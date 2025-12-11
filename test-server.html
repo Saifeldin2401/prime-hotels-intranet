@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Server</title>
+</head>
+<body>
+    <h1>Server is Running!</h1>
+    <p>If you see this, the server is working.</p>
+    <p>Now try: <a href="http://localhost:5173">http://localhost:5173</a></p>
+    <script>
+        fetch('http://localhost:5173')
+            .then(r => r.text())
+            .then(html => {
+                document.body.innerHTML += '<h2>Vite Response:</h2><pre>' + html.substring(0, 500) + '</pre>';
+            })
+            .catch(e => {
+                document.body.innerHTML += '<h2>Error:</h2><pre>' + e + '</pre>';
+            });
+    </script>
+</body>
+</html>
+
+
+

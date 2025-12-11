@@ -1,0 +1,97 @@
+import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
+import { Loader2 } from 'lucide-react'
+
+interface EnhancedButtonProps {
+  children: ReactNode
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'gold' | 'navy'
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
+  loading?: boolean
+  disabled?: boolean
+  icon?: ReactNode
+  iconPosition?: 'left' | 'right'
+  fullWidth?: boolean
+  onClick?: () => void
+  type?: 'button' | 'submit' | 'reset'
+}
+
+export function EnhancedButton({
+  children,
+  variant = 'primary',
+  size = 'md',
+  className,
+  loading = false,
+  disabled = false,
+  icon,
+  iconPosition = 'left',
+  fullWidth = false,
+  onClick,
+  type = 'button'
+}: EnhancedButtonProps) {
+  const baseClasses = 'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none'
+  
+  const variantClasses = {
+    primary: 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md focus:ring-primary',
+    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm focus:ring-secondary',
+    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm focus:ring-accent',
+    ghost: 'hover:bg-accent hover:text-accent-foreground focus:ring-accent',
+    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-md focus:ring-destructive',
+    gold: 'bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-white hover:from-hotel-gold-light hover:to-hotel-gold hover:shadow-md focus:ring-hotel-gold',
+    navy: 'bg-gradient-to-r from-hotel-navy to-hotel-navy-dark text-white hover:from-hotel-navy-light hover:to-hotel-navy hover:shadow-md focus:ring-hotel-navy'
+  }
+  
+  const sizeClasses = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2.5 text-sm',
+    lg: 'px-6 py-3 text-base'
+  }
+  
+  const widthClasses = fullWidth ? 'w-full' : ''
+  
+  const renderIcon = () => {
+    if (loading) {
+      return <Loader2 className="h-4 w-4 animate-spin" />
+    }
+    return icon
+  }
+  
+  const renderContent = () => {
+    if (!icon) return children
+    
+    const iconElement = renderIcon()
+    
+    if (iconPosition === 'left') {
+      return (
+        <>
+          {iconElement}
+          <span className="ml-2">{children}</span>
+        </>
+      )
+    } else {
+      return (
+        <>
+          <span className="mr-2">{children}</span>
+          {iconElement}
+        </>
+      )
+    }
+  }
+  
+  return (
+    <button
+      type={type}
+      className={cn(
+        baseClasses,
+        variantClasses[variant],
+        sizeClasses[size],
+        widthClasses,
+        className
+      )}
+      onClick={onClick}
+      disabled={disabled || loading}
+    >
+      {renderContent()}
+    </button>
+  )
+}

@@ -1,0 +1,29 @@
+{
+  "language": {
+    "en": "English",
+    "ar": "العربية"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search...",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Operation completed successfully",
+    "confirm": "Are you sure?",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalid_email": "Please enter a valid email address",
+    "min_length": "Must be at least {{count}} characters",
+    "max_length": "Cannot exceed {{count}} characters"
+  }
+}

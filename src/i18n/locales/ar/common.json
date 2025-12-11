@@ -1,0 +1,29 @@
+{
+  "language": {
+    "en": "English",
+    "ar": "العربية"
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "submit": "إرسال",
+    "back": "رجوع",
+    "next": "التالي",
+    "previous": "السابق",
+    "search": "بحث...",
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ",
+    "success": "تمت العملية بنجاح",
+    "confirm": "هل أنت متأكد؟",
+    "yes": "نعم",
+    "no": "لا"
+  },
+  "validation": {
+    "required": "هذا الحقل مطلوب",
+    "invalid_email": "الرجاء إدخال بريد إلكتروني صحيح",
+    "min_length": "يجب أن يكون {{count}} أحرف على الأقل",
+    "max_length": "لا يمكن أن يتجاوز {{count}} حرف"
+  }
+}
