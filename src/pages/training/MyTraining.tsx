@@ -161,8 +161,7 @@ export default function MyTraining() {
                         <BookOpen className="w-5 h-5 text-blue-500" />
                         <h3 className="font-semibold text-lg">{item.module.title}</h3>
                         <Badge 
-                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                          className={`ml-2 ${getStatusColor(status)}`}
+                          className={`bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors ml-2 ${getStatusColor(status)}`}
                         >
                           {status.replace('_', ' ').toUpperCase()}
                         </Badge>
