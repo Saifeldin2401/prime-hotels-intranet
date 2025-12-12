@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { 
-  Globe, 
-  ChevronDown 
+import {
+  Globe,
+  ChevronDown
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -21,13 +21,20 @@ export function LanguageSwitcher() {
   const { i18n } = useTranslation()
   const [currentLang, setCurrentLang] = useState(i18n.language)
 
+  // Set initial direction on mount
+  useEffect(() => {
+    const savedLang = localStorage.getItem('preferred-language') || i18n.language
+    document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr'
+    setCurrentLang(savedLang)
+  }, [i18n.language])
+
   const handleLanguageChange = (langCode: string) => {
     i18n.changeLanguage(langCode)
     setCurrentLang(langCode)
-    
+
     // Save preference to localStorage
     localStorage.setItem('preferred-language', langCode)
-    
+
     // Update document direction for Arabic
     document.documentElement.dir = langCode === 'ar' ? 'rtl' : 'ltr'
   }

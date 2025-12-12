@@ -1,0 +1,46 @@
+{
+    "title": "Settings",
+    "description": "Manage your account settings and preferences",
+    "tabs": {
+        "general": "General",
+        "notifications": "Notifications",
+        "security": "Security"
+    },
+    "appearance": {
+        "title": "App Appearance",
+        "description": "Customize how the app looks on your device",
+        "theme": "Theme",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System",
+        "language": "Language",
+        "languageDescription": "Select your preferred language",
+        "english": "English",
+        "arabic": "Arabic"
+    },
+    "notifications": {
+        "title": "Notification Preferences",
+        "description": "Manage how you receive notifications",
+        "email_notifications": "Email Notifications",
+        "email_description": "Receive notifications via email",
+        "browser_notifications": "Browser Notifications",
+        "browser_description": "Receive real-time push notifications",
+        "types": {
+            "approvals": "Approvals",
+            "approvals_desc": "When validation is required or status changes",
+            "training": "Training",
+            "training_desc": "New assignments and deadlines",
+            "announcements": "Announcements",
+            "announcements_desc": "Company news and updates",
+            "maintenance": "Maintenance",
+            "maintenance_desc": "Ticket updates and assignments"
+        }
+    },
+    "actions": {
+        "save": "Save Changes",
+        "saving": "Saving...",
+        "success": "Settings saved successfully",
+        "error": "Failed to save settings",
+        "loading": "Loading settings..."
+    }
+}

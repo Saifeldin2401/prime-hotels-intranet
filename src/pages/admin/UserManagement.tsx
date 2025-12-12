@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { UserForm } from '@/components/admin/UserForm'
-import { Plus } from 'lucide-react'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { Plus, Users } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 
+import { useTranslation } from 'react-i18next'
+
 export default function UserManagement() {
+  const { t } = useTranslation('users')
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -53,61 +54,85 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="User Management"
-        description="Manage users, roles, and permissions"
+        title={t('title')}
+        description={t('description')}
         actions={
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
+          <button className="bg-hotel-gold text-white px-4 py-2 rounded-md text-sm hover:bg-hotel-gold-dark transition-colors flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            {t('add_user')}
+          </button>
         }
       />
 
-      <Card>
-        <CardContent className="p-6">
+      <div className="prime-card">
+        <div className="prime-card-header">
+          <h3 className="text-lg font-semibold">{t('directory')}</h3>
+        </div>
+        <div className="prime-card-body">
           <div className="mb-4">
-            <Input
-              placeholder="Search users..."
+            <input
+              type="text"
+              placeholder={t('search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+              className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-hotel-navy focus:border-hotel-navy"
             />
           </div>
 
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Loading users...
+              {t('loading')}
             </div>
-          ) : (
+          ) : filteredUsers && filteredUsers.length > 0 ? (
             <div className="space-y-2">
-              {filteredUsers?.map((user) => (
+              {filteredUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer"
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                   onClick={() => handleEdit(user)}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                      <span className="text-primary-foreground font-medium">
+                    <div className="w-10 h-10 rounded-full bg-hotel-gold/20 flex items-center justify-center border border-hotel-gold/40">
+                      <span className="text-hotel-gold font-medium">
                         {(user.full_name || user.email)[0].toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium">{user.full_name || 'No name'}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      <p className="font-medium text-gray-900">{user.full_name || 'No name'}</p>
+                      <p className="text-sm text-gray-500">{user.email}</p>
+                      {user.properties && user.properties.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {user.properties.map(p => (
+                            <Badge key={p.id} variant="outline" className="text-[10px] px-1 py-0 h-4 border-gray-300 text-gray-500">
+                              {p.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                      {user.is_active ? t('status.active') : t('status.inactive')}
                     </Badge>
                   </div>
                 </div>
               ))}
             </div>
+          ) : (
+            <EmptyState
+              icon={Users}
+              title={t('empty.title')}
+              description={searchTerm ? t('empty.no_results') : t('empty.description')}
+              action={{
+                label: t('add_user'),
+                onClick: () => setShowForm(true),
+                icon: Plus
+              }}
+            />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

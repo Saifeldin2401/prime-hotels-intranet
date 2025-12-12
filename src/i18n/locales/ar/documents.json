@@ -1,0 +1,42 @@
+{
+    "title": "مكتبة المستندات السحابية",
+    "description": "إدارة مركزية للمستندات مع تخزين سحابي وتعاون",
+    "filter": "تصفية",
+    "upload_document": "رفع مستند",
+    "storage": {
+        "title": "نظرة عامة على التخزين",
+        "usage": "استخدام التخزين السحابي",
+        "files": "{{count}} ملف",
+        "used": "مستخدم: {{value}} جيجابايت",
+        "total": "المجموع: {{value}} جيجابايت",
+        "shared_docs": "{{count}} مستند مشترك",
+        "percent_used": "{{percent}}% مستخدم"
+    },
+    "search_placeholder": "البحث في المستندات، المجلدات، أو الوسوم...",
+    "folders": {
+        "all": "كل المستندات",
+        "drafts": "المسودات",
+        "pending": "قيد المراجعة",
+        "published": "منشور"
+    },
+    "unit_files": "ملفات",
+    "tabs": {
+        "documents": "المستندات",
+        "folders": "المجلدات",
+        "shared": "مشتركة",
+        "recent": "الأخيرة",
+        "favorites": "المفضلة"
+    },
+    "empty": {
+        "title": "لا توجد مستندات",
+        "description": "ابدأ برفع أول مستند لك إلى المكتبة."
+    },
+    "document": {
+        "all_properties": "كل المنشآت",
+        "property_specific": "خاص بالمنشأة",
+        "department_specific": "خاص بالقسم",
+        "role_specific": "خاص بالدور",
+        "acknowledged": "تم الإقرار",
+        "acknowledge": "إقرار"
+    }
+}

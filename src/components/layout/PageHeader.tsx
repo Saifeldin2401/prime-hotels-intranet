@@ -1,9 +1,9 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface PageHeaderProps {
   title: string
-  description?: string
+  description?: string | ReactNode
   actions?: ReactNode
   className?: string
 }
@@ -16,13 +16,13 @@ export function PageHeader({ title, description, actions, className }: PageHeade
     )}>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-1 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-          <h1 className="text-3xl font-bold text-gradient tracking-tight">{title}</h1>
+          <div className="h-8 w-1 bg-primary rounded-full"></div>
+          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
         </div>
         {description && (
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base leading-relaxed max-w-2xl">
+          <div className="text-muted-foreground mt-2 text-sm sm:text-base leading-relaxed max-w-2xl">
             {description}
-          </p>
+          </div>
         )}
       </div>
       {actions && (

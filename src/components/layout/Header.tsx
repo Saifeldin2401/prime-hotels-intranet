@@ -1,39 +1,195 @@
-import { useAuth } from '@/hooks/useAuth'
+import { useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useProperty } from '@/contexts/PropertyContext'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { ThemeToggle } from '@/components/common/ThemeToggle'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
+import {
+  Search,
+  Menu,
+  User,
+  ChevronDown,
+  LogOut,
+  Settings,
+  Sparkles,
+  Building
+} from 'lucide-react'
 
-export function Header() {
-  const { profile } = useAuth()
+interface HeaderProps {
+  sidebarCollapsed: boolean
+  setSidebarCollapsed: (value: boolean) => void
+  userMenuOpen: boolean
+  setUserMenuOpen: (value: boolean) => void
+  handleLogout: () => void
+}
+
+export function Header({
+  sidebarCollapsed,
+  setSidebarCollapsed,
+  userMenuOpen,
+  setUserMenuOpen,
+  handleLogout
+}: HeaderProps) {
+  const { user, profile } = useAuth()
+  const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
+  const { t } = useTranslation(['nav', 'common'])
+  const [searchQuery, setSearchQuery] = useState('')
 
   return (
-    <header className="h-16 border-b bg-card flex items-center justify-between px-6">
-      <div className="flex items-center gap-4">
-        <h2 className="text-lg font-semibold">Prime Hotels Intranet</h2>
-      </div>
+    <header className="sticky top-0 z-40 w-full transition-all duration-300">
+      {/* Prime Connect Premium Header Bar - Navy Background */}
+      <div className="bg-hotel-navy text-white shadow-md border-b-4 border-hotel-gold">
+        <div className="flex h-16 items-center justify-between px-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden lg:flex text-white/80 hover:bg-white/10 hover:text-white"
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
 
-      <div className="flex items-center gap-4">
-        <NotificationBell />
-
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
-            <p className="text-xs text-muted-foreground">{profile?.email}</p>
-          </div>
-          {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={profile.full_name || 'User'}
-              className="w-10 h-10 rounded-full"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-medium">
-                {(profile?.full_name || profile?.email || 'U')[0].toUpperCase()}
-              </span>
+            {/* Logo Area */}
+            <div className="flex items-center group">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-hotel-gold to-hotel-gold-dark flex items-center justify-center shadow-lg group-hover:shadow-hotel-gold/50 transition-all duration-300">
+                <Sparkles className="h-5 w-5 text-hotel-navy fill-current" />
+              </div>
+              <div className="ms-3 hidden md:block">
+                <h1 className="text-xl font-serif font-bold text-white tracking-wide">PRIME <span className="text-hotel-gold">Connect</span></h1>
+                <p className="text-[10px] uppercase tracking-widest text-hotel-gold-light font-medium">Employee Portal</p>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Center Search - Premium Style */}
+          <div className="hidden md:block flex-1 max-w-xl mx-6">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 ps-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-white/40 group-focus-within:text-hotel-gold transition-colors" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search resources, SOPs, or staff..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white/10 border border-white/10 rounded-full py-2 ps-10 pe-4 text-sm text-white placeholder-white/40 focus:bg-white/20 focus:border-hotel-gold/50 focus:ring-1 focus:ring-hotel-gold/50 focus:outline-none transition-all duration-300"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Property Switcher for Multi-Property Users */}
+            {isMultiPropertyUser && (
+              <div className="hidden md:flex items-center me-2">
+                <Select value={currentProperty?.id} onValueChange={switchProperty}>
+                  <SelectTrigger className="w-[180px] h-9 bg-white/10 border-white/20 text-white hover:bg-white/20 focus:ring-hotel-gold/50 transition-colors">
+                    <div className="flex items-center gap-2 truncate">
+                      <Building className="h-3.5 w-3.5 text-hotel-gold" />
+                      <SelectValue placeholder="Select Property" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {availableProperties.map(prop => (
+                      <SelectItem key={prop.id} value={prop.id} className="cursor-pointer">
+                        {prop.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Notification Bell - Light Variant for Navy Header */}
+            <div className="text-white">
+              <NotificationBell />
+            </div>
+
+            {/* Theme Toggle - Adapted for Dark/Navy header */}
+            <div className="text-white/80 hover:text-white">
+              <ThemeToggle />
+            </div>
+
+            {/* Divider */}
+            <div className="h-8 w-px bg-white/10 mx-1" />
+
+            {/* User Menu */}
+            <div className="relative ms-1">
+              <Button
+                variant="ghost"
+                className="flex items-center gap-3 hover:bg-white/10 px-3 py-2 rounded-full border border-transparent hover:border-white/10 transition-all duration-200"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+              >
+                <div className="flex flex-col items-end hidden md:flex">
+                  <span className="text-sm font-medium text-white leading-none mb-1">
+                    {profile?.full_name || user?.email?.split('@')[0]}
+                  </span>
+                  <span className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-semibold">
+                    {/* Role display based on profile data */}
+                    {profile?.roles?.some(r => ['regional_admin', 'regional_hr'].includes(r)) ? 'Admin' : 'Employee'}
+                  </span>
+                </div>
+
+                <div className="h-9 w-9 rounded-full bg-hotel-gold flex items-center justify-center text-hotel-navy font-bold shadow-sm border-2 border-hotel-navy ring-2 ring-hotel-gold/30">
+                  {profile?.full_name?.[0] || user?.email?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
+                </div>
+                <ChevronDown className={`h-4 w-4 text-hotel-gold-light transition-transform duration-200 ${userMenuOpen ? 'transform rotate-180' : ''}`} />
+              </Button>
+
+              {userMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setUserMenuOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="absolute right-0 mt-3 w-64 bg-card rounded-xl shadow-xl ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-200 border border-border">
+                    <div className="p-4 bg-hotel-navy text-white rounded-t-xl">
+                      <p className="text-sm font-semibold">{profile?.full_name || 'User'}</p>
+                      <p className="text-xs text-white/70 truncate">{user?.email}</p>
+                    </div>
+
+                    <div className="py-2">
+                      <a
+                        href="/profile"
+                        className="flex items-center px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        <User className="me-3 h-4 w-4 text-hotel-gold" />
+                        {t('nav:profile')}
+                      </a>
+                      <a
+                        href="/settings"
+                        className="flex items-center px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Settings className="me-3 h-4 w-4 text-hotel-gold" />
+                        {t('nav:settings')}
+                      </a>
+                      <div className="h-px bg-border my-2 mx-4" />
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-start flex items-center px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-colors font-medium"
+                      >
+                        <LogOut className="me-3 h-4 w-4" />
+                        {t('nav:logout')}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </header>
   )
 }
-

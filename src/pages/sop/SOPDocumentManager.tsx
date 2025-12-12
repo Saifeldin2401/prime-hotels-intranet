@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Icons } from '@/components/icons'
@@ -12,132 +13,45 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatDate } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 
-const mockDocuments = [
-  {
-    id: '1',
-    title: 'Guest Check-in Procedure',
-    description: 'Standard procedure for guest registration and check-in process',
-    status: 'approved',
-    version: '2.1',
-    department: 'Front Desk',
-    category: 'Operations',
-    priority: 'high',
-    emergencyProcedure: false,
-    requiresTraining: true,
-    complianceLevel: 'standard',
-    reviewFrequency: 'quarterly',
-    lastReviewed: new Date('2024-09-15'),
-    nextReviewDue: new Date('2024-12-15'),
-    createdBy: 'John Doe',
-    createdAt: new Date('2024-01-10'),
-    updatedBy: 'Jane Smith',
-    updatedAt: new Date('2024-09-15'),
-    approvers: ['Mike Johnson', 'Sarah Wilson'],
-    tags: ['check-in', 'registration', 'guest-service'],
-    versions: [
-      { version: '1.0', date: new Date('2024-01-10'), author: 'John Doe', changes: 'Initial version' },
-      { version: '1.1', date: new Date('2024-03-15'), author: 'Jane Smith', changes: 'Added VIP guest handling' },
-      { version: '2.0', date: new Date('2024-06-20'), author: 'Mike Johnson', changes: 'Major restructuring' },
-      { version: '2.1', date: new Date('2024-09-15'), author: 'Jane Smith', changes: 'Updated contactless check-in' }
-    ],
-    acknowledgments: 45,
-    totalStaff: 50,
-    trainingCompletion: 90
-  },
-  {
-    id: '2',
-    title: 'Emergency Fire Protocol',
-    description: 'Comprehensive emergency response procedures for fire incidents',
-    status: 'approved',
-    version: '3.0',
-    department: 'Safety',
-    category: 'Emergency',
-    priority: 'critical',
-    emergencyProcedure: true,
-    requiresTraining: true,
-    complianceLevel: 'regulatory',
-    reviewFrequency: 'semi-annually',
-    lastReviewed: new Date('2024-06-20'),
-    nextReviewDue: new Date('2024-12-20'),
-    createdBy: 'Sarah Wilson',
-    createdAt: new Date('2023-12-01'),
-    updatedBy: 'Tom Brown',
-    updatedAt: new Date('2024-06-20'),
-    approvers: ['John Doe', 'Mike Johnson', 'Jane Smith'],
-    tags: ['emergency', 'fire', 'safety', 'critical'],
-    versions: [
-      { version: '1.0', date: new Date('2023-12-01'), author: 'Sarah Wilson', changes: 'Initial emergency protocol' },
-      { version: '2.0', date: new Date('2024-03-01'), author: 'Tom Brown', changes: 'Added evacuation routes' },
-      { version: '3.0', date: new Date('2024-06-20'), author: 'Tom Brown', changes: 'Updated with new fire codes' }
-    ],
-    acknowledgments: 120,
-    totalStaff: 120,
-    trainingCompletion: 100
-  },
-  {
-    id: '3',
-    title: 'Housekeeping Room Cleaning Standards',
-    description: 'Detailed cleaning procedures and quality standards for all room types',
-    status: 'under_review',
-    version: '3.0',
-    department: 'Housekeeping',
-    category: 'Operations',
-    priority: 'medium',
-    emergencyProcedure: false,
-    requiresTraining: true,
-    complianceLevel: 'enhanced',
-    reviewFrequency: 'quarterly',
-    lastReviewed: new Date('2024-09-25'),
-    nextReviewDue: new Date('2024-12-25'),
-    createdBy: 'Mike Johnson',
-    createdAt: new Date('2024-02-15'),
-    updatedBy: 'Lisa Anderson',
-    updatedAt: new Date('2024-09-25'),
-    approvers: ['John Doe'],
-    tags: ['cleaning', 'housekeeping', 'quality', 'standards'],
-    versions: [
-      { version: '1.0', date: new Date('2024-02-15'), author: 'Mike Johnson', changes: 'Initial cleaning standards' },
-      { version: '2.0', date: new Date('2024-05-10'), author: 'Lisa Anderson', changes: 'Added COVID protocols' },
-      { version: '3.0', date: new Date('2024-09-25'), author: 'Lisa Anderson', changes: 'Updated eco-friendly practices' }
-    ],
-    acknowledgments: 28,
-    totalStaff: 35,
-    trainingCompletion: 80
-  },
-  {
-    id: '4',
-    title: 'Food Safety Guidelines',
-    description: 'Food handling, storage, and preparation safety protocols',
-    status: 'draft',
-    version: '1.0',
-    department: 'Food & Beverage',
-    category: 'Safety',
-    priority: 'high',
-    emergencyProcedure: false,
-    requiresTraining: true,
-    complianceLevel: 'regulatory',
-    reviewFrequency: 'annually',
-    lastReviewed: null,
-    nextReviewDue: new Date('2025-01-01'),
-    createdBy: 'Tom Brown',
-    createdAt: new Date('2024-11-01'),
-    updatedBy: 'Tom Brown',
-    updatedAt: new Date('2024-11-01'),
-    approvers: [],
-    tags: ['food-safety', 'handling', 'storage', 'preparation'],
-    versions: [
-      { version: '1.0', date: new Date('2024-11-01'), author: 'Tom Brown', changes: 'Initial draft' }
-    ],
-    acknowledgments: 0,
-    totalStaff: 25,
-    trainingCompletion: 0
-  }
-]
+interface Document {
+  id: string
+  title: string
+  description: string
+  status: string
+  version: string
+  department: string
+  category: string
+  priority: string
+  emergencyProcedure: boolean
+  requiresTraining: boolean
+  complianceLevel: string
+  reviewFrequency: string
+  lastReviewed: Date | null
+  nextReviewDue: Date | null
+  createdBy: string
+  createdAt: Date | null
+  updatedBy: string
+  updatedAt: Date | null
+  approvers: string[]
+  tags: string[]
+  versions: Array<{
+    version: string
+    date: Date | null
+    author: string
+    changes: string
+  }>
+  acknowledgments: number
+  totalStaff: number
+  trainingCompletion: number
+}
+
+// Mock data removed in favor of Supabase fetching
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',
   under_review: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
+  published: 'bg-green-100 text-green-800',
   obsolete: 'bg-red-100 text-red-800'
 }
 
@@ -155,29 +69,92 @@ const complianceColors: Record<string, string> = {
   regulatory: 'bg-red-100 text-red-800'
 }
 
-export function SOPDocumentManager() {
-  const [documents, setDocuments] = useState(mockDocuments)
+export function SOPDocumentManager({ onEdit }: { onEdit?: (doc: Document) => void }) {
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [departments, setDepartments] = useState<{ id: string, name: string }[]>([])
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterDepartment, setFilterDepartment] = useState('all')
   const [filterPriority, setFilterPriority] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const [showApprovalDialog, setShowApprovalDialog] = useState(false)
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch Documents and Departments
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        // Fetch Departments
+        const { data: depts } = await supabase.from('departments').select('id, name').eq('is_active', true)
+        if (depts) setDepartments(depts)
+
+        // Fetch SOP Documents
+        const { data: docs, error } = await supabase
+          .from('sop_documents')
+          .select(`
+            id, title, description, status, version, priority, requires_quiz, compliance_level, review_frequency_months,
+            created_at, updated_at, next_review_date,
+            departments (name),
+            author:profiles!sop_documents_created_by_fkey (full_name) 
+          `) // profiles might need to be joined via created_by or similar if relation exists
+          .order('updated_at', { ascending: false })
+
+        if (error) throw error
+
+        if (docs) {
+          const mappedDocs: Document[] = docs.map((d: any) => ({
+            id: d.id,
+            title: d.title,
+            description: d.description || '',
+            status: d.status,
+            version: d.version.toString(),
+            department: d.departments?.name || 'Unknown',
+            category: 'Operations', // Placeholder
+            priority: d.priority || 'medium',
+            emergencyProcedure: false, // Placeholder
+            requiresTraining: d.requires_quiz || false,
+            complianceLevel: d.compliance_level || 'standard',
+            reviewFrequency: d.review_frequency_months ? `${d.review_frequency_months} months` : 'quarterly',
+            lastReviewed: null,
+            nextReviewDue: d.next_review_date ? new Date(d.next_review_date) : null,
+            createdBy: d.author?.full_name || 'Unknown',
+            createdAt: d.created_at ? new Date(d.created_at) : null,
+            updatedBy: 'Unknown',
+            updatedAt: d.updated_at ? new Date(d.updated_at) : null,
+            approvers: [],
+            tags: [],
+            versions: [],
+            acknowledgments: 0,
+            totalStaff: 0,
+            trainingCompletion: 0
+          }))
+          setDocuments(mappedDocs)
+        }
+      } catch (err) {
+        console.error('Failed to fetch SOP data:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const filteredDocuments = documents.filter(doc => {
     const matchesStatus = filterStatus === 'all' || doc.status === filterStatus
     const matchesDepartment = filterDepartment === 'all' || doc.department === filterDepartment
     const matchesPriority = filterPriority === 'all' || doc.priority === filterPriority
     const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         doc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-    
+      doc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+
     return matchesStatus && matchesDepartment && matchesPriority && matchesSearch
   })
 
   const handleApprove = (documentId: string) => {
-    setDocuments(prev => prev.map(doc => 
-      doc.id === documentId 
+    setDocuments(prev => prev.map(doc =>
+      doc.id === documentId
         ? { ...doc, status: 'approved', updatedAt: new Date() }
         : doc
     ))
@@ -185,32 +162,38 @@ export function SOPDocumentManager() {
   }
 
   const handleReject = (documentId: string) => {
-    setDocuments(prev => prev.map(doc => 
-      doc.id === documentId 
+    setDocuments(prev => prev.map(doc =>
+      doc.id === documentId
         ? { ...doc, status: 'draft', updatedAt: new Date() }
         : doc
     ))
     setShowApprovalDialog(false)
   }
 
-  const DocumentActions = ({ document: _document }: { document: any }) => (
+  const DocumentActions = ({ doc }: { doc: Document }) => (
     <div className="flex items-center gap-2">
-      <Button variant="ghost" size="sm">
+      <Button size="sm" className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors">
         <Icons.Eye className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm">
+      <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => onEdit?.(doc)}>
         <Icons.Edit className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => setShowVersionHistory(true)}>
+      <Button size="sm" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => {
+        setSelectedDocument(doc)
+        setShowVersionHistory(true)
+      }}>
         <Icons.History className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm">
+      <Button size="sm" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
         <Icons.Download className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm">
+      <Button size="sm" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
         <Icons.Printer className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm">
+      <Button size="sm" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => {
+        setSelectedDocument(doc)
+        setShowApprovalDialog(true)
+      }}>
         <Icons.MoreHorizontal className="h-4 w-4" />
       </Button>
     </div>
@@ -222,16 +205,16 @@ export function SOPDocumentManager() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">SOP Document Manager</h1>
-          <p className="text-muted-foreground">
+          <p className="text-gray-600">
             Comprehensive document management with version control and approval workflows
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
+          <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
             <Icons.Upload className="h-4 w-4 mr-2" />
             Import Documents
           </Button>
-          <Button>
+          <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors">
             <Icons.FilePlus className="h-4 w-4 mr-2" />
             Create SOP
           </Button>
@@ -261,6 +244,7 @@ export function SOPDocumentManager() {
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="under_review">Under Review</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
                 <SelectItem value="obsolete">Obsolete</SelectItem>
               </SelectContent>
             </Select>
@@ -270,10 +254,9 @@ export function SOPDocumentManager() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="Front Desk">Front Desk</SelectItem>
-                <SelectItem value="Housekeeping">Housekeeping</SelectItem>
-                <SelectItem value="Food & Beverage">Food & Beverage</SelectItem>
-                <SelectItem value="Safety">Safety</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={filterPriority} onValueChange={setFilterPriority}>
@@ -295,7 +278,7 @@ export function SOPDocumentManager() {
       {/* Documents Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Documents ({filteredDocuments.length})</CardTitle> 
+          <CardTitle>Documents ({filteredDocuments.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -318,10 +301,10 @@ export function SOPDocumentManager() {
                   <TableCell>
                     <div>
                       <div className="font-medium">{doc.title}</div>
-                      <div className="text-sm text-muted-foreground">{doc.description}</div>
+                      <div className="text-sm text-gray-600">{doc.description}</div>
                       <div className="flex gap-1 mt-1">
                         {doc.tags.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
+                          <Badge key={tag} className="bg-hotel-navy text-white border border-hotel-navy rounded-md text-xs">
                             {tag}
                           </Badge>
                         ))}
@@ -349,8 +332,8 @@ export function SOPDocumentManager() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm">{doc.trainingCompletion}%</span>
                       <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500" 
+                        <div
+                          className="h-full bg-blue-500"
                           style={{ width: `${doc.trainingCompletion}%` }}
                         />
                       </div>
@@ -359,13 +342,13 @@ export function SOPDocumentManager() {
                   <TableCell>
                     <div>
                       <div className="text-sm">{formatDate(doc.updatedAt)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(doc.updatedAt)} ago
+                      <div className="text-xs text-gray-600">
+                        {doc.updatedAt ? `${formatDistanceToNow(doc.updatedAt)} ago` : 'N/A'}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <DocumentActions document={doc} />
+                    <DocumentActions doc={doc} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -384,29 +367,33 @@ export function SOPDocumentManager() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-              {mockDocuments[0]?.versions.map((version: any, index: number) => (
+            {selectedDocument?.versions?.length ? (
+              selectedDocument.versions.map((version: Document['versions'][0], index: number) => (
                 <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">v{version.version}</Badge>
+                      <Badge className="bg-hotel-navy text-white border border-hotel-navy rounded-md">v{version.version}</Badge>
                       <span className="font-medium">{version.author}</span>
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1">
+                    <div className="text-sm text-gray-600 mt-1">
                       {version.changes}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-xs text-gray-600 mt-1">
                       {formatDate(version.date)}
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors">
                     <Icons.Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
                 </div>
-              ))}
-            </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 py-4">No version history available</div>
+            )}
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowVersionHistory(false)}>
+            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => setShowVersionHistory(false)}>
               Close
             </Button>
           </DialogFooter>
@@ -450,13 +437,13 @@ export function SOPDocumentManager() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>
+            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => setShowApprovalDialog(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={() => handleReject(mockDocuments[0].id)}>
+            <Button className="bg-red-500 text-white hover:bg-red-600 rounded-md transition-colors" onClick={() => selectedDocument && handleReject(selectedDocument.id)}>
               Reject
             </Button>
-            <Button onClick={() => handleApprove(mockDocuments[0].id)}>
+            <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" onClick={() => selectedDocument && handleApprove(selectedDocument.id)}>
               Approve
             </Button>
           </DialogFooter>

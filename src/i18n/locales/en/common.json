@@ -18,12 +18,115 @@
     "success": "Operation completed successfully",
     "confirm": "Are you sure?",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "actions": "Actions",
+    "status": "Status",
+    "created_at": "Created At",
+    "updated_at": "Updated At",
+    "view_details": "View Details",
+    "download": "Download",
+    "upload": "Upload",
+    "filter": "Filter",
+    "clear_filters": "Clear Filters",
+    "apply": "Apply"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "staff_dashboard": "Staff Dashboard",
+    "directory": "Directory",
+    "documents": "Documents",
+    "training": "Training",
+    "sops": "Standard Operating Procedures",
+    "jobs": "Job Postings",
+    "maintenance": "Maintenance",
+    "tasks": "Tasks",
+    "messaging": "Messaging",
+    "approvals": "Approvals",
+    "hr": "HR Management",
+    "announcements": "Announcements",
+    "admin": "Admin",
+    "my_profile": "My Profile",
+    "settings": "Settings",
+    "logout": "Log Out"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back, {{name}}",
+    "quick_actions": "Quick Actions",
+    "recent_activity": "Recent Activity",
+    "announcements": "Announcements",
+    "my_tasks": "My Tasks",
+    "pending_approvals": "Pending Approvals"
+  },
+  "jobs": {
+    "title": "Job Postings",
+    "create_new": "Create New Job",
+    "internal_jobs": "Internal Job Board",
+    "position": "Position",
+    "department": "Department",
+    "location": "Location",
+    "type": "Employment Type",
+    "posted_date": "Posted Date",
+    "closing_date": "Closing Date",
+    "apply_now": "Apply Now",
+    "description": "Job Description",
+    "requirements": "Requirements",
+    "status": {
+      "open": "Open",
+      "closed": "Closed",
+      "draft": "Draft"
+    }
+  },
+  "hr": {
+    "promotions": "Promotions",
+    "transfers": "Transfers",
+    "leave_requests": "Leave Requests",
+    "performance": "Performance Reviews",
+    "new_promotion": "New Promotion Request",
+    "new_transfer": "New Transfer Request",
+    "current_position": "Current Position",
+    "proposed_position": "Proposed Position",
+    "justification": "Justification",
+    "effective_date": "Effective Date"
+  },
+  "profile": {
+    "personal_info": "Personal Information",
+    "employment_details": "Employment Details",
+    "documents": "Documents",
+    "emergency_contact": "Emergency Contact",
+    "skills": "Skills & Qualifications",
+    "full_name": "Full Name",
+    "email": "Email",
+    "phone": "Phone Number",
+    "address": "Address",
+    "employee_id": "Employee ID",
+    "join_date": "Join Date"
+  },
+  "settings": {
+    "general": "General Settings",
+    "notifications": "Notification Preferences",
+    "security": "Security",
+    "appearance": "Appearance",
+    "language": "Language",
+    "email_notifications": "Email Notifications",
+    "push_notifications": "Push Notifications"
   },
   "validation": {
     "required": "This field is required",
     "invalid_email": "Please enter a valid email address",
     "min_length": "Must be at least {{count}} characters",
-    "max_length": "Cannot exceed {{count}} characters"
+    "max_length": "Cannot exceed {{count}} characters",
+    "password_mismatch": "Passwords do not match",
+    "numeric": "Must be a number"
+  },
+  "roles": {
+    "super_admin": "Super Admin",
+    "admin": "Administrator",
+    "regional_admin": "Regional Admin",
+    "property_manager": "Property Manager",
+    "department_manager": "Department Manager",
+    "hr_manager": "HR Manager",
+    "staff": "Staff",
+    "corporate_hr": "Corporate HR"
   }
 }

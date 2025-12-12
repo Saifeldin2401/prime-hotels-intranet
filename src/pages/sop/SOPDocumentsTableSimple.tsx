@@ -60,25 +60,25 @@ export function SOPDocumentsTable() {
         <table className="w-full">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+              <th className="h-12 px-4 text-left align-middle font-medium text-gray-600">
                 Title
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+              <th className="h-12 px-4 text-left align-middle font-medium text-gray-600">
                 Status
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+              <th className="h-12 px-4 text-left align-middle font-medium text-gray-600">
                 Department
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+              <th className="h-12 px-4 text-left align-middle font-medium text-gray-600">
                 Category
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+              <th className="h-12 px-4 text-left align-middle font-medium text-gray-600">
                 Version
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+              <th className="h-12 px-4 text-left align-middle font-medium text-gray-600">
                 Updated
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+              <th className="h-12 px-4 text-left align-middle font-medium text-gray-600">
                 Actions
               </th>
             </tr>
@@ -89,7 +89,7 @@ export function SOPDocumentsTable() {
                 <td className="p-4">
                   <div>
                     <div className="font-medium">{doc.title}</div>
-                    <div className="text-sm text-muted-foreground">{doc.description}</div>
+                    <div className="text-sm text-gray-600">{doc.description}</div>
                   </div>
                 </td>
                 <td className="p-4">
@@ -105,13 +105,13 @@ export function SOPDocumentsTable() {
                 </td>
                 <td className="p-4">
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
+                    <Button size="sm" className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors">
                       <Icons.Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors">
                       <Icons.Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button size="sm" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
                       <Icons.MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
@@ -122,14 +122,14 @@ export function SOPDocumentsTable() {
         </table>
       </div>
       <div className="flex items-center justify-between p-4">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-gray-600">
           Showing {mockDocuments.length} of {mockDocuments.length} results
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button size="sm" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" disabled>
             Previous
           </Button>
-          <Button variant="outline" size="sm" disabled>
+          <Button size="sm" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" disabled>
             Next
           </Button>
         </div>

@@ -1,0 +1,112 @@
+{
+    "title": "لوحة التحكم",
+    "welcome": "مرحباً بك، {{name}}",
+    "widgets": {
+        "role": "الدور الحالي",
+        "documents": "المستندات الأخيرة",
+        "training": "تقدم التدريب",
+        "announcements": "الإعلانات",
+        "tasks": "مهامي",
+        "maintenance": "طلبات الصيانة",
+        "quick_actions": "إجراءات سريعة",
+        "quick_actions_desc": "المهام الشائعة والاختصارات",
+        "pending": "عناصر معلقة",
+        "activity": "النشاط الأخير",
+        "activity_desc": "آخر التحديثات والمهام",
+        "view_documents": "عرض المستندات",
+        "view_training": "عرض التدريب",
+        "view_announcements": "عرض الإعلانات",
+        "manage_users": "إدارة المستخدمين",
+        "no_role": "لا يوجد دور معين",
+        "property": "منشأة",
+        "department": "قسم",
+        "properties": "منشآت",
+        "departments": "أقسام"
+    },
+    "analytics": {
+        "title": "لوحة التحليلات",
+        "subtitle": "مقاييس النظام وتحليلات الأداء",
+        "time_range": "النطاق الزمني",
+        "ranges": {
+            "today": "اليوم",
+            "7days": "آخر 7 أيام",
+            "30days": "آخر 30 يوماً",
+            "90days": "آخر 90 يوماً"
+        },
+        "export": "تصدير",
+        "total_users": "إجمالي المستخدمين",
+        "active_now": "نشط الآن",
+        "documents": "المستندات",
+        "published": "منشور",
+        "training": "التدريب",
+        "overdue": "متأخر",
+        "maintenance": "الصيانة",
+        "critical": "حرج",
+        "urgent": "عاجل",
+        "user_activity": "نشاط المستخدم",
+        "new_users": "مستخدمين جدد",
+        "active_users": "مستخدمين نشطين",
+        "total_logins": "إجمالي عمليات الدخول",
+        "referral_program": "برنامج الإحالة",
+        "total_referrals": "إجمالي الإحالات",
+        "hired": "تم تعيينهم",
+        "bonuses_paid": "المكافآت المدفوعة",
+        "recent_activity": "النشاط الأخير",
+        "no_activity": "لا يوجد نشاط حديث",
+        "activity_placeholder": "سيظهر النشاط هنا عندما يتفاعل المستخدمون مع النظام"
+    },
+    "stats": {
+        "total": "الإجمالي",
+        "pending": "معلق",
+        "completed": "مكتمل"
+    },
+    "actions": {
+        "view_all": "عرض الكل",
+        "create_new": "إنشاء جديد",
+        "refresh": "تحديث"
+    },
+    "staff": {
+        "welcome_back": "مرحباً بعودتك، {{name}}",
+        "subtitle": "إليك نظرة عامة يومية",
+        "role_badge": "موظف",
+        "notifications": "الإشعارات",
+        "stats": {
+            "todays_tasks": "مهام اليوم",
+            "from_yesterday": "عن الأمس",
+            "training_progress": "تقدم التدريب",
+            "upcoming_events": "الأحداث القادمة",
+            "next_event": "التالي: {{event}}",
+            "no_upcoming_events": "لا توجد أحداث قادمة",
+            "performance_score": "نقاط الأداء",
+            "above_average": "فوق المتوسط",
+            "average": "متوسط",
+            "below_average": "أقل من المتوسط"
+        },
+        "quick_actions": {
+            "clock_in_out": "تسجيل الدخول/الخروج",
+            "track_work_hours": "تتبع ساعات عملك",
+            "time_tracking_btn": "تتبع الوقت",
+            "documents": "المستندات",
+            "access_documents": "الوصول إلى مستنداتك",
+            "view_documents_btn": "عرض المستندات",
+            "training": "التدريب",
+            "complete_training": "أكمل تدريبك",
+            "continue_learning_btn": "متابعة التعلم"
+        },
+        "tabs": {
+            "activity_feed": "سجل النشاط",
+            "my_tasks": "مهامي",
+            "schedule": "الجدول الزمني"
+        },
+        "recent_activity": "النشاط الأخير",
+        "your_tasks": "مهامك",
+        "due_today": "مستحق اليوم",
+        "due_tomorrow": "مستحق غداً",
+        "due_date": "مستحق: {{date}}",
+        "no_tasks": "لا توجد مهام معينة",
+        "weeks_schedule": "جدول هذا الأسبوع",
+        "today": "اليوم",
+        "tomorrow": "غداً",
+        "no_schedule": "لا يوجد جدول متاح"
+    }
+}

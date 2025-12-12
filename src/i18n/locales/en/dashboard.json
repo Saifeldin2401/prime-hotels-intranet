@@ -1,0 +1,112 @@
+{
+    "title": "Dashboard",
+    "welcome": "Welcome back, {{name}}",
+    "widgets": {
+        "role": "Current Role",
+        "documents": "Recent Documents",
+        "training": "Training Progress",
+        "announcements": "Announcements",
+        "tasks": "My Tasks",
+        "maintenance": "Maintenance Requests",
+        "quick_actions": "Quick Actions",
+        "quick_actions_desc": "Common tasks and shortcuts",
+        "pending": "Pending Items",
+        "activity": "Recent Activity",
+        "activity_desc": "Latest updates and assignments",
+        "view_documents": "View Documents",
+        "view_training": "View Training",
+        "view_announcements": "View Announcements",
+        "manage_users": "Manage Users",
+        "no_role": "No role assigned",
+        "property": "property",
+        "department": "department",
+        "properties": "properties",
+        "departments": "departments"
+    },
+    "analytics": {
+        "title": "Analytics Dashboard",
+        "subtitle": "System-wide metrics and performance analytics",
+        "time_range": "Time Range",
+        "ranges": {
+            "today": "Today",
+            "7days": "Last 7 Days",
+            "30days": "Last 30 Days",
+            "90days": "Last 90 Days"
+        },
+        "export": "Export",
+        "total_users": "Total Users",
+        "active_now": "active now",
+        "documents": "Documents",
+        "published": "published",
+        "training": "Training",
+        "overdue": "overdue",
+        "maintenance": "Maintenance",
+        "critical": "critical",
+        "urgent": "urgent",
+        "user_activity": "User Activity",
+        "new_users": "New Users",
+        "active_users": "Active Users",
+        "total_logins": "Total Logins",
+        "referral_program": "Referral Program",
+        "total_referrals": "Total Referrals",
+        "hired": "Hired",
+        "bonuses_paid": "Bonuses Paid",
+        "recent_activity": "Recent Activity",
+        "no_activity": "No recent activity found",
+        "activity_placeholder": "Activity will appear here as users interact with the system"
+    },
+    "stats": {
+        "total": "Total",
+        "pending": "Pending",
+        "completed": "Completed"
+    },
+    "actions": {
+        "view_all": "View All",
+        "create_new": "Create New",
+        "refresh": "Refresh"
+    },
+    "staff": {
+        "welcome_back": "Welcome back, {{name}}",
+        "subtitle": "Here's your daily overview",
+        "role_badge": "Staff Member",
+        "notifications": "Notifications",
+        "stats": {
+            "todays_tasks": "Today's Tasks",
+            "from_yesterday": "from yesterday",
+            "training_progress": "Training Progress",
+            "upcoming_events": "Upcoming Events",
+            "next_event": "Next: {{event}}",
+            "no_upcoming_events": "No upcoming events",
+            "performance_score": "Performance Score",
+            "above_average": "Above Average",
+            "average": "Average",
+            "below_average": "Below Average"
+        },
+        "quick_actions": {
+            "clock_in_out": "Clock In/Out",
+            "track_work_hours": "Track your work hours",
+            "time_tracking_btn": "Time Tracking",
+            "documents": "Documents",
+            "access_documents": "Access your documents",
+            "view_documents_btn": "View Documents",
+            "training": "Training",
+            "complete_training": "Complete your training",
+            "continue_learning_btn": "Continue Learning"
+        },
+        "tabs": {
+            "activity_feed": "Activity Feed",
+            "my_tasks": "My Tasks",
+            "schedule": "Schedule"
+        },
+        "recent_activity": "Recent Activity",
+        "your_tasks": "Your Tasks",
+        "due_today": "Due Today",
+        "due_tomorrow": "Due Tomorrow",
+        "due_date": "Due: {{date}}",
+        "no_tasks": "No tasks assigned",
+        "weeks_schedule": "This Week's Schedule",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "no_schedule": "No schedule available"
+    }
+}

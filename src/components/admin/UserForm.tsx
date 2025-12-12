@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
+import { suggestSystemRole, getCommonJobTitles } from '@/lib/jobTitleMappings'
 import type { Profile, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
 import { ArrowLeft } from 'lucide-react'
@@ -20,6 +21,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [jobTitle, setJobTitle] = useState('')
   const [role, setRole] = useState<AppRole | ''>('')
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
@@ -57,6 +59,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       setEmail(user.email)
       setFullName(user.full_name || '')
       setPhone(user.phone || '')
+      setJobTitle(user.job_title || '')
       // Load user's roles, properties, departments
       loadUserData()
     }
@@ -96,6 +99,17 @@ export function UserForm({ user, onClose }: UserFormProps) {
     }
   }
 
+  // Handle job title change and auto-suggest role
+  const handleJobTitleChange = (newJobTitle: string) => {
+    setJobTitle(newJobTitle)
+
+    // Auto-suggest system role if no role is selected yet
+    if (!role && newJobTitle.trim()) {
+      const suggestedRole = suggestSystemRole(newJobTitle)
+      setRole(suggestedRole)
+    }
+  }
+
   const createUserMutation = useMutation({
     mutationFn: async () => {
       if (!email || !fullName || !role) {
@@ -114,10 +128,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
       const { userId } = (data || {}) as { userId?: string }
       if (!userId) throw new Error('User ID not returned from create-user function')
 
-      // Update profile
+      // Update profile with job title
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ full_name: fullName, phone: phone || null })
+        .update({
+          full_name: fullName,
+          phone: phone || null,
+          job_title: jobTitle || null
+        })
         .eq('id', userId)
 
       if (profileError) throw profileError
@@ -160,10 +178,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
     mutationFn: async () => {
       if (!user) return
 
-      // Update profile
+      // Update profile with job title
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ full_name: fullName, phone: phone || null })
+        .update({
+          full_name: fullName,
+          phone: phone || null,
+          job_title: jobTitle || null
+        })
         .eq('id', user.id)
 
       if (profileError) throw profileError
@@ -258,7 +280,27 @@ export function UserForm({ user, onClose }: UserFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="jobTitle">Job Title *</Label>
+              <Input
+                id="jobTitle"
+                value={jobTitle}
+                onChange={(e) => handleJobTitleChange(e.target.value)}
+                placeholder="e.g., Front Office Manager, Room Attendant"
+                list="job-titles-datalist"
+                required
+              />
+              <datalist id="job-titles-datalist">
+                {getCommonJobTitles().map((title) => (
+                  <option key={title} value={title} />
+                ))}
+              </datalist>
+              <p className="text-xs text-gray-600">
+                Actual hotel job position (will be displayed throughout the system)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Permission Level (System Role) *</Label>
               <select
                 id="role"
                 value={role}
@@ -273,6 +315,9 @@ export function UserForm({ user, onClose }: UserFormProps) {
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-gray-600">
+                System role for permissions - auto-suggested based on job title
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -320,10 +365,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createUserMutation.isPending || updateUserMutation.isPending}>
+              <Button type="submit" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" disabled={createUserMutation.isPending || updateUserMutation.isPending}>
                 {user ? 'Update' : 'Create'} User
               </Button>
             </div>

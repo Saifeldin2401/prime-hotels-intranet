@@ -186,7 +186,7 @@ export default function TrainingCertificates() {
         .order('issued_at', { ascending: false })
 
       if (error) throw error
-      return data as TrainingCertificate[]
+      return data as CertificateWithDetails[]
     },
     enabled: !!profile?.id
   })
@@ -327,7 +327,7 @@ export default function TrainingCertificates() {
         description={isRTL ? 'عرض وإدارة شهادات التدريب والتحقق منها' : 'View and manage training certificates and verification'}
         actions={
           <Button
-            variant="outline"
+            className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors"
             size="sm"
             onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
           >
@@ -348,7 +348,7 @@ export default function TrainingCertificates() {
         <TabsContent value="my-certificates" className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder={t.searchCertificates}
                 value={search}
@@ -364,7 +364,7 @@ export default function TrainingCertificates() {
             </CardHeader>
             <CardContent>
               {myLoading ? (
-                <div className="text-center py-8 text-muted-foreground">{t.loading}</div>
+                <div className="text-center py-8 text-gray-700">{t.loading}</div>
               ) : filteredMyCertificates.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredMyCertificates.map((certificate) => {
@@ -382,7 +382,7 @@ export default function TrainingCertificates() {
                                 <h3 className="font-medium text-sm">
                                   {certificate.training_progress.training_modules.title}
                                 </h3>
-                                <div className="text-sm text-muted-foreground">
+                                <div className="text-sm text-gray-600">
                                   <div>{t.issuedOn}: {format(new Date(certificate.issued_at), 'PPP', { locale: dateLocale })}</div>
                                   {certificate.expires_at && (
                                     <div>{t.expiresOn}: {format(new Date(certificate.expires_at), 'PPP', { locale: dateLocale })}</div>
@@ -402,7 +402,7 @@ export default function TrainingCertificates() {
                             </div>
                             <div className="flex justify-between text-sm">
                               <span>{t.certificateType}:</span>
-                              <Badge className={getTypeColor(type)} variant="outline">
+                              <Badge className={`bg-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-100 text-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-800 border border-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'} rounded-md`}>
                                 {t[type]}
                               </Badge>
                             </div>
@@ -419,7 +419,7 @@ export default function TrainingCertificates() {
                               <FileText className="w-4 h-4 mr-2" />
                               {t.viewCertificate}
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleDownload(certificate.id)}>
+                            <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleDownload(certificate.id)}>
                               <Download className="w-4 h-4 mr-2" />
                               {t.download}
                             </Button>
@@ -428,10 +428,10 @@ export default function TrainingCertificates() {
                           {certificate.verification_code && (
                             <div className="mt-4 pt-4 border-t">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-xs text-gray-600">
                                   {t.verificationCode}: {certificate.verification_code}
                                 </span>
-                                <Button size="sm" variant="ghost" onClick={() => copyCertificateLink(certificate)}>
+                                <Button size="sm" className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors" onClick={() => copyCertificateLink(certificate)}>
                                   <ExternalLink className="w-3 h-3" />
                                 </Button>
                               </div>
@@ -443,7 +443,7 @@ export default function TrainingCertificates() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">{t.noCertificates}</div>
+                <div className="text-center py-8 text-gray-700">{t.noCertificates}</div>
               )}
             </CardContent>
           </Card>
@@ -469,7 +469,7 @@ export default function TrainingCertificates() {
                     placeholder={t.enterVerificationCode}
                     className="flex-1"
                   />
-                  <Button onClick={handleVerify} disabled={verifyCertificateMutation.isPending}>
+                  <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" onClick={handleVerify} disabled={verifyCertificateMutation.isPending}>
                     {verifyCertificateMutation.isPending ? t.loading : t.verifyButton}
                   </Button>
                 </div>
@@ -528,7 +528,7 @@ export default function TrainingCertificates() {
         <TabsContent value="all-certificates" className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder={t.searchCertificates}
                 value={search}
@@ -544,7 +544,7 @@ export default function TrainingCertificates() {
             </CardHeader>
             <CardContent>
               {allLoading ? (
-                <div className="text-center py-8 text-muted-foreground">{t.loading}</div>
+                <div className="text-center py-8 text-gray-700">{t.loading}</div>
               ) : filteredAllCertificates.length > 0 ? (
                 <div className="space-y-4">
                   {filteredAllCertificates.map((certificate) => {
@@ -560,10 +560,10 @@ export default function TrainingCertificates() {
                             <h3 className="font-medium">
                               {certificate.training_progress.training_modules.title}
                             </h3>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-gray-600">
                               {certificate.training_progress.profiles.full_name}
                             </p>
-                            <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
                               <span>{t.issuedOn}: {format(new Date(certificate.issued_at), 'PPP', { locale: dateLocale })}</span>
                               <span>{t.score}: {score}%</span>
                             </div>
@@ -573,10 +573,10 @@ export default function TrainingCertificates() {
                           <Badge className={getStatusColor(status)}>
                             {t[status]}
                           </Badge>
-                          <Badge className={getTypeColor(type)} variant="outline">
+                          <Badge className={`bg-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-100 text-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-800 border border-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'} rounded-md`}>
                             {t[type]}
                           </Badge>
-                          <Button size="sm" variant="outline" onClick={() => handleViewCertificate(certificate)}>
+                          <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleViewCertificate(certificate)}>
                             {t.viewCertificate}
                           </Button>
                         </div>
@@ -585,7 +585,7 @@ export default function TrainingCertificates() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">{t.noCertificates}</div>
+                <div className="text-center py-8 text-gray-700">{t.noCertificates}</div>
               )}
             </CardContent>
           </Card>
@@ -598,8 +598,8 @@ export default function TrainingCertificates() {
               <CardTitle>{t.downloadHistory}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Download className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <div className="text-center py-8 text-gray-700">
+                <Download className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                 <p>Download history will appear here</p>
               </div>
             </CardContent>
@@ -666,11 +666,11 @@ export default function TrainingCertificates() {
                   <Download className="w-4 h-4 mr-2" />
                   {t.downloadPDF}
                 </Button>
-                <Button variant="outline" onClick={() => window.print()}>
+                <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => window.print()}>
                   <Printer className="w-4 h-4 mr-2" />
                   {t.printCertificate}
                 </Button>
-                <Button variant="outline" onClick={() => copyCertificateLink(selectedCertificate)}>
+                <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => copyCertificateLink(selectedCertificate)}>
                   <ExternalLink className="w-4 h-4 mr-2" />
                   {t.copyLink}
                 </Button>

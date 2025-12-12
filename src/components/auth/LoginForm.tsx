@@ -3,9 +3,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTranslation } from 'react-i18next'
 
 export function LoginForm() {
+  const { t } = useTranslation('auth')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -21,61 +22,60 @@ export function LoginForm() {
       const { error } = await signIn(email, password)
 
       if (error) {
-        setError(error.message || 'Failed to sign in')
+        setError(error.message || t('errors.invalid_credentials'))
         setLoading(false)
       } else {
         // Sign in successful - loading state is managed by AuthContext
-        // Don't set loading to false here, let AuthContext handle it
-        // The app will navigate automatically when user is set
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError(t('errors.network_error'))
       setLoading(false)
     }
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Prime Hotels Intranet</CardTitle>
-        <CardDescription>Sign in to your account</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-          {error && (
-            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-              {error}
-            </div>
-          )}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="email">{t('email_label')}</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder={t('email_placeholder')}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={loading}
+          className="h-11"
+        />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">{t('password_label')}</Label>
+          <Button variant="link" className="p-0 h-auto font-normal text-xs" type="button">
+            {t('forgot_password')}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+        <Input
+          id="password"
+          type="password"
+          placeholder={t('password_placeholder')}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          disabled={loading}
+          className="h-11"
+        />
+      </div>
+      {error && (
+        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-destructive"></span>
+          {error}
+        </div>
+      )}
+      <Button type="submit" className="w-full h-11" disabled={loading}>
+        {loading ? t('logging_in') : t('sign_in_button')}
+      </Button>
+    </form>
   )
 }
 

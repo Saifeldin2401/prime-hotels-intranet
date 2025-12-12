@@ -5,6 +5,7 @@ import {
   Home,
   FileText,
   BookOpen,
+  CheckSquare,
   Menu
 } from 'lucide-react'
 
@@ -35,6 +36,12 @@ const mobileNavItems: MobileNavItem[] = [
     roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
   },
   {
+    title: 'Approvals',
+    href: '/approvals',
+    icon: CheckSquare,
+    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
+  },
+  {
     title: 'Menu',
     href: '#',
     icon: Menu,
@@ -43,15 +50,14 @@ const mobileNavItems: MobileNavItem[] = [
 ]
 
 interface MobileNavigationProps {
-  isOpen?: boolean
   onClose?: () => void
 }
 
-export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
+export function MobileNavigation({ onClose }: MobileNavigationProps) {
   const location = useLocation()
   const { primaryRole } = useAuth()
 
-  const filteredNavItems = mobileNavItems.filter(item => 
+  const filteredNavItems = mobileNavItems.filter(item =>
     !item.roles || item.roles.includes(primaryRole || 'staff')
   )
 
@@ -62,8 +68,8 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border md:hidden">
-      <div className="grid grid-cols-4 gap-1 p-2">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border md:hidden shadow-lg">
+      <div className="grid grid-cols-5 gap-1 p-2 pb-safe">
         {filteredNavItems.map((item) => {
           const Icon = item.icon
           const isItemActive = isActive(item.href)
@@ -74,12 +80,12 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
                 key={item.title}
                 onClick={onClose}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-all duration-200",
-                  "text-muted-foreground hover:text-accent-foreground hover:bg-accent/50"
+                  "flex flex-col items-center gap-1 py-2 px-1 rounded-md transition-colors duration-200",
+                  "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
               >
-                <Icon className="h-5 w-5" />
-                <span className="text-xs">{item.title}</span>
+                <Icon className="h-6 w-6" />
+                <span className="text-[10px] font-medium">{item.title}</span>
               </button>
             )
           }
@@ -89,14 +95,14 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-all duration-200",
-                isItemActive 
-                  ? "text-primary bg-primary/10" 
-                  : "text-muted-foreground hover:text-accent-foreground hover:bg-accent/50"
+                "flex flex-col items-center gap-1 py-2 px-1 rounded-md transition-colors duration-200",
+                isItemActive
+                  ? "text-primary font-semibold bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs">{item.title}</span>
+              <Icon className={cn("h-6 w-6", isItemActive && "fill-current")} />
+              <span className="text-[10px] font-medium">{item.title}</span>
             </Link>
           )
         })}

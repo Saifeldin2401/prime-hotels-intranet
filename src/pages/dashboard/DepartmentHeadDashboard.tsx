@@ -7,13 +7,19 @@ import { SocialFeed, type FeedItem } from '@/components/social/SocialFeed'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 
-interface DepartmentHeadDashboardProps {
-  user: User
-}
-
-export function DepartmentHeadDashboard({ user }: DepartmentHeadDashboardProps) {
+export function DepartmentHeadDashboard() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Mock user object for SocialFeed component
+  const mockUser: User = {
+    id: 'dh-1',
+    name: 'Department Head',
+    email: 'dh@primehotels.com',
+    role: 'department_head',
+    department: 'Front Desk',
+    permissions: []
+  }
   const [teamStats] = useState({
     totalStaff: 12,
     presentToday: 10,
@@ -117,7 +123,7 @@ export function DepartmentHeadDashboard({ user }: DepartmentHeadDashboardProps) 
   const handleComment = (itemId: string, content: string) => {
     const newComment = {
       id: Date.now().toString(),
-      author: user,
+      author: mockUser,
       content,
       timestamp: new Date(),
       reactions: {}
@@ -156,12 +162,9 @@ export function DepartmentHeadDashboard({ user }: DepartmentHeadDashboardProps) 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Department Dashboard</h1>
-          <p className="text-gray-600">{user.department} • {user.property}</p>
+          <p className="text-gray-600">Manage your team and department operations</p>
         </div>
         <div className="flex items-center space-x-4">
-          <Badge variant="outline" className="text-sm">
-            {user.role.replace('_', ' ').toUpperCase()}
-          </Badge>
           <Badge className="text-sm bg-green-100 text-green-800">
             {teamStats.totalStaff} Team Members
           </Badge>
@@ -224,7 +227,7 @@ export function DepartmentHeadDashboard({ user }: DepartmentHeadDashboardProps) 
 
         <TabsContent value="feed" className="space-y-6">
           <SocialFeed
-            user={user}
+            user={mockUser}
             feedItems={feedItems}
             onReact={handleReact}
             onComment={handleComment}
@@ -256,7 +259,7 @@ export function DepartmentHeadDashboard({ user }: DepartmentHeadDashboardProps) 
                     </div>
                   </div>
                   <Badge className={
-                    member.status === 'present' 
+                    member.status === 'present'
                       ? 'bg-green-100 text-green-800'
                       : 'bg-yellow-100 text-yellow-800'
                   }>
@@ -291,7 +294,7 @@ export function DepartmentHeadDashboard({ user }: DepartmentHeadDashboardProps) 
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge className={
-                      approval.priority === 'urgent' 
+                      approval.priority === 'urgent'
                         ? 'bg-red-100 text-red-800'
                         : 'bg-blue-100 text-blue-800'
                     }>
@@ -328,7 +331,7 @@ export function DepartmentHeadDashboard({ user }: DepartmentHeadDashboardProps) 
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge className={
-                      report.status === 'ready' 
+                      report.status === 'ready'
                         ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }>

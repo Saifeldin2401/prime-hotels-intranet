@@ -1,98 +1,167 @@
 {
-  "sop": {
-    "title": "الإجراءات التشغيلية القياسية",
-    "dashboard": {
-      "title": "لوحة تحكم الإجراءات",
-      "recent_documents": "المستندات الحديثة",
-      "pending_approvals": "في انتظار الموافقة",
-      "expiring_soon": "تنتهي قريباً",
-      "create_new": "إنشاء إجراء جديد"
+  "title": "إجراءات التشغيل القياسية",
+  "dashboard": {
+    "title": "لوحة قياس الإجراءات",
+    "recent_documents": "أحدث المستندات",
+    "pending_approvals": "في انتظار الموافقة",
+    "expiring_soon": "تنتهي صلاحيتها قريباً",
+    "create_new": "إنشاء إجراء جديد"
+  },
+  "status": {
+    "draft": "مسودة",
+    "under_review": "قيد المراجعة",
+    "approved": "معتمد",
+    "obsolete": "ملغى"
+  },
+  "actions": {
+    "create": "إنشاء إجراء",
+    "edit": "تعديل الإجراء",
+    "view": "عرض الإجراء",
+    "delete": "حذف الإجراء",
+    "submit_for_approval": "إرسال للموافقة",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "request_changes": "طلب تعديلات",
+    "download": "تحميل",
+    "print": "طباعة",
+    "export": "تصدير"
+  },
+  "form": {
+    "title": "العنوان",
+    "title_ar": "العنوان (بالعربية)",
+    "code": "رمز الإجراء",
+    "category": "الفئة",
+    "department": "القسم",
+    "version": "الإصدار",
+    "effective_date": "تاريخ التفعيل",
+    "review_date": "تاريخ المراجعة",
+    "description": "الوصف",
+    "description_ar": "الوصف (بالعربية)",
+    "keywords": "الكلمات المفتاحية",
+    "attachments": "المرفقات",
+    "drag_drop": "اسحب وأفلت الملفات هنا، أو انقر للاختيار",
+    "select_files": "اختيار ملفات"
+  },
+  "editor": {
+    "bold": "عريض",
+    "italic": "مائل",
+    "underline": "تسطير",
+    "strike": "شطب",
+    "heading": "عنوان",
+    "paragraph": "فقرة",
+    "bullet_list": "قائمة نقطية",
+    "ordered_list": "قائمة مرقمة",
+    "code_block": "كتلة كود",
+    "blockquote": "اقتباس",
+    "horizontal_rule": "خط أفقي",
+    "undo": "تراجع",
+    "redo": "إعادة",
+    "insert_image": "إدراج صورة",
+    "insert_table": "إدراج جدول",
+    "add_row": "إضافة صف",
+    "add_column": "إضافة عمود",
+    "delete_row": "حذف صف",
+    "delete_column": "حذف عمود",
+    "delete_table": "حذف جدول",
+    "text_color": "لون النص",
+    "background_color": "لون الخلفية",
+    "align_left": "محاذاة لليسار",
+    "align_center": "توسط",
+    "align_right": "محاذاة لليمين",
+    "align_justify": "ضبط"
+  },
+  "workflow": {
+    "approvers": "الموافقون",
+    "approval_status": "حالة الموافقة",
+    "approval_history": "سجل الموافقات",
+    "add_approver": "إضافة موافق",
+    "no_approvers": "لم يتم تعيين موافقين",
+    "approval_required": "الموافقة مطلوبة"
+  },
+  "notifications": {
+    "saved": "تم حفظ الإجراء بنجاح",
+    "submitted": "تم إرسال الإجراء للموافقة",
+    "approved": "تم اعتماد الإجراء بنجاح",
+    "rejected": "تم رفض الإجراء",
+    "changes_requested": "تم طلب تعديلات",
+    "error": "حدث خطأ أثناء معالجة طلبك"
+  },
+  "validation": {
+    "title_required": "العنوان مطلوب",
+    "title_ar_required": "العنوان بالعربية مطلوب",
+    "category_required": "الفئة مطلوبة",
+    "department_required": "القسم مطلوب",
+    "content_required": "المحتوى مطلوب"
+  },
+  "library": {
+    "title": "نظام إدارة الإجراءات",
+    "subtitle": "إدارة شاملة لإجراءات التشغيل القياسية مع ميزات متقدمة",
+    "import": "استيراد",
+    "export": "تصدير",
+    "create_advanced": "إنشاء إجراء متقدم",
+    "tabs": {
+      "dashboard": "لوحة المعلومات",
+      "documents": "المستندات",
+      "editor": "المحرر",
+      "analytics": "التحليلات"
     },
-    "status": {
-      "draft": "مسودة",
-      "under_review": "قيد المراجعة",
-      "approved": "معتمد",
-      "obsolete": "قديم"
+    "editor_card": {
+      "title": "محرر الإجراءات",
+      "subtitle": "محرر متقدم للإجراءات",
+      "description": "إنشاء وتعديل مستندات الإجراءات مع تحرير نص غني، والتحكم في الإصدارات، وسير عمل الموافقات.",
+      "create_button": "إنشاء إجراء جديد"
+    }
+  },
+  "analytics": {
+    "title": "لوحة تحليلات الإجراءات",
+    "subtitle": "نظرة شاملة على إجراءات التشغيل القياسية",
+    "key_metrics": {
+      "total_documents": "إجمالي المستندات",
+      "compliance_rate": "معدل الامتثال",
+      "avg_review_time": "متوسط وقت المراجعة",
+      "overdue_reviews": "مراجعات متأخرة",
+      "active": "نشط",
+      "across_depts": "عبر جميع الأقسام",
+      "from_submission": "من التقديم إلى الاعتماد",
+      "immediate_attention": "تتطلب اهتماماً فورياً"
     },
-    "actions": {
-      "create": "إنشاء إجراء",
-      "edit": "تعديل الإجراء",
-      "view": "عرض الإجراء",
-      "delete": "حذف الإجراء",
-      "submit_for_approval": "إرسال للموافقة",
-      "approve": "موافقة",
-      "reject": "رفض",
-      "request_changes": "طلب تعديلات",
-      "download": "تحميل",
-      "print": "طباعة",
-      "export": "تصدير"
+    "tabs": {
+      "overview": "نظرة عامة",
+      "trends": "الاتجاهات",
+      "compliance": "الامتثال",
+      "activity": "النشاط"
     },
-    "form": {
-      "title": "العنوان",
-      "title_ar": "العنوان (إنجليزي)",
-      "code": "كود الإجراء",
-      "category": "الفئة",
-      "department": "القسم",
-      "version": "الإصدار",
-      "effective_date": "تاريخ النفاذ",
-      "review_date": "تاريخ المراجعة",
-      "description": "الوصف",
-      "description_ar": "الوصف (إنجليزي)",
-      "keywords": "الكلمات المفتاحية",
-      "attachments": "المرفقات",
-      "drag_drop": "اسحب وأفلت الملفات هنا، أو انقر لاختيار الملفات",
-      "select_files": "اختر الملفات"
+    "cards": {
+      "dept_performance": "أداء الأقسام",
+      "doc_categories": "فئات المستندات",
+      "monthly_trends": "الاتجاهات الشهرية",
+      "upcoming_reviews": "المراجعات القادمة",
+      "compliance_issues": "قضايا الامتثال",
+      "recent_activity": "النشاط الأخير"
     },
-    "editor": {
-      "bold": "عريض",
-      "italic": "مائل",
-      "underline": "تحته خط",
-      "strike": "يتوسطه خط",
-      "heading": "عنوان",
-      "paragraph": "فقرة",
-      "bullet_list": "قائمة نقطية",
-      "ordered_list": "قائمة مرقمة",
-      "code_block": "كود برمجي",
-      "blockquote": "اقتباس",
-      "horizontal_rule": "خط أفقي",
-      "undo": "تراجع",
-      "redo": "إعادة",
-      "insert_image": "إدراج صورة",
-      "insert_table": "إدراج جدول",
-      "add_row": "إضافة صف",
-      "add_column": "إضافة عمود",
-      "delete_row": "حذف صف",
-      "delete_column": "حذف عمود",
-      "delete_table": "حذف الجدول",
-      "text_color": "لون النص",
-      "background_color": "لون الخلفية",
-      "align_left": "محاذاة لليسار",
-      "align_center": "توسيط",
-      "align_right": "محاذاة لليمين",
-      "align_justify": "ضبط"
+    "labels": {
+      "compliant": "ممتثل",
+      "overdue": "متأخر",
+      "created": "تم الإنشاء",
+      "reviewed": "تمت المراجعة",
+      "approved": "تم الاعتماد"
     },
-    "workflow": {
-      "approvers": "المعتمدون",
-      "approval_status": "حالة الموافقة",
-      "approval_history": "سجل الموافقات",
-      "add_approver": "إضافة معتمد",
-      "no_approvers": "لا يوجد معتمدون",
-      "approval_required": "مطلوب موافقة"
+    "periods": {
+      "7days": "آخر 7 أيام",
+      "30days": "آخر 30 يوم",
+      "90days": "آخر 90 يوم",
+      "1year": "العام الماضي",
+      "all": "كل الوقت"
     },
-    "notifications": {
-      "saved": "تم حفظ الإجراء بنجاح",
-      "submitted": "تم إرسال الإجراء للموافقة",
-      "approved": "تم اعتماد الإجراء بنجاح",
-      "rejected": "تم رفض الإجراء",
-      "changes_requested": "تم طلب تعديلات",
-      "error": "حدث خطأ أثناء معالجة طلبك"
+    "charts": {
+      "operations": "العمليات",
+      "safety": "السلامة",
+      "service": "الخدمة"
     },
-    "validation": {
-      "title_required": "مطلوب إدخال العنوان",
-      "title_ar_required": "مطلوب إدخال العنوان باللغة الإنجليزية",
-      "category_required": "مطلوب اختيار الفئة",
-      "department_required": "مطلوب اختيار القسم",
-      "content_required": "محتوى الإجراء مطلوب"
+    "empty": {
+      "upcoming_reviews": "لا توجد مراجعات قادمة",
+      "compliance_issues": "لم يتم اكتشاف قضايا امتثال حرجة",
+      "recent_activity": "لا يوجد نشاط حديث"
     }
   }
 }

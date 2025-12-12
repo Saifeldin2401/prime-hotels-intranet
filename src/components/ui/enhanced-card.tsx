@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-interface EnhancedCardProps {
+interface EnhancedCardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
   className?: string
-  variant?: 'default' | 'glass' | 'gold' | 'elevated'
+  variant?: 'default' | 'glass' | 'gold' | 'navy' | 'elevated'
   padding?: 'none' | 'sm' | 'md' | 'lg'
   hover?: boolean
   clickable?: boolean
@@ -18,27 +18,29 @@ export function EnhancedCard({
   padding = 'md',
   hover = true,
   clickable = false,
-  onClick
+  onClick,
+  ...props
 }: EnhancedCardProps) {
   const baseClasses = 'rounded-xl transition-all duration-200'
-  
+
   const variantClasses = {
     default: 'bg-card border border-border shadow-md',
-    glass: 'bg-white/80 backdrop-blur-sm border border-white/20 shadow-hotel',
-    gold: 'bg-gradient-to-br from-hotel-gold/10 to-hotel-gold/5 border border-hotel-gold/20 shadow-hotel',
+    glass: 'bg-card border border-border shadow-md', // Deprecated glass look, mapped to default
+    gold: 'bg-[#FDF8F0] border border-[#E5D5BC] shadow-sm', // Solid Cream
+    navy: 'bg-hotel-navy text-white border border-hotel-navy-light shadow-lg',
     elevated: 'bg-card border border-border shadow-lg'
   }
-  
+
   const paddingClasses = {
     none: '',
     sm: 'p-4',
     md: 'p-6',
     lg: 'p-8'
   }
-  
+
   const hoverClasses = hover ? 'hover:shadow-lg hover:-translate-y-1' : ''
   const clickableClasses = clickable ? 'cursor-pointer active:scale-95' : ''
-  
+
   return (
     <div
       className={cn(
@@ -50,6 +52,7 @@ export function EnhancedCard({
         className
       )}
       onClick={clickable ? onClick : undefined}
+      {...props}
     >
       {children}
     </div>

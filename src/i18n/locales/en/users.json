@@ -1,0 +1,17 @@
+{
+    "title": "User Management",
+    "description": "Manage users, roles, and permissions",
+    "add_user": "Add User",
+    "directory": "User Directory",
+    "search_placeholder": "Search users...",
+    "loading": "Loading users...",
+    "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+    },
+    "empty": {
+        "title": "No users found",
+        "description": "Get started by adding your first user to the system.",
+        "no_results": "No users match your search criteria. Try adjusting your search."
+    }
+}

@@ -12,18 +12,20 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pin } from 'lucide-react'
 import type { Announcement } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
 type PriorityValue = Announcement['priority']
-
-const priorityOptions: { value: PriorityValue; label: string }[] = [
-  { value: 'normal', label: 'Normal' },
-  { value: 'important', label: 'Important' },
-  { value: 'critical', label: 'Critical' },
-]
 
 export default function AnnouncementFeed() {
   const { profile, primaryRole } = useAuth()
   const queryClient = useQueryClient()
+  const { t } = useTranslation('announcements')
+
+  const priorityOptions: { value: PriorityValue; label: string }[] = [
+    { value: 'normal', label: t('priority.normal') },
+    { value: 'important', label: t('priority.important') },
+    { value: 'critical', label: t('priority.critical') },
+  ]
 
   const { data: announcements, isLoading } = useQuery({
     queryKey: ['announcements'],
@@ -153,13 +155,13 @@ export default function AnnouncementFeed() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Announcements"
-        description="Stay updated with latest news and updates"
+        title={t('title')}
+        description={t('description')}
         actions={
           isAdmin && (
             <Button onClick={startCreate}>
               <Plus className="w-4 h-4 mr-2" />
-              Create Announcement
+              {t('create')}
             </Button>
           )
         }
@@ -169,12 +171,12 @@ export default function AnnouncementFeed() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Announcements</CardTitle>
+              <CardTitle>{t('title')}</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Loading announcements...
+                <div className="text-center py-8 text-gray-600">
+                  {t('loading')}
                 </div>
               ) : announcements && announcements.length > 0 ? (
                 <div className="space-y-4">
@@ -188,7 +190,7 @@ export default function AnnouncementFeed() {
                     return (
                       <div
                         key={announcement.id}
-                        className={`p-4 border rounded-lg hover:bg-accent/50 ${priorityColor}`}
+                        className={`p-4 border rounded-lg hover:bg-accent ${priorityColor}`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -197,27 +199,27 @@ export default function AnnouncementFeed() {
                           </div>
                           <PriorityBadge priority={announcement.priority} />
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">{announcement.content}</p>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <p className="text-sm text-gray-600 mb-2">{announcement.content}</p>
+                        <div className="flex items-center justify-between text-xs text-gray-600">
                           <span>{new Date(announcement.created_at).toLocaleString()}</span>
                           <div className="flex items-center gap-2">
                             {!isRead && (
                               <Button
                                 size="sm"
-                                variant="outline"
+                                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                                 onClick={() => handleMarkAsRead(announcement.id)}
                                 disabled={markAsReadMutation.isPending}
                               >
-                                Mark as read
+                                {t('actions.markRead')}
                               </Button>
                             )}
                             {isAdmin && (
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                                 onClick={() => startEdit(announcement)}
                               >
-                                Edit
+                                {t('actions.edit')}
                               </Button>
                             )}
                           </div>
@@ -227,114 +229,114 @@ export default function AnnouncementFeed() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No announcements yet.
+                <div className="text-center py-8 text-gray-600">
+                  {t('noAnnouncements')}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
-
-        {isAdmin && (
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>{editingAnnouncement ? 'Edit Announcement' : 'Create Announcement'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="content">Content</Label>
-                    <Textarea
-                      id="content"
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      rows={4}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Priority</Label>
-                    <Select value={priority} onValueChange={(v: PriorityValue) => setPriority(v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {priorityOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="pinned"
-                      checked={pinned}
-                      onChange={(e) => setPinned(e.target.checked)}
-                    />
-                    <Label htmlFor="pinned">Pinned</Label>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="scheduledAt">Schedule (optional)</Label>
-                    <Input
-                      id="scheduledAt"
-                      type="datetime-local"
-                      value={scheduledAt}
-                      onChange={(e) => setScheduledAt(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="expiresAt">Expires (optional)</Label>
-                    <Input
-                      id="expiresAt"
-                      type="datetime-local"
-                      value={expiresAt}
-                      onChange={(e) => setExpiresAt(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    {editingAnnouncement && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={resetForm}
-                        disabled={upsertMutation.isPending}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                    <Button type="submit" disabled={upsertMutation.isPending}>
-                      {upsertMutation.isPending
-                        ? 'Saving...'
-                        : editingAnnouncement
-                        ? 'Update Announcement'
-                        : 'Create Announcement'}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
+
+      {isAdmin && (
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>{editingAnnouncement ? t('edit') : t('create')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <Label htmlFor="title">{t('form.title')}</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="content">{t('form.content')}</Label>
+                  <Textarea
+                    id="content"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    rows={4}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('form.priority')}</Label>
+                  <Select value={priority} onValueChange={(v: PriorityValue) => setPriority(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {priorityOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="pinned"
+                    checked={pinned}
+                    onChange={(e) => setPinned(e.target.checked)}
+                  />
+                  <Label htmlFor="pinned">{t('form.pinned')}</Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="scheduledAt">{t('form.schedule')}</Label>
+                  <Input
+                    id="scheduledAt"
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expiresAt">{t('form.expires')}</Label>
+                  <Input
+                    id="expiresAt"
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  {editingAnnouncement && (
+                    <Button
+                      type="button"
+                      className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                      onClick={resetForm}
+                      disabled={upsertMutation.isPending}
+                    >
+                      {t('form.cancel')}
+                    </Button>
+                  )}
+                  <Button type="submit" disabled={upsertMutation.isPending}>
+                    {upsertMutation.isPending
+                      ? t('form.saving')
+                      : editingAnnouncement
+                        ? t('update')
+                        : t('create')}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

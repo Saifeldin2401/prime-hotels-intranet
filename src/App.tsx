@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from '@/components/ui/toaster'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { PropertyProvider } from '@/contexts/PropertyContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -10,7 +12,9 @@ import Login from '@/pages/Login'
 import Unauthorized from '@/pages/Unauthorized'
 import { StaffDashboard } from '@/pages/dashboard/StaffDashboard'
 import UserManagement from '@/pages/admin/UserManagement'
+import PropertyManagement from '@/pages/admin/PropertyManagement'
 import DocumentLibrary from '@/pages/documents/DocumentLibrary'
+import DocumentDetail from '@/pages/documents/DocumentDetail'
 import TrainingModules from '@/pages/training/TrainingModules'
 import MyTraining from '@/pages/training/MyTraining'
 import TrainingDashboard from '@/pages/training/TrainingDashboard'
@@ -20,11 +24,35 @@ import TrainingCertificates from '@/pages/training/TrainingCertificates'
 import TrainingPaths from '@/pages/training/TrainingPaths'
 import AnnouncementFeed from '@/pages/announcements/AnnouncementFeed'
 import SOPLibrary from '@/pages/sop/SOPLibrary'
+import SubmitTicket from '@/pages/maintenance/SubmitTicket'
 import MaintenanceDashboard from '@/pages/maintenance/MaintenanceDashboard'
+import MaintenanceTicketDetail from '@/pages/maintenance/MaintenanceTicketDetail'
+import ReportsDashboard from '@/pages/reports/ReportsDashboard'
 import EmployeeReferrals from '@/pages/hr/EmployeeReferrals'
+import MyLeaveRequests from '@/pages/hr/MyLeaveRequests'
 import AuditLogs from '@/pages/admin/AuditLogs'
 import EscalationRules from '@/pages/admin/EscalationRules'
+import { PIIAuditViewer } from '@/pages/admin/PIIIAuditViewer'
 import AnalyticsDashboard from '@/pages/dashboard/AnalyticsDashboard'
+import MyApprovals from '@/pages/approvals/MyApprovals'
+import TasksDashboard from '@/pages/tasks/TasksDashboard'
+import TaskDetail from '@/pages/tasks/TaskDetail'
+import MessagingDashboard from '@/pages/messaging/MessagingDashboard'
+import MessageDetail from '@/pages/messaging/MessageDetail'
+import MyProfile from '@/pages/profile/MyProfile'
+import Settings from '@/pages/settings/Settings'
+import ApprovalsDashboard from '@/pages/approvals/ApprovalsDashboard'
+import EmployeeDirectory from '@/pages/directory/EmployeeDirectory'
+import GlobalSearch from '@/pages/search/GlobalSearch'
+import JobPostings from '@/pages/jobs/JobPostings'
+import JobPostingDetail from '@/pages/jobs/JobPostingDetail'
+import CreateJobPosting from '@/pages/jobs/CreateJobPosting'
+import EditJobPosting from '@/pages/jobs/EditJobPosting'
+import PromotionWorkflow from '@/pages/hr/PromotionWorkflow'
+import TransferWorkflow from '@/pages/hr/TransferWorkflow'
+import PromotionTransferHistory from '@/pages/hr/PromotionTransferHistory'
+import SOPQuizBuilder from '@/pages/sop/SOPQuizBuilder'
+import SOPQuizTaker from '@/pages/sop/SOPQuizTaker'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,25 +77,6 @@ function AppRoutes() {
     )
   }
 
-  // Convert auth user to our User type for StaffDashboard
-  const staffUser = user ? {
-    id: user.id,
-    name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-    email: user.email || '',
-    role: 'staff' as const,
-    department: 'Front Desk',
-    property: 'Riyadh Downtown',
-    permissions: []
-  } : {
-    id: 'unknown',
-    name: 'Unknown User',
-    email: 'unknown@example.com',
-    role: 'staff' as const,
-    department: 'Front Desk',
-    property: 'Riyadh Downtown',
-    permissions: []
-  }
-
   return (
     <Routes>
       <Route
@@ -86,11 +95,71 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MyProfile />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Settings />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/approvals"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ApprovalsDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/directory"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <EmployeeDirectory />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <GlobalSearch />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
             <AppLayout>
-              <StaffDashboard user={staffUser} />
+              <StaffDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff-dashboard"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <StaffDashboard />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -101,6 +170,16 @@ function AppRoutes() {
           <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
             <AppLayout>
               <UserManagement />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/properties"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin']}>
+            <AppLayout>
+              <PropertyManagement />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -126,11 +205,41 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/pii-audit"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
+            <AppLayout>
+              <PIIAuditViewer />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/documents"
         element={
           <ProtectedRoute>
             <AppLayout>
               <DocumentLibrary />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documents/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <DocumentDetail />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/approvals"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+            <AppLayout>
+              <MyApprovals />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -238,9 +347,29 @@ function AppRoutes() {
       <Route
         path="/maintenance"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
             <AppLayout>
               <MaintenanceDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/maintenance/submit"
+        element={
+          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+            <AppLayout>
+              <SubmitTicket />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/maintenance/tickets/:id"
+        element={
+          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+            <AppLayout>
+              <MaintenanceTicketDetail />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -256,6 +385,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/hr/leave"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MyLeaveRequests />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/hr/referrals"
         element={
           <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
@@ -266,27 +405,131 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/tasks"
+        path="/hr/promotions/new"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
             <AppLayout>
-              <div className="p-6">
-                <h1 className="text-2xl font-bold">Tasks & Checklists</h1>
-                <p className="text-gray-600">Task management system coming soon...</p>
-              </div>
+              <PromotionWorkflow />
             </AppLayout>
           </ProtectedRoute>
         }
       />
       <Route
-        path="/messages"
+        path="/hr/transfers/new"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
+            <AppLayout>
+              <TransferWorkflow />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/promotions/history"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+            <AppLayout>
+              <PromotionTransferHistory />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/transfers/history"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+            <AppLayout>
+              <PromotionTransferHistory />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tasks"
         element={
           <ProtectedRoute>
             <AppLayout>
-              <div className="p-6">
-                <h1 className="text-2xl font-bold">Messages</h1>
-                <p className="text-gray-600">Internal messaging system coming soon...</p>
-              </div>
+              <TasksDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tasks/:taskId"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TaskDetail />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/messaging"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MessagingDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <ReportsDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/messaging/:messageId"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MessageDetail />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jobs"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <JobPostings />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jobs/new"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']}>
+            <AppLayout>
+              <CreateJobPosting />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jobs/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <JobPostingDetail />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jobs/:id/edit"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']}>
+            <AppLayout>
+              <EditJobPosting />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -303,11 +546,14 @@ function App() {
         <ThemeProvider>
           <BrowserRouter>
             <AuthProvider>
-              <AppRoutes />
+              <PropertyProvider>
+                <AppRoutes />
+              </PropertyProvider>
             </AuthProvider>
           </BrowserRouter>
           <ReactQueryDevtools initialIsOpen={false} />
         </ThemeProvider>
+        <Toaster />
       </QueryClientProvider>
     </ErrorBoundary>
   )

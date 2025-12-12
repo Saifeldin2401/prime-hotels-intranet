@@ -12,16 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Users, 
-  Shield, 
-  Edit, 
+import {
+  Users,
+  Shield,
+  Edit,
   Search,
   Lock,
   CheckCircle
 } from 'lucide-react'
 import type { AppRole } from '@/lib/constants'
 import type { Permission } from '@/hooks/usePermissions'
+import { useTranslation } from 'react-i18next'
 
 const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
   regional_admin: [
@@ -64,57 +65,17 @@ const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
 }
 
 export default function RoleManagement() {
-  const { properties, departments } = useAuth()
   const { hasPermission } = usePermissions()
-  const [lang, setLang] = useState<'en' | 'ar'>('en')
-  const isRTL = lang === 'ar'
-
-  const t = {
-    en: {
-      roleManagement: 'Role Management',
-      userRoles: 'User Roles',
-      permissions: 'Permissions',
-      assignRole: 'Assign Role',
-      editRole: 'Edit Role',
-      removeRole: 'Remove Role',
-      search: 'Search',
-      user: 'User',
-      currentRole: 'Current Role',
-      properties: 'Properties',
-      departments: 'Departments',
-      permissionsByRole: 'Permissions by Role',
-      role: 'Role',
-      hasAccess: 'Has Access',
-      noAccess: 'No Access',
-      save: 'Save',
-      cancel: 'Cancel'
-    },
-    ar: {
-      roleManagement: 'إدارة الأدوار',
-      userRoles: 'أدوار المستخدمين',
-      permissions: 'الصلاحيات',
-      assignRole: 'تعيين دور',
-      editRole: 'تعديل دور',
-      removeRole: 'إزالة دور',
-      search: 'بحث',
-      user: 'المستخدم',
-      currentRole: 'الدور الحالي',
-      properties: 'الممتلكات',
-      departments: 'الأقسام',
-      permissionsByRole: 'الصلاحيات حسب الدور',
-      role: 'الدور',
-      hasAccess: 'لديه وصول',
-      noAccess: 'لا يوجد وصول',
-      save: 'حفظ',
-      cancel: 'إلغاء'
-    }
-  }[lang]
+  const { t, i18n } = useTranslation('admin')
+  const isRTL = i18n.dir() === 'rtl'
 
   // State
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState<AppRole>('staff')
+
+  const queryClient = useQueryClient()
 
   // Queries
   const { data: users = [] } = useQuery({
@@ -133,7 +94,8 @@ export default function RoleManagement() {
 
       if (error) throw error
       return data
-    }
+    },
+    enabled: hasPermission('users.view')
   })
 
   // Mutations
@@ -150,22 +112,6 @@ export default function RoleManagement() {
       queryClient.invalidateQueries({ queryKey: ['users'] })
     }
   })
-
-  const removeRoleMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
-    }
-  })
-
-  const queryClient = useQueryClient()
 
   const handleAssignRole = () => {
     if (selectedUser && selectedRole) {
@@ -190,35 +136,24 @@ export default function RoleManagement() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-          <p className="text-muted-foreground">You don't have permission to access role management.</p>
+          <h2 className="text-xl font-semibold mb-2">{t('roles.access_denied')}</h2>
+          <p className="text-muted-foreground">{t('roles.access_denied_desc')}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+    <div className="space-y-6">
       <PageHeader
-        title={t.roleManagement}
-        description={isRTL ? 'إدارة أدوار المستخدمين والصلاحيات' : 'Manage user roles and permissions'}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
-            >
-              {lang === 'en' ? 'العربية' : 'English'}
-            </Button>
-          </div>
-        }
+        title={t('roles.title')}
+        description={t('roles.description')}
       />
 
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="users">{t.userRoles}</TabsTrigger>
-          <TabsTrigger value="permissions">{t.permissions}</TabsTrigger>
+          <TabsTrigger value="users">{t('roles.user_roles')}</TabsTrigger>
+          <TabsTrigger value="permissions">{t('roles.permissions')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -227,16 +162,16 @@ export default function RoleManagement() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5" />
-                  {t.userRoles}
+                  {t('roles.user_roles')}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <div className="relative">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                     <Input
-                      placeholder={t.search}
+                      placeholder={t('roles.search')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 w-64"
+                      className="pl-10 w-64 rtl:pl-3 rtl:pr-10"
                     />
                   </div>
                 </div>
@@ -287,7 +222,7 @@ export default function RoleManagement() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />
-                {t.permissionsByRole}
+                {t('roles.permissions_by_role')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -315,15 +250,15 @@ export default function RoleManagement() {
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t.assignRole}</DialogTitle>
+            <DialogTitle>{t('roles.assign_role')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>{t.user}</Label>
+              <Label>{t('roles.user')}</Label>
               <p className="text-sm font-medium">{selectedUser?.full_name || selectedUser?.email}</p>
             </div>
             <div>
-              <Label>{t.role}</Label>
+              <Label>{t('roles.role')}</Label>
               <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as AppRole)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -339,10 +274,10 @@ export default function RoleManagement() {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
-                {t.cancel}
+                {t('roles.cancel')}
               </Button>
               <Button onClick={handleAssignRole} disabled={assignRoleMutation.isPending}>
-                {t.save}
+                {t('roles.save')}
               </Button>
             </div>
           </div>

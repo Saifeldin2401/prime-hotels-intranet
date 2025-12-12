@@ -351,19 +351,19 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
                           change.type === 'removed' && 'text-red-600 line-through',
                           change.type === 'added' && 'text-muted-foreground'
                         )}>
-                          {change.line1 || ''}
+                          {change.line1 || '<empty>'}
                         </div>
                         <div className={cn(
-                          change.type === 'added' && 'text-green-600",
-                          change.type === 'removed' && 'text-muted-foreground'
+                          change.type === 'added' && 'text-green-600',
+                          change.type === 'removed' && 'text-gray-500'
                         )}>
-                          {change.line2 || ''}
+                          {change.line2 || '<empty>'}
                         </div>
                       </div>
                     </div>
                   ))}
-                </div>
-              </TabsContent>
+              </div>
+            </TabsContent>
 
               <TabsContent value="changes-only" className="space-y-0">
                 <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -375,13 +375,13 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
                         <div className="grid grid-cols-2 gap-4 text-sm font-mono p-2">
                           <div className={cn(
                             change.type === 'removed' && 'text-red-600 line-through',
-                            change.type === 'added' && 'text-muted-foreground'
+                            change.type === 'added' && 'text-gray-500'
                           )}>
                             {change.line1 || '<empty>'}
                           </div>
                           <div className={cn(
                             change.type === 'added' && 'text-green-600',
-                            change.type === 'removed' && 'text-muted-foreground'
+                            change.type === 'removed' && 'text-gray-500'
                           )}>
                             {change.line2 || '<empty>'}
                           </div>

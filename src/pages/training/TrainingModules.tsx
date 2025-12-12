@@ -11,16 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Users, 
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import {
+  Plus,
+  Search,
+  Edit,
+  Users,
   Clock,
   Settings,
   Eye
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+import { useTranslation } from 'react-i18next'
 
 // Type definitions
 type Language = 'en' | 'ar'
@@ -41,91 +44,10 @@ interface TrainingModule {
   updated_at?: string
 }
 
-// Translation labels (temporary mock)
-const labels = {
-  en: {
-    modules: 'Training Modules',
-    moduleDescription: 'Manage training modules and assignments',
-    createModule: 'Create Module',
-    editModule: 'Edit Module',
-    search: 'Search modules...',
-    status: 'Status',
-    category: 'Category',
-    duration: 'Duration',
-    difficulty: 'Difficulty',
-    title: 'Title',
-    description: 'Description',
-    cancel: 'Cancel',
-    create: 'Create',
-    update: 'Update',
-    assign: 'Assign',
-    assignModule: 'Assign Module',
-    assignTo: 'Assign to',
-    allUsers: 'All Users',
-    specificUsers: 'Specific Users',
-    departments: 'Departments',
-    properties: 'Properties',
-    deadline: 'Deadline',
-    allModules: 'All Modules',
-    published: 'Published',
-    draft: 'Draft',
-    archived: 'Archived',
-    allCategories: 'All Categories',
-    loading: 'Loading...',
-    noModulesFound: 'No modules found',
-    views: 'views',
-    enterTitle: 'Enter title',
-    enterDescription: 'Enter description',
-    enterCategory: 'Enter category',
-    beginner: 'Beginner',
-    intermediate: 'Intermediate',
-    advanced: 'Advanced'
-  },
-  ar: {
-    modules: 'وحدات التدريب',
-    moduleDescription: 'إدارة وحدات التدريب والتكليفات',
-    createModule: 'إنشاء وحدة',
-    editModule: 'تحرير وحدة',
-    search: 'البحث في الوحدات...',
-    status: 'الحالة',
-    category: 'الفئة',
-    duration: 'المدة',
-    difficulty: 'الصعوبة',
-    title: 'العنوان',
-    description: 'الوصف',
-    cancel: 'إلغاء',
-    create: 'إنشاء',
-    update: 'تحديث',
-    assign: 'تكليف',
-    assignModule: 'تكليف الوحدة',
-    assignTo: 'تكليف إلى',
-    allUsers: 'جميع المستخدمين',
-    specificUsers: 'مستخدمين محددين',
-    departments: 'الأقسام',
-    properties: 'الممتلكات',
-    deadline: 'الموعد النهائي',
-    allModules: 'جميع الوحدات',
-    published: 'منشور',
-    draft: 'مسودة',
-    archived: 'مؤرشف',
-    allCategories: 'جميع الفئات',
-    loading: 'جاري التحميل...',
-    noModulesFound: 'لم يتم العثور على وحدات',
-    views: 'مشاهدات',
-    enterTitle: 'أدخل العنوان',
-    enterDescription: 'أدخل الوصف',
-    enterCategory: 'أدخل الفئة',
-    beginner: 'مبتدئ',
-    intermediate: 'متوسط',
-    advanced: 'متقدم'
-  }
-}
-
 export default function TrainingModules() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
-  const [lang] = useState<Language>('en')
-  const t = labels[lang]
+  const { t } = useTranslation('training')
 
   // State management
   const [search, setSearch] = useState('')
@@ -136,6 +58,8 @@ export default function TrainingModules() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [editingModule, setEditingModule] = useState<TrainingModule | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [moduleToDelete, setModuleToDelete] = useState<TrainingModule | null>(null)
 
   // Form states
   const [title, setTitle] = useState('')
@@ -184,7 +108,7 @@ export default function TrainingModules() {
         .from('training_modules')
         .select('category')
         .not('category', 'is', null)
-      
+
       const uniqueCategories = [...new Set(data?.map(item => item.category) || [])]
       return uniqueCategories
     }
@@ -204,7 +128,7 @@ export default function TrainingModules() {
         }])
         .select()
         .single()
-      
+
       if (error) throw error
       return data
     },
@@ -227,7 +151,7 @@ export default function TrainingModules() {
         .eq('id', id)
         .select()
         .single()
-      
+
       if (error) throw error
       return data
     },
@@ -245,7 +169,7 @@ export default function TrainingModules() {
         .from('training_modules')
         .delete()
         .eq('id', id)
-      
+
       if (error) throw error
     },
     onSuccess: () => {
@@ -265,7 +189,7 @@ export default function TrainingModules() {
           deadline: deadline,
           status: 'assigned'
         }])
-      
+
       if (error) throw error
     },
     onSuccess: () => {
@@ -320,15 +244,21 @@ export default function TrainingModules() {
     setShowCreateDialog(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this training module?')) {
-      await deleteModuleMutation.mutateAsync(id)
+  const handleDelete = (module: TrainingModule) => {
+    setModuleToDelete(module)
+    setDeleteConfirmOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (moduleToDelete) {
+      await deleteModuleMutation.mutateAsync(moduleToDelete.id)
+      setModuleToDelete(null)
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     try {
       if (editingModule) {
         await updateModuleMutation.mutateAsync({
@@ -362,7 +292,7 @@ export default function TrainingModules() {
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!assigningModuleId) return
 
     try {
@@ -382,16 +312,16 @@ export default function TrainingModules() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <PageHeader 
-        title={t.modules}
-        description={t.moduleDescription}
+      <PageHeader
+        title={t('modules')}
+        description={t('moduleDescription')}
         actions={
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder={t.search}
+                placeholder={t('search')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10 w-64"
@@ -399,7 +329,7 @@ export default function TrainingModules() {
             </div>
             <Button onClick={handleCreate}>
               <Plus className="h-4 w-4 mr-2" />
-              {t.createModule}
+              {t('createModule')}
             </Button>
           </div>
         }
@@ -408,22 +338,22 @@ export default function TrainingModules() {
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-4">
         <Select value={statusFilter} onValueChange={(value: ModuleStatus | 'all') => setStatusFilter(value)}>
-          <SelectTrigger className="w-[150px] border-0 shadow-lg bg-card/80 backdrop-blur-sm">
-            <SelectValue placeholder={t.status} />
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder={t('status')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t.allModules}</SelectItem>
-            <SelectItem value="published">{t.published}</SelectItem>
-            <SelectItem value="draft">{t.draft}</SelectItem>
-            <SelectItem value="archived">{t.archived}</SelectItem>
+            <SelectItem value="all">{t('allModules')}</SelectItem>
+            <SelectItem value="published">{t('published')}</SelectItem>
+            <SelectItem value="draft">{t('draft')}</SelectItem>
+            <SelectItem value="archived">{t('archived')}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[150px] border-0 shadow-lg bg-card/80 backdrop-blur-sm">
-            <SelectValue placeholder={t.category} />
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder={t('category')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t.allCategories}</SelectItem>
+            <SelectItem value="all">{t('allCategories')}</SelectItem>
             {categories?.map(cat => (
               <SelectItem key={cat} value={cat}>{cat}</SelectItem>
             ))}
@@ -444,7 +374,7 @@ export default function TrainingModules() {
       {/* Modules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          <div className="col-span-full text-center py-8 text-muted-foreground">{t.loading}</div>
+          <div className="col-span-full text-center py-8 text-gray-700">{t('loading')}</div>
         ) : modules && modules.length > 0 ? (
           modules.map((module) => (
             <Card key={module.id} className="hover:shadow-lg transition-shadow">
@@ -452,51 +382,51 @@ export default function TrainingModules() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <CardTitle className="text-lg font-semibold line-clamp-2">{module.title}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-3">
                       {module.description}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Badge className={cn(getStatusColor(module.status))}>
+                    <Badge className={cn(getStatusColor(module.status || 'draft'))}>
                       {module.status}
                     </Badge>
-                    <Badge className={cn(getDifficultyColor(module.difficulty))}>
+                    <Badge className={cn(getDifficultyColor(module.difficulty || 'beginner'))}>
                       {module.difficulty}
                     </Badge>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      <span>{module.estimated_duration || ''} {t.duration}</span>
+                      <span>{module.estimated_duration || ''} {t('duration')}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Eye className="h-4 w-4" />
-                      <span>{module.view_count || 0} {t.views}</span>
+                      <span>{module.view_count || 0} {t('views')}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors"
                       size="sm"
                       onClick={() => handleEdit(module)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="outline"
+                      className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors"
                       size="sm"
                       onClick={() => handleAssign(module.id)}
                     >
                       <Users className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="destructive"
+                      className="bg-red-500 text-white hover:bg-red-600 rounded-md transition-colors"
                       size="sm"
-                      onClick={() => handleDelete(module.id)}
+                      onClick={() => handleDelete(module)}
                       disabled={deleteModuleMutation.isPending}
                     >
                       <Settings className="h-4 w-4" />
@@ -507,8 +437,8 @@ export default function TrainingModules() {
             </Card>
           ))
         ) : (
-          <div className="col-span-full text-center py-8 text-muted-foreground">
-            {t.noModulesFound}
+          <div className="col-span-full text-center py-8 text-gray-700">
+            {t('noModulesFound')}
           </div>
         )}
       </div>
@@ -518,35 +448,35 @@ export default function TrainingModules() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingModule ? t.editModule : t.createModule}
+              {editingModule ? t('editModule') : t('createModule')}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="title">{t.title}</Label>
+                <Label htmlFor="title">{t('title')}</Label>
                 <Input
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder={t.enterTitle}
+                  placeholder={t('enterTitle')}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">{t.description}</Label>
+                <Label htmlFor="description">{t('description')}</Label>
                 <Textarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t.enterDescription}
+                  placeholder={t('enterDescription')}
                   rows={3}
                 />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="estimatedDuration">{t.duration}</Label>
+                <Label htmlFor="estimatedDuration">{t('duration')}</Label>
                 <Input
                   id="estimatedDuration"
                   value={estimatedDuration}
@@ -556,55 +486,56 @@ export default function TrainingModules() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="difficulty">{t.difficulty}</Label>
+                <Label htmlFor="difficulty">{t('difficulty')}</Label>
                 <Select value={difficulty} onValueChange={(value: 'beginner' | 'intermediate' | 'advanced') => setDifficulty(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="beginner">{t.beginner}</SelectItem>
-                    <SelectItem value="intermediate">{t.intermediate}</SelectItem>
-                    <SelectItem value="advanced">{t.advanced}</SelectItem>
+                    <SelectItem value="beginner">{t('beginner')}</SelectItem>
+                    <SelectItem value="intermediate">{t('intermediate')}</SelectItem>
+                    <SelectItem value="advanced">{t('advanced')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="category">{t.category}</Label>
+                <Label htmlFor="category">{t('category')}</Label>
                 <Input
                   id="category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder={t.enterCategory}
+                  placeholder={t('enterCategory')}
                   required
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="status">{t.status}</Label>
+              <Label htmlFor="status">{t('status')}</Label>
               <Select value={status} onValueChange={(value: ModuleStatus) => setStatus(value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">{t.draft}</SelectItem>
-                  <SelectItem value="published">{t.published}</SelectItem>
-                  <SelectItem value="archived">{t.archived}</SelectItem>
+                  <SelectItem value="draft">{t('draft')}</SelectItem>
+                  <SelectItem value="published">{t('published')}</SelectItem>
+                  <SelectItem value="archived">{t('archived')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 type="button"
-                variant="outline"
+                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                 onClick={() => setShowCreateDialog(false)}
               >
-                {t.cancel}
+                {t('cancel')}
               </Button>
               <Button
                 type="submit"
+                className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors"
                 disabled={createModuleMutation.isPending || updateModuleMutation.isPending}
               >
-                {editingModule ? t.update : t.create}
+                {editingModule ? t('update') : t('create')}
               </Button>
             </div>
           </form>
@@ -615,50 +546,61 @@ export default function TrainingModules() {
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{t.assignModule}</DialogTitle>
+            <DialogTitle>{t('assignModule')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAssignSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>{t.assignTo}</Label>
+              <Label>{t('assignTo')}</Label>
               <Select value={assignTargetType} onValueChange={(value: 'all' | 'users' | 'departments' | 'properties') => setAssignTargetType(value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t.allUsers}</SelectItem>
-                  <SelectItem value="users">{t.specificUsers}</SelectItem>
-                  <SelectItem value="departments">{t.departments}</SelectItem>
-                  <SelectItem value="properties">{t.properties}</SelectItem>
+                  <SelectItem value="all">{t('allUsers')}</SelectItem>
+                  <SelectItem value="users">{t('specificUsers')}</SelectItem>
+                  <SelectItem value="departments">{t('departments')}</SelectItem>
+                  <SelectItem value="properties">{t('properties')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="deadline">{t.deadline}</Label>
+              <Label htmlFor="deadline">{t('deadline')}</Label>
               <Input
                 id="deadline"
                 type="datetime-local"
               />
             </div>
-            
+
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 type="button"
-                variant="outline"
+                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                 onClick={() => setShowAssignDialog(false)}
               >
-                {t.cancel}
+                {t('cancel')}
               </Button>
               <Button
                 type="submit"
+                className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors"
                 disabled={assignToAllMutation.isPending}
               >
-                {t.assign}
+                {t('assign')}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmation
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={confirmDelete}
+        itemName={moduleToDelete?.title || ''}
+        itemType="training module"
+        isLoading={deleteModuleMutation.isPending}
+      />
     </div>
   )
 }

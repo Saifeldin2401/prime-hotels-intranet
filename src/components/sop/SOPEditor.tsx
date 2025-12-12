@@ -1,22 +1,22 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
-import type { TFunction } from 'i18next';
+import { useState, useCallback, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
-import { EditorContent, useEditor, BubbleMenu } from '@tiptap/react';
+import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
-import Table from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableCell from '@tiptap/extension-table-cell';
-import TableHeader from '@tiptap/extension-table-header';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import { Color } from '@tiptap/extension-color';
-import TextStyle from '@tiptap/extension-text-style';
+import { TextStyle } from '@tiptap/extension-text-style';
 import Link from '@tiptap/extension-link';
-import { BubbleMenu as BubbleMenuComponent } from './BubbleMenu';
+import { BubbleMenuComponent } from './BubbleMenu';
 import { Toolbar } from './Toolbar';
-import { SOPService, SOPDocument } from '@/lib/api/sop';
+import { SOPService } from '@/lib/api/sop';
+import type { SOPDocument } from '@/lib/types/sop';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
-import { Icons } from '@/components/icons';
+import { Loader2, Save, Send, Upload, Eye, Settings, User, Users, ShieldCheck, ChevronRight, CheckCircle } from 'lucide-react';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -56,42 +56,11 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
   });
 
   // Fetch document if in edit mode
-  const { data: documentData, isLoading } = useQuery(
-    ['sop-document', documentId],
-    () => SOPService.getDocumentById(documentId!), 
-    {
-      enabled: !!documentId,
-      onSuccess: (data) => {
-        if (data.data) {
-          const doc = data.data;
-          setFormData({
-            title: doc.title,
-            title_ar: doc.title_ar || '',
-            description: doc.description || '',
-            description_ar: doc.description_ar || '',
-            department_id: doc.department_id,
-            category_id: doc.category_id || '',
-            subcategory_id: doc.subcategory_id || '',
-            is_template: doc.is_template || false,
-            template_id: doc.template_id || '',
-          });
-          
-          // Set editor content if available
-          if (doc.current_version?.content) {
-            editor?.commands.setContent(doc.current_version.content);
-          }
-        }
-      },
-      onError: (error) => {
-        console.error('Error fetching document:', error);
-        toast({
-          title: t('error'),
-          description: t('sop.editor.errorLoadingDocument'),
-          variant: 'destructive',
-        });
-      },
-    }
-  );
+  const { data: documentData, isLoading, error } = useQuery({
+    queryKey: ['sop-document', documentId],
+    queryFn: () => SOPService.getDocumentById(documentId!),
+    enabled: !!documentId,
+  });
 
   // Fetch departments and categories
   const { departments, categories, subcategories, isLoading: isLoadingDepartments } = useDepartments();
@@ -124,6 +93,39 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
     },
   });
 
+  useEffect(() => {
+    if (documentData?.data) {
+      const doc = documentData.data;
+      setFormData({
+        title: doc.title,
+        title_ar: doc.title_ar || '',
+        description: doc.description || '',
+        description_ar: doc.description_ar || '',
+        department_id: doc.department_id,
+        category_id: doc.category_id || '',
+        subcategory_id: doc.subcategory_id || '',
+        is_template: doc.is_template || false,
+        template_id: doc.template_id || '',
+      });
+
+      // Set editor content if available
+      if (doc.current_version?.content && editor) {
+        editor.commands.setContent(doc.current_version.content);
+      }
+    }
+  }, [documentData, editor]);
+
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching document:', error);
+      toast({
+        title: t('error'),
+        description: t('sop.editor.errorLoadingDocument'),
+        variant: 'destructive',
+      });
+    }
+  }, [error, t, toast]);
+
   // Handle file uploads
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (!editor) return;
@@ -137,10 +139,10 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
         // In a real app, upload the file to your storage service
         // const filePath = await uploadFile(file);
         // const url = getFileUrl(filePath);
-        
+
         // For now, create a local URL for the image
         const url = URL.createObjectURL(file);
-        
+
         // Add image to the editor
         editor.chain().focus().setImage({ src: url }).run();
       } catch (error) {
@@ -197,7 +199,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
     if (!editor) return;
 
     setIsSaving(true);
-    
+
     try {
       const content = editor.getJSON();
       const documentData = {
@@ -210,23 +212,23 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
       let result;
       if (documentId) {
         // Update existing document
-        result = await SOPService.updateDocument(documentId, documentData);
+        result = await SOPService.updateDocument(documentId, { ...documentData, id: documentId } as any);
       } else {
         // Create new document
-        result = await SOPService.createDocument(documentData);
+        result = await SOPService.createDocument(documentData as any);
       }
 
       if (result.data) {
         toast({
           title: t('success'),
-          description: status === 'publish' 
-            ? t('sop.editor.documentSubmittedForReview') 
+          description: status === 'publish'
+            ? t('sop.editor.documentSubmittedForReview')
             : t('sop.editor.draftSaved'),
         });
-        
+
         // Invalidate queries to refresh the list
-        await queryClient.invalidateQueries(['sop-documents']);
-        
+        await queryClient.invalidateQueries({ queryKey: ['sop-documents'] });
+
         // Call onSave callback if provided
         if (onSave) {
           onSave(result.data);
@@ -274,7 +276,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
   if (isLoading || isLoadingDepartments) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Icons.spinner className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -282,7 +284,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
   return (
     <div className="space-y-6" {...getRootProps()}>
       <input {...getInputProps()} />
-      
+
       {/* Document Header */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -295,33 +297,33 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleCancel}
               disabled={isSaving}
             >
               {t('cancel')}
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleSaveDraft}
               disabled={isSaving}
             >
               {isSaving ? (
-                <Icons.spinner className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Icons.save className="h-4 w-4 mr-2" />
+                <Save className="h-4 w-4 mr-2" />
               )}
               {t('saveDraft')}
             </Button>
-            <Button 
+            <Button
               onClick={handleSubmit}
               disabled={isSaving || readOnly}
             >
               {isSaving ? (
-                <Icons.spinner className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Icons.send className="h-4 w-4 mr-2" />
+                <Send className="h-4 w-4 mr-2" />
               )}
               {t('submitForApproval')}
             </Button>
@@ -333,33 +335,30 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
           <nav className="-mb-px flex space-x-8">
             <button
               type="button"
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'content'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'content'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
+                }`}
               onClick={() => setActiveTab('content')}
             >
               {t('sop.editor.content')}
             </button>
             <button
               type="button"
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'details'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'details'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
+                }`}
               onClick={() => setActiveTab('details')}
             >
               {t('sop.editor.details')}
             </button>
             <button
               type="button"
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'settings'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'settings'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
+                }`}
               onClick={() => setActiveTab('settings')}
             >
               {t('sop.editor.settings')}
@@ -376,17 +375,13 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
               <Toolbar editor={editor} />
               <div className="px-4 py-3 min-h-[500px] max-h-[calc(100vh-300px)] overflow-y-auto">
                 <EditorContent editor={editor} className="prose max-w-none" />
-                
-                {editor && (
-                  <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
-                    <BubbleMenuComponent editor={editor} />
-                  </BubbleMenu>
-                )}
-                
+
+                {editor && <BubbleMenuComponent editor={editor} />}
+
                 {isDragActive && (
-                  <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+                  <div className="fixed inset-0 bg-background/95 flex items-center justify-center z-50">
                     <div className="bg-background border-2 border-dashed border-primary rounded-lg p-8 text-center">
-                      <Icons.upload className="h-12 w-12 mx-auto mb-4 text-primary" />
+                      <Upload className="h-12 w-12 mx-auto mb-4 text-primary" />
                       <h3 className="text-lg font-medium">{t('sop.editor.dropFilesHere')}</h3>
                       <p className="text-muted-foreground mt-1">
                         {t('sop.editor.dropFilesDescription')}
@@ -403,7 +398,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-4">
               <h3 className="text-lg font-medium">{t('sop.editor.basicInformation')}</h3>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="title">{t('sop.editor.title')} *</Label>
                 <Input
@@ -415,7 +410,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                   disabled={readOnly}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="title_ar">{t('sop.editor.titleArabic')}</Label>
                 <Input
@@ -428,7 +423,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                   disabled={readOnly}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="description">{t('sop.editor.description')}</Label>
                 <Textarea
@@ -441,7 +436,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                   disabled={readOnly}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="description_ar">{t('sop.editor.descriptionArabic')}</Label>
                 <Textarea
@@ -456,10 +451,10 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                 />
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <h3 className="text-lg font-medium">{t('sop.editor.categorization')}</h3>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="department_id">{t('sop.editor.department')} *</Label>
                 <Select
@@ -479,7 +474,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="category_id">{t('sop.editor.category')}</Label>
                 <Select
@@ -501,7 +496,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {formData.category_id && (
                 <div className="space-y-2">
                   <Label htmlFor="subcategory_id">{t('sop.editor.subcategory')}</Label>
@@ -525,7 +520,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                   </Select>
                 </div>
               )}
-              
+
               <div className="space-y-2 pt-4">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="is_template">{t('sop.editor.saveAsTemplate')}</Label>
@@ -540,7 +535,7 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                   {t('sop.edider.templateDescription')}
                 </p>
               </div>
-              
+
               {formData.is_template && (
                 <div className="space-y-2">
                   <Label htmlFor="template_id">{t('sop.editor.basedOnTemplate')}</Label>
@@ -567,60 +562,60 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
           <div className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-lg font-medium">{t('sop.editor.workflowSettings')}</h3>
-              
+
               <div className="space-y-2">
                 <Label>{t('sop.editor.approvalWorkflow')}</Label>
                 <div className="rounded-md border p-4">
                   <p className="text-sm text-muted-foreground">
                     {t('sop.editor.approvalWorkflowDescription')}
                   </p>
-                  
+
                   {/* TODO: Add workflow steps configuration */}
                   <div className="mt-4 space-y-3">
                     <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
                       <div className="flex items-center space-x-2">
-                        <Icons.user className="h-4 w-4" />
+                        <User className="h-4 w-4" />
                         <span>{t('sop.editor.departmentHead')}</span>
                       </div>
-                      <Icons.checkCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-green-500" />
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-2 bg-muted/50 rounded opacity-50">
                       <div className="flex items-center space-x-2">
-                        <Icons.users className="h-4 w-4" />
+                        <Users className="h-4 w-4" />
                         <span>{t('sop.editor.propertyManager')}</span>
                       </div>
-                      <Icons.chevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-2 bg-muted/50 rounded opacity-50">
                       <div className="flex items-center space-x-2">
-                        <Icons.shieldCheck className="h-4 w-4" />
+                        <ShieldCheck className="h-4 w-4" />
                         <span>{t('sop.editor.regionalHR')}</span>
                       </div>
-                      <Icons.chevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="mt-4"
                     disabled={readOnly}
                     onClick={() => {
                       // TODO: Open workflow configuration modal
                     }}
                   >
-                    <Icons.settings className="h-4 w-4 mr-2" />
+                    <Settings className="h-4 w-4 mr-2" />
                     {t('sop.editor.configureWorkflow')}
                   </Button>
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <h3 className="text-lg font-medium">{t('sop.editor.notifications')}</h3>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -631,13 +626,13 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                       {t('sop.editor.notifyOnPublishDescription')}
                     </p>
                   </div>
-                  <Switch 
-                    id="notify_on_publish" 
-                    defaultChecked 
-                    disabled={readOnly} 
+                  <Switch
+                    id="notify_on_publish"
+                    defaultChecked
+                    disabled={readOnly}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="notify_on_approval">
@@ -647,13 +642,13 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                       {t('sop.editor.notifyOnApprovalDescription')}
                     </p>
                   </div>
-                  <Switch 
-                    id="notify_on_approval" 
-                    defaultChecked 
-                    disabled={readOnly} 
+                  <Switch
+                    id="notify_on_approval"
+                    defaultChecked
+                    disabled={readOnly}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="notify_on_comment">
@@ -663,10 +658,10 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
                       {t('sop.editor.notifyOnCommentDescription')}
                     </p>
                   </div>
-                  <Switch 
-                    id="notify_on_comment" 
-                    defaultChecked 
-                    disabled={readOnly} 
+                  <Switch
+                    id="notify_on_comment"
+                    defaultChecked
+                    disabled={readOnly}
                   />
                 </div>
               </div>
@@ -674,49 +669,49 @@ export function SOPEditor({ documentId, onSave, onCancel, readOnly = false }: SO
           </div>
         )}
       </div>
-      
+
       {/* Floating action buttons */}
       <div className="fixed bottom-6 right-6 flex flex-col space-y-2">
-        <Button 
-          variant="default" 
-          size="lg" 
+        <Button
+          variant="default"
+          size="lg"
           className="rounded-full w-12 h-12 p-0 shadow-lg"
           onClick={handleSubmit}
           disabled={isSaving || readOnly}
           title={t('submitForApproval')}
         >
           {isSaving ? (
-            <Icons.spinner className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Icons.send className="h-5 w-5" />
+            <Send className="h-5 w-5" />
           )}
         </Button>
-        
-        <Button 
-          variant="outline" 
-          size="lg" 
+
+        <Button
+          variant="outline"
+          size="lg"
           className="rounded-full w-12 h-12 p-0 shadow-lg"
           onClick={handleSaveDraft}
           disabled={isSaving}
           title={t('saveDraft')}
         >
           {isSaving ? (
-            <Icons.spinner className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Icons.save className="h-5 w-5" />
+            <Save className="h-5 w-5" />
           )}
         </Button>
-        
-        <Button 
-          variant="outline" 
-          size="lg" 
+
+        <Button
+          variant="outline"
+          size="lg"
           className="rounded-full w-12 h-12 p-0 shadow-lg"
           onClick={() => {
             // TODO: Open preview modal
           }}
           title={t('preview')}
         >
-          <Icons.eye className="h-5 w-5" />
+          <Eye className="h-5 w-5" />
         </Button>
       </div>
     </div>

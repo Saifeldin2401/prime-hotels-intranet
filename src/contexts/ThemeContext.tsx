@@ -41,6 +41,12 @@ export function ThemeProvider({ children, defaultMode = 'system' }: ThemeProvide
     setTheme(newTheme)
     setIsDark(newIsDark)
     applyTheme(newTheme)
+    const root = document.documentElement
+    if (newIsDark) {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
     localStorage.setItem('theme-mode', mode)
   }, [mode])
 
@@ -52,6 +58,12 @@ export function ThemeProvider({ children, defaultMode = 'system' }: ThemeProvide
         setTheme(newTheme)
         setIsDark(mediaQuery.matches)
         applyTheme(newTheme)
+        const root = document.documentElement
+        if (mediaQuery.matches) {
+          root.classList.add('dark')
+        } else {
+          root.classList.remove('dark')
+        }
       }
       
       mediaQuery.addEventListener('change', handleChange)

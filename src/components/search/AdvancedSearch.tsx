@@ -3,22 +3,17 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { 
-  Search, 
-  Clock, 
-  TrendingUp, 
-  Filter, 
-  X, 
-  ChevronDown,
+import {
+  Search,
+  Clock,
+  TrendingUp,
+  Filter,
+  X,
   FileText,
   Users,
-  Calendar,
-  MapPin,
-  Tag,
-  Star
+  Tag
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useTheme } from '@/contexts/ThemeContext'
 
 interface SearchSuggestion {
   id: string
@@ -61,10 +56,9 @@ export function AdvancedSearch({
   const [selectedFilters, setSelectedFilters] = useState<Record<string, any>>({})
   const [showFiltersPanel, setShowFiltersPanel] = useState(false)
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
-  
+
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { theme } = useTheme()
 
   // Filter suggestions based on query
   const filteredSuggestions = suggestions.filter(suggestion =>
@@ -91,13 +85,13 @@ export function AdvancedSearch({
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault()
-          setActiveSuggestionIndex(prev => 
+          setActiveSuggestionIndex(prev =>
             prev < filteredSuggestions.length - 1 ? prev + 1 : 0
           )
           break
         case 'ArrowUp':
           event.preventDefault()
-          setActiveSuggestionIndex(prev => 
+          setActiveSuggestionIndex(prev =>
             prev > 0 ? prev - 1 : filteredSuggestions.length - 1
           )
           break
@@ -194,7 +188,7 @@ export function AdvancedSearch({
               }
             }}
             placeholder={placeholder}
-            className="pl-10 pr-20 h-11 border-0 shadow-lg bg-gradient-to-r from-card to-card/80 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+            className="pl-10 pr-20 h-11 border border-border shadow-sm bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200"
           />
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
             {query && (
@@ -228,7 +222,7 @@ export function AdvancedSearch({
             <Button
               onClick={handleSearch}
               size="sm"
-              className="h-6 px-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+              className="h-6 px-2 bg-primary hover:bg-primary/90"
             >
               Search
             </Button>
@@ -238,7 +232,7 @@ export function AdvancedSearch({
 
       {/* Suggestions Dropdown */}
       {isOpen && (filteredSuggestions.length > 0 || recentSearches.length > 0) && (
-        <Card className="absolute top-full left-0 right-0 mt-2 z-50 border-0 shadow-2xl animate-fade-in">
+        <Card className="absolute top-full left-0 right-0 mt-2 z-50 border border-border shadow-lg animate-fade-in">
           <CardContent className="p-0">
             {/* Recent Searches */}
             {recentSearches.length > 0 && query === '' && (
@@ -252,7 +246,7 @@ export function AdvancedSearch({
                     <button
                       key={index}
                       onClick={() => handleSuggestionClick({ id: `recent-${index}`, text: search, type: 'recent' })}
-                      className="w-full text-left px-3 py-2 rounded-md hover:bg-accent/50 transition-colors flex items-center gap-3"
+                      className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors flex items-center gap-3"
                     >
                       <Clock className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm">{search}</span>
@@ -272,9 +266,9 @@ export function AdvancedSearch({
                       onClick={() => handleSuggestionClick(suggestion)}
                       className={cn(
                         "w-full text-left px-3 py-2 rounded-md transition-colors flex items-center gap-3 animate-slide-up",
-                        activeSuggestionIndex === index 
-                          ? "bg-primary/10 text-primary" 
-                          : "hover:bg-accent/50"
+                        activeSuggestionIndex === index
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-accent"
                       )}
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
@@ -303,7 +297,7 @@ export function AdvancedSearch({
 
       {/* Filters Panel */}
       {showFiltersPanel && showFilters && (
-        <Card className="absolute top-full left-0 right-0 mt-2 z-40 border-0 shadow-2xl animate-fade-in">
+        <Card className="absolute top-full left-0 right-0 mt-2 z-40 border border-border shadow-lg animate-fade-in">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">Filters</h3>
@@ -318,7 +312,7 @@ export function AdvancedSearch({
                 </Button>
               )}
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filters.map((filter) => (
                 <div key={filter.id} className="space-y-2">
@@ -356,7 +350,7 @@ export function AdvancedSearch({
                   {Object.entries(selectedFilters).map(([filterId, value]) => {
                     const filter = filters.find(f => f.id === filterId)
                     if (!filter || !value) return null
-                    
+
                     return (
                       <Badge
                         key={filterId}

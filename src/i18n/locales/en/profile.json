@@ -1,0 +1,22 @@
+{
+    "personal_info": "Personal Information",
+    "personal_info_desc": "Update your personal details and public profile information.",
+    "change_avatar": "Change Avatar",
+    "email": "Email",
+    "email_desc": "Email cannot be changed.",
+    "full_name": "Full Name",
+    "phone_number": "Phone Number",
+    "role": "Role",
+    "save_changes": "Save Changes",
+    "security": "Security",
+    "security_desc": "Manage your password and security preferences.",
+    "password": "Password",
+    "password_desc": "Change your password to keep your account secure.",
+    "change_password": "Change Password",
+    "active": "Active",
+    "inactive": "Inactive",
+    "uploading": "Uploading...",
+    "saving": "Saving...",
+    "my_profile": "My Profile",
+    "documents": "Documents"
+}

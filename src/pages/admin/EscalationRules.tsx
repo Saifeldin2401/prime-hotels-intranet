@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,21 +9,22 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { 
-  Clock, 
-  Settings, 
-  Plus, 
-  Edit, 
+import {
+  Clock,
+  Settings,
+  Plus,
+  Edit,
   Trash2,
   AlertTriangle,
   Calendar
 } from 'lucide-react'
 import type { EscalationRule } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
+import { useTranslation } from 'react-i18next'
 
 const entityTypes = [
   'leave_request',
-  'document_approval', 
+  'document_approval',
   'training_assignment',
   'maintenance_ticket',
   'sop_approval',
@@ -33,7 +33,7 @@ const entityTypes = [
 
 const roleLabels: Record<AppRole, string> = {
   regional_admin: 'Regional Admin',
-  regional_hr: 'Regional HR', 
+  regional_hr: 'Regional HR',
   property_manager: 'Property Manager',
   property_hr: 'Property HR',
   department_head: 'Department Head',
@@ -41,6 +41,7 @@ const roleLabels: Record<AppRole, string> = {
 }
 
 export default function EscalationRules() {
+  const { t } = useTranslation('admin')
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editingRule, setEditingRule] = useState<EscalationRule | null>(null)
@@ -122,7 +123,7 @@ export default function EscalationRules() {
     mutationFn: async ({ id, is_active }: { id: string, is_active: boolean }) => {
       const { error } = await supabase
         .from('escalation_rules')
-        .update({ 
+        .update({
           is_active,
           updated_at: new Date().toISOString()
         })
@@ -141,7 +142,7 @@ export default function EscalationRules() {
   }
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this escalation rule?')) {
+    if (confirm(t('escalation_rules.delete_confirm'))) {
       deleteRuleMutation.mutate(id)
     }
   }
@@ -151,8 +152,8 @@ export default function EscalationRules() {
   }
 
   if (showForm) {
-    return <EscalationRuleForm 
-      rule={editingRule} 
+    return <EscalationRuleForm
+      rule={editingRule}
       onClose={() => {
         setShowForm(false)
         setEditingRule(null)
@@ -170,12 +171,12 @@ export default function EscalationRules() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Escalation Rules"
-        description="Configure automatic escalation for pending approvals"
+        title={t('escalation_rules.title')}
+        description={t('escalation_rules.description')}
         actions={
           <Button onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Rule
+            <Plus className="w-4 h-4 me-2" />
+            {t('escalation_rules.add_rule')}
           </Button>
         }
       />
@@ -184,17 +185,17 @@ export default function EscalationRules() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Rules</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">{t('escalation_rules.total_rules')}</CardTitle>
+            <Settings className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{rules?.length || 0}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Rules</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('escalation_rules.active_rules')}</CardTitle>
             <Clock className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -206,13 +207,13 @@ export default function EscalationRules() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Threshold</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('escalation_rules.avg_threshold')}</CardTitle>
             <Calendar className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {rules?.length ? 
-                Math.round(rules.reduce((sum, r) => sum + r.threshold_hours, 0) / rules.length) : 
+              {rules?.length ?
+                Math.round(rules.reduce((sum, r) => sum + r.threshold_hours, 0) / rules.length) :
                 0
               }h
             </div>
@@ -221,7 +222,7 @@ export default function EscalationRules() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Critical Rules</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('escalation_rules.critical_rules')}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
@@ -235,12 +236,12 @@ export default function EscalationRules() {
       {/* Rules List */}
       <Card>
         <CardHeader>
-          <CardTitle>Escalation Rules</CardTitle>
+          <CardTitle>{t('escalation_rules.rule_list_title')}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading escalation rules...
+            <div className="text-center py-8 text-gray-600">
+              {t('escalation_rules.loading')}
             </div>
           ) : (
             <div className="space-y-4">
@@ -257,16 +258,16 @@ export default function EscalationRules() {
                             {rule.action_type.replace('_', ' ')}
                           </h3>
                           <Badge variant={rule.is_active ? 'default' : 'secondary'}>
-                            {rule.is_active ? 'Active' : 'Inactive'}
+                            {rule.is_active ? t('escalation_rules.active') : t('profile.inactive')}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600">
-                          Escalates to {roleLabels[rule.next_role]} after {rule.threshold_hours} hours
+                          {t('escalation_rules.escalates_to')} {roleLabels[rule.next_role]} {t('escalation_rules.after_hours', { count: rule.threshold_hours })}
                         </p>
                         <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                          <span>Created {new Date(rule.created_at).toLocaleDateString()}</span>
+                          <span>{t('escalation_rules.created')} {new Date(rule.created_at).toLocaleDateString()}</span>
                           {rule.updated_at && (
-                            <span>Updated {new Date(rule.updated_at).toLocaleDateString()}</span>
+                            <span>{t('escalation_rules.updated')} {new Date(rule.updated_at).toLocaleDateString()}</span>
                           )}
                         </div>
                       </div>
@@ -277,16 +278,16 @@ export default function EscalationRules() {
                         onCheckedChange={(checked) => handleToggle(rule.id, checked)}
                         disabled={toggleRuleMutation.isPending}
                       />
-                      <Button 
-                        size="sm" 
-                        variant="outline"
+                      <Button
+                        size="sm"
+                        className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                         onClick={() => handleEdit(rule)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
+                      <Button
+                        size="sm"
+                        className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                         onClick={() => handleDelete(rule.id)}
                         disabled={deleteRuleMutation.isPending}
                       >
@@ -296,10 +297,10 @@ export default function EscalationRules() {
                   </div>
                 </div>
               ))}
-              
+
               {rules?.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  No escalation rules configured
+                  {t('escalation_rules.no_rules')}
                 </div>
               )}
             </div>
@@ -317,6 +318,7 @@ interface EscalationRuleFormProps {
 }
 
 function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps) {
+  const { t } = useTranslation('admin')
   const [formData, setFormData] = useState({
     action_type: rule?.action_type || '',
     threshold_hours: rule?.threshold_hours || 48,
@@ -337,24 +339,24 @@ function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">
-          {rule ? 'Edit Escalation Rule' : 'Create Escalation Rule'}
+          {rule ? t('escalation_rules.edit_title') : t('escalation_rules.create_title')}
         </h1>
-        <Button variant="ghost" onClick={onClose}>
-          Back
+        <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={onClose}>
+          {t('escalation_rules.cancel')} {/* Using cancel/back depending on context, using cancel key for consistency */}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Rule Configuration</CardTitle>
+          <CardTitle>{t('escalation_rules.rule_configuration')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="action_type">Action Type</Label>
-                <Select 
-                  value={formData.action_type} 
+                <Label htmlFor="action_type">{t('escalation_rules.action_type')}</Label>
+                <Select
+                  value={formData.action_type}
                   onValueChange={(value) => updateFormData('action_type', value)}
                 >
                   <SelectTrigger>
@@ -371,7 +373,7 @@ function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="threshold_hours">Threshold Hours</Label>
+                <Label htmlFor="threshold_hours">{t('escalation_rules.threshold_hours')}</Label>
                 <Input
                   id="threshold_hours"
                   type="number"
@@ -385,9 +387,9 @@ function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="next_role">Escalate To</Label>
-              <Select 
-                value={formData.next_role} 
+              <Label htmlFor="next_role">{t('escalation_rules.escalate_to')}</Label>
+              <Select
+                value={formData.next_role}
                 onValueChange={(value) => updateFormData('next_role', value as AppRole)}
               >
                 <SelectTrigger>
@@ -409,15 +411,15 @@ function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps
                 checked={formData.is_active}
                 onCheckedChange={(checked) => updateFormData('is_active', checked)}
               />
-              <Label htmlFor="is_active">Active</Label>
+              <Label htmlFor="is_active">{t('escalation_rules.active')}</Label>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t('escalation_rules.cancel')}
               </Button>
               <Button type="submit">
-                {rule ? 'Update' : 'Create'} Rule
+                {rule ? t('escalation_rules.update') : t('escalation_rules.create')}
               </Button>
             </div>
           </form>

@@ -2,132 +2,113 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useTheme } from '@/contexts/ThemeContext'
+import { useDocuments, useDocumentStats } from '@/hooks/useDocuments'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
-import { RecentlyViewedDocuments } from '@/components/documents/RecentlyViewedDocuments'
-import { DocumentRecommendations } from '@/components/documents/DocumentRecommendations'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
+import { EnhancedBadge } from '@/components/ui/enhanced-badge'
 import { Progress } from '@/components/ui/progress'
-import { 
-  Plus, 
-  Search, 
-  Download, 
-  Eye, 
-  FileText, 
+import {
+  Plus,
+  Search,
+  Download,
+  FileText,
   Cloud,
-  Share2,
-  Users,
   Filter,
   Grid,
   List,
   Star,
-  Lock,
-  History,
-  Activity,
-  Folder,
-  File,
-  Video,
-  Image,
-  FileSpreadsheet,
-  FileCheck,
-  Calendar,
-  TrendingUp,
-  Clock
+  FileCheck
 } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Document } from '@/lib/types'
+import { TableSkeleton } from '@/components/loading/TableSkeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { useTranslation } from 'react-i18next'
 
 export default function DocumentLibrary() {
-  const { primaryRole } = useAuth()
+  const { user } = useAuth()
+  const { t } = useTranslation('documents')
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const [selectedStatus, setSelectedStatus] = useState<string>('all')
 
-  // Enhanced mock data for modern UI
-  const folders = [
-    { id: 'sop', name: 'SOP Documents', count: 45, icon: FileCheck, color: 'from-blue-400 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
-    { id: 'hr', name: 'HR Policies', count: 23, icon: Users, color: 'from-green-400 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
-    { id: 'training', name: 'Training Materials', count: 67, icon: Star, color: 'from-purple-400 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' },
-    { id: 'forms', name: 'Forms & Templates', count: 34, icon: FileSpreadsheet, color: 'from-orange-400 to-orange-600', bgColor: 'bg-orange-50 dark:bg-orange-950' },
-    { id: 'shared', name: 'Shared Documents', count: 89, icon: Share2, color: 'from-red-400 to-red-600', bgColor: 'bg-red-50 dark:bg-red-950' }
-  ]
-
-  const storageStats = {
-    used: 2.3, // GB
-    total: 10, // GB
-    documents: 258,
-    shared: 45
-  }
-
-  const { data: documents, isLoading } = useQuery({
-    queryKey: ['documents'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return data as Document[]
-    },
+  // Real document data from Supabase
+  const { data: documents = [], isLoading } = useDocuments({
+    search: searchTerm || undefined,
+    status: selectedStatus !== 'all' ? selectedStatus : undefined,
   })
 
-  const filteredDocuments = documents?.filter((doc) =>
+  const { data: stats } = useDocumentStats()
+
+
+
+  // Folder categories based on document types
+  const folders = [
+    { id: 'all', name: t('folders.all'), count: documents.length, icon: FileText, color: 'from-gray-400 to-gray-600', bgColor: 'bg-gray-50 dark:bg-gray-950' },
+    { id: 'draft', name: t('folders.drafts'), count: stats?.draft || 0, icon: FileText, color: 'from-blue-400 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
+    { id: 'pending', name: t('folders.pending'), count: stats?.pending || 0, icon: Star, color: 'from-orange-400 to-orange-600', bgColor: 'bg-orange-50 dark:bg-orange-950' },
+    { id: 'published', name: t('folders.published'), count: stats?.published || 0, icon: FileCheck, color: 'from-green-400 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
+  ]
+
+  // Storage stats
+  const storageStats = {
+    used: 2.3, // GB - mocked for now
+    total: 10, // GB
+    documents: stats?.total || 0,
+    shared: 0 // Mocked
+  }
+
+  // Filter documents based on search and status
+  const filteredDocuments = documents.filter((doc) =>
     doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     doc.description?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: Document['status'] }) => {
-      const { error } = await supabase
-        .from('documents')
-        .update({ status })
-        .eq('id', id)
+  // Get acknowledgments for current user
+  const { data: acknowledgments } = useQuery({
+    queryKey: ['document-acknowledgments', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('document_acknowledgments')
+        .select('document_id, acknowledged_at')
+        .eq('user_id', user!.id)
+
+      if (error) throw error
+      return data as { document_id: string; acknowledged_at: string }[]
+    },
+  })
+
+  const acknowledgedDocumentIds = new Set(
+    acknowledgments?.map((ack) => ack.document_id) ?? [],
+  )
+
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (documentId: string) => {
+      if (!user) throw new Error('User must be signed in to acknowledge documents')
+
+      const { error } = await supabase.from('document_acknowledgments').insert({
+        document_id: documentId,
+        user_id: user.id,
+      })
 
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['document-acknowledgments'] })
     },
   })
 
-  const canSubmitForReview = (doc: Document) => doc.status === 'DRAFT'
-
-  const canApproveReject = (doc: Document) =>
-    doc.status === 'PENDING_REVIEW' &&
-    primaryRole && ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole)
-
-  const canPublish = (doc: Document) =>
-    doc.status === 'APPROVED' &&
-    primaryRole && ['regional_admin', 'regional_hr'].includes(primaryRole)
-
-  const handleSubmitForReview = (doc: Document) => {
-    if (updateStatusMutation.isPending) return
-    updateStatusMutation.mutate({ id: doc.id, status: 'PENDING_REVIEW' })
-  }
-
-  const handleApprove = (doc: Document) => {
-    if (updateStatusMutation.isPending) return
-    updateStatusMutation.mutate({ id: doc.id, status: 'APPROVED' })
-  }
-
-  const handleReject = (doc: Document) => {
-    if (updateStatusMutation.isPending) return
-    // For now, simple status flip; feedback UI can be added later
-    updateStatusMutation.mutate({ id: doc.id, status: 'REJECTED' })
-  }
-
-  const handlePublish = (doc: Document) => {
-    if (updateStatusMutation.isPending) return
-    updateStatusMutation.mutate({ id: doc.id, status: 'PUBLISHED' })
+  const handleFolderClick = (folderId: string) => {
+    setSelectedStatus(folderId === 'all' ? 'all' : folderId)
   }
 
   const handleDownload = async (document: Document) => {
@@ -138,20 +119,20 @@ export default function DocumentLibrary() {
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader
-        title="Document Cloud Library"
-        description="Centralized document management with cloud storage and collaboration"
+        title={t('title')}
+        description={t('description')}
         actions={
           <div className="flex items-center gap-2 sm:gap-3">
-            <Button variant="outline" size="sm" className="hover-lift">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
+            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors hover-lift" size="sm">
+              <Filter className="w-4 h-4 me-2" />
+              {t('filter')}
             </Button>
             <div className="flex border border-border rounded-lg overflow-hidden shadow-sm">
               <Button
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className="rounded-r-none border-r-0"
+                className="rounded-e-none border-e-0"
               >
                 <List className="w-4 h-4" />
               </Button>
@@ -159,60 +140,60 @@ export default function DocumentLibrary() {
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className="rounded-l-none"
+                className="rounded-s-none"
               >
                 <Grid className="w-4 h-4" />
               </Button>
             </div>
-            <Button onClick={() => setUploadDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200">
-              <Plus className="w-4 h-4 mr-2" />
-              Upload Document
+            <Button onClick={() => setUploadDialogOpen(true)} className="shadow-md hover:shadow-lg transition-all duration-200">
+              <Plus className="w-4 h-4 me-2" />
+              {t('upload_document')}
             </Button>
           </div>
         }
       />
 
       {/* Storage Stats Card */}
-      <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
-        <CardContent className="p-6">
+      <EnhancedCard variant="gold" className="bg-gradient-to-r from-hotel-gold/10 to-hotel-cream/30 border-hotel-gold/20">
+        <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Cloud className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 bg-hotel-gold/20 rounded-lg">
+                <Cloud className="h-5 w-5 text-hotel-gold-dark" />
               </div>
               <div>
-                <h3 className="font-semibold text-blue-900 dark:text-blue-100">Storage Overview</h3>
-                <p className="text-sm text-blue-700 dark:text-blue-300">Cloud storage usage</p>
+                <h3 className="font-semibold text-hotel-navy">{t('storage.title')}</h3>
+                <p className="text-sm text-gray-600">{t('storage.usage')}</p>
               </div>
             </div>
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-              {storageStats.documents} files
-            </Badge>
+            <EnhancedBadge variant="gold">
+              {t('storage.files', { count: storageStats.documents })}
+            </EnhancedBadge>
           </div>
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-blue-700 dark:text-blue-300">Used: {storageStats.used} GB</span>
-              <span className="text-blue-700 dark:text-blue-300">Total: {storageStats.total} GB</span>
+              <span className="text-hotel-navy">{t('storage.used', { value: storageStats.used })}</span>
+              <span className="text-gray-500">{t('storage.total', { value: storageStats.total })}</span>
             </div>
-            <Progress value={(storageStats.used / storageStats.total) * 100} className="h-2 bg-blue-200 dark:bg-blue-800" />
-            <div className="flex justify-between text-xs text-blue-600 dark:text-blue-400">
-              <span>{storageStats.shared} shared documents</span>
-              <span>{Math.round((storageStats.used / storageStats.total) * 100)}% used</span>
+            <Progress value={(storageStats.used / storageStats.total) * 100} className="h-2 bg-hotel-gold/20" />
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>{t('storage.shared_docs', { count: storageStats.shared })}</span>
+              <span>{t('storage.percent_used', { percent: Math.round((storageStats.used / storageStats.total) * 100) })}</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </EnhancedCard>
 
       {/* Enhanced Search Bar */}
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className="h-4 w-4 text-muted-foreground" />
+        <div className="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none">
+          <Search className="h-4 w-4 text-gray-400" />
         </div>
         <Input
-          placeholder="Search documents, folders, or tags..."
+          placeholder={t('search_placeholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-12 pr-4 h-12 border-0 shadow-lg bg-gradient-to-r from-card to-card/80 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+          className="ps-12 pe-4 h-12 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all duration-200"
         />
       </div>
 
@@ -221,84 +202,86 @@ export default function DocumentLibrary() {
         {folders.map((folder, index) => {
           const Icon = folder.icon
           return (
-            <Card 
-              key={folder.id} 
-              className="card-hover border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer animate-slide-up"
-              style={{animationDelay: `${index * 100}ms`}}
+            <EnhancedCard
+              key={folder.id}
+              className="card-hover transition-all duration-300 cursor-pointer animate-slide-up hover:-translate-y-1"
+              style={{ animationDelay: `${index * 100}ms` }}
+              onClick={() => handleFolderClick(folder.id)}
             >
-              <CardContent className="p-6 text-center">
+              <div className="p-6 text-center">
                 <div className={cn(
-                  "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg",
-                  folder.bgColor
+                  "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-sm bg-gray-50 group-hover:bg-white transition-colors",
+                  folder.id === 'all' ? 'bg-hotel-navy/5' : folder.id === 'draft' ? 'bg-blue-50' : folder.id === 'pending' ? 'bg-hotel-gold/10' : 'bg-green-50'
                 )}>
                   <div className={cn(
-                    "w-8 h-8 bg-gradient-to-br",
-                    folder.color,
-                    "rounded-lg flex items-center justify-center"
+                    "w-8 h-8 rounded-lg flex items-center justify-center",
                   )}>
-                    <Icon className="w-5 h-5 text-white" />
+                    <Icon className={cn("w-6 h-6",
+                      folder.id === 'all' ? "text-hotel-navy" :
+                        folder.id === 'draft' ? "text-blue-600" :
+                          folder.id === 'pending' ? "text-hotel-gold-dark" :
+                            "text-green-600"
+                    )} />
                   </div>
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">{folder.name}</h3>
-                <Badge variant="secondary" className="bg-accent/50 text-accent-foreground">
-                  {folder.count} files
-                </Badge>
-              </CardContent>
-            </Card>
+                <h3 className="font-semibold text-hotel-navy mb-2">{folder.name}</h3>
+                <EnhancedBadge variant="secondary">
+                  {folder.count} {t('unit_files')}
+                </EnhancedBadge>
+              </div>
+            </EnhancedCard>
           )
         })}
       </div>
 
       {/* Enhanced Document Tabs */}
       <Tabs defaultValue="documents" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1">
-          <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Documents</TabsTrigger>
-          <TabsTrigger value="folders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Folders</TabsTrigger>
-          <TabsTrigger value="shared" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Shared</TabsTrigger>
-          <TabsTrigger value="recent" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Recent</TabsTrigger>
-          <TabsTrigger value="favorites" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Favorites</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 bg-muted p-1 rounded-lg">
+          <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.documents')}</TabsTrigger>
+          <TabsTrigger value="folders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.folders')}</TabsTrigger>
+          <TabsTrigger value="shared" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.shared')}</TabsTrigger>
+          <TabsTrigger value="recent" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.recent')}</TabsTrigger>
+          <TabsTrigger value="favorites" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.favorites')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="documents" className="space-y-4 animate-fade-in">
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
+          <EnhancedCard className="border-0 shadow-lg" padding="none">
+            <div className="p-6">
               {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-pulse-subtle">
-                    <FileText className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                </div>
+                <TableSkeleton rows={5} columns={4} showHeaders={false} />
               ) : filteredDocuments?.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-accent/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-semibold text-foreground mb-2">No documents found</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Start by uploading your first document</p>
-                  <Button onClick={() => setUploadDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary/80">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Upload Document
-                  </Button>
-                </div>
+                <EmptyState
+                  icon={FileText}
+                  title={t('empty.title')}
+                  description={t('empty.description')}
+                  action={{
+                    label: t('upload_document'),
+                    onClick: () => setUploadDialogOpen(true),
+                    icon: Plus
+                  }}
+                />
               ) : (
                 <div className="space-y-3">
                   {filteredDocuments?.map((doc, index) => (
-                    <div 
-                      key={doc.id} 
-                      className="flex items-center justify-between p-4 bg-accent/30 rounded-lg hover:bg-accent/50 transition-all duration-200 hover:shadow-md animate-slide-up"
-                      style={{animationDelay: `${index * 50}ms`}}
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md animate-slide-up border border-transparent hover:border-hotel-navy/10"
+                      style={{ animationDelay: `${index * 50}ms` }}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+                        <div className="w-10 h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10">
+                          <FileText className="w-5 h-5 text-hotel-navy" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-foreground">{doc.title}</h4>
+                          <h4 className="font-semibold text-hotel-navy">{doc.title}</h4>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {doc.category}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
+                            <EnhancedBadge variant="outline" className="text-xs">
+                              {doc.visibility === 'all_properties' && t('document.all_properties')}
+                              {doc.visibility === 'property' && t('document.property_specific')}
+                              {doc.visibility === 'department' && t('document.department_specific')}
+                              {doc.visibility === 'role' && t('document.role_specific')}
+                            </EnhancedBadge>
+                            <span className="text-xs text-gray-500">
                               {formatRelativeTime(doc.created_at)}
                             </span>
                           </div>
@@ -306,7 +289,23 @@ export default function DocumentLibrary() {
                       </div>
                       <div className="flex items-center gap-2">
                         <StatusBadge status={doc.status} />
-                        <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)}>
+                        {doc.requires_acknowledgment && (
+                          acknowledgedDocumentIds.has(doc.id) ? (
+                            <EnhancedBadge variant="success" className="text-xs">
+                              {t('document.acknowledged')}
+                            </EnhancedBadge>
+                          ) : (
+                            <Button
+                              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                              size="sm"
+                              disabled={acknowledgeMutation.isPending}
+                              onClick={() => acknowledgeMutation.mutate(doc.id)}
+                            >
+                              {t('document.acknowledge')}
+                            </Button>
+                          )
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} className="text-gray-500 hover:text-hotel-navy">
                           <Download className="w-4 h-4" />
                         </Button>
                       </div>
@@ -314,18 +313,18 @@ export default function DocumentLibrary() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </EnhancedCard>
         </TabsContent>
       </Tabs>
 
-      <DocumentUploadDialog 
-        open={uploadDialogOpen} 
-        onClose={() => setUploadDialogOpen(false)} 
+      <DocumentUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
       />
     </div>
   )
 }
-                          
-        
-        
+
+
+

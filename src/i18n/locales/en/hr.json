@@ -1,0 +1,140 @@
+{
+    "referrals": {
+        "title": "Employee Referrals",
+        "description": "Manage employee referral program and track referral bonuses",
+        "stats": {
+            "total": "Total Referrals",
+            "hired": "Hired",
+            "bonuses_paid": "Total Bonuses Paid",
+            "pending_bonuses": "Pending Bonuses"
+        },
+        "search_placeholder": "Search referrals...",
+        "referred_by": "Referred by {{referrer}} for {{position}}",
+        "notes": "Notes",
+        "no_referrals": "No referrals found",
+        "actions": {
+            "start_interview": "Start Interview",
+            "mark_hired": "Mark Hired",
+            "reject": "Reject"
+        }
+    },
+    "leave_requests": {
+        "title": "My Leave Requests",
+        "description": "Submit and track your leave requests",
+        "new_request": "New Leave Request",
+        "total_requests": "{{count}} total requests",
+        "form": {
+            "title": "Submit Leave Request",
+            "start_date": "Start Date",
+            "end_date": "End Date",
+            "pick_date": "Pick a date",
+            "type": "Leave Type",
+            "select_type": "Select leave type",
+            "reason": "Reason (optional)",
+            "reason_placeholder": "Provide a reason for your leave request...",
+            "total_days": "Total days: {{count}}",
+            "cancel": "Cancel",
+            "submit": "Submit Request",
+            "submitting": "Submitting..."
+        },
+        "list": {
+            "title": "Your Leave Requests",
+            "loading": "Loading leave requests...",
+            "empty_title": "No leave requests",
+            "empty_desc": "You haven't submitted any leave requests yet.",
+            "submit_first": "Submit Your First Request",
+            "days": "days",
+            "reason": "Reason",
+            "submitted": "Submitted",
+            "approved_by": "Approved by",
+            "rejected_by": "Rejected by",
+            "confirm_cancel": "Are you sure you want to cancel this leave request?",
+            "cancel_action": "Cancel"
+        },
+        "types": {
+            "annual": "Annual Leave",
+            "sick": "Sick Leave",
+            "unpaid": "Unpaid Leave",
+            "maternity": "Maternity Leave",
+            "paternity": "Paternity Leave",
+            "personal": "Personal Leave",
+            "other": "Other"
+        }
+    },
+    "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "hired": "Hired",
+        "interviewing": "Interviewing",
+        "cancelled": "Cancelled",
+        "paid": "Paid",
+        "all": "All Status",
+        "applied": "Applied"
+    },
+    "history": {
+        "title": "Promotion & Transfer History",
+        "description": "View all employee promotions and transfers",
+        "promotions": "Promotions",
+        "transfers": "Transfers",
+        "role": "Role",
+        "title_label": "Title",
+        "department": "Department",
+        "effective": "Effective",
+        "approved_by": "Approved by",
+        "property": "Property",
+        "new_department": "New Department",
+        "reason": "Reason",
+        "no_promotions": "No promotions found",
+        "no_transfers": "No transfers found",
+        "create_first_promo": "Create your first promotion to get started",
+        "create_first_transfer": "Create your first transfer to get started"
+    },
+    "promotion": {
+        "title": "Promote Employee",
+        "description": "Create a promotion record for an employee",
+        "details": "Promotion Details",
+        "employee": "Employee",
+        "select_employee": "Select employee",
+        "current_role": "Current Role",
+        "new_role": "New Role",
+        "select_role": "Select new role",
+        "new_title": "New Job Title",
+        "new_title_placeholder": "e.g. Senior Front Desk Manager",
+        "new_dept": "New Department (Optional)",
+        "effective_date": "Effective Date",
+        "auto_applied": "Promotion will be automatically applied on this date",
+        "notes": "Notes",
+        "notes_placeholder": "Add any additional notes about this promotion...",
+        "create": "Create Promotion",
+        "success_title": "Promotion created",
+        "success_desc": "Employee promotion has been recorded and will be applied on the effective date.",
+        "new_button": "New Promotion"
+    },
+    "transfer": {
+        "title": "Transfer Employee",
+        "description": "Create a transfer record for an employee",
+        "details": "Transfer Details",
+        "employee": "Employee",
+        "current_property": "Current Property",
+        "dest_property": "Destination Property",
+        "select_dest": "Select destination property",
+        "dest_dept": "Destination Department (Optional)",
+        "reason": "Reason for Transfer",
+        "reason_placeholder": "e.g. Business needs, employee request, etc.",
+        "notes_placeholder": "Add any additional notes about this transfer...",
+        "create": "Create Transfer",
+        "success_title": "Transfer created",
+        "success_desc": "Employee transfer has been recorded and will be applied on the effective date.",
+        "new_button": "New Transfer"
+    },
+    "roles": {
+        "regional_admin": "Regional Admin",
+        "regional_hr": "Regional HR",
+        "property_manager": "Property Manager",
+        "property_hr": "Property HR",
+        "department_head": "Department Head",
+        "staff": "Staff",
+        "na": "N/A"
+    }
+}

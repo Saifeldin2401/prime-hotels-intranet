@@ -1,0 +1,28 @@
+{
+    "title": "Announcements",
+    "description": "Stay updated with latest news and updates",
+    "create": "Create Announcement",
+    "edit": "Edit Announcement",
+    "update": "Update Announcement",
+    "loading": "Loading announcements...",
+    "noAnnouncements": "No announcements found.",
+    "form": {
+        "title": "Title",
+        "content": "Content",
+        "priority": "Priority",
+        "pinned": "Pinned",
+        "schedule": "Schedule (optional)",
+        "expires": "Expires (optional)",
+        "cancel": "Cancel",
+        "saving": "Saving..."
+    },
+    "priority": {
+        "normal": "Normal",
+        "important": "Important",
+        "critical": "Critical"
+    },
+    "actions": {
+        "markRead": "Mark as read",
+        "edit": "Edit"
+    }
+}

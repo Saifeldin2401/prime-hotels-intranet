@@ -6,104 +6,93 @@
 
 @layer base {
   :root {
-    /* Prime Hotels Luxury Theme */
-    --background: 0 0% 100%;
-    --foreground: 222 84% 13%;
+    /* PRIME Hotels Corporate Palette */
+    /* Primary Navy: #0B1C3E (Approximate HSL: 220 70% 15%) */
+    /* Primary Gold: #C5A065 (Approximate HSL: 37 45% 58%) */
+
+    --background: 210 20% 98%;
+    --foreground: 220 70% 15%;
+    /* Navy Text */
+
     --card: 0 0% 100%;
-    --card-foreground: 222 84% 13%;
+    --card-foreground: 220 70% 15%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222 84% 13%;
-    --primary: 222 84% 61%;
-    --primary-foreground: 222 84% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 84% 46%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 92%;
-    --accent-foreground: 222 84% 46%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 84% 98%;
-    --border: 210 40% 88%;
-    --input: 210 40% 88%;
-    --ring: 222 84% 61%;
-    --radius: 0.75rem;
-    
-    /* Hotel Brand Colors */
-    --hotel-gold: 45 91% 58%;
-    --hotel-gold-light: 45 91% 68%;
-    --hotel-gold-dark: 45 91% 48%;
-    --hotel-navy: 222 84% 13%;
-    --hotel-navy-light: 222 84% 23%;
-    --hotel-navy-dark: 222 84% 8%;
-    --hotel-cream: 45 20% 96%;
-    --hotel-sage: 142 43% 55%;
-    
-    /* Additional Colors */
-    --success: 142 71% 45%;
-    --success-foreground: 142 71% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 38 92% 98%;
-    --info: 199 89% 48%;
-    --info-foreground: 199 89% 98%;
-    
+    --popover-foreground: 220 70% 15%;
+
+    --primary: 220 70% 15%;
+    /* Deep Navy */
+    --primary-foreground: 37 45% 95%;
+    /* Light Gold/Cream text on Navy */
+
+    --secondary: 37 45% 58%;
+    /* Gold */
+    --secondary-foreground: 220 70% 15%;
+    /* Navy text on Gold */
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 220 20% 45%;
+
+    --accent: 37 45% 95%;
+    /* Light Cream/Gold tint */
+    --accent-foreground: 220 70% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 37 45% 58%;
+    /* Gold Ring */
+
+    --radius: 0.3rem;
+    /* Slightly tighter radius for professional look */
+
+    /* Extended Hotel Palette */
+    --hotel-gold: 37 45% 58%;
+    --hotel-gold-light: 37 45% 68%;
+    --hotel-gold-dark: 37 45% 48%;
+
+    --hotel-navy: 220 70% 15%;
+    --hotel-navy-light: 220 60% 25%;
+    --hotel-navy-dark: 220 80% 10%;
+
+    --hotel-cream: 37 30% 97%;
+
     /* Typography */
-    --font-sans: 'Inter', system-ui, sans-serif;
-    --font-serif: 'Playfair Display', Georgia, serif;
-    --font-mono: 'JetBrains Mono', monospace;
-    
-    /* Enhanced Shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-    --shadow-hotel: 0 4px 20px -4px rgba(222, 84, 61%, 0.15);
-    
-    /* Spacing */
-    --spacing-xs: 0.25rem;
-    --spacing-sm: 0.5rem;
-    --spacing-md: 1rem;
-    --spacing-lg: 1.5rem;
-    --spacing-xl: 2rem;
-    --spacing-2xl: 3rem;
-    --spacing-3xl: 4rem;
-    --spacing-4xl: 6rem;
-    
-    /* Transitions */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Inter', sans-serif;
   }
 
   .dark {
-    --background: 222 84% 5%;
-    --foreground: 210 40% 98%;
-    --card: 222 84% 5%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 84% 5%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 222 84% 61%;
-    --primary-foreground: 222 84% 5%;
-    --secondary: 217 32% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 32% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 32% 17%;
-    --accent-foreground: 210 40% 98%;
+    --background: 220 70% 10%;
+    --foreground: 37 30% 97%;
+
+    --card: 220 60% 13%;
+    --card-foreground: 37 30% 97%;
+
+    --popover: 220 60% 13%;
+    --popover-foreground: 37 30% 97%;
+
+    --primary: 37 45% 58%;
+    /* Gold becomes primary in dark mode for contrast */
+    --primary-foreground: 220 70% 15%;
+
+    --secondary: 220 50% 20%;
+    --secondary-foreground: 37 45% 58%;
+
+    --muted: 220 50% 20%;
+    --muted-foreground: 220 20% 65%;
+
+    --accent: 220 50% 25%;
+    --accent-foreground: 37 45% 58%;
+
     --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 32% 17%;
-    --input: 217 32% 17%;
-    --ring: 222 84% 61%;
-    
-    /* Dark theme hotel colors */
-    --hotel-gold: 45 91% 58%;
-    --hotel-gold-light: 45 91% 68%;
-    --hotel-navy: 222 84% 8%;
-    --hotel-navy-light: 222 84% 18%;
-    --hotel-navy-dark: 222 84% 3%;
-    --hotel-cream: 45 20% 16%;
-    --hotel-sage: 142 43% 45%;
+    --destructive-foreground: 37 30% 97%;
+
+    --border: 220 50% 25%;
+    --input: 220 50% 25%;
+    --ring: 37 45% 58%;
   }
 
   * {
@@ -111,203 +100,230 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground font-sans antialiased;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight font-serif;
-  }
-  
-  h1 {
-    @apply text-3xl md:text-4xl;
-  }
-  
-  h2 {
-    @apply text-2xl md:text-3xl;
-  }
-  
-  h3 {
-    @apply text-xl md:text-2xl;
-  }
-  
-  h4 {
-    @apply text-lg md:text-xl;
-  }
-  
-  h5 {
-    @apply text-base md:text-lg;
-  }
-  
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
   h6 {
-    @apply text-sm md:text-base;
+    @apply font-serif font-bold tracking-tight text-hotel-navy dark:text-hotel-gold;
   }
 }
 
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-  ::-webkit-scrollbar-track {
-    @apply bg-secondary;
-  }
+::-webkit-scrollbar-track {
+  @apply bg-secondary;
+}
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full;
-  }
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
 
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
-  }
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
 
 @layer components {
-  /* Enhanced card styles */
+
+  /* Professional Card Styles - Based on Reference Images */
   .card {
-    @apply bg-card border border-border rounded-xl shadow-md transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+    @apply bg-card border border-border rounded-lg shadow-sm transition-shadow duration-200 hover:shadow-md;
   }
-  
-  .card-glass {
-    @apply bg-white/80 backdrop-blur-sm border border-white/20 rounded-xl shadow-hotel transition-all duration-200 hover:shadow-xl hover:-translate-y-1;
+
+  /* Prime Hotels Header Style */
+  .prime-header {
+    @apply bg-hotel-navy border-b border-hotel-navy-dark shadow-sm;
   }
-  
+
+  .prime-footer {
+    @apply bg-hotel-navy border-t border-hotel-navy-dark text-white;
+  }
+
+  .prime-nav-link {
+    @apply text-white hover:bg-hotel-navy-light/20 px-3 py-2 rounded-md transition-colors duration-200;
+  }
+
+  .prime-nav-link.active {
+    @apply bg-hotel-navy-light/30 text-white;
+  }
+
+  /* Prime Hotels Card Styles */
+  .prime-card {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .prime-card-header {
+    @apply bg-hotel-navy text-white px-4 py-3 rounded-t-lg border-b border-hotel-navy-dark;
+  }
+
+  .prime-card-body {
+    @apply p-4 bg-white;
+  }
+
+  .prime-card-footer {
+    @apply bg-gray-50 px-4 py-3 rounded-b-lg border-t border-gray-200;
+  }
+
+  /* Redefining glass classes to be solid corporate style - NO TRANSPARENCY */
+  .glass {
+    @apply bg-background border border-border shadow-sm;
+    /* Solid background */
+  }
+
+  .glass-card {
+    @apply bg-card border border-border rounded-lg shadow-sm;
+    /* Solid card */
+  }
+
+  .glass-sidebar {
+    @apply bg-card border-r border-border shadow-sm;
+    /* Solid sidebar */
+  }
+
   .card-gold {
-    @apply bg-gradient-to-br from-hotel-gold/10 to-hotel-gold/5 border border-hotel-gold/20 rounded-xl shadow-hotel transition-all duration-200 hover:shadow-xl hover:-translate-y-1;
+    @apply bg-[#FDF8F0] border border-[#E5D5BC] rounded-lg shadow-sm;
+    /* Solid Cream */
   }
-  
-  /* Button styles */
+
+  /* Button styles - Corporate */
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
   }
-  
+
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md focus:ring-primary;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm;
   }
-  
+
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm focus:ring-secondary;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm;
   }
-  
+
   .btn-outline {
-    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm focus:ring-accent;
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm;
+    /* Solid background */
   }
-  
+
   .btn-ghost {
-    @apply hover:bg-accent hover:text-accent-foreground focus:ring-accent;
+    @apply bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground shadow-sm;
+    /* Solid background */
   }
-  
+
   .btn-destructive {
-    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-md focus:ring-destructive;
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm;
   }
-  
+
   .btn-gold {
-    @apply bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-white hover:from-hotel-gold-light hover:to-hotel-gold hover:shadow-md focus:ring-hotel-gold;
+    @apply bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm transition-all duration-200;
   }
-  
+
   .btn-navy {
-    @apply bg-gradient-to-r from-hotel-navy to-hotel-navy-dark text-white hover:from-hotel-navy-light hover:to-hotel-navy hover:shadow-md focus:ring-hotel-navy;
+    @apply bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-sm transition-all duration-200;
   }
-  
-  /* Input styles */
+
+  .btn-primary {
+    @apply bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-sm transition-all duration-200;
+  }
+
+  /* Input styles - Standard */
   .input {
-    @apply w-full px-4 py-2.5 border border-input rounded-lg bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200;
+    @apply w-full px-3 py-2 border border-input rounded-md bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
-  
-  .input:focus {
-    @apply shadow-sm;
-  }
-  
+
   /* Textarea styles */
   .textarea {
     @apply w-full px-4 py-2.5 border border-input rounded-lg bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring resize-y disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200;
   }
-  
+
   .textarea:focus {
     @apply shadow-sm;
   }
-  
+
   /* Select styles */
   .select {
     @apply w-full px-4 py-2.5 border border-input rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200;
   }
-  
-  /* Badge styles */
+
+  /* Badge styles - Clean */
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
-  
+
   .badge-default {
-    @apply bg-primary text-primary-foreground hover:bg-primary/80;
+    @apply border-transparent bg-primary text-primary-foreground hover:bg-primary/80;
   }
-  
+
   .badge-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+    @apply border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80;
   }
-  
+
   .badge-success {
     @apply bg-success text-success-foreground hover:bg-success/80;
   }
-  
+
   .badge-warning {
     @apply bg-warning text-warning-foreground hover:bg-warning/80;
   }
-  
+
   .badge-destructive {
     @apply bg-destructive text-destructive-foreground hover:bg-destructive/80;
   }
-  
+
   .badge-gold {
     @apply bg-hotel-gold text-white hover:bg-hotel-gold-dark;
   }
-  
+
   .badge-navy {
     @apply bg-hotel-navy text-white hover:bg-hotel-navy-dark;
   }
-  
+
   /* Loading spinner */
   .spinner {
     @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary;
   }
-  
+
   .spinner-sm {
     @apply w-4 h-4;
   }
-  
+
   .spinner-md {
     @apply w-6 h-6;
   }
-  
+
   .spinner-lg {
     @apply w-8 h-8;
   }
-  
+
   /* Skeleton loader */
   .skeleton {
     @apply animate-pulse rounded-md bg-muted;
   }
-  
-  /* Glass morphism effect */
-  .glass {
-    @apply bg-white/10 backdrop-blur-md border border-white/20;
+
+  /* Typography Utilities */
+  .text-gradient {
+    @apply text-primary;
+    /* Removed gradient text for solid corporate look */
   }
-  
-  /* Gradient text */
+
   .gradient-text {
-    @apply bg-gradient-to-r from-yellow-500 to-amber-600 bg-clip-text text-transparent;
-  }
-  
-  .gradient-text-navy {
-    @apply bg-gradient-to-r from-blue-900 to-blue-950 bg-clip-text text-transparent;
+    @apply text-foreground;
   }
 }
 
 @layer utilities {
+
   /* Text utilities */
   .text-gradient {
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.6) 100%);
@@ -403,116 +419,143 @@
 
   /* Keyframes */
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes slideUp {
-    from { 
+    from {
       opacity: 0;
       transform: translateY(10px);
     }
-    to { 
+
+    to {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
   @keyframes slideDown {
-    from { 
+    from {
       opacity: 0;
       transform: translateY(-10px);
     }
-    to { 
+
+    to {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
   @keyframes scaleIn {
-    from { 
+    from {
       opacity: 0;
       transform: scale(0.95);
     }
-    to { 
+
+    to {
       opacity: 1;
       transform: scale(1);
     }
   }
 
   @keyframes bounceIn {
-    0% { 
+    0% {
       opacity: 0;
       transform: scale(0.3);
     }
-    50% { 
+
+    50% {
       opacity: 1;
       transform: scale(1.05);
     }
-    70% { 
+
+    70% {
       transform: scale(0.9);
     }
-    100% { 
+
+    100% {
       transform: scale(1);
     }
   }
 
   @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
   }
 
   @keyframes slideFromTop {
-    from { 
+    from {
       opacity: 0;
       transform: translateY(-20px);
     }
-    to { 
+
+    to {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
   @keyframes slideFromBottom {
-    from { 
+    from {
       opacity: 0;
       transform: translateY(20px);
     }
-    to { 
+
+    to {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
   @keyframes slideFromLeft {
-    from { 
+    from {
       opacity: 0;
       transform: translateX(-20px);
     }
-    to { 
+
+    to {
       opacity: 1;
       transform: translateX(0);
     }
   }
 
   @keyframes slideFromRight {
-    from { 
+    from {
       opacity: 0;
       transform: translateX(20px);
     }
-    to { 
+
+    to {
       opacity: 1;
       transform: translateX(0);
     }
   }
 
   /* Staggered animations */
-  .stagger-children > * {
+  .stagger-children>* {
     animation-delay: calc(var(--stagger-delay, 100ms) * var(--stagger-index, 0));
   }
 
@@ -551,6 +594,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -561,6 +605,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -572,6 +617,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -580,9 +626,12 @@
 
 /* Loading animations */
 @keyframes pulse-subtle {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.7;
   }
@@ -614,6 +663,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }

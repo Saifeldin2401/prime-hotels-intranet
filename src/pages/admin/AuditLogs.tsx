@@ -1,23 +1,30 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Download, 
-  User, 
-  FileText, 
-  Settings,
-  Shield,
-  Activity
-} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Download, Filter, Search, Activity, User, FileText, Shield, Clock } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import type { AuditLog } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
 const actionColors = {
   create: 'bg-green-100 text-green-800',
@@ -28,107 +35,114 @@ const actionColors = {
   logout: 'bg-orange-100 text-orange-800'
 }
 
-const entityIcons = {
-  user: User,
-  document: FileText,
-  training: Settings,
-  sop: FileText,
-  maintenance: Settings,
-  announcement: FileText,
-  system: Shield
-}
-
 export default function AuditLogs() {
+  const { t } = useTranslation('admin')
   const [searchTerm, setSearchTerm] = useState('')
-  const [actionFilter, setActionFilter] = useState('all')
-  const [entityFilter, setEntityFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState('7days')
+  const [actionFilter, setActionFilter] = useState<string>('all')
+  const [targetFilter, setTargetFilter] = useState<string>('all')
+  const [dateRange, setDateRange] = useState<string>('30days')
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ['audit-logs', actionFilter, entityFilter, dateFilter],
+    queryKey: ['audit-logs', searchTerm, actionFilter, targetFilter, dateRange],
     queryFn: async () => {
       let query = supabase
         .from('audit_logs')
         .select(`
           *,
-          user:profiles(full_name, email)
+          user:profiles!user_id(full_name, email)
         `)
         .order('created_at', { ascending: false })
 
-      // Apply date filter
-      const now = new Date()
-      let startDate = new Date()
-      
-      switch (dateFilter) {
-        case 'today':
-          startDate.setHours(0, 0, 0, 0)
-          break
-        case '7days':
-          startDate.setDate(now.getDate() - 7)
-          break
-        case '30days':
-          startDate.setDate(now.getDate() - 30)
-          break
-        case '90days':
-          startDate.setDate(now.getDate() - 90)
-          break
-        default:
-          startDate.setDate(now.getDate() - 7)
+      if (searchTerm) {
+        query = query.or(`action.ilike.%${searchTerm}%,entity_type.ilike.%${searchTerm}%`)
       }
 
-      query = query.gte('created_at', startDate.toISOString())
-
-      // Apply filters
       if (actionFilter !== 'all') {
         query = query.eq('action', actionFilter)
       }
-      if (entityFilter !== 'all') {
-        query = query.eq('entity_type', entityFilter)
+
+      if (targetFilter !== 'all') {
+        query = query.eq('entity_type', targetFilter)
       }
 
-      const { data, error } = await query.limit(100)
+      if (dateRange !== 'all') {
+        const now = new Date()
+        let startDate = new Date()
+
+        switch (dateRange) {
+          case 'today':
+            startDate.setHours(0, 0, 0, 0)
+            break
+          case '7days':
+            startDate.setDate(now.getDate() - 7)
+            break
+          case '30days':
+            startDate.setDate(now.getDate() - 30)
+            break
+          case '90days':
+            startDate.setDate(now.getDate() - 90)
+            break
+        }
+
+        query = query.gte('created_at', startDate.toISOString())
+      }
+
+      const { data, error } = await query
+
       if (error) throw error
-      return data as (AuditLog & { user?: { full_name: string | null, email: string } })[]
+      return data as (AuditLog & { user: { full_name: string, email: string } })[]
     }
   })
 
-  const filteredLogs = logs?.filter(log =>
-    log.user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.entity_type.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Calculate stats
+  const stats = {
+    total: logs?.length || 0,
+    byAction: logs?.reduce((acc, log) => {
+      acc[log.action] = (acc[log.action] || 0) + 1
+      return acc
+    }, {} as Record<string, number>),
+    byType: logs?.reduce((acc, log) => {
+      acc[log.entity_type] = (acc[log.entity_type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+  }
 
   const exportLogs = () => {
-    const csv = [
-      ['Date', 'User', 'Action', 'Entity', 'Details'],
-      ...(filteredLogs || []).map(log => [
-        formatDateTime(log.created_at),
-        log.user?.full_name || log.user?.email || 'System',
+    if (!logs) return
+
+    const csvContent = [
+      ['Date', 'User', 'Action', 'Entity Type', 'Entity ID', 'Details', 'IP Address'],
+      ...logs.map(log => [
+        new Date(log.created_at).toLocaleString(),
+        log.user?.full_name || 'System',
         log.action,
         log.entity_type,
-        log.entity_id || ''
+        log.entity_id,
+        JSON.stringify(log.details),
+        log.ip_address || ''
       ])
-    ].map(row => row.join(',')).join('\n')
+    ].map(e => e.join(',')).join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     window.URL.revokeObjectURL(url)
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Audit Logs"
-        description="System activity and security audit trail"
+        title={t('audit_logs.title')}
+        description={t('audit_logs.description')}
         actions={
-          <Button onClick={exportLogs} variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export
+          <Button onClick={exportLogs} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+            <Download className="w-4 h-4 me-2" />
+            {t('audit_logs.export')}
           </Button>
         }
       />
@@ -137,190 +151,208 @@ export default function AuditLogs() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Activities</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('audit_logs.total_activities')}</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{logs?.length || 0}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">User Actions</CardTitle>
-            <User className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">{t('audit_logs.user_actions')}</CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {logs?.filter(log => log.entity_type === 'user').length || 0}
+            <div className="text-2xl font-bold">
+              {Object.entries(stats.byType || {})
+                .filter(([key]) => key === 'user')
+                .reduce((acc, [, val]) => acc + val, 0)}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Document Access</CardTitle>
-            <FileText className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium">{t('audit_logs.document_access')}</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {logs?.filter(log => log.entity_type === 'document').length || 0}
+            <div className="text-2xl font-bold">
+              {Object.entries(stats.byType || {})
+                .filter(([key]) => key === 'document' || key === 'sop')
+                .reduce((acc, [, val]) => acc + val, 0)}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Security Events</CardTitle>
-            <Shield className="h-4 w-4 text-red-500" />
+            <CardTitle className="text-sm font-medium">{t('audit_logs.security_events')}</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {logs?.filter(log => ['login', 'logout'].includes(log.action)).length || 0}
+            <div className="text-2xl font-bold">
+              {Object.entries(stats.byAction || {})
+                .filter(([key]) => key === 'login' || key === 'failed_login')
+                .reduce((acc, [, val]) => acc + val, 0)}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>{t('audit_logs.filters')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 rtl:left-auto rtl:right-3" />
               <Input
-                placeholder="Search logs..."
+                placeholder={t('audit_logs.search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
+                className="w-full ps-10"
               />
             </div>
-            
+
             <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Action" />
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 me-2" />
+                <SelectValue placeholder={t('audit_logs.action')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Actions</SelectItem>
+                <SelectItem value="all">{t('audit_logs.all_actions')}</SelectItem>
                 <SelectItem value="create">Create</SelectItem>
                 <SelectItem value="update">Update</SelectItem>
                 <SelectItem value="delete">Delete</SelectItem>
-                <SelectItem value="view">View</SelectItem>
                 <SelectItem value="login">Login</SelectItem>
-                <SelectItem value="logout">Logout</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={entityFilter} onValueChange={setEntityFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Entity" />
+            <Select value={targetFilter} onValueChange={setTargetFilter}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 me-2" />
+                <SelectValue placeholder={t('audit_logs.entity')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Entities</SelectItem>
+                <SelectItem value="all">{t('audit_logs.all_entities')}</SelectItem>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="document">Document</SelectItem>
-                <SelectItem value="training">Training</SelectItem>
-                <SelectItem value="sop">SOP</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-                <SelectItem value="announcement">Announcement</SelectItem>
-                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="role">Role</SelectItem>
+                <SelectItem value="department">Department</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Date Range" />
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-[180px]">
+                <Clock className="w-4 h-4 me-2" />
+                <SelectValue placeholder={t('audit_logs.date_range')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="7days">Last 7 Days</SelectItem>
-                <SelectItem value="30days">Last 30 Days</SelectItem>
-                <SelectItem value="90days">Last 90 Days</SelectItem>
+                <SelectItem value="today">{t('audit_logs.today')}</SelectItem>
+                <SelectItem value="7days">{t('audit_logs.last_7_days')}</SelectItem>
+                <SelectItem value="30days">{t('audit_logs.last_30_days')}</SelectItem>
+                <SelectItem value="90days">{t('audit_logs.last_90_days')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Logs List */}
       <Card>
         <CardHeader>
-          <CardTitle>Audit Trail</CardTitle>
+          <CardTitle>{t('audit_logs.audit_trail')}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading audit logs...
+            <div className="text-center py-8 text-gray-600">
+              {t('audit_logs.loading')}
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredLogs?.map((log) => {
-                const IconComponent = entityIcons[log.entity_type as keyof typeof entityIcons] || Activity
-                return (
-                  <div key={log.id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-gray-100 rounded-lg">
-                          <IconComponent className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium capitalize">{log.action}</h3>
-                            <Badge className={actionColors[log.action as keyof typeof actionColors]}>
-                              {log.action}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            {log.entity_type} {log.entity_id && `(${log.entity_id})`}
-                          </p>
-                          <p className="text-sm text-gray-500 mt-1">
-                            By: {log.user?.full_name || log.user?.email || 'System'}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('audit_logs.date_range')}</TableHead>
+                    <TableHead>{t('audit_logs.action')}</TableHead>
+                    <TableHead>{t('audit_logs.entity')}</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>User / IP</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs?.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-medium">
                             {formatDateTime(log.created_at)}
-                          </p>
+                          </span>
                         </div>
-                      </div>
-                      <div className="text-right text-sm text-gray-500">
-                        {log.ip_address && (
-                          <div>IP: {log.ip_address}</div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {(log.old_values || log.new_values) && (
-                      <div className="mt-3 pt-3 border-t">
-                        <div className="text-sm">
-                          {log.old_values && (
-                            <div className="mb-2">
-                              <span className="font-medium">Before:</span>
-                              <pre className="bg-gray-50 p-2 rounded text-xs overflow-auto">
-                                {JSON.stringify(log.old_values, null, 2)}
-                              </pre>
-                            </div>
-                          )}
-                          {log.new_values && (
-                            <div>
-                              <span className="font-medium">After:</span>
-                              <pre className="bg-gray-50 p-2 rounded text-xs overflow-auto">
-                                {JSON.stringify(log.new_values, null, 2)}
-                              </pre>
-                            </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={actionColors[log.action as keyof typeof actionColors] || 'bg-gray-100 text-gray-800'}
+                          variant="secondary"
+                        >
+                          {log.action}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium capitalize">{log.entity_type}</span>
+                          {log.entity_id && (
+                            <span className="text-xs text-gray-500 font-mono">
+                              #{log.entity_id.slice(0, 8)}
+                            </span>
                           )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-              
-              {filteredLogs?.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No audit logs found matching your criteria
-                </div>
-              )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-md text-sm text-gray-600">
+                          {log.action === 'update' && log.changes ? (
+                            <div className="space-y-1">
+                              {Object.entries(log.changes).map(([key, change]: [string, any]) => (
+                                <div key={key} className="text-xs">
+                                  <span className="font-medium">{key}:</span>{' '}
+                                  <span className="text-red-500 line-through">{String(change.old)}</span>
+                                  {' → '}
+                                  <span className="text-green-600">{String(change.new)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                              {JSON.stringify(log.details, null, 2)}
+                            </pre>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col text-sm">
+                          <span className="font-medium">
+                            {log.user?.full_name || 'System'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {log.ip_address}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  {logs?.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        {t('audit_logs.no_logs')}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
@@ -328,4 +360,3 @@ export default function AuditLogs() {
     </div>
   )
 }
-

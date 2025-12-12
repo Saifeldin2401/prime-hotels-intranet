@@ -142,7 +142,7 @@ export function CreateSOPDialogSimple({ children }: CreateSOPDialogSimpleProps) 
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit">

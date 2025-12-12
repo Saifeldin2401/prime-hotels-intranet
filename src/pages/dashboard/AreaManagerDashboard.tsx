@@ -7,13 +7,19 @@ import { SocialFeed, type FeedItem } from '@/components/social/SocialFeed'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 
-interface AreaManagerDashboardProps {
-  user: User
-}
-
-export function AreaManagerDashboard({ user }: AreaManagerDashboardProps) {
+export function AreaManagerDashboard() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Mock user object for SocialFeed component
+  const mockUser: User = {
+    id: 'am-1',
+    name: 'Area Manager',
+    email: 'am@primehotels.com',
+    role: 'area_manager',
+    property: 'Region Central',
+    permissions: []
+  }
   const [areaStats] = useState({
     totalProperties: 3,
     avgOccupancy: 85,
@@ -115,7 +121,7 @@ export function AreaManagerDashboard({ user }: AreaManagerDashboardProps) {
   const handleComment = (itemId: string, content: string) => {
     const newComment = {
       id: Date.now().toString(),
-      author: user,
+      author: mockUser,
       content,
       timestamp: new Date(),
       reactions: {}
@@ -157,8 +163,8 @@ export function AreaManagerDashboard({ user }: AreaManagerDashboardProps) {
           <p className="text-gray-600">Area Manager • {areaStats.totalProperties} Properties</p>
         </div>
         <div className="flex items-center space-x-4">
-          <Badge variant="outline" className="text-sm">
-            {user.role.replace('_', ' ').toUpperCase()}
+          <Badge className="bg-gray-100 text-gray-800 border border-gray-600 rounded-md text-sm">
+            REGIONAL ADMIN
           </Badge>
           <Badge className="text-sm bg-green-100 text-green-800">
             ${areaStats.totalRevenue}M Total Revenue
@@ -230,7 +236,7 @@ export function AreaManagerDashboard({ user }: AreaManagerDashboardProps) {
 
         <TabsContent value="feed" className="space-y-6">
           <SocialFeed
-            user={user}
+            user={mockUser}
             feedItems={feedItems}
             onReact={handleReact}
             onComment={handleComment}

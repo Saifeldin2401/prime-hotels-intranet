@@ -1,4 +1,4 @@
-import { Database } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
 
 export type Language = 'en' | 'ar';
 
@@ -62,7 +62,7 @@ export interface SOPDocument {
   published_by?: string;
   archived_at?: string;
   archived_by?: string;
-  
+
   // Relations
   current_version?: SOPDocumentVersion;
   category?: SOPCategory;

@@ -1,0 +1,17 @@
+{
+    "title": "Employee Directory",
+    "description": "Find and connect with colleagues across the organization",
+    "search_placeholder": "Search by name, role, or department...",
+    "filters": "Filters",
+    "all_departments": "All Departments",
+    "all_locations": "All Locations",
+    "view_profile": "View Profile",
+    "send_message": "Send Message",
+    "no_results": "No employees found",
+    "loading": "Loading directory...",
+    "department": "Department",
+    "location": "Location",
+    "contact": "Contact",
+    "email": "Email",
+    "phone": "Phone"
+}

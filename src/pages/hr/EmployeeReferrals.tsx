@@ -8,16 +8,17 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Users, 
-  UserPlus, 
-  DollarSign, 
-  CheckCircle, 
+import {
+  Users,
+  UserPlus,
+  DollarSign,
+  CheckCircle,
   Clock,
   Plus
 } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
 import type { EmployeeReferral } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -33,9 +34,11 @@ const bonusStatusColors = {
 }
 
 export default function EmployeeReferrals() {
+  const { t, i18n } = useTranslation('hr')
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const isRTL = i18n.dir() === 'rtl'
 
   const { data: referrals, isLoading } = useQuery({
     queryKey: ['employee-referrals', statusFilter],
@@ -67,9 +70,9 @@ export default function EmployeeReferrals() {
       const { data, error } = await supabase
         .from('employee_referrals')
         .select('status, bonus_amount, bonus_status')
-      
+
       if (error) throw error
-      
+
       const referralData = data || []
       return {
         total: referralData.length,
@@ -90,12 +93,12 @@ export default function EmployeeReferrals() {
     mutationFn: async ({ referralId, status }: { referralId: string, status: string }) => {
       const { error } = await supabase
         .from('employee_referrals')
-        .update({ 
+        .update({
           status,
           updated_at: new Date().toISOString()
         })
         .eq('id', referralId)
-      
+
       if (error) throw error
     },
     onSuccess: () => {
@@ -130,108 +133,112 @@ export default function EmployeeReferrals() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Employee Referrals"
-        description="Manage employee referral program and track referral bonuses"
+        title={t('referrals.title')}
+        description={t('referrals.description')}
         actions={null}
       />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total || 0}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hired</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats?.hired || 0}</div>
-          </CardContent>
-        </Card>
+        <div className="prime-card">
+          <div className="prime-card-body">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="text-sm font-medium text-gray-600">{t('referrals.stats.total')}</h3>
+              <Users className="h-4 w-4 text-gray-400" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{stats?.total || 0}</div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bonuses Paid</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
+        <div className="prime-card">
+          <div className="prime-card-body">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="text-sm font-medium text-gray-600">{t('referrals.stats.hired')}</h3>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </div>
+            <div className="text-2xl font-bold text-green-600">{stats?.hired || 0}</div>
+          </div>
+        </div>
+
+        <div className="prime-card">
+          <div className="prime-card-body">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="text-sm font-medium text-gray-600">{t('referrals.stats.bonuses_paid')}</h3>
+              <DollarSign className="h-4 w-4 text-blue-500" />
+            </div>
             <div className="text-2xl font-bold text-blue-600">
               ${stats?.totalBonusPaid?.toFixed(0) || 0}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Bonuses</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
+        <div className="prime-card">
+          <div className="prime-card-body">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="text-sm font-medium text-gray-600">{t('referrals.stats.pending_bonuses')}</h3>
+              <Clock className="h-4 w-4 text-yellow-500" />
+            </div>
             <div className="text-2xl font-bold text-yellow-600">
               ${stats?.pendingBonuses?.toFixed(0) || 0}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="prime-card">
+        <div className="prime-card-header">
+          <h3 className="text-lg font-semibold">{t('common:filter', { defaultValue: 'Filter' })}</h3>
+        </div>
+        <div className="prime-card-body">
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
               <Input
-                placeholder="Search referrals..."
+                type="text"
+                placeholder={t('referrals.search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
             </div>
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t('status.all')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="interviewing">Interviewing</SelectItem>
-                <SelectItem value="hired">Hired</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="all">{t('status.all')}</SelectItem>
+                <SelectItem value="pending">{t('status.pending')}</SelectItem>
+                <SelectItem value="interviewing">{t('status.interviewing')}</SelectItem>
+                <SelectItem value="hired">{t('status.hired')}</SelectItem>
+                <SelectItem value="rejected">{t('status.rejected')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Referrals List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Referrals</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="prime-card">
+        <div className="prime-card-header">
+          <h3 className="text-lg font-semibold">{t('referrals.title')}</h3>
+        </div>
+        <div className="prime-card-body">
           <div className="space-y-4">
             {filteredReferrals?.map((referral) => (
-              <div key={referral.id} className="border rounded-lg p-4 space-y-3">
+              <div key={referral.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-blue-100 rounded-lg">
                       <UserPlus className="h-5 w-5 text-blue-600" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold">{referral.candidate?.full_name}</h3>
+                      <h3 className="font-semibold text-gray-900">{referral.candidate?.full_name}</h3>
                       <p className="text-sm text-gray-600 mt-1">
-                        Referred by {referral.referrer?.full_name} for {referral.position?.title}
+                        {t('referrals.referred_by', {
+                          referrer: referral.referrer?.full_name,
+                          position: referral.position?.title
+                        })}
                       </p>
                       <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                         <span>{referral.property?.name}</span>
@@ -242,61 +249,61 @@ export default function EmployeeReferrals() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge className={statusColors[referral.status as keyof typeof statusColors]}>
-                      {referral.status}
+                      {t(`status.${referral.status}`)}
                     </Badge>
                     {referral.bonus_amount && (
                       <Badge className={bonusStatusColors[referral.bonus_status as keyof typeof bonusStatusColors]}>
-                        ${referral.bonus_amount} - {referral.bonus_status}
+                        ${referral.bonus_amount} - {t(`status.${referral.bonus_status}`)}
                       </Badge>
                     )}
                   </div>
                 </div>
-                
+
                 {referral.notes && (
                   <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                    <strong>Notes:</strong> {referral.notes}
+                    <strong>{t('referrals.notes')}:</strong> {referral.notes}
                   </div>
                 )}
-                
+
                 <div className="flex justify-end gap-2">
                   {referral.status === 'pending' && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
+                    <Button
+                      size="sm"
+                      className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                       onClick={() => handleStatusUpdate(referral.id, 'interviewing')}
                     >
-                      Start Interview
+                      {t('referrals.actions.start_interview')}
                     </Button>
                   )}
                   {referral.status === 'interviewing' && (
                     <>
-                      <Button 
+                      <Button
                         size="sm"
                         onClick={() => handleStatusUpdate(referral.id, 'hired')}
                       >
-                        Mark Hired
+                        {t('referrals.actions.mark_hired')}
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
+                      <Button
+                        size="sm"
+                        className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                         onClick={() => handleStatusUpdate(referral.id, 'rejected')}
                       >
-                        Reject
+                        {t('referrals.actions.reject')}
                       </Button>
                     </>
                   )}
                 </div>
               </div>
             ))}
-            
+
             {filteredReferrals?.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                No referrals found
+                {t('referrals.no_referrals')}
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

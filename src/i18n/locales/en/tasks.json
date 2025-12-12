@@ -1,0 +1,12 @@
+{
+    "kanban": {
+        "todo": "To Do",
+        "in_progress": "In Progress",
+        "review": "Review",
+        "completed": "Completed",
+        "no_tasks": "No tasks"
+    },
+    "create_task": "Create Task",
+    "filter_tasks": "Filter Tasks",
+    "my_tasks": "My Tasks"
+}

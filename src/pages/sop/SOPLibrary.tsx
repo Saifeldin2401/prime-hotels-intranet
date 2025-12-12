@@ -7,11 +7,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SOPDashboardAdvanced } from './SOPDashboardAdvanced'
 import { SOPDocumentManager } from './SOPDocumentManager'
 import SOPEditorAdvanced from './SOPEditorAdvanced'
+import { SOPImportDialog } from '@/components/sop/SOPImportDialog'
+import { useTranslation } from 'react-i18next'
 
 export default function SOPLibrary() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [isCreating, setIsCreating] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importedData, setImportedData] = useState<any>(null)
+  const [editingDoc, setEditingDoc] = useState<any>(null)
+
+  const { t } = useTranslation('sop')
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -58,15 +65,24 @@ export default function SOPLibrary() {
     )
   }
 
-  if (isCreating) {
+  if (isCreating || editingDoc) {
     return (
       <div className="h-full">
         <SOPEditorAdvanced
+          documentId={editingDoc?.id}
+          initialContent={!editingDoc ? importedData?.content : undefined}
+          initialMetadata={!editingDoc ? importedData?.metadata : undefined}
           onSave={(content, metadata) => {
             console.log('Saving SOP:', { content, metadata })
             setIsCreating(false)
+            setEditingDoc(null)
+            setImportedData(null)
           }}
-          onCancel={() => setIsCreating(false)}
+          onCancel={() => {
+            setIsCreating(false)
+            setEditingDoc(null)
+            setImportedData(null)
+          }}
         />
       </div>
     )
@@ -74,61 +90,83 @@ export default function SOPLibrary() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      <SOPImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onImport={(data) => {
+          setImportedData({
+            content: data.contentHtml,
+            metadata: {
+              title: data.title,
+              description: data.description,
+              department: data.department,
+              category: data.category,
+              priority: data.priority
+            }
+          })
+          setIsCreating(true)
+        }}
+      />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">SOP Management System</h1>
-          <p className="text-muted-foreground">
-            Comprehensive Standard Operating Procedures management with advanced features
+          <h1 className="text-3xl font-bold tracking-tight">{t('library.title')}</h1>
+          <p className="text-gray-600">
+            {t('library.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Icons.Upload className="h-4 w-4 mr-2" />
-            Import
-          </Button>
-          <Button variant="outline">
-            <Icons.Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button onClick={() => setIsCreating(true)}>
-            <Icons.Plus className="h-4 w-4 mr-2" />
-            Create Advanced SOP
-          </Button>
+          <button
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
+            onClick={() => setShowImportDialog(true)}
+          >
+            <Icons.Sparkles className="h-4 w-4 text-purple-500" />
+            {t('library.import')}
+          </button>
+          <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <Icons.Download className="h-4 w-4" />
+            {t('library.export')}
+          </button>
+          <button
+            className="bg-hotel-gold text-white px-4 py-2 rounded-md text-sm hover:bg-hotel-gold-dark transition-colors flex items-center gap-2"
+            onClick={() => setIsCreating(true)}
+          >
+            <Icons.Plus className="h-4 w-4" />
+            {t('library.create_advanced')}
+          </button>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="editor">Editor</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="dashboard">{t('library.tabs.dashboard')}</TabsTrigger>
+          <TabsTrigger value="documents">{t('library.tabs.documents')}</TabsTrigger>
+          <TabsTrigger value="editor">{t('library.tabs.editor')}</TabsTrigger>
+          <TabsTrigger value="analytics">{t('library.tabs.analytics')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-4">
           <SOPDashboardAdvanced />
         </TabsContent>
 
-        <TabsContent value="documents" className="space-y-4">
-          <SOPDocumentManager />
+        <TabsContent value="documents" className="m-0">
+          <SOPDocumentManager onEdit={(doc) => setEditingDoc(doc)} />
         </TabsContent>
 
         <TabsContent value="editor" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>SOP Editor</CardTitle>
+              <CardTitle>{t('library.editor_card.title')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-center py-12">
-                <Icons.FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Advanced SOP Editor</h3>
-                <p className="text-muted-foreground mb-4">
-                  Create and edit comprehensive SOP documents with rich text editing, 
-                  version control, and approval workflows.
+                <Icons.FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">{t('library.editor_card.subtitle')}</h3>
+                <p className="text-gray-600 mb-4">
+                  {t('library.editor_card.description')}
                 </p>
                 <Button onClick={() => setIsCreating(true)}>
                   <Icons.Plus className="h-4 w-4 mr-2" />
-                  Create New SOP
+                  {t('library.editor_card.create_button')}
                 </Button>
               </div>
             </CardContent>

@@ -18,12 +18,115 @@
     "success": "تمت العملية بنجاح",
     "confirm": "هل أنت متأكد؟",
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "actions": "إجراءات",
+    "status": "الحالة",
+    "created_at": "تاريخ الإنشاء",
+    "updated_at": "تاريخ التحديث",
+    "view_details": "عرض التفاصيل",
+    "download": "تنزيل",
+    "upload": "رفع",
+    "filter": "تصفية",
+    "clear_filters": "مسح التصفيات",
+    "apply": "تطبيق"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "staff_dashboard": "لوحة الموظفين",
+    "directory": "الدليل",
+    "documents": "المستندات",
+    "training": "التدريب",
+    "sops": "إجراءات التشغيل القياسية",
+    "jobs": "الوظائف",
+    "maintenance": "الصيانة",
+    "tasks": "المهام",
+    "messaging": "الرسائل",
+    "approvals": "الموافقات",
+    "hr": "إدارة الموارد البشرية",
+    "announcements": "الإعلانات",
+    "admin": "الإدارة",
+    "my_profile": "ملفي الشخصي",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "welcome": "مرحباً بك، {{name}}",
+    "quick_actions": "إجراءات سريعة",
+    "recent_activity": "النشاط الأخير",
+    "announcements": "الإعلانات",
+    "my_tasks": "مهامي",
+    "pending_approvals": "الموافقات المعلقة"
+  },
+  "jobs": {
+    "title": "الوظائف الشاغرة",
+    "create_new": "إنشاء وظيفة جديدة",
+    "internal_jobs": "لوحة الوظائف الداخلية",
+    "position": "المسمى الوظيفي",
+    "department": "القسم",
+    "location": "الموقع",
+    "type": "نوع التوظيف",
+    "posted_date": "تاريخ النشر",
+    "closing_date": "تاريخ الإغلاق",
+    "apply_now": "قدم الآن",
+    "description": "الوصف الوظيفي",
+    "requirements": "المتطلبات",
+    "status": {
+      "open": "مفتوح",
+      "closed": "مغلق",
+      "draft": "مسودة"
+    }
+  },
+  "hr": {
+    "promotions": "الترقيات",
+    "transfers": "التنقلات",
+    "leave_requests": "طلبات الإجازة",
+    "performance": "تقييم الأداء",
+    "new_promotion": "طلب ترقية جديد",
+    "new_transfer": "طلب نقل جديد",
+    "current_position": "المنصب الحالي",
+    "proposed_position": "المنصب المقترح",
+    "justification": "المبرر",
+    "effective_date": "تاريخ التفعيل"
+  },
+  "profile": {
+    "personal_info": "المعلومات الشخصية",
+    "employment_details": "تفاصيل التوظيف",
+    "documents": "المستندات",
+    "emergency_contact": "جهة اتصال للطوارئ",
+    "skills": "المهارات والمؤهلات",
+    "full_name": "الاسم الكامل",
+    "email": "البريد الإلكتروني",
+    "phone": "رقم الهاتف",
+    "address": "العنوان",
+    "employee_id": "الرقم الوظيفي",
+    "join_date": "تاريخ الانضمام"
+  },
+  "settings": {
+    "general": "الإعدادات العامة",
+    "notifications": "تفضيلات الإشعارات",
+    "security": "الأمان",
+    "appearance": "المظهر",
+    "language": "اللغة",
+    "email_notifications": "إشعارات البريد الإلكتروني",
+    "push_notifications": "الإشعارات المنبثقة"
   },
   "validation": {
     "required": "هذا الحقل مطلوب",
-    "invalid_email": "الرجاء إدخال بريد إلكتروني صحيح",
-    "min_length": "يجب أن يكون {{count}} أحرف على الأقل",
-    "max_length": "لا يمكن أن يتجاوز {{count}} حرف"
+    "invalid_email": "يرجى إدخال بريد إلكتروني صحيح",
+    "min_length": "يجب أن يكون على الأقل {{count}} حرفاً",
+    "max_length": "لا يمكن أن يتجاوز {{count}} حرفاً",
+    "password_mismatch": "كلمات المرور غير متطابقة",
+    "numeric": "يجب أن يكون رقماً"
+  },
+  "roles": {
+    "super_admin": "مشرف عام",
+    "admin": "مسؤول",
+    "regional_admin": "مسؤول إقليمي",
+    "property_manager": "مدير المنشأة",
+    "department_manager": "مدير القسم",
+    "hr_manager": "مدير الموارد البشرية",
+    "staff": "موظف",
+    "corporate_hr": "الموارد البشرية للشركة"
   }
 }

@@ -27,7 +27,7 @@ export default function PIIAccessLogs() {
       <Card>
         <CardContent className="p-6">
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-gray-600">
               Loading PII access logs...
             </div>
           ) : (
@@ -39,11 +39,11 @@ export default function PIIAccessLogs() {
                       <p className="font-medium">
                         Accessed fields: {log.fields_accessed.join(', ')}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-gray-600">
                         {formatDateTime(log.created_at)}
                       </p>
                       {log.reason && (
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-gray-600 mt-1">
                           Reason: {log.reason}
                         </p>
                       )}

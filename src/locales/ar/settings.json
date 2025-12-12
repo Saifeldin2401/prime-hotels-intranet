@@ -1,0 +1,46 @@
+{
+    "title": "الإعدادات",
+    "description": "إدارة إعدادات حسابك وتفضيلاتك",
+    "tabs": {
+        "general": "عام",
+        "notifications": "الإشعارات",
+        "security": "الأمان"
+    },
+    "appearance": {
+        "title": "مظهر التطبيق",
+        "description": "تخصيص مظهر التطبيق على جهازك",
+        "theme": "السمة",
+        "light": "فاتح",
+        "dark": "داكن",
+        "system": "النظام",
+        "language": "اللغة",
+        "languageDescription": "اختر لغتك المفضلة",
+        "english": "الإنجليزية",
+        "arabic": "العربية"
+    },
+    "notifications": {
+        "title": "تفضيلات الإشعارات",
+        "description": "إدارة كيفية تلقي الإشعارات",
+        "email_notifications": "إشعارات البريد الإلكتروني",
+        "email_description": "تلقي الإشعارات عبر البريد الإلكتروني",
+        "browser_notifications": "إشعارات المتصفح",
+        "browser_description": "تلقي إشعارات فورية عبر المتصفح",
+        "types": {
+            "approvals": "الموافقات",
+            "approvals_desc": "عندما يكون التحقق مطلوبًا أو تتغير الحالة",
+            "training": "التدريب",
+            "training_desc": "التعيينات الجديدة والمواعيد النهائية",
+            "announcements": "الإعلانات",
+            "announcements_desc": "أخبار الشركة وتحديثاتها",
+            "maintenance": "الصيانة",
+            "maintenance_desc": "تحديثات التذاكر والتعيينات"
+        }
+    },
+    "actions": {
+        "save": "حفظ التغييرات",
+        "saving": "جاري الحفظ...",
+        "success": "تم حفظ الإعدادات بنجاح",
+        "error": "فشل حفظ الإعدادات",
+        "loading": "جاري تحميل الإعدادات..."
+    }
+}

@@ -11,9 +11,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  BookOpen, 
-  Users, 
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { EmptyState } from '@/components/shared/EmptyState'
+import {
+  BookOpen,
+  Users,
   Target,
   Plus,
   Edit,
@@ -21,124 +23,14 @@ import {
   Briefcase,
   GraduationCap
 } from 'lucide-react'
-import type { 
-  TrainingPath, 
-  TrainingPathModule, 
+import type {
+  TrainingPath,
+  TrainingPathModule,
   UserPathEnrollment,
   TrainingModule
 } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
-// Bilingual labels
-const labels = {
-  en: {
-    paths: 'Learning Paths',
-    createPath: 'Create Path',
-    editPath: 'Edit Path',
-    myPaths: 'My Paths',
-    allPaths: 'All Paths',
-    newPath: 'New Learning Path',
-    pathTitle: 'Path Title',
-    pathDescription: 'Path Description',
-    pathType: 'Path Type',
-    newHire: 'New Hire Path',
-    department: 'Department Path',
-    leadership: 'Leadership Track',
-    compliance: 'Compliance Training',
-    skills: 'Skills Development',
-    estimatedDuration: 'Estimated Duration',
-    modules: 'Modules',
-    enrolled: 'Enrolled',
-    completed: 'Completed',
-    inProgress: 'In Progress',
-    notStarted: 'Not Started',
-    averageScore: 'Average Score',
-    completionRate: 'Completion Rate',
-    enrollNow: 'Enroll Now',
-    continuePath: 'Continue Path',
-    startPath: 'Start Path',
-    assignTo: 'Assign To',
-    allEmployees: 'All Employees',
-    specificDepartments: 'Specific Departments',
-    specificProperties: 'Specific Properties',
-    jobTitles: 'Job Titles',
-    mandatory: 'Mandatory',
-    optional: 'Optional',
-    prerequisites: 'Prerequisites',
-    certificate: 'Certificate',
-    certificateEnabled: 'Certificate Enabled',
-    noPaths: 'No learning paths available',
-    noEnrollments: 'No path enrollments found',
-    loading: 'Loading...',
-    save: 'Save',
-    cancel: 'Cancel',
-    delete: 'Delete',
-    confirmDelete: 'Are you sure you want to delete this learning path?',
-    pathCreated: 'Learning path created successfully',
-    pathUpdated: 'Learning path updated successfully',
-    pathDeleted: 'Learning path deleted successfully',
-    enrolledSuccessfully: 'Enrolled successfully',
-    selectModules: 'Select Modules',
-    sequence: 'Sequence',
-    addModule: 'Add Module',
-    removeModule: 'Remove Module',
-    dragToReorder: 'Drag to reorder modules'
-  },
-  ar: {
-    paths: 'مسارات التعلم',
-    createPath: 'إنشاء مسار',
-    editPath: 'تعديل المسار',
-    myPaths: 'مساراتي',
-    allPaths: 'جميع المسارات',
-    newPath: 'مسار تعلم جديد',
-    pathTitle: 'عنوان المسار',
-    pathDescription: 'وصف المسار',
-    pathType: 'نوع المسار',
-    newHire: 'مسار الموظف الجديد',
-    department: 'مسار القسم',
-    leadership: 'مسار القيادة',
-    compliance: 'تدريب الامتثال',
-    skills: 'تطوير المهارات',
-    estimatedDuration: 'المدة المقدرة',
-    modules: 'الوحدات',
-    enrolled: 'مسجل',
-    completed: 'مكتمل',
-    inProgress: 'قيد التقدم',
-    notStarted: 'لم يبدأ',
-    averageScore: 'متوسط الدرجة',
-    completionRate: 'معدل الإنجاز',
-    enrollNow: 'سجل الآن',
-    continuePath: 'متابعة المسار',
-    startPath: 'بدء المسار',
-    assignTo: 'تعيين إلى',
-    allEmployees: 'جميع الموظفين',
-    specificDepartments: 'أقسام محددة',
-    specificProperties: 'خصائص محددة',
-    jobTitles: 'الوظائف',
-    mandatory: 'إلزامي',
-    optional: 'اختياري',
-    prerequisites: 'المتطلبات الأساسية',
-    certificate: 'شهادة',
-    certificateEnabled: 'الشهادة مفعلة',
-    noPaths: 'لا توجد مسارات تعلم متاحة',
-    noEnrollments: 'لم يتم العثور على تسجيلات للمسار',
-    loading: 'جاري التحميل...',
-    save: 'حفظ',
-    cancel: 'إلغاء',
-    delete: 'حذف',
-    confirmDelete: 'هل أنت متأكد من حذف مسار التعلم هذا؟',
-    pathCreated: 'تم إنشاء مسار التعلم بنجاح',
-    pathUpdated: 'تم تحديث مسار التعلم بنجاح',
-    pathDeleted: 'تم حذف مسار التعلم بنجاح',
-    enrolledSuccessfully: 'تم التسجيل بنجاح',
-    selectModules: 'اختر الوحدات',
-    sequence: 'التسلسل',
-    addModule: 'إضافة وحدة',
-    removeModule: 'إزالة الوحدة',
-    dragToReorder: 'اسحب لإعادة ترتيب الوحدات'
-  }
-}
-
-type Language = 'en' | 'ar'
 type PathType = 'new_hire' | 'department' | 'leadership' | 'compliance' | 'skills'
 
 interface PathForm {
@@ -153,10 +45,9 @@ interface PathForm {
 export default function TrainingPaths() {
   const { profile, primaryRole } = useAuth()
   const queryClient = useQueryClient()
-  const [lang, setLang] = useState<Language>('en')
+  const { t, i18n } = useTranslation('training')
   const [activeTab, setActiveTab] = useState('my')
-  const t = labels[lang]
-  const isRTL = lang === 'ar'
+  const isRTL = i18n.dir() === 'rtl'
 
   // State for dialogs
   const [showPathDialog, setShowPathDialog] = useState(false)
@@ -169,6 +60,8 @@ export default function TrainingPaths() {
     is_mandatory: false,
     certificate_enabled: true
   })
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [pathToDelete, setPathToDelete] = useState<TrainingPath | null>(null)
 
   // Fetch all learning paths
   const { data: paths, isLoading: pathsLoading } = useQuery({
@@ -186,10 +79,10 @@ export default function TrainingPaths() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as (TrainingPath & { 
-        training_path_modules: (TrainingPathModule & { 
-          training_modules: TrainingModule 
-        })[] 
+      return data as (TrainingPath & {
+        training_path_modules: (TrainingPathModule & {
+          training_modules: TrainingModule
+        })[]
       })[]
     }
   })
@@ -215,12 +108,12 @@ export default function TrainingPaths() {
         .order('enrolled_at', { ascending: false })
 
       if (error) throw error
-      return data as (UserPathEnrollment & { 
-        training_paths: TrainingPath & { 
-          training_path_modules: (TrainingPathModule & { 
-            training_modules: TrainingModule 
-          })[] 
-        } 
+      return data as (UserPathEnrollment & {
+        training_paths: TrainingPath & {
+          training_path_modules: (TrainingPathModule & {
+            training_modules: TrainingModule
+          })[]
+        }
       })[]
     },
     enabled: !!profile?.id
@@ -268,7 +161,7 @@ export default function TrainingPaths() {
       setShowPathDialog(false)
       setEditingPath(null)
       resetForm()
-      alert(editingPath ? t.pathUpdated : t.pathCreated)
+      alert(editingPath ? t('pathUpdated') : t('pathCreated'))
     },
     onError: (error) => {
       alert(error.message)
@@ -286,7 +179,7 @@ export default function TrainingPaths() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-paths'] })
-      alert(t.pathDeleted)
+      alert(t('pathDeleted'))
     },
     onError: (error) => {
       alert(error.message)
@@ -317,9 +210,15 @@ export default function TrainingPaths() {
     setShowPathDialog(true)
   }
 
-  const handleDelete = (pathId: string) => {
-    if (confirm(t.confirmDelete)) {
-      deletePathMutation.mutate(pathId)
+  const handleDelete = (path: TrainingPath) => {
+    setPathToDelete(path)
+    setDeleteConfirmOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (pathToDelete) {
+      await deletePathMutation.mutateAsync(pathToDelete.id)
+      setPathToDelete(null)
     }
   }
 
@@ -346,7 +245,7 @@ export default function TrainingPaths() {
     if (!enrollment.training_paths.training_path_modules) return 0
     const totalModules = enrollment.training_paths.training_path_modules.length
     if (totalModules === 0) return 0
-    
+
     // This would need to be calculated based on actual progress
     // For now, return a placeholder based on enrollment ID for consistency
     const hash = enrollment.id.split('-').reduce((acc: number, part: string) => acc + part.charCodeAt(0), 0)
@@ -356,21 +255,21 @@ export default function TrainingPaths() {
   return (
     <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
       <PageHeader
-        title={t.paths}
+        title={t('paths')}
         description={isRTL ? 'إدارة مسارات التعلم المهيكلة للموظفين' : 'Manage structured learning paths for employees'}
         actions={
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors"
               size="sm"
-              onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
+              onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'ar' : 'en')}
             >
-              {lang === 'en' ? 'العربية' : 'English'}
+              {i18n.language === 'en' ? 'العربية' : 'English'}
             </Button>
             {['regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
               <Button onClick={() => setShowPathDialog(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                {t.createPath}
+                {t('createPath')}
               </Button>
             )}
           </div>
@@ -379,20 +278,20 @@ export default function TrainingPaths() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="my">{t.myPaths}</TabsTrigger>
+          <TabsTrigger value="my">{t('myPaths')}</TabsTrigger>
           {['regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
-            <TabsTrigger value="all">{t.allPaths}</TabsTrigger>
+            <TabsTrigger value="all">{t('allPaths')}</TabsTrigger>
           )}
         </TabsList>
 
         <TabsContent value="my" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>{t.myPaths}</CardTitle>
+              <CardTitle>{t('myPaths')}</CardTitle>
             </CardHeader>
             <CardContent>
               {enrollmentsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">{t.loading}</div>
+                <div className="text-center py-8 text-gray-700">{t('loading')}</div>
               ) : myEnrollments && myEnrollments.length > 0 ? (
                 <div className="space-y-4">
                   {myEnrollments.map((enrollment) => (
@@ -401,13 +300,13 @@ export default function TrainingPaths() {
                         {getPathIcon(enrollment.training_paths.path_type)}
                         <div>
                           <h3 className="font-medium">{enrollment.training_paths.title}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-gray-600">
                             {enrollment.training_paths.description}
                           </p>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                            <span>{t.modules}: {enrollment.training_paths.training_path_modules?.length || 0}</span>
-                            <span>{t.estimatedDuration}: {enrollment.training_paths.estimated_duration_hours}h</span>
-                            <span>{t.enrolled}: {new Date(enrollment.enrolled_at).toLocaleDateString()}</span>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                            <span>{t('modules')}: {enrollment.training_paths.training_path_modules?.length || 0}</span>
+                            <span>{t('estimatedDuration')}: {enrollment.training_paths.estimated_duration_hours}h</span>
+                            <span>{t('enrolled')}: {new Date(enrollment.enrolled_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
@@ -415,24 +314,25 @@ export default function TrainingPaths() {
                         <div className="text-right">
                           <div className="text-sm font-medium">{calculateProgress(enrollment)}%</div>
                           <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full" 
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
                               style={{ width: `${calculateProgress(enrollment)}%` }}
                             />
                           </div>
                         </div>
                         <Button size="sm">
-                          {calculateProgress(enrollment) > 0 ? t.continuePath : t.startPath}
+                          {calculateProgress(enrollment) > 0 ? t('continuePath') : t('startPath')}
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">{t.noEnrollments}</p>
-                </div>
+                <EmptyState
+                  icon={BookOpen}
+                  title={t('noEnrollments')}
+                  description={isRTL ? 'ابدأ رحلة التعلم الخاصة بك عن طريق التسجيل في مسار تعلم.' : 'Start your learning journey by enrolling in a learning path.'}
+                />
               )}
             </CardContent>
           </Card>
@@ -442,11 +342,11 @@ export default function TrainingPaths() {
           <TabsContent value="all" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>{t.allPaths}</CardTitle>
+                <CardTitle>{t('allPaths')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {pathsLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">{t.loading}</div>
+                  <div className="text-center py-8 text-gray-700">{t('loading')}</div>
                 ) : paths && paths.length > 0 ? (
                   <div className="space-y-4">
                     {paths.map((path) => (
@@ -455,39 +355,41 @@ export default function TrainingPaths() {
                           {getPathIcon(path.path_type)}
                           <div>
                             <h3 className="font-medium">{path.title}</h3>
-                            <p className="text-sm text-muted-foreground">{path.description}</p>
-                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                              <span>{t.modules}: {path.training_path_modules?.length || 0}</span>
-                              <span>{t.estimatedDuration}: {path.estimated_duration_hours}h</span>
+                            <p className="text-sm text-gray-600">{path.description}</p>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                              <span>{t('modules')}: {path.training_path_modules?.length || 0}</span>
+                              <span>{t('estimatedDuration')}: {path.estimated_duration_hours}h</span>
                               {path.is_mandatory && (
-                                <Badge variant="outline">{t.mandatory}</Badge>
+                                <Badge className="bg-hotel-gold text-white border border-hotel-gold rounded-md">{t('mandatory')}</Badge>
                               )}
                               {path.certificate_enabled && (
-                                <Badge variant="outline">{t.certificate}</Badge>
+                                <Badge className="bg-hotel-navy text-white border border-hotel-navy rounded-md">{t('certificate')}</Badge>
                               )}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => handleEdit(path)}>
+                          <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleEdit(path)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => handleDelete(path.id)}>
-                            <Trash2 className="w-4 h-4" />
+                          <Button size="sm" className="bg-red-500 text-white hover:bg-red-600 border border-red-500 rounded-md transition-colors" onClick={() => handleDelete(path)}>
+                            <Trash2 className="w-4 w-4" />
                           </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground mb-4">{t.noPaths}</p>
-                    <Button onClick={() => setShowPathDialog(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t.newPath}
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={BookOpen}
+                    title={t('noPaths')}
+                    description={isRTL ? 'قم بإنشاء مسارات تعلم منظمة لتوجيه تطوير الموظفين.' : 'Create structured learning paths to guide employee development.'}
+                    action={{
+                      label: t('newPath'),
+                      onClick: () => setShowPathDialog(true),
+                      icon: Plus
+                    }}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -500,12 +402,12 @@ export default function TrainingPaths() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingPath ? t.editPath : t.createPath}
+              {editingPath ? t('editPath') : t('createPath')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label>{t.pathTitle}</Label>
+              <Label>{t('pathTitle')}</Label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -514,7 +416,7 @@ export default function TrainingPaths() {
             </div>
 
             <div className="space-y-2">
-              <Label>{t.pathDescription}</Label>
+              <Label>{t('pathDescription')}</Label>
               <Input
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -523,7 +425,7 @@ export default function TrainingPaths() {
             </div>
 
             <div className="space-y-2">
-              <Label>{t.pathType}</Label>
+              <Label>{t('pathType')}</Label>
               <Select
                 value={formData.path_type}
                 onValueChange={(value: PathType) => setFormData({ ...formData, path_type: value })}
@@ -532,17 +434,17 @@ export default function TrainingPaths() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new_hire">{t.newHire}</SelectItem>
-                  <SelectItem value="department">{t.department}</SelectItem>
-                  <SelectItem value="leadership">{t.leadership}</SelectItem>
-                  <SelectItem value="compliance">{t.compliance}</SelectItem>
-                  <SelectItem value="skills">{t.skills}</SelectItem>
+                  <SelectItem value="new_hire">{t('newHire')}</SelectItem>
+                  <SelectItem value="department">{t('department')}</SelectItem>
+                  <SelectItem value="leadership">{t('leadership')}</SelectItem>
+                  <SelectItem value="compliance">{t('compliance')}</SelectItem>
+                  <SelectItem value="skills">{t('skills')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>{t.estimatedDuration} (hours)</Label>
+              <Label>{t('estimatedDuration')} (hours)</Label>
               <Input
                 type="number"
                 value={formData.estimated_duration_hours}
@@ -559,7 +461,7 @@ export default function TrainingPaths() {
                 onChange={(e) => setFormData({ ...formData, is_mandatory: e.target.checked })}
                 className="w-4 h-4"
               />
-              <Label htmlFor="mandatory">{t.mandatory}</Label>
+              <Label htmlFor="mandatory">{t('mandatory')}</Label>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -570,20 +472,30 @@ export default function TrainingPaths() {
                 onChange={(e) => setFormData({ ...formData, certificate_enabled: e.target.checked })}
                 className="w-4 h-4"
               />
-              <Label htmlFor="certificate">{t.certificateEnabled}</Label>
+              <Label htmlFor="certificate">{t('certificateEnabled')}</Label>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowPathDialog(false)}>
-                {t.cancel}
+              <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => setShowPathDialog(false)}>
+                {t('cancel')}
               </Button>
-              <Button onClick={handleSubmit} disabled={pathMutation.isPending}>
-                {pathMutation.isPending ? t.loading : t.save}
+              <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" onClick={handleSubmit} disabled={pathMutation.isPending}>
+                {pathMutation.isPending ? t('loading') : t('save')}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmation
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={confirmDelete}
+        itemName={pathToDelete?.title || ''}
+        itemType="learning path"
+        isLoading={deletePathMutation.isPending}
+      />
     </div>
   )
 }

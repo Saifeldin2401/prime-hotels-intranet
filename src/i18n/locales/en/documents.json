@@ -1,0 +1,42 @@
+{
+    "title": "Document Cloud Library",
+    "description": "Centralized document management with cloud storage and collaboration",
+    "filter": "Filter",
+    "upload_document": "Upload Document",
+    "storage": {
+        "title": "Storage Overview",
+        "usage": "Cloud storage usage",
+        "files": "{{count}} files",
+        "used": "Used: {{value}} GB",
+        "total": "Total: {{value}} GB",
+        "shared_docs": "{{count}} shared documents",
+        "percent_used": "{{percent}}% used"
+    },
+    "search_placeholder": "Search documents, folders, or tags...",
+    "folders": {
+        "all": "All Documents",
+        "drafts": "Drafts",
+        "pending": "Pending Review",
+        "published": "Published"
+    },
+    "unit_files": "files",
+    "tabs": {
+        "documents": "Documents",
+        "folders": "Folders",
+        "shared": "Shared",
+        "recent": "Recent",
+        "favorites": "Favorites"
+    },
+    "empty": {
+        "title": "No documents found",
+        "description": "Start by uploading your first document to the library."
+    },
+    "document": {
+        "all_properties": "All properties",
+        "property_specific": "Property-specific",
+        "department_specific": "Department-specific",
+        "role_specific": "Role-specific",
+        "acknowledged": "Acknowledged",
+        "acknowledge": "Acknowledge"
+    }
+}

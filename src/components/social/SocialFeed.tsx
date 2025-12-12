@@ -8,10 +8,10 @@ import { Separator } from '@/components/ui/separator'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 import { formatDistanceToNow } from 'date-fns'
-import { 
-  Heart, 
-  MessageCircle, 
-  Share2, 
+import {
+  Heart,
+  MessageCircle,
+  Share2,
   Bookmark,
   MoreHorizontal,
   Image,
@@ -146,9 +146,6 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
                     <h4 className="font-semibold text-gray-900">{item.author.name}</h4>
-                    <Badge variant="outline" className="text-xs">
-                      {item.author.role.replace('_', ' ')}
-                    </Badge>
                     {item.department && (
                       <Badge variant="secondary" className="text-xs">
                         {item.department}
@@ -175,7 +172,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent className="pt-0">
             <div className="space-y-4">
               <div>
@@ -205,7 +202,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
               )}
 
               {item.actionButton && (
-                <Button 
+                <Button
                   onClick={item.actionButton.onClick}
                   className="w-full sm:w-auto"
                 >
@@ -233,7 +230,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                       </button>
                     ))}
                   </div>
-                  
+
                   <button
                     onClick={() => setShowComments(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
                     className="social-reaction-btn"
@@ -241,7 +238,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                     <Icons.MessageCircle className="h-4 w-4" />
                     <span className="text-sm">{item.comments.length}</span>
                   </button>
-                  
+
                   <button
                     onClick={() => onShare(item.id)}
                     className="social-reaction-btn"
@@ -250,7 +247,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                     <span className="text-sm">Share</span>
                   </button>
                 </div>
-                
+
                 <button className="social-reaction-btn">
                   <Icons.Bookmark className="h-4 w-4" />
                   <span className="text-sm">Save</span>
@@ -261,7 +258,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
               {showComments[item.id] && (
                 <div className="space-y-4">
                   <Separator />
-                  
+
                   {/* Existing Comments */}
                   {item.comments.map((comment) => (
                     <div key={comment.id} className="flex space-x-3">
@@ -281,7 +278,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                           </div>
                           <p className="text-sm text-gray-700">{comment.content}</p>
                         </div>
-                        
+
                         {/* Comment Reactions */}
                         {Object.keys(comment.reactions).length > 0 && (
                           <div className="flex items-center space-x-2 mt-1">
@@ -298,7 +295,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                       </div>
                     </div>
                   ))}
-                  
+
                   {/* Add Comment */}
                   <div className="flex space-x-3">
                     <Avatar className="h-8 w-8">

@@ -129,7 +129,7 @@ export class SOPService {
           category:category_id(*),
           subcategory:subcategory_id(*),
           department:department_id(id, name, name_ar, short_code),
-          creator:created_by(id, full_name, avatar_url, email),
+          creator:profiles!sop_documents_created_by_fkey(id, full_name, avatar_url, email),
           approvers:sop_approval_steps(
             id,
             approver_id,
@@ -193,7 +193,7 @@ export class SOPService {
 
   static async createDocument(input: CreateSOPDocumentInput): Promise<APIResponse<SOPDocument>> {
     const { content, tags, attachments, related_documents, ...documentData } = input;
-    
+
     try {
       // Start a transaction
       const { data: document, error: docError } = await supabase.rpc('create_sop_document', {
@@ -227,11 +227,11 @@ export class SOPService {
   }
 
   static async updateDocument(
-    id: string, 
+    id: string,
     input: UpdateSOPDocumentInput
   ): Promise<APIResponse<SOPDocument>> {
     const { content, tags, attachments, related_documents, change_summary, ...documentData } = input;
-    
+
     try {
       // Start a transaction
       const { data: document, error: docError } = await supabase.rpc('update_sop_document', {
@@ -335,7 +335,7 @@ export class SOPService {
   }
 
   static async restoreVersion(
-    documentId: string, 
+    documentId: string,
     versionId: string
   ): Promise<APIResponse<SOPDocument>> {
     try {
@@ -526,12 +526,12 @@ export class SOPService {
 
       if (error) throw error;
 
-      return { 
-        data: { 
-          acknowledged: !!data, 
-          acknowledgment: data as SOPAcknowledgment 
-        }, 
-        success: true 
+      return {
+        data: {
+          acknowledged: !!data,
+          acknowledgment: data as SOPAcknowledgment
+        },
+        success: true
       };
     } catch (error) {
       console.error(`Error fetching acknowledgment status for document ${documentId}:`, error);
@@ -631,12 +631,12 @@ export class SOPService {
 
       if (error) throw error;
 
-      return { 
-        data: { 
+      return {
+        data: {
           logs: data as SOPAuditLog[],
           total: count || 0
-        }, 
-        success: true 
+        },
+        success: true
       };
     } catch (error) {
       console.error('Error fetching audit logs:', error);

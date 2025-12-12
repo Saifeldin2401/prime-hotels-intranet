@@ -1,356 +1,367 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useMyMaintenanceTickets, useAssignedMaintenanceTickets, useUpdateMaintenanceTicket, useCompleteMaintenanceTicket } from '@/hooks/useMaintenanceTickets'
+import { useMaintenanceStats } from '@/hooks/useMaintenanceStats'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Wrench, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  Wrench,
+  AlertTriangle,
+  Clock,
   Plus,
   Search,
-  Filter,
   Zap,
   Droplets,
   Thermometer,
-  Wifi,
   Tv,
-  Bed
+  Calendar,
+  User
 } from 'lucide-react'
-import { formatRelativeTime } from '@/lib/utils'
+import { format } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
 import type { MaintenanceTicket } from '@/lib/types'
+import { cn } from '@/lib/utils'
+import emptyStateImage from '@/assets/maintenance-empty.png'
+import { TableSkeleton } from '@/components/loading/TableSkeleton'
+import { useTranslation } from 'react-i18next'
 
-const priorityColors = {
-  low: 'bg-gray-100 text-gray-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  high: 'bg-orange-100 text-orange-800',
-  critical: 'bg-red-100 text-red-800'
+const priorityColors: Record<string, string> = {
+  low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 border-blue-200 dark:border-blue-800',
+  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800',
+  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200 border-orange-200 dark:border-orange-800',
+  urgent: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 border-red-200 dark:border-red-800',
+  critical: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800 animate-pulse'
 }
 
-const statusColors = {
-  open: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  resolved: 'bg-green-100 text-green-800',
-  closed: 'bg-gray-100 text-gray-800'
+const statusColors: Record<string, string> = {
+  open: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
+  in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+  pending_parts: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200',
+  resolved: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
+  completed: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
+  closed: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 line-through'
 }
 
-const categoryIcons = {
-  electrical: Zap,
+const categoryIcons: Record<string, any> = {
   plumbing: Droplets,
+  electrical: Zap,
   hvac: Thermometer,
-  internet: Wifi,
+  internet: Tv,
   tv: Tv,
-  furniture: Bed,
-  general: Wrench
+  furniture: Wrench,
+  appliance: Wrench,
+  structural: Wrench,
+  cosmetic: Wrench,
+  safety: AlertTriangle,
+  general: Wrench,
+  other: Wrench
 }
 
 export default function MaintenanceDashboard() {
-  const { primaryRole, profile } = useAuth()
-  const queryClient = useQueryClient()
+  const { roles } = useAuth()
+  const { t, i18n } = useTranslation('maintenance')
+  const isRTL = i18n.dir() === 'rtl'
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
 
-  const { data: tickets, isLoading } = useQuery({
-    queryKey: ['maintenance-tickets', statusFilter, priorityFilter, categoryFilter],
-    queryFn: async () => {
-      let query = supabase
-        .from('maintenance_tickets')
-        .select(`
-          *,
-          property:properties(name),
-          department:departments(name),
-          assigned_to:profiles(full_name)
-        `)
-        .order('created_at', { ascending: false })
+  const { data: myTickets, isLoading: myLoading, error: myError } = useMyMaintenanceTickets()
+  const { data: assignedTickets, isLoading: assignedLoading, error: assignedError } = useAssignedMaintenanceTickets()
+  const { data: stats } = useMaintenanceStats()
+  const updateMutation = useUpdateMaintenanceTicket()
+  const completeMutation = useCompleteMaintenanceTicket()
 
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter)
-      }
-      if (priorityFilter !== 'all') {
-        query = query.eq('priority', priorityFilter)
-      }
-      if (categoryFilter !== 'all') {
-        query = query.eq('category', categoryFilter)
-      }
+  const userRole = roles[0]?.role
+  const canManageTickets = ['regional_admin', 'regional_hr', 'property_manager', 'department_head'].includes(userRole || '')
 
-      const { data, error } = await query
-      if (error) throw error
-      return data as MaintenanceTicket[]
-    }
-  })
-
-  const { data: stats } = useQuery({
-    queryKey: ['maintenance-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('maintenance_tickets')
-        .select('status, priority')
-      
-      if (error) throw error
-      
-      const tickets = data || []
-      return {
-        total: tickets.length,
-        open: tickets.filter(t => t.status === 'open').length,
-        inProgress: tickets.filter(t => t.status === 'in_progress').length,
-        resolved: tickets.filter(t => t.status === 'resolved').length,
-        critical: tickets.filter(t => t.priority === 'critical').length,
-        high: tickets.filter(t => t.priority === 'high').length
-      }
-    }
-  })
-
-  const updateTicketMutation = useMutation({
-    mutationFn: async ({ ticketId, status }: { ticketId: string, status: string }) => {
-      const { error } = await supabase
-        .from('maintenance_tickets')
-        .update({ 
-          status,
-          updated_at: new Date().toISOString(),
-          resolved_at: status === 'resolved' ? new Date().toISOString() : null
-        })
-        .eq('id', ticketId)
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
-      queryClient.invalidateQueries({ queryKey: ['maintenance-stats'] })
-    }
-  })
-
-  const filteredTickets = tickets?.filter(ticket =>
-    ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.description.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const handleStatusUpdate = (ticketId: string, newStatus: string) => {
-    updateTicketMutation.mutate({ ticketId, status: newStatus })
+  const filteredTickets = (tickets: MaintenanceTicket[]) => {
+    return tickets?.filter(ticket => {
+      const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.description.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter
+      const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter
+      return matchesSearch && matchesStatus && matchesPriority
+    })
   }
 
-  if (isLoading) {
+  const handleStatusUpdate = (ticketId: string, newStatus: string) => {
+    updateMutation.mutate({ ticketId, updates: { status: newStatus as MaintenanceTicket['status'] } })
+  }
+
+  const handleComplete = (ticketId: string) => {
+    completeMutation.mutate({ ticketId })
+  }
+
+  const TicketCard = ({ ticket, showActions = false }: { ticket: MaintenanceTicket, showActions?: boolean }) => {
+    const Icon = categoryIcons[ticket.category] || Wrench
+
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-24 bg-gray-200 rounded"></div>
-          ))}
+      <div className={cn("bg-card border border-border rounded-lg p-4 group hover:shadow-md transition-shadow duration-200", isRTL ? "border-r-4 border-r-primary/50" : "border-l-4 border-l-primary/50")}>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center space-x-3 gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+              <Icon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h4 className="font-bold text-foreground">{ticket.title}</h4>
+              <p className="text-xs text-gray-600 font-mono">#{ticket.id.slice(0, 8)}</p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Badge className={cn("text-[10px] uppercase tracking-wider font-semibold border", priorityColors[ticket.priority])}>
+              {t(ticket.priority)}
+            </Badge>
+            <Badge className={cn("text-[10px]", statusColors[ticket.status] || statusColors.closed)}>
+              {t(ticket.status)}
+            </Badge>
+          </div>
         </div>
+
+        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{ticket.description}</p>
+
+        <div className="flex items-center justify-between text-xs text-gray-600 mt-auto pt-4 border-t border-border/50">
+          <div className="flex items-center space-x-3 gap-3">
+            {ticket.property && (
+              <span className="flex items-center gap-1 font-medium text-foreground"><HomeIcon className="w-3 h-3" /> {ticket.property.name}</span>
+            )}
+            {ticket.room_number && (
+              <span className="bg-accent/50 px-1.5 py-0.5 rounded">{t('room')} {ticket.room_number}</span>
+            )}
+          </div>
+          <div className="flex items-center space-x-1 gap-1">
+            <Calendar className="w-3 h-3" />
+            <span>{format(new Date(ticket.created_at), 'MMM dd')}</span>
+          </div>
+        </div>
+
+        {showActions && canManageTickets && (
+          <div className="mt-4 pt-3 border-t border-border/50 flex items-center gap-2">
+            {ticket.status === 'open' && (
+              <Button
+                size="sm"
+                className="flex-1 bg-primary/90 hover:bg-primary h-8 text-xs"
+                onClick={(e) => { e.stopPropagation(); handleStatusUpdate(ticket.id, 'in_progress'); }}
+                disabled={updateMutation.isPending}
+              >
+                {t('accept')}
+              </Button>
+            )}
+            {ticket.status === 'in_progress' && (
+              <Button
+                size="sm"
+                className="flex-1 bg-green-600 hover:bg-green-700 h-8 text-xs"
+                onClick={(e) => { e.stopPropagation(); handleComplete(ticket.id); }}
+                disabled={completeMutation.isPending}
+              >
+                {t('complete')}
+              </Button>
+            )}
+            <Button
+              size="sm"
+              className={cn("h-8 text-xs bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors", ticket.status !== 'open' && ticket.status !== 'in_progress' ? "w-full" : "w-auto")}
+              onClick={() => navigate(`/maintenance/tickets/${ticket.id}`)}
+            >
+              {t('view')}
+            </Button>
+          </div>
+        )}
       </div>
     )
   }
 
+  // Only show full loading state if initial load and no error
+  if ((myLoading || assignedLoading) && !myError && !assignedError) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader title={t('dashboard.title')} description={t('dashboard.loading')} />
+        <TableSkeleton rows={4} columns={4} showHeaders={false} />
+      </div>
+    )
+  }
+
+  const HomeIcon = ({ className }: { className?: string }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+  )
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Maintenance Management"
-        description="Track and manage maintenance requests across all properties"
-        actions={
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            New Ticket
-          </Button>
-        }
-      />
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total || 0}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats?.open || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats?.inProgress || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolved Today</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats?.resolved || 0}</div>
-          </CardContent>
-        </Card>
+    <div className="space-y-8 pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('dashboard.title')}</h1>
+          <p className="text-gray-600 mt-1">{t('dashboard.description')}</p>
+        </div>
+        <Button onClick={() => navigate('/maintenance/submit')} className="bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm rounded-md transition-colors">
+          <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+          {t('new_ticket')}
+        </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <Input
-                placeholder="Search tickets..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="electrical">Electrical</SelectItem>
-                <SelectItem value="plumbing">Plumbing</SelectItem>
-                <SelectItem value="hvac">HVAC</SelectItem>
-                <SelectItem value="internet">Internet</SelectItem>
-                <SelectItem value="tv">TV</SelectItem>
-                <SelectItem value="furniture">Furniture</SelectItem>
-                <SelectItem value="general">General</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Stats Overview */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
+          <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+            <Wrench className="w-24 h-24" />
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-sm font-medium text-gray-600">{t('dashboard.my_active_tickets')}</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-foreground">{myTickets?.length || 0}</span>
+            <span className="text-xs text-gray-600 font-medium">{t('dashboard.total_submitted')}</span>
+          </div>
+        </div>
 
-      {/* Tickets List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Maintenance Tickets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredTickets?.map((ticket) => {
-              const IconComponent = categoryIcons[ticket.category as keyof typeof categoryIcons] || Wrench
-              return (
-                <div key={ticket.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <IconComponent className="h-5 w-5 text-gray-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{ticket.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{ticket.description}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                          <span>{ticket.property?.name}</span>
-                          <span>•</span>
-                          <span>{ticket.department?.name}</span>
-                          <span>•</span>
-                          <span>{formatRelativeTime(ticket.created_at)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={priorityColors[ticket.priority as keyof typeof priorityColors]}>
-                        {ticket.priority}
-                      </Badge>
-                      <Badge className={statusColors[ticket.status as keyof typeof statusColors]}>
-                        {ticket.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  {ticket.assigned_to && (
-                    <div className="text-sm text-gray-600">
-                      Assigned to: {ticket.assigned_to.full_name}
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-end gap-2">
-                    {ticket.status === 'open' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleStatusUpdate(ticket.id, 'in_progress')}
-                      >
-                        Start Work
-                      </Button>
-                    )}
-                    {ticket.status === 'in_progress' && (
-                      <Button 
-                        size="sm"
-                        onClick={() => handleStatusUpdate(ticket.id, 'resolved')}
-                      >
-                        Mark Resolved
-                      </Button>
-                    )}
-                    {ticket.status === 'resolved' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleStatusUpdate(ticket.id, 'closed')}
-                      >
-                        Close Ticket
-                      </Button>
-                    )}
-                  </div>
+        {canManageTickets && (
+          <>
+            <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
+              <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                <User className="w-24 h-24" />
+              </div>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.assigned_me')}</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-foreground">{assignedTickets?.length || 0}</span>
+                <span className="text-xs text-orange-600 font-medium">{stats?.inProgress || 0} {t('dashboard.in_progress')}</span>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
+              <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                <AlertTriangle className="w-24 h-24" />
+              </div>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.critical_issues')}</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-destructive">{(stats?.critical || 0) + (stats?.urgent || 0)}</span>
+                <span className="text-xs text-destructive font-medium">{t('dashboard.requires_attention')}</span>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
+              <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                <Clock className="w-24 h-24" />
+              </div>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.avg_resolution')}</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-foreground">{stats?.avgResolutionTime || 0}</span>
+                <span className="text-xs text-gray-600 font-medium">{t('dashboard.days')}</span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Filters & Content */}
+      <div className="space-y-4">
+        <div className="bg-card border border-border p-4 rounded-lg flex flex-col md:flex-row gap-4 items-center shadow-sm">
+          <div className="relative flex-1 w-full">
+            <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
+            <Input
+              placeholder={t('dashboard.search')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={cn("bg-background border-input focus:border-primary transition-all", isRTL ? "pr-10" : "pl-10")}
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full md:w-40 bg-background border-input">
+              <SelectValue placeholder={t('status')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('all_status')}</SelectItem>
+              <SelectItem value="open">{t('dashboard.open')}</SelectItem>
+              <SelectItem value="in_progress">{t('dashboard.in_progress')}</SelectItem>
+              <SelectItem value="resolved">{t('dashboard.resolved')}</SelectItem>
+              <SelectItem value="closed">{t('dashboard.closed')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-full md:w-40 bg-background border-input">
+              <SelectValue placeholder={t('priority')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('all_priority')}</SelectItem>
+              <SelectItem value="critical">{t('critical')}</SelectItem>
+              <SelectItem value="urgent">{t('urgent')}</SelectItem>
+              <SelectItem value="high">{t('high')}</SelectItem>
+              <SelectItem value="medium">{t('medium')}</SelectItem>
+              <SelectItem value="low">{t('low')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Tabs defaultValue="my-tickets" className="space-y-6">
+          <TabsList className="bg-muted p-1 rounded-md">
+            <TabsTrigger value="my-tickets" className="rounded-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('dashboard.my_tickets')} ({myTickets?.length || 0})</TabsTrigger>
+            {canManageTickets && (
+              <TabsTrigger value="assigned" className="rounded-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('dashboard.assigned_tickets')} ({assignedTickets?.length || 0})</TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="my-tickets" className="space-y-4 animate-slide-up">
+            {filteredTickets(myTickets || []).length === 0 ? (
+              <div className="bg-card border border-border dashed border-2 p-12 rounded-lg text-center">
+                <div className="w-48 h-48 mx-auto mb-6 opacity-90 transition-opacity duration-300">
+                  <img
+                    src={emptyStateImage}
+                    alt="No tickets"
+                    className="w-full h-full object-contain filter drop-shadow-sm"
+                  />
                 </div>
-              )
-            })}
-            
-            {filteredTickets?.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No maintenance tickets found
+                <h3 className="text-xl font-semibold mb-2 text-foreground">{t('dashboard.no_tickets')}</h3>
+                <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                  {searchTerm || statusFilter !== 'all' || priorityFilter !== 'all'
+                    ? t('dashboard.adjust_filters')
+                    : t('dashboard.no_tickets_submitted')
+                  }
+                </p>
+                <Button onClick={() => navigate('/maintenance/submit')} className="rounded-md shadow-sm">
+                  <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                  {t('new_ticket')}
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filteredTickets(myTickets || []).map(ticket => (
+                  <TicketCard key={ticket.id} ticket={ticket} />
+                ))}
               </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </TabsContent>
+
+          {canManageTickets && (
+            <TabsContent value="assigned" className="space-y-4 animate-slide-up">
+              {filteredTickets(assignedTickets || []).length === 0 ? (
+                <div className="prime-card p-12 rounded-xl text-center border-dashed border-2 border-border/60">
+                  <div className="w-48 h-48 mx-auto mb-6 opacity-90 hover:opacity-100 transition-opacity duration-300">
+                    <img
+                      src={emptyStateImage}
+                      alt="No tickets"
+                      className="w-full h-full object-contain filter drop-shadow-xl"
+                    />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2 text-foreground">{t('dashboard.no_assigned_tickets')}</h3>
+                  <p className="text-gray-600 max-w-sm mx-auto">
+                    {searchTerm || statusFilter !== 'all' || priorityFilter !== 'all'
+                      ? t('dashboard.adjust_filters')
+                      : t('dashboard.all_caught_up')
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredTickets(assignedTickets || []).map(ticket => (
+                    <TicketCard key={ticket.id} ticket={ticket} showActions />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
     </div>
   )
 }

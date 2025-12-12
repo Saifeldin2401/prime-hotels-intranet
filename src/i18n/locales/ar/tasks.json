@@ -1,0 +1,12 @@
+{
+    "kanban": {
+        "todo": "للعمل",
+        "in_progress": "قيد التنفيذ",
+        "review": "مراجعة",
+        "completed": "مكتمل",
+        "no_tasks": "لا توجد مهام"
+    },
+    "create_task": "إنشاء مهمة",
+    "filter_tasks": "تصفية المهام",
+    "my_tasks": "مهامي"
+}

@@ -1,0 +1,240 @@
+/* RTL Support for Arabic */
+[dir="rtl"] {
+    direction: rtl;
+}
+
+[dir="rtl"] .sidebar {
+    left: auto;
+    right: 0;
+}
+
+[dir="rtl"] .ml-auto {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+[dir="rtl"] .mr-auto {
+    margin-right: 0;
+    margin-left: auto;
+}
+
+[dir="rtl"] .text-left {
+    text-align: right;
+}
+
+[dir="rtl"] .text-right {
+    text-align: left;
+}
+
+/* Flip icons and arrows in RTL */
+[dir="rtl"] .lucide-chevron-right {
+    transform: scaleX(-1);
+}
+
+[dir="rtl"] .lucide-chevron-left {
+    transform: scaleX(-1);
+}
+
+[dir="rtl"] .lucide-arrow-right {
+    transform: scaleX(-1);
+}
+
+[dir="rtl"] .lucide-arrow-left {
+    transform: scaleX(-1);
+}
+
+/* Common RTL spacing overrides for Tailwind utilities */
+[dir="rtl"] .mr-1 {
+    margin-right: 0;
+    margin-left: 0.25rem;
+}
+
+[dir="rtl"] .ml-1 {
+    margin-left: 0;
+    margin-right: 0.25rem;
+}
+
+[dir="rtl"] .mr-2 {
+    margin-right: 0;
+    margin-left: 0.5rem;
+}
+
+[dir="rtl"] .ml-2 {
+    margin-left: 0;
+    margin-right: 0.5rem;
+}
+
+[dir="rtl"] .mr-3 {
+    margin-right: 0;
+    margin-left: 0.75rem;
+}
+
+[dir="rtl"] .ml-3 {
+    margin-left: 0;
+    margin-right: 0.75rem;
+}
+
+[dir="rtl"] .mr-4 {
+    margin-right: 0;
+    margin-left: 1rem;
+}
+
+[dir="rtl"] .ml-4 {
+    margin-left: 0;
+    margin-right: 1rem;
+}
+
+[dir="rtl"] .mr-5 {
+    margin-right: 0;
+    margin-left: 1.25rem;
+}
+
+[dir="rtl"] .ml-5 {
+    margin-left: 0;
+    margin-right: 1.25rem;
+}
+
+[dir="rtl"] .mr-6 {
+    margin-right: 0;
+    margin-left: 1.5rem;
+}
+
+[dir="rtl"] .ml-6 {
+    margin-left: 0;
+    margin-right: 1.5rem;
+}
+
+[dir="rtl"] .mr-8 {
+    margin-right: 0;
+    margin-left: 2rem;
+}
+
+[dir="rtl"] .ml-8 {
+    margin-left: 0;
+    margin-right: 2rem;
+}
+
+/* Padding overrides */
+[dir="rtl"] .pr-1 {
+    padding-right: 0;
+    padding-left: 0.25rem;
+}
+
+[dir="rtl"] .pl-1 {
+    padding-left: 0;
+    padding-right: 0.25rem;
+}
+
+[dir="rtl"] .pr-2 {
+    padding-right: 0;
+    padding-left: 0.5rem;
+}
+
+[dir="rtl"] .pl-2 {
+    padding-left: 0;
+    padding-right: 0.5rem;
+}
+
+[dir="rtl"] .pr-3 {
+    padding-right: 0;
+    padding-left: 0.75rem;
+}
+
+[dir="rtl"] .pl-3 {
+    padding-left: 0;
+    padding-right: 0.75rem;
+}
+
+[dir="rtl"] .pr-4 {
+    padding-right: 0;
+    padding-left: 1rem;
+}
+
+[dir="rtl"] .pl-4 {
+    padding-left: 0;
+    padding-right: 1rem;
+}
+
+[dir="rtl"] .pr-5 {
+    padding-right: 0;
+    padding-left: 1.25rem;
+}
+
+[dir="rtl"] .pl-5 {
+    padding-left: 0;
+    padding-right: 1.25rem;
+}
+
+[dir="rtl"] .pr-6 {
+    padding-right: 0;
+    padding-left: 1.5rem;
+}
+
+[dir="rtl"] .pl-6 {
+    padding-left: 0;
+    padding-right: 1.5rem;
+}
+
+[dir="rtl"] .pr-8 {
+    padding-right: 0;
+    padding-left: 2rem;
+}
+
+[dir="rtl"] .pl-8 {
+    padding-left: 0;
+    padding-right: 2rem;
+}
+
+/* RTL border radius */
+[dir="rtl"] .rounded-l {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+}
+
+[dir="rtl"] .rounded-r {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 0.25rem;
+    border-bottom-left-radius: 0.25rem;
+}
+
+[dir="rtl"] .rounded-l-md {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+[dir="rtl"] .rounded-r-md {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+[dir="rtl"] .rounded-l-lg {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+[dir="rtl"] .rounded-r-lg {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 0.5rem;
+    border-bottom-left-radius: 0.5rem;
+}
+
+/* Border side overrides */
+[dir="rtl"] .border-r {
+    border-right-width: 0;
+    border-left-width: 1px;
+}
+
+[dir="rtl"] .border-l {
+    border-left-width: 0;
+    border-right-width: 1px;
+}

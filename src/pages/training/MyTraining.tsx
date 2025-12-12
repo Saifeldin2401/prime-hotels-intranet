@@ -1,9 +1,26 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { 
+  useTrainingAssignments, 
+  useTrainingProgress, 
+  useStartTraining, 
+  useCompleteTraining,
+  useTrainingStats
+} from '@/hooks/useTraining'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { 
+  Play, 
+  Clock, 
+  CheckCircle, 
+  BookOpen, 
+  Award,
+  Calendar,
+  BarChart3
+} from 'lucide-react'
+import { formatRelativeTime } from '@/lib/utils'
 import type { TrainingModule, TrainingAssignment, TrainingProgress } from '@/lib/types'
 
 interface UserTrainingItem {
@@ -14,188 +31,219 @@ interface UserTrainingItem {
 
 export default function MyTraining() {
   const { profile } = useAuth()
-  const queryClient = useQueryClient()
 
-  const { data: items, isLoading } = useQuery({
-    queryKey: ['my-training', profile?.id],
-    enabled: !!profile?.id,
-    queryFn: async () => {
-      if (!profile?.id) return [] as UserTrainingItem[]
-
-      // Fetch assignments visible to this user
-      const { data: assignments, error: assignmentsError } = await supabase
-        .from('training_assignments')
-        .select('*')
-
-      if (assignmentsError) throw assignmentsError
-
-      const assignmentModulesIds = Array.from(
-        new Set((assignments || []).map((a) => a.training_module_id))
-      )
-
-      if (assignmentModulesIds.length === 0) return [] as UserTrainingItem[]
-
-      // Fetch modules
-      const { data: modules, error: modulesError } = await supabase
-        .from('training_modules')
-        .select('*')
-        .in('id', assignmentModulesIds)
-
-      if (modulesError) throw modulesError
-
-      // Fetch progress for this user
-      const { data: progress, error: progressError } = await supabase
-        .from('training_progress')
-        .select('*')
-        .eq('user_id', profile.id)
-
-      if (progressError) throw progressError
-
-      const items: UserTrainingItem[] = []
-
-      modules?.forEach((m) => {
-        const moduleAssignments = (assignments || []).filter(
-          (a) => a.training_module_id === m.id,
-        )
-
-        // For now, just pick the first assignment; logic can be extended later
-        const assignment = moduleAssignments[0] || null
-        const moduleProgress = (progress || []).find((p) => p.training_id === m.id) || null
-
-        items.push({
-          module: m as TrainingModule,
-          assignment: assignment as TrainingAssignment | null,
-          progress: moduleProgress as TrainingProgress | null,
-        })
-      })
-
-      return items
-    },
+  // Get user's training assignments
+  const { data: assignments, isLoading: assignmentsLoading } = useTrainingAssignments({
+    assigned_to_user_id: profile?.id
   })
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({
-      moduleId,
-      assignmentId,
-      nextStatus,
-    }: {
-      moduleId: string
-      assignmentId: string | null
-      nextStatus: 'in_progress' | 'completed'
-    }) => {
-      if (!profile?.id) return
+  // Get user's training progress
+  const { data: progress, isLoading: progressLoading } = useTrainingProgress(
+    profile?.id
+  )
 
-      const now = new Date().toISOString()
+  // Get training stats
+  const { data: stats } = useTrainingStats()
 
-      // Upsert progress row for this user and module
-      const { data, error } = await supabase
-        .from('training_progress')
-        .upsert(
-          {
-            user_id: profile.id,
-            training_id: moduleId,
-            assignment_id: assignmentId,
-            status: nextStatus,
-            started_at: nextStatus === 'in_progress' ? now : undefined,
-            completed_at: nextStatus === 'completed' ? now : undefined,
-          },
-          { onConflict: 'user_id,training_id' },
-        )
-        .select()
+  // Mutations
+  const startTrainingMutation = useStartTraining()
+  const completeTrainingMutation = useCompleteTraining()
 
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-training', profile?.id] })
-    },
-  })
+  // Combine assignments with progress
+  const trainingItems: UserTrainingItem[] = assignments?.map(assignment => ({
+    module: assignment.training_modules!,
+    assignment,
+    progress: progress?.find(p => p.training_id === assignment.training_module_id) || null
+  })) || []
 
-  const handleStart = (item: UserTrainingItem) => {
-    updateStatusMutation.mutate({
-      moduleId: item.module.id,
-      assignmentId: item.assignment?.id ?? null,
-      nextStatus: 'in_progress',
-    })
+  const handleStartTraining = (trainingId: string, assignmentId?: string) => {
+    startTrainingMutation.mutate({ trainingId, assignmentId })
   }
 
-  const handleComplete = (item: UserTrainingItem) => {
-    updateStatusMutation.mutate({
-      moduleId: item.module.id,
-      assignmentId: item.assignment?.id ?? null,
-      nextStatus: 'completed',
-    })
+  const handleCompleteTraining = (progressId: string) => {
+    completeTrainingMutation.mutate({ progressId })
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800'
+      case 'in_progress': return 'bg-blue-100 text-blue-800'
+      case 'not_started': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="w-4 h-4" />
+      case 'in_progress': return <Play className="w-4 h-4" />
+      case 'not_started': return <BookOpen className="w-4 h-4" />
+      default: return <BookOpen className="w-4 h-4" />
+    }
+  }
+
+  if (assignmentsLoading || progressLoading) {
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <PageHeader
+          title="My Training"
+          description="View and complete your assigned training modules"
+        />
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading training data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
       <PageHeader
         title="My Training"
-        description="View your assigned training and track your progress"
+        description="View and complete your assigned training modules"
       />
 
-      <Card>
-        <CardContent className="p-6 space-y-4">
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading training...
-            </div>
-          ) : !items || items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No training assigned yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item) => {
-                const status = item.progress?.status ?? 'not_started'
-                return (
-                  <div
-                    key={item.module.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium">{item.module.title}</p>
-                      {item.module.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {item.module.description}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1 capitalize">
-                        Status: {status.replace('_', ' ')}
+      {/* Stats Overview */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-blue-600">{stats.totalAssigned}</div>
+              <div className="text-sm text-gray-600">Assigned</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-orange-600">{stats.inProgress}</div>
+              <div className="text-sm text-gray-600">In Progress</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+              <div className="text-sm text-gray-600">Completed</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
+              <div className="text-sm text-gray-600">Overdue</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Training Items */}
+      <div className="space-y-4">
+        {trainingItems.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-8">
+              <BookOpen className="w-12 h-12 text-hotel-navy mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No training assigned</h3>
+              <p className="text-gray-700">
+                You don't have any training modules assigned to you yet.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          trainingItems.map((item) => {
+            const status = item.progress?.status || 'not_started'
+            const progress = item.progress?.status === 'completed' ? 100 : 
+                           item.progress?.status === 'in_progress' ? 50 : 0
+
+            return (
+              <Card key={item.module.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <BookOpen className="w-5 h-5 text-blue-500" />
+                        <h3 className="font-semibold text-lg">{item.module.title}</h3>
+                        <Badge 
+                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                          className={`ml-2 ${getStatusColor(status)}`}
+                        >
+                          {status.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                      </div>
+                      
+                      <p className="text-gray-600 mb-4 line-clamp-2">
+                        {item.module.description || 'No description provided'}
                       </p>
+
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{item.module.estimated_duration_minutes || 0} min</span>
+                        </div>
+                        {item.assignment?.deadline && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>Due {formatRelativeTime(item.assignment.deadline)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {item.assignment?.deadline && new Date(item.assignment.deadline) < new Date() && status !== 'completed' && (
+                        <Badge variant="destructive" className="mb-3">
+                          Overdue
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-2 ml-4">
                       {status === 'not_started' && (
                         <Button
+                          variant="default"
                           size="sm"
-                          onClick={() => handleStart(item)}
-                          disabled={updateStatusMutation.isPending}
+                          onClick={() => handleStartTraining(item.module.id, item.assignment?.id)}
+                          disabled={startTrainingMutation.isPending}
                         >
+                          <Play className="w-4 h-4 mr-1" />
                           Start
                         </Button>
                       )}
+                      
                       {status === 'in_progress' && (
                         <Button
+                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                           size="sm"
-                          onClick={() => handleComplete(item)}
-                          disabled={updateStatusMutation.isPending}
+                          onClick={() => window.open(`/training/${item.module.id}`, '_self')}
                         >
-                          Mark Complete
+                          <BookOpen className="w-4 h-4 mr-1" />
+                          Continue
                         </Button>
                       )}
+                      
                       {status === 'completed' && (
-                        <span className="text-xs text-green-600 font-medium">
-                          Completed
-                        </span>
+                        <Button
+                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                          size="sm"
+                          onClick={() => window.open(`/training/${item.module.id}`, '_self')}
+                        >
+                          <Award className="w-4 h-4 mr-1" />
+                          View Certificate
+                        </Button>
                       )}
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                  {status === 'in_progress' && (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Progress</span>
+                        <span className="text-sm text-gray-600">{progress}%</span>
+                      </div>
+                      <Progress value={progress} className="h-2" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
+      </div>
     </div>
   )
 }

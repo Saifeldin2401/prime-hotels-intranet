@@ -1,10 +1,14 @@
+// DEPRECATED: This file contains legacy role definitions used only for mock data and development.
+// The canonical role system is defined in lib/constants.ts with AppRole enum.
+// All new code should use AppRole and the usePermissions hook from hooks/usePermissions.ts.
+
 export type UserRole = 
   | 'staff'
   | 'department_head' 
   | 'property_hr'
   | 'property_manager'
-  | 'area_manager'
-  | 'corporate_admin'
+  | 'area_manager'  // Legacy: maps to regional_admin in new system
+  | 'corporate_admin' // Legacy: maps to regional_admin in new system
 
 export interface User {
   id: string
@@ -31,6 +35,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     { resource: 'hr', actions: ['read', 'create'] }, // For leave requests, etc.
     { resource: 'tasks', actions: ['read', 'update'] },
     { resource: 'messages', actions: ['create', 'read'] },
+    { resource: 'jobs', actions: ['read'] },
     { resource: 'profile', actions: ['read', 'update'] }
   ],
   
@@ -42,6 +47,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     { resource: 'hr', actions: ['read', 'create', 'approve'] }, // Approve leave requests
     { resource: 'tasks', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'messages', actions: ['create', 'read'] },
+    { resource: 'jobs', actions: ['read'] },
     { resource: 'profile', actions: ['read', 'update'] },
     { resource: 'team', actions: ['read', 'manage'] }
   ],
@@ -54,6 +60,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     { resource: 'hr', actions: ['create', 'read', 'update', 'delete', 'approve'] },
     { resource: 'tasks', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'messages', actions: ['create', 'read'] },
+    { resource: 'jobs', actions: ['read', 'create', 'update', 'delete'] },
     { resource: 'profile', actions: ['read', 'update'] },
     { resource: 'staff', actions: ['read', 'create', 'update', 'delete'] },
     { resource: 'onboarding', actions: ['create', 'read', 'update'] }
@@ -67,6 +74,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     { resource: 'hr', actions: ['read', 'create', 'approve'] },
     { resource: 'tasks', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'messages', actions: ['create', 'read'] },
+    { resource: 'jobs', actions: ['read', 'create', 'update', 'delete', 'approve'] },
     { resource: 'profile', actions: ['read', 'update'] },
     { resource: 'reports', actions: ['read', 'create'] },
     { resource: 'audits', actions: ['create', 'read', 'update'] },
@@ -81,6 +89,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     { resource: 'hr', actions: ['read', 'approve'] },
     { resource: 'tasks', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'messages', actions: ['create', 'read'] },
+    { resource: 'jobs', actions: ['read', 'create', 'update', 'delete', 'approve'] },
     { resource: 'profile', actions: ['read', 'update'] },
     { resource: 'reports', actions: ['read', 'create', 'delete'] },
     { resource: 'properties', actions: ['read', 'manage'] },
@@ -133,6 +142,7 @@ export function canAccessPage(user: User, page: string): boolean {
     '/hr': { resource: 'hr', action: 'read' },
     '/tasks': { resource: 'tasks', action: 'read' },
     '/messages': { resource: 'messages', action: 'read' },
+    '/jobs': { resource: 'jobs', action: 'read' },
     '/profile': { resource: 'profile', action: 'read' },
     '/admin': { resource: 'admin', action: 'read' },
     '/reports': { resource: 'reports', action: 'read' },

@@ -6,14 +6,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SocialFeed, type FeedItem } from '@/components/social/SocialFeed'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
+import { useTeamLeaveRequests, useApproveLeaveRequest, useRejectLeaveRequest } from '@/hooks/useLeaveRequests'
+import { format } from 'date-fns'
+import { CheckCircle, XCircle } from 'lucide-react'
 
-interface PropertyHRDashboardProps {
-  user: User
-}
-
-export function PropertyHRDashboard({ user }: PropertyHRDashboardProps) {
+export function PropertyHRDashboard() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Mock user object for SocialFeed component
+  const mockUser: User = {
+    id: 'hr-1',
+    name: 'Property HR',
+    email: 'hr@primehotels.com',
+    role: 'property_hr',
+    property: 'Riyadh Downtown',
+    permissions: []
+  }
+
+  const { data: leaveRequests, isLoading: leaveLoading } = useTeamLeaveRequests()
+  const approveMutation = useApproveLeaveRequest()
+  const rejectMutation = useRejectLeaveRequest()
+
+  const handleApprove = (requestId: string) => {
+    approveMutation.mutate({ requestId })
+  }
+
+  const handleReject = (requestId: string) => {
+    const reason = prompt('Please provide a reason for rejection:')
+    if (reason) {
+      rejectMutation.mutate({ requestId, reason })
+    }
+  }
   const [hrStats] = useState({
     totalStaff: 85,
     presentToday: 78,
@@ -119,7 +143,7 @@ export function PropertyHRDashboard({ user }: PropertyHRDashboardProps) {
   const handleComment = (itemId: string, content: string) => {
     const newComment = {
       id: Date.now().toString(),
-      author: user,
+      author: mockUser,
       content,
       timestamp: new Date(),
       reactions: {}
@@ -158,12 +182,9 @@ export function PropertyHRDashboard({ user }: PropertyHRDashboardProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">HR Dashboard</h1>
-          <p className="text-gray-600">Human Resources • {user.property}</p>
+          <p className="text-gray-600">Manage human resources and staff operations</p>
         </div>
         <div className="flex items-center space-x-4">
-          <Badge variant="outline" className="text-sm">
-            {user.role.replace('_', ' ').toUpperCase()}
-          </Badge>
           <Badge className="text-sm bg-blue-100 text-blue-800">
             {hrStats.totalStaff} Total Staff
           </Badge>
@@ -227,7 +248,7 @@ export function PropertyHRDashboard({ user }: PropertyHRDashboardProps) {
 
         <TabsContent value="feed" className="space-y-6">
           <SocialFeed
-            user={user}
+            user={mockUser}
             feedItems={feedItems}
             onReact={handleReact}
             onComment={handleComment}
@@ -244,42 +265,82 @@ export function PropertyHRDashboard({ user }: PropertyHRDashboardProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                { employee: 'John Smith', type: 'Annual Leave', dates: 'Oct 15-17', status: 'pending', priority: 'regular' },
-                { employee: 'Sarah Johnson', type: 'Sick Leave', dates: 'Oct 12', status: 'pending', priority: 'urgent' },
-                { employee: 'Mike Wilson', type: 'Personal Leave', dates: 'Oct 20', status: 'pending', priority: 'regular' },
-                { employee: 'Lisa Chen', type: 'Maternity Leave', dates: 'Nov 1 - Feb 28', status: 'approved', priority: 'low' }
-              ].map((request, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{request.employee}</p>
-                    <p className="text-sm text-gray-600">{request.type} • {request.dates}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={
-                      request.status === 'approved' 
-                        ? 'bg-green-100 text-green-800'
-                        : request.status === 'pending'
-                        ? request.priority === 'urgent' 
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }>
-                      {request.status}
-                    </Badge>
-                    {request.status === 'pending' && (
-                      <div className="flex space-x-1">
-                        <button className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">
-                          Approve
-                        </button>
-                        <button className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
-                          Reject
-                        </button>
-                      </div>
-                    )}
-                  </div>
+              {leaveLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading leave requests...</p>
                 </div>
-              ))}
+              ) : !leaveRequests || leaveRequests.length === 0 ? (
+                <div className="text-center py-8">
+                  <Icons.Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No leave requests</h3>
+                  <p className="text-gray-600">
+                    No leave requests from your team at this time.
+                  </p>
+                </div>
+              ) : (
+                leaveRequests.map((request) => (
+                  <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="font-medium">{request.requester?.full_name}</h4>
+                        <Badge className={
+                          request.status === 'approved'
+                            ? 'bg-green-100 text-green-800'
+                            : request.status === 'rejected'
+                              ? 'bg-red-100 text-red-800'
+                              : request.status === 'cancelled'
+                                ? 'bg-gray-100 text-gray-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                        }>
+                          {request.status}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <div className="capitalize">
+                          {request.type.replace('_', ' ')} • {format(new Date(request.start_date), 'MMM dd')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
+                        </div>
+                        {request.reason && (
+                          <div>Reason: {request.reason}</div>
+                        )}
+                        <div>Department: {request.department?.name || 'Not assigned'}</div>
+                        <div>Submitted: {format(new Date(request.created_at), 'MMM dd, yyyy')}</div>
+                        {request.approved_by && (
+                          <div>Approved by: {request.approved_by.full_name}</div>
+                        )}
+                        {request.rejected_by && (
+                          <div>
+                            Rejected by: {request.rejected_by.full_name}
+                            {request.rejection_reason && ` - ${request.rejection_reason}`}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {request.status === 'pending' && (
+                        <div className="flex space-x-1">
+                          <button
+                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                            onClick={() => handleApprove(request.id)}
+                            disabled={approveMutation.isPending}
+                          >
+                            <CheckCircle className="w-3 h-3 inline mr-1" />
+                            Approve
+                          </button>
+                          <button
+                            className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                            onClick={() => handleReject(request.id)}
+                            disabled={rejectMutation.isPending}
+                          >
+                            <XCircle className="w-3 h-3 inline mr-1" />
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -310,7 +371,7 @@ export function PropertyHRDashboard({ user }: PropertyHRDashboardProps) {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge className={
-                      staff.status === 'active' 
+                      staff.status === 'active'
                         ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }>
@@ -349,11 +410,11 @@ export function PropertyHRDashboard({ user }: PropertyHRDashboardProps) {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge className={
-                      position.urgency === 'high' 
+                      position.urgency === 'high'
                         ? 'bg-red-100 text-red-800'
                         : position.urgency === 'medium'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-blue-100 text-blue-800'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-blue-100 text-blue-800'
                     }>
                       {position.urgency}
                     </Badge>
@@ -386,11 +447,11 @@ export function PropertyHRDashboard({ user }: PropertyHRDashboardProps) {
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-medium">{item.item}</p>
                     <Badge className={
-                      item.status === 'compliant' 
+                      item.status === 'compliant'
                         ? 'bg-green-100 text-green-800'
                         : item.status === 'attention'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
                     }>
                       {item.status}
                     </Badge>

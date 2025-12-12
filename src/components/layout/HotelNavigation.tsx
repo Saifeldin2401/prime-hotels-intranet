@@ -14,63 +14,69 @@ interface HotelNavigationProps {
 }
 
 const navigationItems = [
-  { 
-    name: 'Dashboard', 
-    href: '/dashboard', 
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
     icon: Icons.LayoutDashboard,
     requiredRole: 'staff' as const
   },
-  { 
-    name: 'SOPs', 
-    href: '/sop', 
+  {
+    name: 'SOPs',
+    href: '/sop',
     icon: Icons.ClipboardList,
     requiredRole: 'staff' as const
   },
-  { 
-    name: 'Training', 
-    href: '/training', 
+  {
+    name: 'Training',
+    href: '/training',
     icon: Icons.GraduationCap,
     requiredRole: 'staff' as const
   },
-  { 
-    name: 'Documents', 
-    href: '/documents', 
+  {
+    name: 'Documents',
+    href: '/documents',
     icon: Icons.FileText,
     requiredRole: 'staff' as const
   },
-  { 
-    name: 'Announcements', 
-    href: '/announcements', 
+  {
+    name: 'Announcements',
+    href: '/announcements',
     icon: Icons.Megaphone,
     requiredRole: 'staff' as const
   },
-  { 
-    name: 'HR', 
-    href: '/hr', 
+  {
+    name: 'HR',
+    href: '/hr',
     icon: Icons.Users,
     requiredRole: 'staff' as const
   },
-  { 
-    name: 'Tasks', 
-    href: '/tasks', 
+  {
+    name: 'Tasks',
+    href: '/tasks',
     icon: Icons.CheckSquare,
     requiredRole: 'staff' as const
   },
-  { 
-    name: 'Messages', 
-    href: '/messages', 
+  {
+    name: 'Jobs',
+    href: '/jobs',
+    icon: Icons.Briefcase,
+    requiredRole: 'staff' as const
+  },
+  {
+    name: 'Messages',
+    href: '/messages',
     icon: Icons.MessageSquare,
     requiredRole: 'staff' as const
   },
-  { 
-    name: 'Reports', 
-    href: '/reports', 
+  {
+    name: 'Reports',
+    href: '/reports',
     icon: Icons.BarChart3,
     requiredRole: 'property_manager' as const
   },
-  { 
-    name: 'Admin', 
-    href: '/admin', 
+  {
+    name: 'Admin',
+    href: '/admin',
     icon: Icons.Settings,
     requiredRole: 'corporate_admin' as const
   }
@@ -80,7 +86,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const filteredNavItems = navigationItems.filter(item => 
+  const filteredNavItems = navigationItems.filter(item =>
     canAccessPage(user, item.href)
   )
 
@@ -163,25 +169,25 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="w-full cursor-pointer">
-                    <Icons.User className="mr-2 h-4 w-4" />
+                    <Icons.User className="me-2 h-4 w-4" />
                     <span>My Profile</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/settings" className="w-full cursor-pointer">
-                    <Icons.Settings className="mr-2 h-4 w-4" />
+                    <Icons.Settings className="me-2 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/help" className="w-full cursor-pointer">
-                    <Icons.HelpCircle className="mr-2 h-4 w-4" />
+                    <Icons.HelpCircle className="me-2 h-4 w-4" />
                     <span>Help & Support</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
-                  <Icons.LogOut className="mr-2 h-4 w-4" />
+                  <Icons.LogOut className="me-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -209,9 +215,8 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-white hover:bg-white/10 ${
-                      isActive ? 'bg-white/20 text-yellow-200' : ''
-                    }`}
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-white hover:bg-white/10 ${isActive ? 'bg-white/20 text-yellow-200' : ''
+                      }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <item.icon className="h-5 w-5" />

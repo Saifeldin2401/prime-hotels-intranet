@@ -1,0 +1,140 @@
+{
+    "referrals": {
+        "title": "إحالات الموظفين",
+        "description": "إدارة برنامج إحالة الموظفين وتتبع مكافآت الإحالة",
+        "stats": {
+            "total": "إجمالي الإحالات",
+            "hired": "تم تعيينهم",
+            "bonuses_paid": "إجمالي المكافآت المدفوعة",
+            "pending_bonuses": "مكافآت معلقة"
+        },
+        "search_placeholder": "بحث في الإحالات...",
+        "referred_by": "تمت الإحالة بواسطة {{referrer}} لوظيفة {{position}}",
+        "notes": "ملاحظات",
+        "no_referrals": "لم يتم العثور على إحالات",
+        "actions": {
+            "start_interview": "بدء المقابلة",
+            "mark_hired": "تعيين كموظف",
+            "reject": "رفض"
+        }
+    },
+    "leave_requests": {
+        "title": "طلبات الإجازة الخاصة بي",
+        "description": "تقديم وتتبع طلبات الإجازة الخاصة بك",
+        "new_request": "طلب إجازة جديد",
+        "total_requests": "{{count}} طلبات إجمالية",
+        "form": {
+            "title": "تقديم طلب إجازة",
+            "start_date": "تاريخ البدء",
+            "end_date": "تاريخ الانتهاء",
+            "pick_date": "اختر تاريخاً",
+            "type": "نوع الإجازة",
+            "select_type": "اختر نوع الإجازة",
+            "reason": "السبب (اختياري)",
+            "reason_placeholder": "اذكر سبب طلب الإجازة...",
+            "total_days": "إجمالي الأيام: {{count}}",
+            "cancel": "إلغاء",
+            "submit": "تقديم الطلب",
+            "submitting": "جاري التقديم..."
+        },
+        "list": {
+            "title": "طلبات الإجازة الخاصة بك",
+            "loading": "جاري تحميل طلبات الإجازة...",
+            "empty_title": "لا توجد طلبات إجازة",
+            "empty_desc": "لم تقم بتقديم أي طلبات إجازة بعد.",
+            "submit_first": "قدم طلبك الأول",
+            "days": "أيام",
+            "reason": "السبب",
+            "submitted": "تاريخ التقديم",
+            "approved_by": "تمت الموافقة بواسطة",
+            "rejected_by": "تم الرفض بواسطة",
+            "confirm_cancel": "هل أنت متأكد من إلغاء طلب الإجازة هذا؟",
+            "cancel_action": "إلغاء"
+        },
+        "types": {
+            "annual": "إجازة سنوية",
+            "sick": "إجازة مرضية",
+            "unpaid": "إجازة غير مدفوعة",
+            "maternity": "إجازة أمومة",
+            "paternity": "إجازة أبوة",
+            "personal": "إجازة شخصية",
+            "other": "أخرى"
+        }
+    },
+    "status": {
+        "pending": "قيد الانتظار",
+        "approved": "مقبول",
+        "rejected": "مرفوض",
+        "hired": "تم التعيين",
+        "interviewing": "مقابلة",
+        "cancelled": "ملغي",
+        "paid": "مدفوع",
+        "all": "جميع الحالات",
+        "applied": "تم التطبيق"
+    },
+    "history": {
+        "title": "سجل الترقيات والنقل",
+        "description": "عرض جميع ترقيات ونقل الموظفين",
+        "promotions": "الترقيات",
+        "transfers": "النقل",
+        "role": "الدور",
+        "title_label": "المسمى الوظيفي",
+        "department": "القسم",
+        "effective": "تاريخ التفعيل",
+        "approved_by": "تمت الموافقة بواسطة",
+        "property": "المنشأة",
+        "new_department": "القسم الجديد",
+        "reason": "السبب",
+        "no_promotions": "لم يتم العثور على ترقيات",
+        "no_transfers": "لم يتم العثور على عمليات نقل",
+        "create_first_promo": "أنشئ أول ترقية للبدء",
+        "create_first_transfer": "أنشئ أول عملية نقل للبدء"
+    },
+    "promotion": {
+        "title": "ترقية موظف",
+        "description": "إنشاء سجل ترقية لموظف",
+        "details": "تفاصيل الترقية",
+        "employee": "الموظف",
+        "select_employee": "اختر الموظف",
+        "current_role": "الدور الحالي",
+        "new_role": "الدور الجديد",
+        "select_role": "اختر الدور الجديد",
+        "new_title": "المسمى الوظيفي الجديد",
+        "new_title_placeholder": "مثال: مدير استقبال أول",
+        "new_dept": "القسم الجديد (اختياري)",
+        "effective_date": "تاريخ التفعيل",
+        "auto_applied": "سيتم تطبيق الترقية تلقائياً في هذا التاريخ",
+        "notes": "ملاحظات",
+        "notes_placeholder": "أضف أي ملاحظات إضافية حول هذه الترقية...",
+        "create": "إنشاء الترقية",
+        "success_title": "تم إنشاء الترقية",
+        "success_desc": "تم تسجيل ترقية الموظف وسيتم تطبيقها في تاريخ التفعيل.",
+        "new_button": "ترقية جديدة"
+    },
+    "transfer": {
+        "title": "نقل موظف",
+        "description": "إنشاء سجل نقل لموظف",
+        "details": "تفاصيل النقل",
+        "employee": "الموظف",
+        "current_property": "المنشأة الحالية",
+        "dest_property": "المنشأة الوجهة",
+        "select_dest": "اختر المنشأة الوجهة",
+        "dest_dept": "القسم الوجهة (اختياري)",
+        "reason": "سبب النقل",
+        "reason_placeholder": "مثال: احتياجات العمل، طلب الموظف، إلخ.",
+        "notes_placeholder": "أضف أي ملاحظات إضافية حول هذا النقل...",
+        "create": "إنشاء النقل",
+        "success_title": "تم إنشاء النقل",
+        "success_desc": "تم تسجيل نقل الموظف وسيتم تطبيقه في تاريخ التفعيل.",
+        "new_button": "نقل جديد"
+    },
+    "roles": {
+        "regional_admin": "مساعد إداري إقليمي",
+        "regional_hr": "موارد بشرية إقليمية",
+        "property_manager": "مدير منشأة",
+        "property_hr": "موارد بشرية للمنشأة",
+        "department_head": "رئيس قسم",
+        "staff": "موظف",
+        "na": "غير متوفر"
+    }
+}

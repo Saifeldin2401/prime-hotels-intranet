@@ -7,13 +7,19 @@ import { SocialFeed, type FeedItem } from '@/components/social/SocialFeed'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 
-interface PropertyManagerDashboardProps {
-  user: User
-}
-
-export function PropertyManagerDashboard({ user }: PropertyManagerDashboardProps) {
+export function PropertyManagerDashboard() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Mock user object for SocialFeed component
+  const mockUser: User = {
+    id: 'pm-1',
+    name: 'Property Manager',
+    email: 'pm@primehotels.com',
+    role: 'property_manager',
+    property: 'Riyadh Downtown',
+    permissions: []
+  }
   const [propertyStats] = useState({
     occupancyRate: 87,
     guestSatisfaction: 4.6,
@@ -119,7 +125,7 @@ export function PropertyManagerDashboard({ user }: PropertyManagerDashboardProps
   const handleComment = (itemId: string, content: string) => {
     const newComment = {
       id: Date.now().toString(),
-      author: user,
+      author: mockUser,
       content,
       timestamp: new Date(),
       reactions: {}
@@ -158,12 +164,9 @@ export function PropertyManagerDashboard({ user }: PropertyManagerDashboardProps
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Property Dashboard</h1>
-          <p className="text-gray-600">General Manager • {user.property}</p>
+          <p className="text-gray-600">Oversee property operations and performance</p>
         </div>
         <div className="flex items-center space-x-4">
-          <Badge variant="outline" className="text-sm">
-            {user.role.replace('_', ' ').toUpperCase()}
-          </Badge>
           <Badge className="text-sm bg-orange-100 text-orange-800">
             {propertyStats.occupancyRate}% Occupancy
           </Badge>
@@ -191,9 +194,9 @@ export function PropertyManagerDashboard({ user }: PropertyManagerDashboardProps
             <div className="text-2xl font-bold text-blue-600">{propertyStats.guestSatisfaction}/5.0</div>
             <div className="flex space-x-1 mt-2">
               {[1, 2, 3, 4, 5].map(star => (
-                <Icons.Star 
-                  key={star} 
-                  className={`h-4 w-4 ${star <= Math.floor(propertyStats.guestSatisfaction) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                <Icons.Star
+                  key={star}
+                  className={`h-4 w-4 ${star <= Math.floor(propertyStats.guestSatisfaction) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                 />
               ))}
             </div>
@@ -236,7 +239,7 @@ export function PropertyManagerDashboard({ user }: PropertyManagerDashboardProps
 
         <TabsContent value="feed" className="space-y-6">
           <SocialFeed
-            user={user}
+            user={mockUser}
             feedItems={feedItems}
             onReact={handleReact}
             onComment={handleComment}
@@ -303,11 +306,11 @@ export function PropertyManagerDashboard({ user }: PropertyManagerDashboardProps
                       <p className="text-xs text-gray-600">{item.location} • {item.reported}</p>
                     </div>
                     <Badge className={
-                      item.priority === 'high' 
+                      item.priority === 'high'
                         ? 'bg-red-100 text-red-800'
                         : item.priority === 'medium'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-blue-100 text-blue-800'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-blue-100 text-blue-800'
                     }>
                       {item.priority}
                     </Badge>
@@ -365,7 +368,7 @@ export function PropertyManagerDashboard({ user }: PropertyManagerDashboardProps
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge className={
-                      report.status === 'ready' 
+                      report.status === 'ready'
                         ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }>
@@ -400,11 +403,11 @@ export function PropertyManagerDashboard({ user }: PropertyManagerDashboardProps
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-medium">{audit.audit}</p>
                     <Badge className={
-                      audit.status === 'completed' 
+                      audit.status === 'completed'
                         ? 'bg-green-100 text-green-800'
                         : audit.status === 'upcoming'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-yellow-100 text-yellow-800'
                     }>
                       {audit.status}
                     </Badge>

@@ -28,7 +28,7 @@ export function SOPFilters() {
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-1 gap-4 sm:flex-row sm:items-center">
         <div className="relative flex-1 sm:max-w-xs">
-          <Icons.Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Icons.Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search SOPs..."
             value={query}
@@ -73,7 +73,7 @@ export function SOPFilters() {
           </SelectContent>
         </Select>
       </div>
-      <Button variant="outline" size="sm">
+      <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="sm">
         <Icons.Filter className="mr-2 h-4 w-4" />
         More Filters
       </Button>
