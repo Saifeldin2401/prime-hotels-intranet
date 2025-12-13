@@ -9,6 +9,8 @@ import { EnhancedBadge } from '@/components/ui/enhanced-badge'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { CardLoading } from '@/components/common/LoadingStates'
 import {
     Briefcase,
     Plus,
@@ -18,12 +20,14 @@ import {
     DollarSign,
     Eye,
     Edit,
-    Trash2
+    Trash2,
+    Search
 } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
 import type { JobPosting } from '@/lib/types'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import { useTranslation } from 'react-i18next'
+import { crudToasts } from '@/lib/toastHelpers'
 
 
 
@@ -74,6 +78,10 @@ export default function JobPostings() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['job-postings'] })
             setDeleteJob(null)
+            crudToasts.delete.success('Job posting')
+        },
+        onError: () => {
+            crudToasts.delete.error('job posting')
         }
     })
 
@@ -106,12 +114,8 @@ export default function JobPostings() {
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
-                <div className="grid gap-4">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="h-32 bg-gray-200 rounded animate-pulse"></div>
-                    ))}
-                </div>
+                <PageHeader title={t('title')} description={t('description')} />
+                <CardLoading count={3} />
             </div>
         )
     }
@@ -135,20 +139,20 @@ export default function JobPostings() {
 
             {/* Filters */}
             <div className="prime-card">
-                <div className="prime-card-body">
-                    <div className="flex flex-wrap gap-4">
-                        <div className="flex-1 min-w-[200px]">
+                <div className="prime-card-body p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                        <div className="flex-1">
                             <Input
                                 type="text"
                                 placeholder={t('search_placeholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full"
+                                className="w-full h-11"
                             />
                         </div>
 
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-[150px]">
+                            <SelectTrigger className="w-full sm:w-[150px] h-11">
                                 <SelectValue placeholder={t('filters.status')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -166,57 +170,81 @@ export default function JobPostings() {
 
             {/* Job Listings */}
             <div className="space-y-4">
+                {filteredJobs?.length === 0 && jobs?.length === 0 && (
+                    <EmptyState
+                        icon={Briefcase}
+                        title="No job postings yet"
+                        description="Create your first job posting to start attracting talented candidates."
+                        action={canManageJobs ? {
+                            label: t('create'),
+                            onClick: () => window.location.href = '/jobs/new',
+                            icon: Plus
+                        } : undefined}
+                    />
+                )}
+                {filteredJobs?.length === 0 && jobs && jobs.length > 0 && (
+                    <EmptyState
+                        icon={Search}
+                        title="No jobs found"
+                        description="Try adjusting your search or filter criteria to find what you're looking for."
+                        action={{
+                            label: "Clear filters",
+                            onClick: () => {
+                                setSearchTerm('')
+                                setStatusFilter('all')
+                            }
+                        }}
+                    />
+                )}
                 {filteredJobs?.map((job) => (
                     <EnhancedCard key={job.id} variant="default" className="hover:shadow-lg hover:border-hotel-navy/20 transition-all duration-300">
-                        <div className="flex items-start justify-between p-1">
-                            <div className="flex items-start gap-4 flex-1">
-                                <div className="p-3 bg-hotel-navy/5 rounded-lg border border-hotel-navy/10">
-                                    <Briefcase className="h-6 w-6 text-hotel-navy" />
+                        <div className="p-3 sm:p-4">
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                                <div className="p-2.5 sm:p-3 bg-hotel-navy/5 rounded-lg border border-hotel-navy/10 self-start">
+                                    <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-hotel-navy" />
                                 </div>
 
-                                <div className="flex-1">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h3 className="text-lg font-semibold text-hotel-navy">{job.title}</h3>
-                                            <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
-                                                {job.property && (
-                                                    <span className="flex items-center gap-1">
-                                                        <Building2 className="h-4 w-4 text-hotel-gold" />
-                                                        {job.property.name}
-                                                    </span>
-                                                )}
-                                                {job.department && (
-                                                    <span className="flex items-center gap-1">
-                                                        <MapPin className="h-4 w-4 text-hotel-gold" />
-                                                        {job.department.name}
-                                                    </span>
-                                                )}
-                                                <span className="flex items-center gap-1">
-                                                    <Calendar className="h-4 w-4 text-hotel-gold" />
-                                                    {formatRelativeTime(job.created_at)}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <EnhancedBadge variant={job.status === 'open' ? 'success' : job.status === 'filled' ? 'navy' : 'secondary'}>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-start gap-2 mb-2">
+                                        <h3 className="text-base sm:text-lg font-semibold text-hotel-navy">{job.title}</h3>
+                                        <div className="flex flex-wrap gap-1">
+                                            <EnhancedBadge variant={job.status === 'open' ? 'success' : job.status === 'filled' ? 'navy' : 'secondary'} className="text-xs">
                                                 {t(`status.${job.status}`)}
                                             </EnhancedBadge>
-                                            <EnhancedBadge variant="gold" dot>
+                                            <EnhancedBadge variant="gold" dot className="text-xs">
                                                 {t(`seniority.${job.seniority_level}`)}
                                             </EnhancedBadge>
                                         </div>
                                     </div>
 
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-600">
+                                        {job.property && (
+                                            <span className="flex items-center gap-1">
+                                                <Building2 className="h-3.5 w-3.5 text-hotel-gold" />
+                                                {job.property.name}
+                                            </span>
+                                        )}
+                                        {job.department && (
+                                            <span className="flex items-center gap-1">
+                                                <MapPin className="h-3.5 w-3.5 text-hotel-gold" />
+                                                {job.department.name}
+                                            </span>
+                                        )}
+                                        <span className="flex items-center gap-1">
+                                            <Calendar className="h-3.5 w-3.5 text-hotel-gold" />
+                                            {formatRelativeTime(job.created_at)}
+                                        </span>
+                                    </div>
+
                                     {job.description && (
-                                        <p className="text-sm text-gray-600 mt-3 line-clamp-2">
+                                        <p className="text-xs sm:text-sm text-gray-600 mt-2 line-clamp-2">
                                             {job.description}
                                         </p>
                                     )}
 
                                     {(job.salary_range_min || job.salary_range_max) && (
-                                        <div className="flex items-center gap-2 mt-3 text-sm text-gray-700">
-                                            <DollarSign className="h-4 w-4" />
+                                        <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-gray-700">
+                                            <DollarSign className="h-3.5 w-3.5" />
                                             {job.salary_range_min && job.salary_range_max
                                                 ? `$${job.salary_range_min.toLocaleString()} - $${job.salary_range_max.toLocaleString()}`
                                                 : job.salary_range_min
@@ -226,10 +254,10 @@ export default function JobPostings() {
                                         </div>
                                     )}
 
-                                    <div className="flex items-center gap-2 mt-4">
+                                    <div className="flex flex-wrap items-center gap-2 mt-3">
                                         <Link to={`/jobs/${job.id}`}>
-                                            <Button size="sm" variant="outline">
-                                                <Eye className="h-4 w-4 me-2" />
+                                            <Button size="sm" variant="outline" className="h-9 text-xs sm:text-sm">
+                                                <Eye className="h-3.5 w-3.5 me-1.5" />
                                                 {t('viewDetails')}
                                             </Button>
                                         </Link>
@@ -237,8 +265,8 @@ export default function JobPostings() {
                                         {canManageJobs && (
                                             <>
                                                 <Link to={`/jobs/${job.id}/edit`}>
-                                                    <Button size="sm" variant="outline">
-                                                        <Edit className="h-4 w-4 me-2" />
+                                                    <Button size="sm" variant="outline" className="h-9 text-xs sm:text-sm">
+                                                        <Edit className="h-3.5 w-3.5 me-1.5" />
                                                         {t('edit')}
                                                     </Button>
                                                 </Link>
@@ -246,7 +274,7 @@ export default function JobPostings() {
                                                 {job.status === 'draft' && (
                                                     <Button
                                                         size="sm"
-                                                        className="bg-green-600 hover:bg-green-700 text-white"
+                                                        className="bg-green-600 hover:bg-green-700 text-white h-9 text-xs sm:text-sm"
                                                         onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: 'open' })}
                                                     >
                                                         {t('publish')}
@@ -257,6 +285,7 @@ export default function JobPostings() {
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
+                                                        className="h-9 text-xs sm:text-sm"
                                                         onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: 'closed' })}
                                                     >
                                                         {t('close')}
@@ -266,10 +295,10 @@ export default function JobPostings() {
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    className="text-red-600 hover:text-red-700"
+                                                    className="text-red-600 hover:text-red-700 h-9"
                                                     onClick={() => setDeleteJob(job)}
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
                                             </>
                                         )}

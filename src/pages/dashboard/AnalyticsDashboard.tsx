@@ -70,7 +70,7 @@ export default function AnalyticsDashboard() {
       // Execute queries in parallel with error handling
       const results = await Promise.allSettled([
         supabase.from('profiles').select('created_at, is_active').gte('created_at', isoDate),
-        supabase.from('documents').select('created_at, status, visibility').gte('created_at', isoDate),
+        supabase.from('documents').select('created_at, status').gte('created_at', isoDate),
         supabase.from('training_assignments').select('created_at, status, due_date').gte('created_at', isoDate),
         supabase.from('maintenance_tickets').select('created_at, status, priority').gte('created_at', isoDate),
         // Employee referrals table might not exist yet, so we skip it to prevent errors
@@ -181,7 +181,7 @@ export default function AnalyticsDashboard() {
     return (
       <div className="space-y-6">
         <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 lg:gap-6">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="h-24 bg-gray-200 rounded"></div>
           ))}
@@ -196,9 +196,9 @@ export default function AnalyticsDashboard() {
         title={t('analytics.title')}
         description={t('analytics.subtitle')}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder={t('analytics.time_range')} />
               </SelectTrigger>
               <SelectContent>
@@ -208,7 +208,7 @@ export default function AnalyticsDashboard() {
                 <SelectItem value="90days">{t('analytics.ranges.90days')}</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={exportAnalytics} className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors">
+            <Button onClick={exportAnalytics} className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors w-full sm:w-auto">
               <Download className="h-4 w-4 me-2" />
               {t('analytics.export')}
             </Button>
@@ -219,7 +219,7 @@ export default function AnalyticsDashboard() {
 
 
       {/* Enhanced Key Metrics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 lg:gap-6">
         <EnhancedCard variant="gold" className="animate-fade-in hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div className="flex items-center gap-2">
@@ -244,7 +244,7 @@ export default function AnalyticsDashboard() {
           </CardContent>
         </EnhancedCard>
 
-        <EnhancedCard variant="default" className="animate-fade-in hover:border-hotel-navy/30 transition-all duration-300" style={{ animationDelay: '100ms' }}>
+        <EnhancedCard variant="default" className="animate-fade-in hover:border-hotel-navy transition-all duration-300" style={{ animationDelay: '100ms' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-[#F0F4F8] border border-[#DCE4E9] rounded-lg">
@@ -268,7 +268,7 @@ export default function AnalyticsDashboard() {
           </CardContent>
         </EnhancedCard>
 
-        <EnhancedCard variant="default" className="animate-fade-in hover:border-hotel-navy/30 transition-all duration-300" style={{ animationDelay: '200ms' }}>
+        <EnhancedCard variant="default" className="animate-fade-in hover:border-hotel-navy transition-all duration-300" style={{ animationDelay: '200ms' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-[#F0F4F8] border border-[#DCE4E9] rounded-lg">
@@ -292,7 +292,7 @@ export default function AnalyticsDashboard() {
           </CardContent>
         </EnhancedCard>
 
-        <EnhancedCard variant="default" className="animate-fade-in hover:border-hotel-navy/30 transition-all duration-300" style={{ animationDelay: '300ms' }}>
+        <EnhancedCard variant="default" className="animate-fade-in hover:border-hotel-navy transition-all duration-300" style={{ animationDelay: '300ms' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-[#FEF2F2] border border-[#FECACA] rounded-lg">
@@ -417,7 +417,7 @@ export default function AnalyticsDashboard() {
             {recentActivity?.map((activity: AnalyticsItem, index: number) => (
               <div
                 key={activity.id}
-                className="flex items-center justify-between p-4 bg-accent/30 rounded-lg hover:bg-accent/50 transition-all duration-200 hover:shadow-sm animate-slide-up"
+                className="flex items-center justify-between p-4 bg-accent rounded-lg hover:bg-muted transition-all duration-200 hover:shadow-sm animate-slide-up"
                 style={{ animationDelay: `${700 + index * 100} ms` }}
               >
                 <div className="flex items-center gap-4">
@@ -448,7 +448,7 @@ export default function AnalyticsDashboard() {
 
             {recentActivity?.length === 0 && (
               <div className="text-center py-12 text-gray-600 animate-fade-in">
-                <div className="p-3 bg-accent/50 rounded-lg w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <div className="p-3 bg-accent rounded-lg w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Clock className="h-6 w-6 text-gray-400" />
                 </div>
                 <p className="text-sm font-medium">{t('analytics.no_activity')}</p>

@@ -9,6 +9,7 @@ import { SOPDocumentManager } from './SOPDocumentManager'
 import SOPEditorAdvanced from './SOPEditorAdvanced'
 import { SOPImportDialog } from '@/components/sop/SOPImportDialog'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function SOPLibrary() {
   const [loading, setLoading] = useState(true)
@@ -37,7 +38,7 @@ export default function SOPLibrary() {
           </div>
           <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-6 grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
               <CardHeader className="pb-2">
@@ -88,6 +89,12 @@ export default function SOPLibrary() {
     )
   }
 
+  // Permission check
+  const { primaryRole } = useAuth()
+  const canManageSOPs = ['regional_admin', 'regional_hr', 'property_hr'].includes(primaryRole || '')
+  // Analytics visible to managers too
+  const canViewAnalytics = ['regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <SOPImportDialog
@@ -107,42 +114,51 @@ export default function SOPLibrary() {
           setIsCreating(true)
         }}
       />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('library.title')}</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('library.title')}</h1>
+          <p className="text-gray-600 text-sm sm:text-base">
             {t('library.subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
-            onClick={() => setShowImportDialog(true)}
-          >
-            <Icons.Sparkles className="h-4 w-4 text-purple-500" />
-            {t('library.import')}
-          </button>
-          <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
-            <Icons.Download className="h-4 w-4" />
-            {t('library.export')}
-          </button>
-          <button
-            className="bg-hotel-gold text-white px-4 py-2 rounded-md text-sm hover:bg-hotel-gold-dark transition-colors flex items-center gap-2"
-            onClick={() => setIsCreating(true)}
-          >
-            <Icons.Plus className="h-4 w-4" />
-            {t('library.create_advanced')}
-          </button>
-        </div>
+
+        {/* Only show management buttons if allowed */}
+        {canManageSOPs && (
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button
+              className="bg-white border border-gray-300 text-gray-700 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 flex-1 sm:flex-none justify-center min-h-touch"
+              onClick={() => setShowImportDialog(true)}
+            >
+              <Icons.Sparkles className="h-4 w-4 text-purple-500" />
+              <span className="hidden sm:inline">{t('library.import')}</span>
+              <span className="sm:hidden">Import</span>
+            </button>
+            <button className="bg-white border border-gray-300 text-gray-700 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 flex-1 sm:flex-none justify-center min-h-touch">
+              <Icons.Download className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('library.export')}</span>
+              <span className="sm:hidden">Export</span>
+            </button>
+            <button
+              className="bg-hotel-gold text-white px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm hover:bg-hotel-gold-dark transition-colors flex items-center gap-2 w-full sm:w-auto justify-center min-h-touch"
+              onClick={() => setIsCreating(true)}
+            >
+              <Icons.Plus className="h-4 w-4" />
+              {t('library.create_advanced')}
+            </button>
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dashboard">{t('library.tabs.dashboard')}</TabsTrigger>
-          <TabsTrigger value="documents">{t('library.tabs.documents')}</TabsTrigger>
-          <TabsTrigger value="editor">{t('library.tabs.editor')}</TabsTrigger>
-          <TabsTrigger value="analytics">{t('library.tabs.analytics')}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-4 h-auto">
+            <TabsTrigger value="dashboard" className="text-xs sm:text-sm py-2.5 whitespace-nowrap">{t('library.tabs.dashboard')}</TabsTrigger>
+            <TabsTrigger value="documents" className="text-xs sm:text-sm py-2.5 whitespace-nowrap">{t('library.tabs.documents')}</TabsTrigger>
+            {/* Hide restricted tabs */}
+            {canManageSOPs && <TabsTrigger value="editor" className="text-xs sm:text-sm py-2.5 whitespace-nowrap">{t('library.tabs.editor')}</TabsTrigger>}
+            {canViewAnalytics && <TabsTrigger value="analytics" className="text-xs sm:text-sm py-2.5 whitespace-nowrap">{t('library.tabs.analytics')}</TabsTrigger>}
+          </TabsList>
+        </div>
 
         <TabsContent value="dashboard" className="space-y-4">
           <SOPDashboardAdvanced />

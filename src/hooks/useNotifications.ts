@@ -33,10 +33,9 @@ export function useNotifications() {
         .limit(20)
 
       if (error) throw error
-      console.log('Fetched notifications:', data?.length)
 
       // Map database fields to TS interface if needed
-      // Assuming 'read_at' exists in DB and 'is_read' is expected by UI
+      // Calculate is_read based on read_at field
       return (data || []).map((n: any) => ({
         ...n,
         is_read: !!n.read_at

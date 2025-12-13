@@ -40,23 +40,142 @@ interface NavItem {
 }
 
 const navigationItems: NavItem[] = [
+  // --- Common ---
   {
     title: 'dashboard',
-    href: '/',
+    href: '/dashboard', // Logic will redirect staff to /staff-dashboard if they land here, but we should show /staff-dashboard link for staff? No, let's just use / and let redirect handle it, or use conditional logic.
+    // Actually, distinct links:
     icon: Home,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
+    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
   },
   {
     title: 'staff_dashboard',
     href: '/staff-dashboard',
-    icon: Users,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
+    icon: Home,
+    roles: ['staff']
+  },
+
+  // --- Staff Specific ---
+  {
+    title: 'my_training',
+    href: '/training/my',
+    icon: BookOpen,
+    roles: ['staff']
   },
   {
-    title: 'directory',
+    title: 'my_approvals',
+    href: '/approvals',
+    icon: CheckSquare,
+    roles: ['staff']
+  },
+  {
+    title: 'my_sops',
+    href: '/sop', // Staff view of SOPs
+    icon: FileText,
+    roles: ['staff']
+  },
+  {
+    title: 'my_certificates',
+    href: '/training/certificates',
+    icon: ClipboardList,
+    roles: ['staff']
+  },
+  {
+    title: 'my_requests',
+    href: '/hr/leave', // Assuming this covers leave requests
+    icon: Calendar,
+    roles: ['staff']
+  },
+  {
+    title: 'my_profile',
+    href: '/profile',
+    icon: User,
+    roles: ['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']
+  },
+
+  // --- Department Head ---
+  {
+    title: 'team_training',
+    href: '/training/dashboard', // Team overview
+    icon: Users,
+    roles: ['department_head']
+  },
+  {
+    title: 'sops_view',
+    href: '/sop',
+    icon: FileText,
+    roles: ['department_head']
+  },
+  {
+    title: 'my_department_staff',
     href: '/directory',
     icon: Users,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
+    roles: ['department_head']
+  },
+
+  // --- Property HR ---
+  {
+    title: 'employees',
+    href: '/directory', // Manage users
+    icon: Users,
+    roles: ['property_hr']
+  },
+  {
+    title: 'sop_assignments',
+    href: '/training/assignments',
+    icon: ListTodo,
+    roles: ['property_hr', 'property_manager', 'regional_hr', 'regional_admin']
+  },
+  {
+    title: 'referrals',
+    href: '/hr/referrals',
+    icon: Users,
+    roles: ['property_hr', 'regional_hr', 'regional_admin']
+  },
+  {
+    title: 'jobs',
+    href: '/jobs',
+    icon: Briefcase,
+    roles: ['property_hr', 'regional_hr', 'regional_admin']
+  },
+
+  // --- Property Manager ---
+  {
+    title: 'department_status',
+    href: '/dashboard', // Part of main dashboard
+    icon: BarChart3,
+    roles: ['property_manager']
+  },
+  {
+    title: 'hr_approvals',
+    href: '/approvals',
+    icon: CheckSquare,
+    roles: ['property_manager', 'regional_admin', 'regional_hr', 'property_hr', 'department_head']
+  },
+  {
+    title: 'property_reports',
+    href: '/reports',
+    icon: FileText,
+    roles: ['property_manager', 'regional_admin', 'regional_hr']
+  },
+  {
+    title: 'sop_compliance',
+    href: '/sop', // View all SOPs compliance?
+    icon: ClipboardList,
+    roles: ['property_manager']
+  },
+
+  // --- Corporate / Admin (General Access) ---
+  {
+    title: 'admin_panel',
+    href: '/admin',
+    icon: Settings,
+    roles: ['regional_admin', 'regional_hr'],
+    children: [
+      { title: 'users', href: '/admin/users', icon: Users },
+      { title: 'properties', href: '/admin/properties', icon: Home },
+      { title: 'audit_logs', href: '/admin/audit', icon: BarChart3 }
+    ]
   },
   {
     title: 'documents',
@@ -65,76 +184,22 @@ const navigationItems: NavItem[] = [
     roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
   },
   {
-    title: 'training',
-    href: '/training',
-    icon: BookOpen,
+    title: 'announcements',
+    href: '/announcements', // "My Property Announcements" for staff
+    icon: Megaphone,
     roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
   },
   {
-    title: 'sop_library',
-    href: '/sop',
-    icon: ClipboardList,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'jobs',
-    href: '/jobs',
-    icon: Briefcase,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'staff']
-  },
-  {
-    title: 'maintenance',
-    href: '/maintenance',
-    icon: Wrench,
-    roles: ['regional_admin', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'tasks',
-    href: '/tasks',
-    icon: ListTodo,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'messaging',
+    title: 'messaging', // Using messaging key to avoid conflict with notifications object
     href: '/messaging',
     icon: MessageSquare,
     roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
   },
   {
-    title: 'approvals',
-    href: '/approvals',
-    icon: CheckSquare,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
-  },
-  {
-    title: 'hr',
-    href: '/hr',
-    icon: Users,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-    children: [
-      { title: 'leave_requests', href: '/hr/leave', icon: Calendar },
-      { title: 'referrals', href: '/hr/referrals', icon: Users },
-      { title: 'promotions', href: '/hr/promotions/history', icon: ArrowUp, roles: ['regional_admin', 'regional_hr', 'property_hr'] },
-      { title: 'transfers', href: '/hr/transfers/history', icon: ArrowRightLeft, roles: ['regional_admin', 'regional_hr'] }
-    ]
-  },
-  {
-    title: 'announcements',
-    href: '/announcements',
-    icon: Megaphone,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'admin',
-    href: '/admin',
+    title: 'settings',
+    href: '/settings',
     icon: Settings,
-    roles: ['regional_admin', 'regional_hr'],
-    children: [
-      { title: 'users', href: '/admin/users', icon: Users },
-      { title: 'properties', href: '/admin/properties', icon: Home },
-      { title: 'audit_logs', href: '/admin/audit', icon: BarChart3 },
-      { title: 'escalation', href: '/admin/escalation', icon: Settings }
-    ]
+    roles: ['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']
   }
 ]
 
@@ -189,7 +254,7 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
       <div className={cn(
         "fixed inset-y-0 z-50 bg-hotel-navy text-white transform transition-all duration-300 ease-in-out shadow-2xl",
         "start-0 border-e border-hotel-navy-dark",
-        isMobile ? "lg:hidden w-[280px]" : "hidden lg:block lg:translate-x-0 w-[280px]",
+        isMobile ? "lg:hidden w-[85vw] max-w-[320px]" : "hidden lg:block lg:translate-x-0 w-[280px]",
         isOpen ? "translate-x-0" : (document.dir === 'rtl' ? "translate-x-full" : "-translate-x-full"),
         collapsed && !isMobile && "lg:w-20"
       )}>
@@ -200,7 +265,7 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
             collapsed && "justify-center px-0"
           )}>
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-md bg-gradient-to-br from-hotel-gold to-hotel-gold-dark flex items-center justify-center shadow-lg ring-1 ring-white/10">
+              <div className="h-8 w-8 rounded-md bg-gradient-to-br from-hotel-gold to-hotel-gold-dark flex items-center justify-center shadow-lg ring-1 ring-hotel-navy-light">
                 <span className="text-hotel-navy font-bold text-lg font-serif">P</span>
               </div>
               {!collapsed && (
@@ -212,12 +277,12 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
               )}
             </div>
             {isMobile && (
-              <Button variant="ghost" size="icon" onClick={onClose} className="text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+              <Button variant="ghost" size="icon" onClick={onClose} className="text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors">
                 <X className="h-5 w-5" />
               </Button>
             )}
             {!isMobile && !collapsed && onToggleCollapse && (
-              <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="ms-auto text-white/50 hover:bg-white/10 hover:text-white h-8 w-8 transition-colors">
+              <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="ms-auto text-gray-400 hover:bg-hotel-navy-light hover:text-white h-8 w-8 transition-colors">
                 <ChevronDown className="h-4 w-4 ltr:rotate-90 rtl:-rotate-90" />
               </Button>
             )}
@@ -226,7 +291,7 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
           {/* User Profile Summary (Desktop) */}
           {!collapsed && (
             <div className="px-4 py-6">
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
+              <div className="p-3 rounded-xl bg-hotel-navy-dark border border-hotel-navy-light">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-full bg-hotel-gold flex items-center justify-center border-2 border-hotel-navy shadow-sm">
                     <span className="font-bold text-hotel-navy text-sm">
@@ -262,8 +327,8 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
                         if (!collapsed) toggleExpanded(item.title)
                       }}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left group",
-                        "text-white/70 hover:bg-white/5 hover:text-white hover:shadow-inner",
+                        "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all w-full text-left group min-h-touch",
+                        "text-gray-300 hover:bg-hotel-navy-light hover:text-white hover:shadow-inner",
                         collapsed && "justify-center px-0"
                       )}
                       title={collapsed ? t(item.title) : undefined}
@@ -296,10 +361,10 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
                         if (isMobile) onClose()
                       }}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
+                        "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",
                         isItemActive
                           ? "bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-hotel-navy shadow-lg shadow-black/20"
-                          : "text-white/70 hover:bg-white/5 hover:text-white hover:shadow-inner",
+                          : "text-gray-300 hover:bg-hotel-navy-light hover:text-white hover:shadow-inner",
                         collapsed && "justify-center px-0"
                       )}
                       title={collapsed ? t(item.title) : undefined}
@@ -347,8 +412,8 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
                             className={cn(
                               "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                               isChildActive
-                                ? "bg-white/10 text-hotel-gold font-medium border border-white/5"
-                                : "text-white/50 hover:bg-white/5 hover:text-white"
+                                ? "bg-hotel-navy-light text-hotel-gold font-medium border border-hotel-navy-dark"
+                                : "text-gray-400 hover:bg-hotel-navy-light hover:text-white"
                             )}
                           >
                             <ChildIcon className={cn("h-4 w-4", isChildActive ? "text-hotel-gold" : "text-white/40")} />
@@ -365,7 +430,7 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
 
           {/* Footer */}
           <div className={cn(
-            "p-4 border-t border-hotel-navy-dark space-y-3 bg-hotel-navy-dark/30 backdrop-blur-sm",
+            "p-4 border-t border-hotel-navy-dark space-y-3 bg-hotel-navy-dark",
             collapsed && "p-2 items-center flex flex-col"
           )}>
             <div className={cn(

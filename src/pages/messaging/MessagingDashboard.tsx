@@ -105,27 +105,27 @@ export default function MessagingDashboard() {
 
   const MessageCard = ({ message }: { message: Message }) => (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-medium">{message.subject}</h4>
-              <Badge className={priorityColors[message.priority]}>
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+              <h4 className="font-medium text-sm sm:text-base truncate">{message.subject}</h4>
+              <Badge className={`text-xs ${priorityColors[message.priority]}`}>
                 {t(`priority_${message.priority}`)}
               </Badge>
-              <Badge className={messageTypeColors[message.message_type]}>
+              <Badge className={`text-xs ${messageTypeColors[message.message_type]}`}>
                 {t(message.message_type)}
               </Badge>
               {message.status !== 'read' && (
-                <Badge className="bg-blue-100 text-blue-800 border border-blue-600 rounded-md text-blue-700">
+                <Badge className="bg-blue-100 text-blue-800 border border-blue-600 rounded-md text-blue-700 text-xs">
                   {t('unread')}
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 mb-2">
               {message.content}
             </p>
-            <div className="flex items-center gap-4 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-500">
               <span>{t('from')}: {message.sender?.full_name}</span>
               {message.recipient && (
                 <span>{t('to')}: {message.recipient.full_name}</span>
@@ -133,9 +133,9 @@ export default function MessagingDashboard() {
               <span>{formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}</span>
             </div>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
             <Button
-              className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors"
+              className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors h-8 text-xs"
               size="sm"
               onClick={() => navigate(`/messaging/${message.id}`)}
             >
@@ -143,7 +143,7 @@ export default function MessagingDashboard() {
             </Button>
             {message.status !== 'read' && message.recipient_id === user?.id && (
               <Button
-                className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors"
+                className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors h-8 text-xs"
                 size="sm"
                 onClick={() => handleMarkAsRead(message.id)}
                 disabled={markAsReadMutation.isPending}
@@ -165,9 +165,10 @@ export default function MessagingDashboard() {
         actions={
           <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="h-10 w-full sm:w-auto text-sm">
                 <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-                {t('compose_message')}
+                <span className="hidden sm:inline">{t('compose_message')}</span>
+                <span className="sm:hidden">Compose</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
@@ -199,7 +200,7 @@ export default function MessagingDashboard() {
                     placeholder={t('subject_placeholder')}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="type">{t('type')}</Label>
                     <Select value={newMessage.message_type} onValueChange={(value: Message['message_type']) => setNewMessage({ ...newMessage, message_type: value })}>
@@ -258,47 +259,47 @@ export default function MessagingDashboard() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-blue-500" />
-                <div>
-                  <p className="text-sm text-gray-600">{t('total_messages')}</p>
-                  <p className="text-2xl font-bold">{stats.totalMessages}</p>
+                <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">{t('total_messages')}</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.totalMessages}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2">
-                <Send className="w-5 h-5 text-green-500" />
-                <div>
-                  <p className="text-sm text-gray-600">{t('sent')}</p>
-                  <p className="text-2xl font-bold">{stats.sentMessages}</p>
+                <Send className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600">{t('sent')}</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.sentMessages}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-purple-500" />
-                <div>
-                  <p className="text-sm text-gray-600">{t('received')}</p>
-                  <p className="text-2xl font-bold">{stats.receivedMessages}</p>
+                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600">{t('received')}</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.receivedMessages}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                <div>
-                  <p className="text-sm text-gray-600">{t('unread')}</p>
-                  <p className="text-2xl font-bold">{stats.unreadMessages}</p>
+                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600">{t('unread')}</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.unreadMessages}</p>
                 </div>
               </div>
             </CardContent>
@@ -307,27 +308,29 @@ export default function MessagingDashboard() {
       )}
 
       <Tabs defaultValue="messages" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="messages">{t('messages')}</TabsTrigger>
-          <TabsTrigger value="conversations">{t('conversations')}</TabsTrigger>
-          <TabsTrigger value="notifications">{t('notifications')}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:w-auto h-auto">
+            <TabsTrigger value="messages" className="text-xs sm:text-sm whitespace-nowrap">{t('messages')}</TabsTrigger>
+            <TabsTrigger value="conversations" className="text-xs sm:text-sm whitespace-nowrap">{t('conversations')}</TabsTrigger>
+            <TabsTrigger value="notifications" className="text-xs sm:text-sm whitespace-nowrap">{t('notifications')}</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="messages" className="space-y-4">
           {/* Filters */}
           <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <div className="flex-1">
                   <Input
                     placeholder={t('search_placeholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full"
+                    className="w-full h-11"
                   />
                 </div>
                 <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
-                  <SelectTrigger className="w-full md:w-40">
+                  <SelectTrigger className="w-full sm:w-40 h-11">
                     <SelectValue placeholder={t('status')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -339,7 +342,7 @@ export default function MessagingDashboard() {
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={(value: any) => setTypeFilter(value)}>
-                  <SelectTrigger className="w-full md:w-40">
+                  <SelectTrigger className="w-full sm:w-40 h-11">
                     <SelectValue placeholder={t('type')} />
                   </SelectTrigger>
                   <SelectContent>

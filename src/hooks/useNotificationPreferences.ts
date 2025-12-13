@@ -1,18 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
-
-export interface NotificationPreferences {
-    id: string
-    user_id: string
-    email_enabled: boolean
-    approval_email: boolean
-    training_email: boolean
-    announcement_email: boolean
-    maintenance_email: boolean
-    created_at: string
-    updated_at: string
-}
+import type { NotificationPreference } from '@/lib/types'
 
 export function useNotificationPreferences() {
     const { user } = useAuth()
@@ -45,16 +34,16 @@ export function useNotificationPreferences() {
                         .single()
 
                     if (createError) throw createError
-                    return newData as NotificationPreferences
+                    return newData as NotificationPreference
                 }
                 throw error
             }
-            return data as NotificationPreferences
+            return data as NotificationPreference
         }
     })
 
     const updatePreferences = useMutation({
-        mutationFn: async (newPreferences: Partial<NotificationPreferences>) => {
+        mutationFn: async (newPreferences: Partial<NotificationPreference>) => {
             if (!user) return
 
             const { error } = await supabase

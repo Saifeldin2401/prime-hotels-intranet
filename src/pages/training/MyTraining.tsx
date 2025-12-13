@@ -1,8 +1,8 @@
 import { useAuth } from '@/hooks/useAuth'
-import { 
-  useTrainingAssignments, 
-  useTrainingProgress, 
-  useStartTraining, 
+import {
+  useTrainingAssignments,
+  useTrainingProgress,
+  useStartTraining,
   useCompleteTraining,
   useTrainingStats
 } from '@/hooks/useTraining'
@@ -11,11 +11,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { 
-  Play, 
-  Clock, 
-  CheckCircle, 
-  BookOpen, 
+import { StatsLoading, CardLoading } from '@/components/common/LoadingStates'
+import {
+  Play,
+  Clock,
+  CheckCircle,
+  BookOpen,
   Award,
   Calendar,
   BarChart3
@@ -89,10 +90,8 @@ export default function MyTraining() {
           title="My Training"
           description="View and complete your assigned training modules"
         />
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading training data...</p>
-        </div>
+        <StatsLoading count={4} />
+        <CardLoading count={3} />
       </div>
     )
   }
@@ -106,29 +105,29 @@ export default function MyTraining() {
 
       {/* Stats Overview */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 mb-6 sm:mb-8">
           <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.totalAssigned}</div>
-              <div className="text-sm text-gray-600">Assigned</div>
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.totalAssigned}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Assigned</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-orange-600">{stats.inProgress}</div>
-              <div className="text-sm text-gray-600">In Progress</div>
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">{stats.inProgress}</div>
+              <div className="text-xs sm:text-sm text-gray-600">In Progress</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-              <div className="text-sm text-gray-600">Completed</div>
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.completed}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Completed</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-              <div className="text-sm text-gray-600">Overdue</div>
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-red-600">{stats.overdue}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Overdue</div>
             </CardContent>
           </Card>
         </div>
@@ -149,80 +148,81 @@ export default function MyTraining() {
         ) : (
           trainingItems.map((item) => {
             const status = item.progress?.status || 'not_started'
-            const progress = item.progress?.status === 'completed' ? 100 : 
-                           item.progress?.status === 'in_progress' ? 50 : 0
+            const progress = item.progress?.status === 'completed' ? 100 :
+              item.progress?.status === 'in_progress' ? 50 : 0
 
             return (
               <Card key={item.module.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <BookOpen className="w-5 h-5 text-blue-500" />
-                        <h3 className="font-semibold text-lg">{item.module.title}</h3>
-                        <Badge 
-                          className={`bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors ml-2 ${getStatusColor(status)}`}
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 flex-shrink-0" />
+                        <h3 className="font-semibold text-base sm:text-lg">{item.module.title}</h3>
+                        <Badge
+                          className={`text-xs ${getStatusColor(status)}`}
                         >
                           {status.replace('_', ' ').toUpperCase()}
                         </Badge>
                       </div>
-                      
-                      <p className="text-gray-600 mb-4 line-clamp-2">
+
+                      <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">
                         {item.module.description || 'No description provided'}
                       </p>
 
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-3">
                         <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
+                          <Clock className="w-3.5 h-3.5" />
                           <span>{item.module.estimated_duration_minutes || 0} min</span>
                         </div>
                         {item.assignment?.deadline && (
                           <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
+                            <Calendar className="w-3.5 h-3.5" />
                             <span>Due {formatRelativeTime(item.assignment.deadline)}</span>
                           </div>
                         )}
                       </div>
 
                       {item.assignment?.deadline && new Date(item.assignment.deadline) < new Date() && status !== 'completed' && (
-                        <Badge variant="destructive" className="mb-3">
+                        <Badge variant="destructive" className="mb-2 text-xs">
                           Overdue
                         </Badge>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="flex items-center gap-2">
                       {status === 'not_started' && (
                         <Button
                           variant="default"
                           size="sm"
+                          className="h-9 text-xs sm:text-sm"
                           onClick={() => handleStartTraining(item.module.id, item.assignment?.id)}
                           disabled={startTrainingMutation.isPending}
                         >
-                          <Play className="w-4 h-4 mr-1" />
+                          <Play className="w-3.5 h-3.5 mr-1" />
                           Start
                         </Button>
                       )}
-                      
+
                       {status === 'in_progress' && (
                         <Button
-                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-9 text-xs sm:text-sm"
                           size="sm"
                           onClick={() => window.open(`/training/${item.module.id}`, '_self')}
                         >
-                          <BookOpen className="w-4 h-4 mr-1" />
+                          <BookOpen className="w-3.5 h-3.5 mr-1" />
                           Continue
                         </Button>
                       )}
-                      
+
                       {status === 'completed' && (
                         <Button
-                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-9 text-xs sm:text-sm"
                           size="sm"
                           onClick={() => window.open(`/training/${item.module.id}`, '_self')}
                         >
-                          <Award className="w-4 h-4 mr-1" />
-                          View Certificate
+                          <Award className="w-3.5 h-3.5 mr-1" />
+                          Certificate
                         </Button>
                       )}
                     </div>
@@ -231,8 +231,8 @@ export default function MyTraining() {
                   {status === 'in_progress' && (
                     <div className="mt-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Progress</span>
-                        <span className="text-sm text-gray-600">{progress}%</span>
+                        <span className="text-xs sm:text-sm font-medium">Progress</span>
+                        <span className="text-xs sm:text-sm text-gray-600">{progress}%</span>
                       </div>
                       <Progress value={progress} className="h-2" />
                     </div>

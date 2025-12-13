@@ -68,8 +68,8 @@ export function MobileNavigation({ onClose }: MobileNavigationProps) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border md:hidden shadow-lg">
-      <div className="grid grid-cols-5 gap-1 p-2 pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border lg:hidden shadow-lg">
+      <div className="grid grid-cols-5 gap-0 pb-safe">
         {filteredNavItems.map((item) => {
           const Icon = item.icon
           const isItemActive = isActive(item.href)
@@ -80,12 +80,12 @@ export function MobileNavigation({ onClose }: MobileNavigationProps) {
                 key={item.title}
                 onClick={onClose}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2 px-1 rounded-md transition-colors duration-200",
-                  "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  "flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors duration-200 touch-target",
+                  "text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
                 )}
               >
-                <Icon className="h-6 w-6" />
-                <span className="text-[10px] font-medium">{item.title}</span>
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]">{item.title}</span>
               </button>
             )
           }
@@ -95,14 +95,14 @@ export function MobileNavigation({ onClose }: MobileNavigationProps) {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 py-2 px-1 rounded-md transition-colors duration-200",
+                "flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors duration-200 touch-target",
                 isItemActive
                   ? "text-primary font-semibold bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
               )}
             >
-              <Icon className={cn("h-6 w-6", isItemActive && "fill-current")} />
-              <span className="text-[10px] font-medium">{item.title}</span>
+              <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6", isItemActive && "fill-current")} />
+              <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]">{item.title}</span>
             </Link>
           )
         })}

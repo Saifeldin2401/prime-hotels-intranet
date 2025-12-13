@@ -36,15 +36,28 @@ export default function Login() {
       </div>
 
       {/* Form Side */}
-      <div className="flex items-center justify-center bg-background p-8">
-        <div className="w-full max-w-md space-y-8">
+      <div className="flex items-center justify-center bg-background p-4 sm:p-6 md:p-8 min-h-screen lg:min-h-0 pt-safe pb-safe">
+        <div className="w-full max-w-md space-y-6 sm:space-y-8">
+          {/* Mobile Logo */}
+          <div className="flex flex-col items-center lg:hidden mb-6">
+            <div className="p-3 rounded-xl bg-hotel-gold/90 text-primary shadow-lg border border-hotel-gold/50 mb-3">
+              <Building2 className="w-8 h-8" />
+            </div>
+            <span className="text-xl font-bold tracking-tight font-heading text-hotel-navy">Prime Hotels</span>
+          </div>
+
           <div className="flex flex-col space-y-2 text-center lg:text-left">
-            <h2 className="text-3xl font-semibold tracking-tight">{t('sign_in_title')}</h2>
-            <p className="text-gray-600">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{t('sign_in_title')}</h2>
+            <p className="text-gray-600 text-sm sm:text-base">
               {t('sign_in_subtitle')}
             </p>
           </div>
           <LoginForm />
+
+          {/* Mobile copyright */}
+          <div className="text-center text-xs text-gray-400 lg:hidden pt-4">
+            {t('copyright', { year })}
+          </div>
         </div>
       </div>
     </div>

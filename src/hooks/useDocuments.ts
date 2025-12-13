@@ -17,25 +17,7 @@ export function useDocuments(filters?: {
     queryFn: async () => {
       let query = supabase
         .from('documents')
-        .select(`
-          *,
-          profiles!documents_created_by_fkey(
-            full_name,
-            email
-          ),
-          properties(id, name),
-          departments(id, name),
-          document_approvals(
-            id,
-            status,
-            approver_role,
-            approved_at,
-            rejected_at,
-            approved_by,
-            rejected_by,
-            rejection_reason
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       // Apply filters
@@ -61,12 +43,7 @@ export function useDocuments(filters?: {
       const { data, error } = await query
 
       if (error) throw error
-      return data as (Document & {
-        profiles?: { full_name: string; email: string }
-        properties?: { id: string; name: string }
-        departments?: { id: string; name: string }
-        document_approvals?: DocumentApproval[]
-      })[]
+      return data as Document[]
     },
   })
 }
@@ -77,35 +54,12 @@ export function useDocument(documentId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('documents')
-        .select(`
-          *,
-          profiles!documents_created_by_fkey(
-            full_name,
-            email
-          ),
-          properties(id, name),
-          departments(id, name),
-          document_approvals(
-            id,
-            status,
-            approver_role,
-            approved_at,
-            rejected_at,
-            approved_by,
-            rejected_by,
-            rejection_reason
-          )
-        `)
+        .select('*')
         .eq('id', documentId)
         .single()
 
       if (error) throw error
-      return data as Document & {
-        profiles?: { full_name: string; email: string }
-        properties?: { id: string; name: string }
-        departments?: { id: string; name: string }
-        document_approvals?: DocumentApproval[]
-      }
+      return data as Document
     },
     enabled: !!documentId,
   })

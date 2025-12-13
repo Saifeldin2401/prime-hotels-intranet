@@ -91,7 +91,13 @@
             "view_documents_btn": "عرض المستندات",
             "training": "التدريب",
             "complete_training": "أكمل تدريبك",
-            "continue_learning_btn": "متابعة التعلم"
+            "continue_learning_btn": "متابعة التعلم",
+            "policies_forms": "السياسات والنماذج",
+            "access_policies": "الوصول إلى سياسات الشركة",
+            "my_requests": "طلباتي",
+            "submit_requests": "تقديم طلبات الإجازة وغيرها",
+            "support": "الدعم الفني",
+            "get_help": "الحصول على المساعدة"
         },
         "tabs": {
             "activity_feed": "سجل النشاط",

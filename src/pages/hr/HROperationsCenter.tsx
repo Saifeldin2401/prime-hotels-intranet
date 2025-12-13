@@ -1,0 +1,429 @@
+import { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Label } from '@/components/ui/label'
+import { Loader2, Search, Filter, CalendarIcon, Bell, CheckCircle, XCircle, AlertCircle, Mail, MessageSquare, FileText, Settings } from 'lucide-react'
+import { format } from 'date-fns'
+import { useNotifications } from '@/hooks/useNotifications'
+import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
+import { ar, enUS } from 'date-fns/locale'
+import { useAuth } from '@/hooks/useAuth'
+
+const notificationTypeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  approval_required: { label: 'Approval Required', color: 'bg-yellow-100 text-yellow-800', icon: <AlertCircle className="w-4 h-4" /> },
+  request_approved: { label: 'Request Approved', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
+  request_rejected: { label: 'Request Rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4" /> },
+  request_submitted: { label: 'Request Submitted', color: 'bg-blue-100 text-blue-800', icon: <FileText className="w-4 h-4" /> },
+  comment_added: { label: 'Comment Added', color: 'bg-purple-100 text-purple-800', icon: <MessageSquare className="w-4 h-4" /> },
+  request_returned: { label: 'Request Returned', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4" /> },
+  request_closed: { label: 'Request Closed', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4" /> },
+  training_assigned: { label: 'Training Assigned', color: 'bg-indigo-100 text-indigo-800', icon: <FileText className="w-4 h-4" /> },
+  training_deadline: { label: 'Training Deadline', color: 'bg-red-100 text-red-800', icon: <AlertCircle className="w-4 h-4" /> },
+  document_published: { label: 'Document Published', color: 'bg-blue-100 text-blue-800', icon: <FileText className="w-4 h-4" /> },
+  document_acknowledgment_required: { label: 'Document Acknowledgment', color: 'bg-orange-100 text-orange-800', icon: <FileText className="w-4 h-4" /> },
+  announcement_new: { label: 'New Announcement', color: 'bg-purple-100 text-purple-800', icon: <Bell className="w-4 h-4" /> },
+  escalation_alert: { label: 'Escalation Alert', color: 'bg-red-100 text-red-800', icon: <AlertCircle className="w-4 h-4" /> },
+  referral_status_update: { label: 'Referral Update', color: 'bg-blue-100 text-blue-800', icon: <Mail className="w-4 h-4" /> },
+  maintenance_assigned: { label: 'Maintenance Assigned', color: 'bg-yellow-100 text-yellow-800', icon: <AlertCircle className="w-4 h-4" /> },
+  maintenance_resolved: { label: 'Maintenance Resolved', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
+}
+
+export default function HROperationsCenter() {
+  const { user } = useAuth()
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+  const { t, i18n } = useTranslation('notifications')
+  const isRTL = i18n.dir() === 'rtl'
+  const locale = i18n.language === 'ar' ? ar : enUS
+
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [readStatus, setReadStatus] = useState<'all' | 'read' | 'unread'>('all')
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [sortBy, setSortBy] = useState<'created_at' | 'read_at'>('created_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  // Filter notifications
+  const filteredNotifications = notifications
+    .filter(notification => {
+      // Search filter
+      if (searchTerm && !notification.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
+          !notification.message.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false
+      }
+
+      // Type filter
+      if (selectedTypes.length > 0 && !selectedTypes.includes(notification.type)) {
+        return false
+      }
+
+      // Read status filter
+      if (readStatus === 'read' && !notification.is_read) return false
+      if (readStatus === 'unread' && notification.is_read) return false
+
+      // Date range filter
+      if (dateRange) {
+        const notificationDate = new Date(notification.created_at)
+        const startDate = new Date(dateRange.start)
+        const endDate = new Date(dateRange.end)
+        endDate.setHours(23, 59, 59, 999) // End of day
+        
+        if (notificationDate < startDate || notificationDate > endDate) {
+          return false
+        }
+      }
+
+      return true
+    })
+    .sort((a, b) => {
+      const aValue = a[sortBy]
+      const bValue = b[sortBy]
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1
+      } else {
+        return aValue < bValue ? 1 : -1
+      }
+    })
+
+  const handleTypeChange = (type: string, checked: boolean) => {
+    if (checked) {
+      setSelectedTypes([...selectedTypes, type])
+    } else {
+      setSelectedTypes(selectedTypes.filter(t => t !== type))
+    }
+  }
+
+  const handleDateRangeSelect = (date: Date | undefined, type: 'start' | 'end') => {
+    if (!date) return
+    const newRange = dateRange || { start: '', end: '' }
+    newRange[type] = date.toISOString().split('T')[0]
+    setDateRange(newRange)
+  }
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setSelectedTypes([])
+    setReadStatus('all')
+    setDateRange(null)
+  }
+
+  const getTypeBadge = (type: string) => {
+    const config = notificationTypeConfig[type] || {
+      label: type.replace('_', ' ').toUpperCase(),
+      color: 'bg-gray-100 text-gray-800',
+      icon: <Bell className="w-4 h-4" />
+    }
+    return (
+      <Badge className={cn(config.color, "rounded-md")}>
+        {config.icon}
+        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{config.label}</span>
+      </Badge>
+    )
+  }
+
+  // Calculate statistics
+  const stats = {
+    total: notifications.length,
+    unread: unreadCount,
+    byType: notifications.reduce((acc, notification) => {
+      acc[notification.type] = (acc[notification.type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="text-center py-12 border rounded-lg bg-red-50">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-red-800">Access Denied</h3>
+          <p className="text-red-600">You must be logged in to access this page</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">HR Operations Center</h1>
+          <p className="text-gray-600">Monitor notifications and system activity</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => markAllAsRead.mutate()}
+            disabled={unreadCount === 0 || markAllAsRead.isPending}
+          >
+            {markAllAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            Mark All Read
+          </Button>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Notifications</CardTitle>
+            <Bell className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Unread</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{stats.unread}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Approval Required</CardTitle>
+            <Settings className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.byType.approval_required || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Escalations</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.byType.escalation_alert || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Search className="w-4 h-4 text-gray-500" />
+              <Input
+                placeholder="Search notifications..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={(value: 'created_at' | 'read_at') => setSortBy(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Created</SelectItem>
+                  <SelectItem value="read_at">Read</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">Newest</SelectItem>
+                  <SelectItem value="asc">Oldest</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+                {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
+                  <Badge variant="secondary" className="ml-1">
+                    {selectedTypes.length + (readStatus !== 'all' ? 1 : 0) + (dateRange ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
+              {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
+                <Button variant="ghost" onClick={clearFilters}>
+                  Clear all
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        {showFilters && (
+          <CardContent className="space-y-4">
+            {/* Type Filters */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Notification Type</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {Object.entries(notificationTypeConfig).map(([type, config]) => (
+                  <div key={type} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={type}
+                      checked={selectedTypes.includes(type)}
+                      onCheckedChange={(checked) => handleTypeChange(type, checked as boolean)}
+                    />
+                    <Label htmlFor={type} className="text-sm cursor-pointer">
+                      {config.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Read Status */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Read Status</Label>
+              <div className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="read-all"
+                    checked={readStatus === 'all'}
+                    onCheckedChange={() => setReadStatus('all')}
+                  />
+                  <Label htmlFor="read-all" className="text-sm cursor-pointer">All</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="read-unread"
+                    checked={readStatus === 'unread'}
+                    onCheckedChange={() => setReadStatus('unread')}
+                  />
+                  <Label htmlFor="read-unread" className="text-sm cursor-pointer">Unread</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="read-read"
+                    checked={readStatus === 'read'}
+                    onCheckedChange={() => setReadStatus('read')}
+                  />
+                  <Label htmlFor="read-read" className="text-sm cursor-pointer">Read</Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Date Range */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.start ? format(new Date(dateRange.start), 'PPP', { locale }) : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={dateRange?.start ? new Date(dateRange.start) : undefined}
+                      onSelect={(date) => handleDateRangeSelect(date, 'start')}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.end ? format(new Date(dateRange.end), 'PPP', { locale }) : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={dateRange?.end ? new Date(dateRange.end) : undefined}
+                      onSelect={(date) => handleDateRangeSelect(date, 'end')}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Results */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium">
+          {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? 's' : ''} found
+        </h2>
+      </div>
+
+      {filteredNotifications.length === 0 ? (
+        <div className="text-center py-12 border rounded-lg bg-muted/20">
+          <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium">No notifications found</h3>
+          <p className="text-gray-600">Try adjusting your filters or search terms</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredNotifications.map((notification) => (
+            <Card key={notification.id} className={cn("hover:shadow-md transition-shadow", !notification.is_read && "border-l-4 border-l-blue-500")}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      {getTypeBadge(notification.type)}
+                      {!notification.is_read && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+                          Unread
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <h3 className="text-lg font-medium mb-1">{notification.title}</h3>
+                    <p className="text-gray-600 mb-2">{notification.message}</p>
+                    
+                    <div className="text-sm text-gray-500">
+                      Created: {format(new Date(notification.created_at), 'MMM d, yyyy h:mm a')}
+                      {notification.read_at && (
+                        <span className="ml-4">
+                          Read: {format(new Date(notification.read_at), 'MMM d, yyyy h:mm a')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {!notification.is_read && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => markAsRead.mutate(notification.id)}
+                        disabled={markAsRead.isPending}
+                      >
+                        {markAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                        Mark Read
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

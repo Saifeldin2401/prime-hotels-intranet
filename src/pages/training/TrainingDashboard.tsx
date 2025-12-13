@@ -207,7 +207,7 @@ export default function TrainingDashboard() {
             {['regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
               <Button
                 onClick={() => navigate('/training/modules')}
-                className="bg-primary hover:bg-primary/90 shadow-sm hover:shadow-md transition-all duration-200"
+                className="bg-primary hover:bg-hotel-navy shadow-sm hover:shadow-md transition-all duration-200"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 {t('createModule')}
@@ -239,7 +239,7 @@ export default function TrainingDashboard() {
         <Card className="card-hover animate-fade-in" style={{ animationDelay: '100ms' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-sm font-medium text-gray-600">{t('modules')}</CardTitle>
-            <div className="p-2 bg-blue-500/10 rounded-lg">
+            <div className="p-2 bg-blue-50 rounded-lg">
               <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
           </CardHeader>
@@ -256,7 +256,7 @@ export default function TrainingDashboard() {
         <Card className="card-hover animate-fade-in" style={{ animationDelay: '200ms' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-sm font-medium text-gray-600">{t('completionRate')}</CardTitle>
-            <div className="p-2 bg-green-500/10 rounded-lg">
+            <div className="p-2 bg-green-50 rounded-lg">
               <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
             </div>
           </CardHeader>
@@ -274,7 +274,7 @@ export default function TrainingDashboard() {
         <Card className="card-hover animate-fade-in" style={{ animationDelay: '300ms' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-sm font-medium text-gray-600">{t('overdue')}</CardTitle>
-            <div className="p-2 bg-red-500/10 rounded-lg">
+            <div className="p-2 bg-red-50 rounded-lg">
               <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
             </div>
           </CardHeader>
@@ -297,7 +297,7 @@ export default function TrainingDashboard() {
         <Card className="card-hover animate-fade-in" style={{ animationDelay: '400ms' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-sm font-medium text-gray-600">{t('certificates')}</CardTitle>
-            <div className="p-2 bg-purple-500/10 rounded-lg">
+            <div className="p-2 bg-purple-50 rounded-lg">
               <Award className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </div>
           </CardHeader>

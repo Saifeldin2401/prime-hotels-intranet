@@ -498,7 +498,7 @@ function SOPEditorAdvanced({ documentId, initialContent = '', initialMetadata, o
           {!isPreview && editor && (
             <>
               {/* Sticky Toolbar for manual actions */}
-              <div className="border-b p-2 flex flex-wrap gap-2 items-center bg-background/95 backdrop-blur z-10 sticky top-0 print:hidden">
+              <div className="border-b p-2 flex flex-wrap gap-2 items-center bg-background z-10 sticky top-0 print:hidden">
                 <div className="flex gap-1">
                   <Toggle pressed={editor.isActive('bold')} onPressedChange={() => editor.chain().focus().toggleBold().run()} size="sm">
                     <Icons.Bold className="h-4 w-4" />

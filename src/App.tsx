@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { RoleBasedRedirect } from '@/components/auth/RoleBasedRedirect'
 import Login from '@/pages/Login'
 import Unauthorized from '@/pages/Unauthorized'
 import { StaffDashboard } from '@/pages/dashboard/StaffDashboard'
@@ -24,6 +25,7 @@ import TrainingCertificates from '@/pages/training/TrainingCertificates'
 import TrainingPaths from '@/pages/training/TrainingPaths'
 import AnnouncementFeed from '@/pages/announcements/AnnouncementFeed'
 import SOPLibrary from '@/pages/sop/SOPLibrary'
+import SOPViewer from '@/pages/sop/SOPViewer'
 import SubmitTicket from '@/pages/maintenance/SubmitTicket'
 import MaintenanceDashboard from '@/pages/maintenance/MaintenanceDashboard'
 import MaintenanceTicketDetail from '@/pages/maintenance/MaintenanceTicketDetail'
@@ -51,6 +53,9 @@ import EditJobPosting from '@/pages/jobs/EditJobPosting'
 import PromotionWorkflow from '@/pages/hr/PromotionWorkflow'
 import TransferWorkflow from '@/pages/hr/TransferWorkflow'
 import PromotionTransferHistory from '@/pages/hr/PromotionTransferHistory'
+import RequestDetail from '@/pages/hr/RequestDetail'
+import RequestsInbox from '@/pages/hr/RequestsInbox'
+import HROperationsCenter from '@/pages/hr/HROperationsCenter'
 import SOPQuizBuilder from '@/pages/sop/SOPQuizBuilder'
 import SOPQuizTaker from '@/pages/sop/SOPQuizTaker'
 
@@ -88,9 +93,7 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <AppLayout>
-              <AnalyticsDashboard />
-            </AppLayout>
+            <RoleBasedRedirect />
           </ProtectedRoute>
         }
       />
@@ -147,9 +150,9 @@ function AppRoutes() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
             <AppLayout>
-              <StaffDashboard />
+              <AnalyticsDashboard />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -157,7 +160,7 @@ function AppRoutes() {
       <Route
         path="/staff-dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['staff']}>
             <AppLayout>
               <StaffDashboard />
             </AppLayout>
@@ -237,7 +240,7 @@ function AppRoutes() {
       <Route
         path="/approvals"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+          <ProtectedRoute>
             <AppLayout>
               <MyApprovals />
             </AppLayout>
@@ -345,6 +348,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/sop/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <SOPViewer />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/maintenance"
         element={
           <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
@@ -390,6 +403,36 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <MyLeaveRequests />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/request/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <RequestDetail />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/inbox"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head']}>
+            <AppLayout>
+              <RequestsInbox />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/operations"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+            <AppLayout>
+              <HROperationsCenter />
             </AppLayout>
           </ProtectedRoute>
         }

@@ -172,7 +172,7 @@ export function SOPDocumentManager({ onEdit }: { onEdit?: (doc: Document) => voi
 
   const DocumentActions = ({ doc }: { doc: Document }) => (
     <div className="flex items-center gap-2">
-      <Button size="sm" className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors">
+      <Button size="sm" className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors" onClick={() => window.location.href = `/sop/${doc.id}`}>
         <Icons.Eye className="h-4 w-4" />
       </Button>
       <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => onEdit?.(doc)}>

@@ -150,9 +150,9 @@ export function StaffDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
         <div className="prime-card">
-          <div className="prime-card-body">
+          <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">{t('staff.stats.todays_tasks')}</p>
@@ -169,7 +169,7 @@ export function StaffDashboard() {
         </div>
 
         <div className="prime-card">
-          <div className="prime-card-body">
+          <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">{t('staff.stats.training_progress')}</p>
@@ -184,7 +184,7 @@ export function StaffDashboard() {
         </div>
 
         <div className="prime-card">
-          <div className="prime-card-body">
+          <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">{t('staff.stats.upcoming_events')}</p>
@@ -201,7 +201,7 @@ export function StaffDashboard() {
         </div>
 
         <div className="prime-card">
-          <div className="prime-card-body">
+          <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">{t('staff.stats.performance_score')}</p>
@@ -219,57 +219,52 @@ export function StaffDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="prime-card">
-          <div className="prime-card-body">
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/tasks'}>
+          <div className="prime-card-body p-6">
             <div className="text-center">
-              <div className="h-16 w-16 rounded-full bg-hotel-gold/20 flex items-center justify-center mx-auto mb-4">
-                <Clock className="h-8 w-8 text-hotel-gold" />
+              <div className="h-14 w-14 rounded-full bg-hotel-gold/10 group-hover:bg-hotel-gold/20 flex items-center justify-center mx-auto mb-3 transition-colors">
+                <Clock className="h-7 w-7 text-hotel-gold" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('staff.quick_actions.clock_in_out')}</h3>
-              <p className="text-sm text-gray-600 mb-4">{t('staff.quick_actions.track_work_hours')}</p>
-              <Link
-                to="/tasks"
-                className="block bg-hotel-navy text-white px-4 py-2 rounded-md text-sm hover:bg-hotel-navy-light transition-colors w-full"
-              >
-                {t('staff.quick_actions.time_tracking_btn')}
-              </Link>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.clock_in_out')}</h3>
+              <p className="text-xs text-gray-500">{t('staff.quick_actions.track_work_hours')}</p>
             </div>
           </div>
         </div>
 
-        <div className="prime-card">
-          <div className="prime-card-body">
+        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/documents'}>
+          <div className="prime-card-body p-6">
             <div className="text-center">
-              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                <FileText className="h-8 w-8 text-blue-600" />
+              <div className="h-14 w-14 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mx-auto mb-3 transition-colors">
+                <FileText className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('staff.quick_actions.documents')}</h3>
-              <p className="text-sm text-gray-600 mb-4">{t('staff.quick_actions.access_documents')}</p>
-              <Link
-                to="/documents"
-                className="block bg-hotel-gold text-white px-4 py-2 rounded-md text-sm hover:bg-hotel-gold-dark transition-colors w-full"
-              >
-                {t('staff.quick_actions.view_documents_btn')}
-              </Link>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.policies_forms')}</h3>
+              <p className="text-xs text-gray-500">{t('staff.quick_actions.access_policies')}</p>
             </div>
           </div>
         </div>
 
-        <div className="prime-card">
-          <div className="prime-card-body">
+        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/hr/leave'}>
+          <div className="prime-card-body p-6">
             <div className="text-center">
-              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                <Award className="h-8 w-8 text-green-600" />
+              <div className="h-14 w-14 rounded-full bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center mx-auto mb-3 transition-colors">
+                <Calendar className="h-7 w-7 text-purple-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('staff.quick_actions.training')}</h3>
-              <p className="text-sm text-gray-600 mb-4">{t('staff.quick_actions.complete_training')}</p>
-              <Link
-                to="/training/my"
-                className="block bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors w-full text-center"
-              >
-                {t('staff.quick_actions.continue_learning_btn')}
-              </Link>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.my_requests')}</h3>
+              <p className="text-xs text-gray-500">{t('staff.quick_actions.submit_requests')}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/maintenance/submit'}>
+          <div className="prime-card-body p-6">
+            <div className="text-center">
+              <div className="h-14 w-14 rounded-full bg-green-50 group-hover:bg-green-100 flex items-center justify-center mx-auto mb-3 transition-colors">
+                <Activity className="h-7 w-7 text-green-600" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.support')}</h3>
+              <p className="text-xs text-gray-500">{t('staff.quick_actions.get_help')}</p>
             </div>
           </div>
         </div>
@@ -277,10 +272,10 @@ export function StaffDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="feed" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="feed">{t('staff.tabs.activity_feed')}</TabsTrigger>
-          <TabsTrigger value="tasks">{t('staff.tabs.my_tasks')}</TabsTrigger>
-          <TabsTrigger value="schedule">{t('staff.tabs.schedule')}</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="feed" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.activity_feed')}</TabsTrigger>
+          <TabsTrigger value="tasks" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.my_tasks')}</TabsTrigger>
+          <TabsTrigger value="schedule" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.schedule')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="feed" className="space-y-4">

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Activity, FileText, CheckSquare, MessageSquare, AlertTriangle, Clock, Download } from 'lucide-react'
 import { format } from 'date-fns'
+import { exportToCSV } from '@/lib/exportUtils'
 
 export default function ReportsDashboard() {
     const { user } = useAuth()
@@ -31,8 +32,21 @@ export default function ReportsDashboard() {
     }
 
     const handleExport = (type: string) => {
-        // In a real app, this would generate and download a CSV/PDF
-        console.log(`Exporting ${type} report...`)
+        if (type === 'overview') {
+            const overviewData = [
+                { Metric: 'Total Tasks', Value: taskStats?.total_tasks || 0 },
+                { Metric: 'Completed Tasks', Value: taskStats?.completed_tasks || 0 },
+                { Metric: 'Open Maintenance Tickets', Value: maintenanceStats?.open || 0 },
+                { Metric: 'Critical Maintenance Tickets', Value: maintenanceStats?.critical || 0 },
+                { Metric: 'Urgent Maintenance Tickets', Value: maintenanceStats?.urgent || 0 },
+                { Metric: 'Total Messages', Value: messageStats?.totalMessages || 0 },
+                { Metric: 'Unread Messages', Value: messageStats?.unreadMessages || 0 },
+                { Metric: 'Published Documents', Value: docStats.published },
+                { Metric: 'Pending Documents', Value: docStats.pending },
+                { Metric: 'Rejected Documents', Value: docStats.rejected },
+            ]
+            exportToCSV(overviewData, `system_overview_report_${format(new Date(), 'yyyy-MM-dd')}`)
+        }
     }
 
     return (

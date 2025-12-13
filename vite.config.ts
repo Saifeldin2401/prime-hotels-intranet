@@ -6,9 +6,9 @@ const securityHeaders = {
   'Content-Security-Policy': [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Needed for some libraries
-    "style-src 'self' 'unsafe-inline'", // Needed for Tailwind
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Needed for Tailwind and Google Fonts
     "img-src 'self' data: https:",
-    "font-src 'self'",
+    "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:;",
     "connect-src 'self' https://api.supabase.co https://htsvjfrofcpkfzvjpwvx.supabase.co wss://htsvjfrofcpkfzvjpwvx.supabase.co ws://htsvjfrofcpkfzvjpwvx.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com",
     "frame-ancestors 'none'"

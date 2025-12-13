@@ -9,13 +9,14 @@ import {
     useApproveLeaveRequest,
     useRejectLeaveRequest
 } from '@/hooks/useLeaveRequests'
+import { useRequestsInbox, type RequestStatus } from '@/hooks/useRequests'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FileText, CheckCircle, Loader2, Calendar } from 'lucide-react'
+import { FileText, CheckCircle, Loader2, Calendar, Clock, AlertCircle, XCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/ui/use-toast'
@@ -28,18 +29,22 @@ export default function ApprovalsDashboard() {
     const { t, i18n } = useTranslation('approvals')
     const isRTL = i18n.dir() === 'rtl'
 
-    // Document Hooks
+    // Unified requests hook
+    const { data: pendingRequests = [], isLoading: requestsLoading } = useRequestsInbox({
+        status: ['pending_supervisor_approval', 'pending_hr_review']
+    })
+
+    // Legacy hooks for backward compatibility
     const { data: pendingApprovals = [], isLoading: documentsLoading } = usePendingApprovals()
     const approveDocument = useApproveDocument()
     const rejectDocument = useRejectDocument()
 
-    // Leave Hooks
     const { data: teamLeaves = [], isLoading: leavesLoading } = useTeamLeaveRequests()
     const approveLeave = useApproveLeaveRequest()
     const rejectLeave = useRejectLeaveRequest()
 
     const pendingLeaves = teamLeaves.filter(l => l.status === 'pending')
-    const isLoading = documentsLoading || leavesLoading
+    const isLoading = requestsLoading || documentsLoading || leavesLoading
 
     const [selectedApproval, setSelectedApproval] = useState<string | null>(null)
     const [actionType, setActionType] = useState<'document' | 'leave' | null>(null)
@@ -50,6 +55,40 @@ export default function ApprovalsDashboard() {
 
     if (isLoading) {
         return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+    }
+
+    const getStatusBadge = (status: RequestStatus) => {
+        const statusConfig = {
+            pending_supervisor_approval: { label: 'Pending Supervisor', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-4 h-4" /> },
+            pending_hr_review: { label: 'Pending HR', color: 'bg-blue-100 text-blue-800', icon: <Clock className="w-4 h-4" /> },
+            approved: { label: 'Approved', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
+            rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4" /> },
+            returned_for_correction: { label: 'Returned', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4" /> },
+            draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800', icon: <FileText className="w-4 h-4" /> },
+            closed: { label: 'Closed', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4" /> },
+        }
+        const config = statusConfig[status] || statusConfig.draft
+        return (
+            <Badge className={cn(config.color, "rounded-md")}>
+                {config.icon}
+                <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{config.label}</span>
+            </Badge>
+        )
+    }
+
+    const getEntityBadge = (entityType: string) => {
+        const entityConfig = {
+            leave_request: { label: 'Leave Request', icon: <Calendar className="w-4 h-4" /> },
+            document: { label: 'Document', icon: <FileText className="w-4 h-4" /> },
+            transfer: { label: 'Transfer', icon: <FileText className="w-4 h-4" /> },
+        }
+        const config = entityConfig[entityType as keyof typeof entityConfig] || { label: entityType, icon: <FileText className="w-4 h-4" /> }
+        return (
+            <Badge variant="outline" className="rounded-md">
+                {config.icon}
+                <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{config.label}</span>
+            </Badge>
+        )
     }
 
     const initiateAction = (id: string, action: 'approve' | 'reject', type: 'document' | 'leave') => {
@@ -137,11 +176,57 @@ export default function ApprovalsDashboard() {
                 </div>
             </div>
 
-            <Tabs defaultValue="documents" className="w-full">
+            <Tabs defaultValue="unified" className="w-full">
                 <TabsList>
+                    <TabsTrigger value="unified">Unified Requests ({pendingRequests.length})</TabsTrigger>
                     <TabsTrigger value="documents">{t('documents_tab')} ({pendingApprovals.length})</TabsTrigger>
                     <TabsTrigger value="leaves">{t('leaves_tab')} ({pendingLeaves.length})</TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="unified" className="space-y-4">
+                    {pendingRequests.length === 0 ? (
+                        <div className="text-center py-12 border rounded-lg bg-muted/20">
+                            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium">All caught up</h3>
+                            <p className="text-gray-600">No pending requests to review</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {pendingRequests.map((request) => (
+                                <Card key={request.id}>
+                                    <CardHeader className="pb-2">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex flex-col gap-1 mb-2">
+                                                {getEntityBadge(request.entity_type)}
+                                                {getStatusBadge(request.status)}
+                                            </div>
+                                            <span className="text-xs text-gray-600">
+                                                {format(new Date(request.created_at), 'MMM d')}
+                                            </span>
+                                        </div>
+                                        <CardTitle className="text-base line-clamp-1">
+                                            {request.requester?.full_name || 'Unknown Employee'}
+                                        </CardTitle>
+                                        <CardDescription className="line-clamp-2">
+                                            Request #{request.request_no} • {request.current_assignee?.full_name ? `Assigned to: ${request.current_assignee.full_name}` : 'Unassigned'}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex justify-end gap-2 mt-4">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => navigate(`/hr/request/${request.id}`)}
+                                            >
+                                                View Details
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </TabsContent>
 
                 <TabsContent value="documents" className="space-y-4">
                     {pendingApprovals.length === 0 ? (
