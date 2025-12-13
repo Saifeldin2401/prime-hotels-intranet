@@ -23,11 +23,11 @@ export function EnhancedBadge({
   const baseClasses = 'inline-flex items-center rounded-full font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
 
   const variantClasses = {
-    default: 'bg-primary text-primary-foreground hover:bg-primary/80',
-    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-    success: 'bg-success text-success-foreground hover:bg-success/80',
-    warning: 'bg-warning text-warning-foreground hover:bg-warning/80',
-    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/80',
+    default: 'bg-primary text-primary-foreground hover:bg-hotel-navy',
+    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary-foreground hover:text-secondary',
+    success: 'bg-success text-success-foreground hover:bg-emerald-600',
+    warning: 'bg-warning text-warning-foreground hover:bg-amber-600',
+    destructive: 'bg-destructive text-destructive-foreground hover:bg-red-700',
     gold: 'bg-hotel-gold text-white hover:bg-hotel-gold-dark',
     navy: 'bg-hotel-navy text-white hover:bg-hotel-navy-dark',
     outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'

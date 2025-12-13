@@ -54,7 +54,7 @@ export function Header({
               variant="ghost"
               size="icon"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex text-white/80 hover:bg-white/10 hover:text-white"
+              className="hidden lg:flex text-gray-200 hover:bg-hotel-navy-light hover:text-white"
               aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <Menu className="h-5 w-5" />
@@ -76,14 +76,14 @@ export function Header({
           <div className="hidden md:block flex-1 max-w-xl mx-6">
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 ps-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-white/40 group-focus-within:text-hotel-gold transition-colors" />
+                <Search className="h-4 w-4 text-gray-400 group-focus-within:text-hotel-gold transition-colors" />
               </div>
               <input
                 type="text"
                 placeholder="Search resources, SOPs, or staff..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/10 border border-white/10 rounded-full py-2 ps-10 pe-4 text-sm text-white placeholder-white/40 focus:bg-white/20 focus:border-hotel-gold/50 focus:ring-1 focus:ring-hotel-gold/50 focus:outline-none transition-all duration-300"
+                className="w-full bg-hotel-navy-light border border-hotel-navy-dark rounded-full py-2 ps-10 pe-4 text-sm text-white placeholder-gray-400 focus:bg-hotel-navy-light focus:border-hotel-gold focus:ring-1 focus:ring-hotel-gold focus:outline-none transition-all duration-300"
               />
             </div>
           </div>
@@ -93,7 +93,7 @@ export function Header({
             {isMultiPropertyUser && (
               <div className="hidden md:flex items-center me-2">
                 <Select value={currentProperty?.id} onValueChange={switchProperty}>
-                  <SelectTrigger className="w-[180px] h-9 bg-white/10 border-white/20 text-white hover:bg-white/20 focus:ring-hotel-gold/50 transition-colors">
+                  <SelectTrigger className="w-[180px] h-9 bg-hotel-navy-light border-hotel-navy-dark text-white hover:bg-hotel-navy focus:ring-hotel-gold transition-colors">
                     <div className="flex items-center gap-2 truncate">
                       <Building className="h-3.5 w-3.5 text-hotel-gold" />
                       <SelectValue placeholder="Select Property" />
@@ -116,18 +116,18 @@ export function Header({
             </div>
 
             {/* Theme Toggle - Adapted for Dark/Navy header */}
-            <div className="text-white/80 hover:text-white">
+            <div className="text-gray-200 hover:text-white">
               <ThemeToggle />
             </div>
 
             {/* Divider */}
-            <div className="h-8 w-px bg-white/10 mx-1" />
+            <div className="h-8 w-px bg-hotel-navy-dark mx-1" />
 
             {/* User Menu */}
             <div className="relative ms-1">
               <Button
                 variant="ghost"
-                className="flex items-center gap-3 hover:bg-white/10 px-3 py-2 rounded-full border border-transparent hover:border-white/10 transition-all duration-200"
+                className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark transition-all duration-200"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
                 <div className="flex flex-col items-end hidden md:flex">
@@ -153,7 +153,7 @@ export function Header({
                     onClick={() => setUserMenuOpen(false)}
                     aria-hidden="true"
                   />
-                  <div className="absolute right-0 mt-3 w-64 bg-card rounded-xl shadow-xl ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-200 border border-border">
+                  <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-950 rounded-xl shadow-xl ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-200 border border-border">
                     <div className="p-4 bg-hotel-navy text-white rounded-t-xl">
                       <p className="text-sm font-semibold">{profile?.full_name || 'User'}</p>
                       <p className="text-xs text-white/70 truncate">{user?.email}</p>

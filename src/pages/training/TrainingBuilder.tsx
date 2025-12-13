@@ -601,11 +601,11 @@ export default function TrainingBuilder() {
               {viewMode === 'builder' ? <Eye className="w-4 h-4 mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
               {viewMode === 'builder' ? t('preview') : t('builderMode')}
             </Button>
-            <Button onClick={saveTraining} className="bg-primary hover:bg-primary/90 shadow-sm transition-all duration-200">
+            <Button onClick={saveTraining} className="bg-primary hover:bg-hotel-navy shadow-sm transition-all duration-200">
               <Save className="w-4 h-4 mr-1" />
               {t('save')}
             </Button>
-            <Button onClick={publishTraining} variant="default" className="bg-primary hover:bg-primary/90 shadow-sm transition-all duration-200">
+            <Button onClick={publishTraining} variant="default" className="bg-primary hover:bg-hotel-navy shadow-sm transition-all duration-200">
               <Upload className="w-4 h-4 mr-1" />
               {t('publish')}
             </Button>
@@ -656,7 +656,7 @@ export default function TrainingBuilder() {
               </div>
 
               {sections.length === 0 ? (
-                <Card className="border-dashed border-2 bg-gray-50/50">
+                <Card className="border-dashed border-2 bg-gray-50">
                   <CardContent className="text-center py-12">
                     <p className="text-gray-500 mb-4">{t('noContent')}</p>
                     <Button onClick={addSection} variant="outline" className="border-dashed">
@@ -669,7 +669,7 @@ export default function TrainingBuilder() {
                 sections.map((section) => (
                   <Card key={section.id} className="overflow-hidden card-hover border-l-4 border-l-hotel-navy">
                     <CardHeader
-                      className="cursor-pointer bg-gray-50/50 hover:bg-gray-100/50 transition-colors py-3"
+                      className="cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors py-3"
                       onClick={() => setActiveSection(activeSection === section.id ? null : section.id)}
                     >
                       <div className="flex items-center justify-between">
@@ -699,7 +699,7 @@ export default function TrainingBuilder() {
                         {/* Content Items */}
                         <div className="space-y-3 mb-4">
                           {section.items.length === 0 ? (
-                            <div className="text-center py-8 border border-dashed rounded-lg bg-gray-50/30">
+                            <div className="text-center py-8 border border-dashed rounded-lg bg-gray-50">
                               <p className="text-sm text-gray-500 mb-4">{t('noContent')}</p>
                               <div className="flex flex-wrap gap-2 justify-center">
                                 {(['text', 'video', 'image', 'document_link'] as ContentType[]).map((type) => (

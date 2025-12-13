@@ -214,13 +214,14 @@ export interface Conversation {
 export interface Notification {
   id: string
   user_id: string
+  type: 'approval_required' | 'request_approved' | 'request_rejected' | 'request_submitted' | 'comment_added' | 'request_returned' | 'request_closed' | 'training_assigned' | 'training_deadline' | 'document_published' | 'document_acknowledgment_required' | 'announcement_new' | 'escalation_alert' | 'referral_status_update' | 'maintenance_assigned' | 'maintenance_resolved' | 'message' | 'mention' | 'task_assigned' | 'system'
   title: string
   message: string
-  notification_type: 'message' | 'mention' | 'task_assigned' | 'approval_required' | 'system' | 'request_approved' | 'request_rejected' | 'training_assigned' | 'training_deadline' | 'document_published' | 'document_acknowledgment_required' | 'announcement_new' | 'escalation_alert' | 'referral_status_update' | 'maintenance_assigned' | 'maintenance_resolved'
   entity_type: string | null
   entity_id: string | null
   metadata: Record<string, any> | null
   is_read: boolean
+  read_at: string | null
   created_at: string
 
   // Relations

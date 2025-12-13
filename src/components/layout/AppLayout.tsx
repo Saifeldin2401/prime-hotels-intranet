@@ -51,7 +51,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Skip to content link for keyboard accessibility */}
+      <a href="#main-content" className="skip-to-content">
+        Skip to main content
+      </a>
+
       {/* Desktop Sidebar */}
       <SidebarNavigation
         isOpen={sidebarOpen}
@@ -76,13 +81,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Mobile Header */}
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 lg:hidden">
+        <header className="sticky top-0 z-40 flex h-14 sm:h-16 items-center justify-between border-b border-gray-200 bg-white px-3 sm:px-4 lg:hidden pt-safe">
           <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSidebarOpen(true)}
-              className="text-gray-600"
+              className="text-gray-600 touch-target"
               aria-label="Open menu"
             >
               <Menu className="h-6 w-6" />
@@ -92,16 +97,21 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-gray-600 hover:bg-gray-100">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-gray-600 hover:bg-gray-100 touch-target"
+              aria-label="Search"
+            >
               <Search className="h-5 w-5" />
             </Button>
             <NotificationBell />
           </div>
         </header>
 
-        <main className="flex-1 bg-gray-50">
-          <div className="container py-6 px-4 sm:px-6 lg:px-8">
+        <main id="main-content" className="flex-1 bg-background/50 pb-20 lg:pb-0" role="main">
+          <div className="container py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8">
             {children}
           </div>
         </main>

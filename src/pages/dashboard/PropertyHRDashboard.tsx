@@ -167,9 +167,9 @@ export function PropertyHRDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
           {[1, 2, 3, 4].map(i => (
-            <Card key={i} className="loading-skeleton h-32" />
+            <Card key={i} className="loading-skeleton h-24 sm:h-32" />
           ))}
         </div>
       </div>
@@ -179,20 +179,20 @@ export function PropertyHRDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">HR Dashboard</h1>
-          <p className="text-gray-600">Manage human resources and staff operations</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">HR Dashboard</h1>
+          <p className="text-gray-600 text-sm sm:text-base">Manage human resources and staff operations</p>
         </div>
-        <div className="flex items-center space-x-4">
-          <Badge className="text-sm bg-blue-100 text-blue-800">
+        <div className="flex items-center">
+          <Badge className="text-xs sm:text-sm bg-blue-100 text-blue-800">
             {hrStats.totalStaff} Total Staff
           </Badge>
         </div>
       </div>
 
       {/* HR Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
         <Card className="role-property-hr">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Staff Attendance</CardTitle>
@@ -237,14 +237,16 @@ export function PropertyHRDashboard() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="feed" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="feed">Feed</TabsTrigger>
-          <TabsTrigger value="leave">Leave</TabsTrigger>
-          <TabsTrigger value="staff">Staff</TabsTrigger>
-          <TabsTrigger value="recruitment">Recruitment</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="feed" className="space-y-4 sm:space-y-6">
+        <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5 h-auto">
+            <TabsTrigger value="feed" className="text-xs sm:text-sm whitespace-nowrap">Feed</TabsTrigger>
+            <TabsTrigger value="leave" className="text-xs sm:text-sm whitespace-nowrap">Leave</TabsTrigger>
+            <TabsTrigger value="staff" className="text-xs sm:text-sm whitespace-nowrap">Staff</TabsTrigger>
+            <TabsTrigger value="recruitment" className="text-xs sm:text-sm whitespace-nowrap">Recruit</TabsTrigger>
+            <TabsTrigger value="compliance" className="text-xs sm:text-sm whitespace-nowrap">Compliance</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="feed" className="space-y-6">
           <SocialFeed
@@ -280,47 +282,37 @@ export function PropertyHRDashboard() {
                 </div>
               ) : (
                 leaveRequests.map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h4 className="font-medium">{request.requester?.full_name}</h4>
+                  <div key={request.id} className="flex flex-col sm:flex-row sm:items-start justify-between p-3 border rounded-lg gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h4 className="font-medium text-sm sm:text-base">{request.requester?.full_name}</h4>
                         <Badge className={
                           request.status === 'approved'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-green-100 text-green-800 text-xs'
                             : request.status === 'rejected'
-                              ? 'bg-red-100 text-red-800'
+                              ? 'bg-red-100 text-red-800 text-xs'
                               : request.status === 'cancelled'
-                                ? 'bg-gray-100 text-gray-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                                ? 'bg-gray-100 text-gray-800 text-xs'
+                                : 'bg-yellow-100 text-yellow-800 text-xs'
                         }>
                           {request.status}
                         </Badge>
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
+                      <div className="text-xs sm:text-sm text-gray-600 space-y-1">
                         <div className="capitalize">
                           {request.type.replace('_', ' ')} • {format(new Date(request.start_date), 'MMM dd')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
                         </div>
                         {request.reason && (
-                          <div>Reason: {request.reason}</div>
+                          <div className="truncate">Reason: {request.reason}</div>
                         )}
                         <div>Department: {request.department?.name || 'Not assigned'}</div>
-                        <div>Submitted: {format(new Date(request.created_at), 'MMM dd, yyyy')}</div>
-                        {request.approved_by && (
-                          <div>Approved by: {request.approved_by.full_name}</div>
-                        )}
-                        {request.rejected_by && (
-                          <div>
-                            Rejected by: {request.rejected_by.full_name}
-                            {request.rejection_reason && ` - ${request.rejection_reason}`}
-                          </div>
-                        )}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2">
                       {request.status === 'pending' && (
-                        <div className="flex space-x-1">
+                        <div className="flex gap-1">
                           <button
-                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                            className="px-2.5 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 min-h-touch sm:min-h-0"
                             onClick={() => handleApprove(request.id)}
                             disabled={approveMutation.isPending}
                           >
@@ -328,7 +320,7 @@ export function PropertyHRDashboard() {
                             Approve
                           </button>
                           <button
-                            className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                            className="px-2.5 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 min-h-touch sm:min-h-0"
                             onClick={() => handleReject(request.id)}
                             disabled={rejectMutation.isPending}
                           >
@@ -360,24 +352,24 @@ export function PropertyHRDashboard() {
                 { name: 'Mike Wilson', department: 'Housekeeping', role: 'Supervisor', status: 'active', hireDate: '2020-11-10' },
                 { name: 'Lisa Chen', department: 'Food & Beverage', role: 'Server', status: 'on-leave', hireDate: '2023-01-05' }
               ].map((staff, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-2 sm:gap-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <div>
-                      <p className="font-medium">{staff.name}</p>
-                      <p className="text-sm text-gray-600">{staff.role} • {staff.department}</p>
+                    <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm sm:text-base">{staff.name}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">{staff.role} • {staff.department}</p>
                       <p className="text-xs text-gray-500">Hired: {staff.hireDate}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <Badge className={
                       staff.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-green-100 text-green-800 text-xs'
+                        : 'bg-yellow-100 text-yellow-800 text-xs'
                     }>
                       {staff.status}
                     </Badge>
-                    <button className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
+                    <button className="px-2.5 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 min-h-touch sm:min-h-0">
                       View
                     </button>
                   </div>

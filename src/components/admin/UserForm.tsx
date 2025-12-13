@@ -11,6 +11,7 @@ import { suggestSystemRole, getCommonJobTitles } from '@/lib/jobTitleMappings'
 import type { Profile, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
 import { ArrowLeft } from 'lucide-react'
+import { useDepartments } from '@/hooks/useDepartments'
 
 interface UserFormProps {
   user?: Profile
@@ -40,19 +41,11 @@ export function UserForm({ user, onClose }: UserFormProps) {
     },
   })
 
-  const { data: departments } = useQuery({
-    queryKey: ['departments'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-      if (error) throw error
-      return data as Department[]
-    },
-  })
+  /* 
+    Updated to use useDepartments hook which includes fallback data handling 
+    for persistent 400 Bad Request API errors.
+  */
+  const { departments } = useDepartments()
 
   useEffect(() => {
     if (user) {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -9,9 +10,11 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
-import { 
-  Search, 
-  FileText, 
+import { CardLoading } from '@/components/common/LoadingStates'
+import { crudToasts } from '@/lib/toastHelpers'
+import {
+  Search,
+  FileText,
   Clock,
   CheckCircle,
   XCircle,
@@ -20,12 +23,31 @@ import {
   User,
   Filter
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { formatRelativeTime } from '@/lib/utils'
 import type { Document, DocumentApproval, LeaveRequest, MaintenanceTicket } from '@/lib/types'
 
 export default function MyApprovals() {
-  const { user, primaryRole } = useAuth()
+  const { user, primaryRole, departments, properties } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('')
   const queryClient = useQueryClient()
 
   // Fetch pending document approvals for the current user
@@ -33,7 +55,7 @@ export default function MyApprovals() {
     queryKey: ['pending-approvals', primaryRole],
     queryFn: async () => {
       if (!primaryRole) return []
-      
+
       const { data, error } = await supabase
         .from('document_approvals')
         .select(`
@@ -60,7 +82,7 @@ export default function MyApprovals() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as (DocumentApproval & { 
+      return data as (DocumentApproval & {
         documents: Document & { profiles?: { full_name: string; email: string } }
       })[]
     },
@@ -104,7 +126,7 @@ export default function MyApprovals() {
         .order('updated_at', { ascending: false })
 
       if (error) throw error
-      return data as (DocumentApproval & { 
+      return data as (DocumentApproval & {
         documents: Document & { profiles?: { full_name: string; email: string } }
       })[]
     },
@@ -134,20 +156,28 @@ export default function MyApprovals() {
       // Apply role-based filtering
       if (primaryRole === 'department_head') {
         // Department heads can approve leave for their departments
-        // This would need to be filtered based on user's departments
-        query = query.in('department_id', ['dept1', 'dept2']) // TODO: Get from user context
+        // Use the departments from the authenticated user's context
+        const userDepartmentIds = departments?.map(d => d.id) || []
+
+        if (userDepartmentIds.length > 0) {
+          query = query.in('department_id', userDepartmentIds)
+        } else {
+          // If department head has no assigned department, return no requests to be safe
+          console.warn('Department Head has no assigned departments for filtering')
+          return []
+        }
       } else if (primaryRole === 'property_hr') {
         // Property HR can approve department head leave
-        query = query.is('department_id', 'not', null)
+        query = query.not('department_id', 'is', null)
       } else if (primaryRole === 'regional_hr') {
         // Regional HR can approve property manager leave
-        query = query.is('property_id', 'not', null)
+        query = query.not('property_id', 'is', null)
       }
 
       const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as (LeaveRequest & { 
+      return data as (LeaveRequest & {
         profiles?: { full_name: string; email: string },
         properties?: { id: string; name: string },
         departments?: { id: string; name: string }
@@ -179,12 +209,45 @@ export default function MyApprovals() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as (MaintenanceTicket & { 
+      return data as (MaintenanceTicket & {
         profiles?: { full_name: string; email: string },
         properties?: { id: string; name: string },
         departments?: { id: string; name: string }
       })[]
     },
+  })
+
+  // Fetch staff members for assignment (filtering by current property)
+  const { data: staffMembers } = useQuery({
+    queryKey: ['staff-members', properties?.[0]?.id],
+    enabled: !!properties?.[0]?.id && assignDialogOpen,
+    queryFn: async () => {
+      const propertyId = properties?.[0]?.id
+      if (!propertyId) return []
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+            id, 
+            full_name, 
+            email,
+            user_roles!inner(role),
+            user_properties!inner(property_id)
+        `)
+        .eq('user_roles.role', 'staff')
+        .eq('user_properties.property_id', propertyId)
+
+      if (error) {
+        console.error('Error fetching staff:', error)
+        return []
+      }
+
+      return data.map(p => ({
+        id: p.id,
+        full_name: p.full_name,
+        email: p.email
+      }))
+    }
   })
 
   const approveMutation = useMutation({
@@ -227,7 +290,11 @@ export default function MyApprovals() {
       queryClient.invalidateQueries({ queryKey: ['document-approvals-pending'] })
       queryClient.invalidateQueries({ queryKey: ['document-approvals-completed'] })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      crudToasts.approve.success('Document')
     },
+    onError: () => {
+      crudToasts.approve.error('document')
+    }
   })
 
   const rejectMutation = useMutation({
@@ -261,7 +328,11 @@ export default function MyApprovals() {
       queryClient.invalidateQueries({ queryKey: ['document-approvals-pending'] })
       queryClient.invalidateQueries({ queryKey: ['document-approvals-completed'] })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      crudToasts.reject.success('Document')
     },
+    onError: () => {
+      crudToasts.reject.error('document')
+    }
   })
 
   // Leave request mutations
@@ -284,7 +355,11 @@ export default function MyApprovals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-leave-requests'] })
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      crudToasts.approve.success('Leave request')
     },
+    onError: () => {
+      crudToasts.approve.error('leave request')
+    }
   })
 
   const rejectLeaveMutation = useMutation({
@@ -307,7 +382,11 @@ export default function MyApprovals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-leave-requests'] })
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      crudToasts.reject.success('Leave request')
     },
+    onError: () => {
+      crudToasts.reject.error('leave request')
+    }
   })
 
   // Maintenance ticket mutations
@@ -330,7 +409,11 @@ export default function MyApprovals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-maintenance-tickets'] })
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+      crudToasts.update.success('Maintenance ticket')
     },
+    onError: () => {
+      crudToasts.update.error('maintenance ticket')
+    }
   })
 
   const handleApprove = (documentId: string) => {
@@ -356,9 +439,16 @@ export default function MyApprovals() {
   }
 
   const handleAssignMaintenance = (ticketId: string) => {
-    // For now, assign to self. In a real app, you'd show a staff selection modal
-    if (user) {
-      assignMaintenanceMutation.mutate({ ticketId, assignedToId: user.id })
+    setSelectedTicketId(ticketId)
+    setAssignDialogOpen(true)
+  }
+
+  const confirmAssignment = () => {
+    if (selectedTicketId && selectedStaffId) {
+      assignMaintenanceMutation.mutate({ ticketId: selectedTicketId, assignedToId: selectedStaffId })
+      setAssignDialogOpen(false)
+      setSelectedTicketId(null)
+      setSelectedStaffId('')
     }
   }
 
@@ -369,7 +459,7 @@ export default function MyApprovals() {
   const filterApprovals = (approvals: any[], query: string) => {
     if (!query) return approvals
     const lowerQuery = query.toLowerCase()
-    return approvals.filter(approval => 
+    return approvals.filter(approval =>
       approval.documents?.title?.toLowerCase().includes(lowerQuery) ||
       approval.documents?.description?.toLowerCase().includes(lowerQuery) ||
       approval.documents?.file_name?.toLowerCase().includes(lowerQuery) ||
@@ -394,52 +484,57 @@ export default function MyApprovals() {
         description="Review and approve documents, leave requests, and maintenance tickets pending your attention"
       />
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Search approvals..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11"
           />
         </div>
-        <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="sm">
+        <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-11 w-full sm:w-auto" size="sm">
           <Filter className="w-4 h-4 mr-2" />
           Filters
         </Button>
       </div>
 
       <Tabs defaultValue="documents" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="documents" className="relative">
-            Documents
-            {filteredPendingDocuments.length > 0 && (
-              <Badge variant="destructive" className="ml-2 px-2 py-0 text-xs">
-                {filteredPendingDocuments.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="leave" className="relative">
-            Leave Requests
-            {filteredPendingLeave.length > 0 && (
-              <Badge variant="destructive" className="ml-2 px-2 py-0 text-xs">
-                {filteredPendingLeave.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="maintenance" className="relative">
-            Maintenance
-            {filteredPendingMaintenance.length > 0 && (
-              <Badge variant="destructive" className="ml-2 px-2 py-0 text-xs">
-                {filteredPendingMaintenance.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            Completed
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
+            <TabsTrigger value="documents" className="relative text-xs sm:text-sm whitespace-nowrap">
+              <span className="hidden sm:inline">Documents</span>
+              <span className="sm:hidden">Docs</span>
+              {filteredPendingDocuments.length > 0 && (
+                <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
+                  {filteredPendingDocuments.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="leave" className="relative text-xs sm:text-sm whitespace-nowrap">
+              <span className="hidden sm:inline">Leave Requests</span>
+              <span className="sm:hidden">Leave</span>
+              {filteredPendingLeave.length > 0 && (
+                <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
+                  {filteredPendingLeave.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="maintenance" className="relative text-xs sm:text-sm whitespace-nowrap">
+              <span className="hidden sm:inline">Maintenance</span>
+              <span className="sm:hidden">Maint.</span>
+              {filteredPendingMaintenance.length > 0 && (
+                <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
+                  {filteredPendingMaintenance.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="text-xs sm:text-sm whitespace-nowrap">
+              Completed
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="documents" className="space-y-4">
           {isLoading ? (
@@ -474,7 +569,7 @@ export default function MyApprovals() {
                             {approval.documents.visibility === 'role' && 'Role-specific'}
                           </Badge>
                         </div>
-                        
+
                         <p className="text-gray-600 mb-3 line-clamp-2">
                           {approval.documents.description || 'No description provided'}
                         </p>
@@ -558,7 +653,7 @@ export default function MyApprovals() {
                             {leave.type}
                           </Badge>
                         </div>
-                        
+
                         <div className="text-gray-600 mb-3">
                           <p className="font-medium">{leave.profiles?.full_name || 'Unknown'}</p>
                           <p>{leave.reason || 'No reason provided'}</p>
@@ -649,7 +744,7 @@ export default function MyApprovals() {
                             {ticket.category}
                           </Badge>
                         </div>
-                        
+
                         <p className="text-gray-600 mb-3 line-clamp-2">
                           {ticket.description}
                         </p>
@@ -730,7 +825,7 @@ export default function MyApprovals() {
                           <h3 className="font-semibold text-lg">{approval.documents.title}</h3>
                           <StatusBadge status={approval.status} />
                         </div>
-                        
+
                         <p className="text-gray-600 mb-3 line-clamp-2">
                           {approval.documents.description || 'No description provided'}
                         </p>
@@ -743,7 +838,7 @@ export default function MyApprovals() {
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             <span>
-                              {approval.status === 'approved' 
+                              {approval.status === 'approved'
                                 ? `Approved ${formatRelativeTime(approval.approved_at!)}`
                                 : `Rejected ${formatRelativeTime(approval.rejected_at!)}`
                               }
@@ -777,6 +872,38 @@ export default function MyApprovals() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Maintenance Ticket</DialogTitle>
+            <DialogDescription>
+              Select a staff member to assign this ticket to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label htmlFor="staff-select">Staff Member</Label>
+            <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+              <SelectTrigger id="staff-select">
+                <SelectValue placeholder="Select staff..." />
+              </SelectTrigger>
+              <SelectContent>
+                {staffMembers?.map((staff: any) => (
+                  <SelectItem key={staff.id} value={staff.id}>
+                    {staff.full_name || staff.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+            <Button onClick={confirmAssignment} disabled={!selectedStaffId || assignMaintenanceMutation.isPending}>
+              {assignMaintenanceMutation.isPending ? 'Assigning...' : 'Assign'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

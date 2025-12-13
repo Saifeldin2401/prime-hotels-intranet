@@ -147,9 +147,9 @@ export function DepartmentHeadDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
           {[1, 2, 3, 4].map(i => (
-            <Card key={i} className="loading-skeleton h-32" />
+            <Card key={i} className="loading-skeleton h-24 sm:h-32" />
           ))}
         </div>
       </div>
@@ -159,20 +159,20 @@ export function DepartmentHeadDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Department Dashboard</h1>
-          <p className="text-gray-600">Manage your team and department operations</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Department Dashboard</h1>
+          <p className="text-gray-600 text-sm sm:text-base">Manage your team and department operations</p>
         </div>
-        <div className="flex items-center space-x-4">
-          <Badge className="text-sm bg-green-100 text-green-800">
+        <div className="flex items-center">
+          <Badge className="text-xs sm:text-sm bg-green-100 text-green-800">
             {teamStats.totalStaff} Team Members
           </Badge>
         </div>
       </div>
 
       {/* Department Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
         <Card className="role-department-head">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Team Present Today</CardTitle>
@@ -217,13 +217,15 @@ export function DepartmentHeadDashboard() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="feed" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="feed">Feed</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="approvals">Approvals</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="feed" className="space-y-4 sm:space-y-6">
+        <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-4 h-auto">
+            <TabsTrigger value="feed" className="text-xs sm:text-sm whitespace-nowrap">Feed</TabsTrigger>
+            <TabsTrigger value="team" className="text-xs sm:text-sm whitespace-nowrap">Team</TabsTrigger>
+            <TabsTrigger value="approvals" className="text-xs sm:text-sm whitespace-nowrap">Approvals</TabsTrigger>
+            <TabsTrigger value="reports" className="text-xs sm:text-sm whitespace-nowrap">Reports</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="feed" className="space-y-6">
           <SocialFeed
@@ -250,18 +252,18 @@ export function DepartmentHeadDashboard() {
                 { name: 'Mike Wilson', status: 'leave', training: 92, performance: 4.5 },
                 { name: 'Sarah Davis', status: 'present', training: 78, performance: 4.9 }
               ].map((member, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-2 sm:gap-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <div>
-                      <p className="font-medium">{member.name}</p>
-                      <p className="text-sm text-gray-600">Training: {member.training}% • Rating: {member.performance}</p>
+                    <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm sm:text-base truncate">{member.name}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Training: {member.training}% • Rating: {member.performance}</p>
                     </div>
                   </div>
                   <Badge className={
                     member.status === 'present'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
+                      ? 'bg-green-100 text-green-800 text-xs'
+                      : 'bg-yellow-100 text-yellow-800 text-xs'
                   }>
                     {member.status}
                   </Badge>
@@ -285,22 +287,22 @@ export function DepartmentHeadDashboard() {
                 { type: 'SOP Update', employee: 'Lisa Chen', title: 'Check-in Process', priority: 'regular' },
                 { type: 'Training Assignment', employee: 'John Smith', course: 'Safety Procedures', priority: 'urgent' }
               ].map((approval, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{approval.type}</p>
-                    <p className="text-sm text-gray-600">
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-2 sm:gap-4">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm sm:text-base">{approval.type}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">
                       {approval.employee} • {approval.days || approval.title || approval.course}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <Badge className={
                       approval.priority === 'urgent'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-blue-100 text-blue-800'
+                        ? 'bg-red-100 text-red-800 text-xs'
+                        : 'bg-blue-100 text-blue-800 text-xs'
                     }>
                       {approval.priority}
                     </Badge>
-                    <button className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700">
+                    <button className="px-3 py-1.5 text-xs sm:text-sm bg-green-600 text-white rounded hover:bg-green-700 min-h-touch sm:min-h-0">
                       Approve
                     </button>
                   </div>
@@ -324,20 +326,20 @@ export function DepartmentHeadDashboard() {
                 { name: 'Training Compliance Summary', period: 'Q3 2024', status: 'processing' },
                 { name: 'Staff Attendance Analysis', period: 'Last 30 days', status: 'ready' }
               ].map((report, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{report.name}</p>
-                    <p className="text-sm text-gray-600">{report.period}</p>
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-2 sm:gap-4">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm sm:text-base">{report.name}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">{report.period}</p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <Badge className={
                       report.status === 'ready'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-green-100 text-green-800 text-xs'
+                        : 'bg-yellow-100 text-yellow-800 text-xs'
                     }>
                       {report.status}
                     </Badge>
-                    <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                    <button className="px-3 py-1.5 text-xs sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 min-h-touch sm:min-h-0">
                       View
                     </button>
                   </div>

@@ -95,7 +95,6 @@ export const JOB_TITLE_MAPPINGS: JobTitleDefinition[] = [
     { title: 'Recreation Manager', role: 'department_head', category: 'Recreation' },
     { title: 'Spa Manager', role: 'department_head', category: 'Spa' },
     { title: 'Fitness Manager', role: 'department_head', category: 'Recreation' },
-    { title: 'Banquet Manager', role: 'department_head', category: 'Banquet' },
     { title: 'Conference Manager', role: 'department_head', category: 'Conference' },
     { title: 'Purchasing Manager', role: 'department_head', category: 'Purchasing' },
     { title: 'IT Manager', role: 'department_head', category: 'Information Technology' },

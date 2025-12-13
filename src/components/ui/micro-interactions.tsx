@@ -25,10 +25,10 @@ export const InteractiveButton = forwardRef<HTMLButtonElement, InteractiveButton
         const rect = element.getBoundingClientRect()
         const centerX = rect.left + rect.width / 2
         const centerY = rect.top + rect.height / 2
-        
+
         const deltaX = (e.clientX - centerX) * 0.3
         const deltaY = (e.clientY - centerY) * 0.3
-        
+
         element.style.transform = `translate(${deltaX}px, ${deltaY}px)`
       }
 
@@ -72,10 +72,10 @@ export const InteractiveButton = forwardRef<HTMLButtonElement, InteractiveButton
     const baseClasses = cn(
       'relative inline-flex items-center justify-center rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none overflow-hidden',
       {
-        'bg-primary text-primary-foreground hover:bg-primary/90': variant === 'default',
-        'bg-destructive text-destructive-foreground hover:bg-destructive/90': variant === 'destructive',
+        'bg-primary text-primary-foreground hover:bg-hotel-navy': variant === 'default',
+        'bg-destructive text-destructive-foreground hover:bg-red-700': variant === 'destructive',
         'border border-input hover:bg-accent hover:text-accent-foreground': variant === 'outline',
-        'bg-secondary text-secondary-foreground hover:bg-secondary/80': variant === 'secondary',
+        'bg-secondary text-secondary-foreground hover:bg-secondary-foreground hover:text-secondary': variant === 'secondary',
         'hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
         'text-primary underline-offset-4 hover:underline': variant === 'link',
       },
@@ -100,7 +100,7 @@ export const InteractiveButton = forwardRef<HTMLButtonElement, InteractiveButton
         {ripples.map(ripple => (
           <span
             key={ripple.id}
-            className="absolute bg-white/30 rounded-full animate-ripple pointer-events-none"
+            className="absolute bg-white/10 rounded-full animate-ripple pointer-events-none"
             style={{
               left: ripple.x,
               top: ripple.y,
@@ -195,10 +195,10 @@ export const InteractiveCard = forwardRef<HTMLDivElement, InteractiveCardProps>(
         const rect = card.getBoundingClientRect()
         const centerX = rect.left + rect.width / 2
         const centerY = rect.top + rect.height / 2
-        
+
         const angleX = (e.clientY - centerY) * 0.01
         const angleY = (centerX - e.clientX) * 0.01
-        
+
         card.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale(1.02)`
       }
 
@@ -276,12 +276,12 @@ export const AnimatedProgress: React.FC<AnimatedProgressProps> = ({
       const now = Date.now()
       const elapsed = now - startTime
       const progress = Math.min(elapsed / duration, 1)
-      
+
       const easeOutQuart = 1 - Math.pow(1 - progress, 4)
       const newValue = startValue + (value - startValue) * easeOutQuart
-      
+
       setDisplayValue(newValue)
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate)
       }
@@ -371,7 +371,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       >
         {children}
       </div>
-      
+
       {isVisible && (
         <div
           className={cn(

@@ -48,7 +48,7 @@ const ChartTooltip = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "absolute z-50 rounded-lg border bg-popover p-2 text-sm shadow-md",
+      "absolute z-50 rounded-lg border bg-white dark:bg-slate-950 p-2 text-sm shadow-md",
       className
     )}
     {...props}
@@ -93,7 +93,7 @@ const ChartTooltipContent = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl transition-all ease-in-out animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+        "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border bg-white dark:bg-slate-950 px-2.5 py-1.5 text-xs shadow-xl transition-all ease-in-out animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
         className
       )}
       {...otherProps}

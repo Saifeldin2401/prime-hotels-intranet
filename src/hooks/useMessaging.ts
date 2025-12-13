@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { crudToasts } from '@/lib/toastHelpers'
 import type { Message, Comment, Notification } from '@/lib/types'
 
 // Message Hooks
@@ -232,6 +233,10 @@ export function useSendMessage() {
       queryClient.invalidateQueries({ queryKey: ['messages'] })
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      crudToasts.create.success('Message')
+    },
+    onError: () => {
+      crudToasts.create.error('message')
     }
   })
 }
@@ -355,6 +360,10 @@ export function useAddComment() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['comments', variables.entity_type, variables.entity_id] })
+      crudToasts.create.success('Comment')
+    },
+    onError: () => {
+      crudToasts.create.error('comment')
     }
   })
 }
@@ -385,6 +394,10 @@ export function useUpdateComment() {
     onSuccess: () => {
       // Invalidate comment queries
       queryClient.invalidateQueries({ queryKey: ['comments'] })
+      crudToasts.update.success('Comment')
+    },
+    onError: () => {
+      crudToasts.update.error('comment')
     }
   })
 }
@@ -404,6 +417,10 @@ export function useDeleteComment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
+      crudToasts.delete.success('Comment')
+    },
+    onError: () => {
+      crudToasts.delete.error('comment')
     }
   })
 }

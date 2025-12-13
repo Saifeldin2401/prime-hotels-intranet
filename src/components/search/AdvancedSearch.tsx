@@ -196,7 +196,7 @@ export function AdvancedSearch({
                 variant="ghost"
                 size="sm"
                 onClick={() => setQuery('')}
-                className="h-6 w-6 p-0 hover:bg-muted"
+                className="h-6 w-6 p-0"
               >
                 <X className="w-3 h-3" />
               </Button>
@@ -222,7 +222,7 @@ export function AdvancedSearch({
             <Button
               onClick={handleSearch}
               size="sm"
-              className="h-6 px-2 bg-primary hover:bg-primary/90"
+              className="h-6 px-2 bg-primary hover:bg-hotel-navy"
             >
               Search
             </Button>
@@ -232,7 +232,7 @@ export function AdvancedSearch({
 
       {/* Suggestions Dropdown */}
       {isOpen && (filteredSuggestions.length > 0 || recentSearches.length > 0) && (
-        <Card className="absolute top-full left-0 right-0 mt-2 z-50 border border-border shadow-lg animate-fade-in">
+        <Card className="absolute top-full left-0 right-0 mt-2 z-50 border border-border shadow-lg animate-fade-in bg-white dark:bg-slate-950">
           <CardContent className="p-0">
             {/* Recent Searches */}
             {recentSearches.length > 0 && query === '' && (
@@ -267,7 +267,7 @@ export function AdvancedSearch({
                       className={cn(
                         "w-full text-left px-3 py-2 rounded-md transition-colors flex items-center gap-3 animate-slide-up",
                         activeSuggestionIndex === index
-                          ? "bg-primary/10 text-primary"
+                          ? "bg-hotel-navy-light text-hotel-navy dark:text-white"
                           : "hover:bg-accent"
                       )}
                       style={{ animationDelay: `${index * 50}ms` }}
@@ -297,7 +297,7 @@ export function AdvancedSearch({
 
       {/* Filters Panel */}
       {showFiltersPanel && showFilters && (
-        <Card className="absolute top-full left-0 right-0 mt-2 z-40 border border-border shadow-lg animate-fade-in">
+        <Card className="absolute top-full left-0 right-0 mt-2 z-40 border border-border shadow-lg animate-fade-in bg-white dark:bg-slate-950">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">Filters</h3>

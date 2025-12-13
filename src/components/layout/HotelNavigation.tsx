@@ -91,7 +91,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
   )
 
   return (
-    <nav className="hotel-navbar sticky top-0 z-50">
+    <nav className="hotel-navbar sticky top-0 z-50 bg-hotel-navy">
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -127,7 +127,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
           {/* Right side items */}
           <div className="flex items-center space-x-4">
             {/* Notifications */}
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="sm" className="text-white hover:bg-hotel-navy-dark">
               <Icons.Bell className="h-5 w-5" />
               <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs">
                 3
@@ -135,7 +135,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
             </Button>
 
             {/* Messages */}
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="sm" className="text-white hover:bg-hotel-navy-dark">
               <Icons.MessageSquare className="h-5 w-5" />
               <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs">
                 5
@@ -197,7 +197,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="lg:hidden text-white hover:bg-white/10"
+              className="lg:hidden text-white hover:bg-hotel-navy-dark"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <Icons.Menu className="h-5 w-5" />
@@ -215,7 +215,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-white hover:bg-white/10 ${isActive ? 'bg-white/20 text-yellow-200' : ''
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-white hover:bg-hotel-navy-dark ${isActive ? 'bg-hotel-navy-dark text-yellow-200' : ''
                       }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >

@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useDocuments, useDocumentStats } from '@/hooks/useDocuments'
+import { useDocuments, useDocumentStats, useUpdateDocument } from '@/hooks/useDocuments'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
+import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EnhancedBadge } from '@/components/ui/enhanced-badge'
 import { Progress } from '@/components/ui/progress'
@@ -40,11 +41,34 @@ export default function DocumentLibrary() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
 
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [selectedDocument, setSelectedDocument] = useState<{ id: string; title: string; file_url: string } | null>(null)
+
+  const updateDocument = useUpdateDocument()
+
   // Real document data from Supabase
   const { data: documents = [], isLoading } = useDocuments({
     search: searchTerm || undefined,
     status: selectedStatus !== 'all' ? selectedStatus : undefined,
   })
+
+  const handlePublish = (documentId: string) => {
+    if (!documentId) return
+    updateDocument.mutate({ id: documentId, status: 'PUBLISHED' })
+  }
+
+  const handleViewDocument = (doc: any) => {
+    setSelectedDocument({
+      id: doc.id,
+      title: doc.title,
+      file_url: doc.file_url
+    })
+    setViewerOpen(true)
+  }
+
+  const handleDownload = async (document: any) => {
+    window.open(document.file_url, '_blank')
+  }
 
   const { data: stats } = useDocumentStats()
 
@@ -111,28 +135,23 @@ export default function DocumentLibrary() {
     setSelectedStatus(folderId === 'all' ? 'all' : folderId)
   }
 
-  const handleDownload = async (document: Document) => {
-    // Open document in new tab
-    window.open(document.file_url, '_blank')
-  }
-
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader
         title={t('title')}
         description={t('description')}
         actions={
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors hover-lift" size="sm">
-              <Filter className="w-4 h-4 me-2" />
-              {t('filter')}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors hover-lift h-9" size="sm">
+              <Filter className="w-4 h-4 sm:me-2" />
+              <span className="hidden sm:inline">{t('filter')}</span>
             </Button>
             <div className="flex border border-border rounded-lg overflow-hidden shadow-sm">
               <Button
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className="rounded-e-none border-e-0"
+                className="rounded-e-none border-e-0 h-9"
               >
                 <List className="w-4 h-4" />
               </Button>
@@ -140,14 +159,15 @@ export default function DocumentLibrary() {
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className="rounded-s-none"
+                className="rounded-s-none h-9"
               >
                 <Grid className="w-4 h-4" />
               </Button>
             </div>
-            <Button onClick={() => setUploadDialogOpen(true)} className="shadow-md hover:shadow-lg transition-all duration-200">
-              <Plus className="w-4 h-4 me-2" />
-              {t('upload_document')}
+            <Button onClick={() => setUploadDialogOpen(true)} className="shadow-md hover:shadow-lg transition-all duration-200 h-9 text-xs sm:text-sm">
+              <Plus className="w-4 h-4 sm:me-2" />
+              <span className="hidden sm:inline">{t('upload_document')}</span>
+              <span className="sm:hidden">Upload</span>
             </Button>
           </div>
         }
@@ -155,31 +175,27 @@ export default function DocumentLibrary() {
 
       {/* Storage Stats Card */}
       <EnhancedCard variant="gold" className="bg-gradient-to-r from-hotel-gold/10 to-hotel-cream/30 border-hotel-gold/20">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-hotel-gold/20 rounded-lg">
-                <Cloud className="h-5 w-5 text-hotel-gold-dark" />
+                <Cloud className="h-4 w-4 sm:h-5 sm:w-5 text-hotel-gold-dark" />
               </div>
               <div>
-                <h3 className="font-semibold text-hotel-navy">{t('storage.title')}</h3>
-                <p className="text-sm text-gray-600">{t('storage.usage')}</p>
+                <h3 className="font-semibold text-hotel-navy text-sm sm:text-base">{t('storage.title')}</h3>
+                <p className="text-xs sm:text-sm text-gray-600">{t('storage.usage')}</p>
               </div>
             </div>
-            <EnhancedBadge variant="gold">
+            <EnhancedBadge variant="gold" className="self-start sm:self-auto text-xs">
               {t('storage.files', { count: storageStats.documents })}
             </EnhancedBadge>
           </div>
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-hotel-navy">{t('storage.used', { value: storageStats.used })}</span>
               <span className="text-gray-500">{t('storage.total', { value: storageStats.total })}</span>
             </div>
             <Progress value={(storageStats.used / storageStats.total) * 100} className="h-2 bg-hotel-gold/20" />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>{t('storage.shared_docs', { count: storageStats.shared })}</span>
-              <span>{t('storage.percent_used', { percent: Math.round((storageStats.used / storageStats.total) * 100) })}</span>
-            </div>
           </div>
         </div>
       </EnhancedCard>
@@ -198,7 +214,7 @@ export default function DocumentLibrary() {
       </div>
 
       {/* Enhanced Folders Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         {folders.map((folder, index) => {
           const Icon = folder.icon
           return (
@@ -208,15 +224,15 @@ export default function DocumentLibrary() {
               style={{ animationDelay: `${index * 100}ms` }}
               onClick={() => handleFolderClick(folder.id)}
             >
-              <div className="p-6 text-center">
+              <div className="p-3 sm:p-6 text-center">
                 <div className={cn(
-                  "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-sm bg-gray-50 group-hover:bg-white transition-colors",
+                  "w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-4 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm bg-gray-50 group-hover:bg-white transition-colors",
                   folder.id === 'all' ? 'bg-hotel-navy/5' : folder.id === 'draft' ? 'bg-blue-50' : folder.id === 'pending' ? 'bg-hotel-gold/10' : 'bg-green-50'
                 )}>
                   <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center",
+                    "w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center",
                   )}>
-                    <Icon className={cn("w-6 h-6",
+                    <Icon className={cn("w-4 h-4 sm:w-6 sm:h-6",
                       folder.id === 'all' ? "text-hotel-navy" :
                         folder.id === 'draft' ? "text-blue-600" :
                           folder.id === 'pending' ? "text-hotel-gold-dark" :
@@ -224,8 +240,8 @@ export default function DocumentLibrary() {
                     )} />
                   </div>
                 </div>
-                <h3 className="font-semibold text-hotel-navy mb-2">{folder.name}</h3>
-                <EnhancedBadge variant="secondary">
+                <h3 className="font-semibold text-hotel-navy text-sm sm:text-base mb-1 sm:mb-2">{folder.name}</h3>
+                <EnhancedBadge variant="secondary" className="text-xs">
                   {folder.count} {t('unit_files')}
                 </EnhancedBadge>
               </div>
@@ -235,14 +251,16 @@ export default function DocumentLibrary() {
       </div>
 
       {/* Enhanced Document Tabs */}
-      <Tabs defaultValue="documents" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 bg-muted p-1 rounded-lg">
-          <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.documents')}</TabsTrigger>
-          <TabsTrigger value="folders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.folders')}</TabsTrigger>
-          <TabsTrigger value="shared" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.shared')}</TabsTrigger>
-          <TabsTrigger value="recent" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.recent')}</TabsTrigger>
-          <TabsTrigger value="favorites" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('tabs.favorites')}</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="documents" className="space-y-4 sm:space-y-6">
+        <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5 bg-muted p-1 rounded-lg h-auto">
+            <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.documents')}</TabsTrigger>
+            <TabsTrigger value="folders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.folders')}</TabsTrigger>
+            <TabsTrigger value="shared" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.shared')}</TabsTrigger>
+            <TabsTrigger value="recent" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.recent')}</TabsTrigger>
+            <TabsTrigger value="favorites" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.favorites')}</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="documents" className="space-y-4 animate-fade-in">
           <EnhancedCard className="border-0 shadow-lg" padding="none">
@@ -261,20 +279,20 @@ export default function DocumentLibrary() {
                   }}
                 />
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {filteredDocuments?.map((doc, index) => (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md animate-slide-up border border-transparent hover:border-hotel-navy/10"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50/50 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md animate-slide-up border border-transparent hover:border-hotel-navy/10 gap-3"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10">
-                          <FileText className="w-5 h-5 text-hotel-navy" />
+                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10 flex-shrink-0">
+                          <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-hotel-navy" />
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-hotel-navy">{doc.title}</h4>
-                          <div className="flex items-center gap-2 mt-1">
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-hotel-navy text-sm sm:text-base truncate">{doc.title}</h4>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
                             <EnhancedBadge variant="outline" className="text-xs">
                               {doc.visibility === 'all_properties' && t('document.all_properties')}
                               {doc.visibility === 'property' && t('document.property_specific')}
@@ -287,8 +305,18 @@ export default function DocumentLibrary() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge status={doc.status} />
+                        {user?.id === doc.created_by && doc.status !== 'PUBLISHED' && (
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs"
+                            disabled={updateDocument.isPending}
+                            onClick={() => handlePublish(doc.id)}
+                          >
+                            Publish
+                          </Button>
+                        )}
                         {doc.requires_acknowledgment && (
                           acknowledgedDocumentIds.has(doc.id) ? (
                             <EnhancedBadge variant="success" className="text-xs">
@@ -296,7 +324,7 @@ export default function DocumentLibrary() {
                             </EnhancedBadge>
                           ) : (
                             <Button
-                              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-8 text-xs"
                               size="sm"
                               disabled={acknowledgeMutation.isPending}
                               onClick={() => acknowledgeMutation.mutate(doc.id)}
@@ -305,7 +333,7 @@ export default function DocumentLibrary() {
                             </Button>
                           )
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} className="text-gray-500 hover:text-hotel-navy">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)} className="text-gray-500 hover:text-hotel-navy h-8 w-8 p-0">
                           <Download className="w-4 h-4" />
                         </Button>
                       </div>
@@ -321,6 +349,12 @@ export default function DocumentLibrary() {
       <DocumentUploadDialog
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
+      />
+
+      <DocumentViewer
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+        document={selectedDocument || { id: '', title: '', file_url: '' }}
       />
     </div>
   )

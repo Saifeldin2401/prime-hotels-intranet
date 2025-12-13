@@ -161,7 +161,7 @@ export default function MyProfile() {
                                     <div className="flex-1 space-y-4 w-full">
                                         <div className="grid gap-2">
                                             <Label htmlFor="email">{t('email')}</Label>
-                                            <Input id="email" value={user?.email || ''} disabled className="bg-muted" />
+                                            <Input id="email" value={user?.email || ''} disabled />
                                             <p className="text-xs text-gray-600">{t('email_desc')}</p>
                                         </div>
 

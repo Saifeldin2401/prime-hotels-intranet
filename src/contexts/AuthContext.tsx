@@ -33,19 +33,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profile && profile.id === userId) {
         return
       }
-      
+
       console.log('Loading user data for:', userId)
-      
-      // Load profile - use RPC or direct query that bypasses RLS if needed
-      const { data: profileData, error: profileError } = await supabase
+
+      // Add a timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('User data loading timeout')), 3000) // 3 second timeout
+      })
+
+      // Load profile with timeout
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
 
+      const { data: profileData, error: profileError } = await Promise.race([profilePromise, timeoutPromise]) as any
+
       if (profileError) {
         console.error('Error loading profile:', profileError)
-        
+
         // Try alternative: use auth.users metadata
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
@@ -57,6 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone: null,
             avatar_url: null,
             hire_date: null,
+            job_title: null,
+            reporting_to: null,
             is_active: true,
             created_at: user.created_at,
             updated_at: user.updated_at || user.created_at,
@@ -66,94 +75,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(profileData)
       }
 
-      // Load roles - use RPC function or direct query
-      // First try direct query (might fail due to RLS)
-      let rolesData: any[] = []
-      const { data: directRoles, error: rolesError } = await supabase
+      // Load all other data in parallel with individual timeouts
+      const rolesPromise = supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', userId)
 
-      if (rolesError) {
-        console.error('Error loading roles (direct):', rolesError)
-        console.error('Roles error details:', JSON.stringify(rolesError, null, 2))
-        
-        // Try using RPC function if available
-        try {
-          const { data: rpcRoles, error: rpcError } = await supabase.rpc('get_user_roles', { user_uuid: userId })
-          if (!rpcError && rpcRoles) {
-            rolesData = rpcRoles
+      const propertiesPromise = supabase
+        .from('user_properties')
+        .select('property_id, properties(*)')
+        .eq('user_id', userId)
+
+      const departmentsPromise = supabase
+        .from('user_departments')
+        .select('department_id, departments(*)')
+        .eq('user_id', userId)
+
+      // Load all data with individual timeouts
+      const [rolesResult, propertiesResult, departmentsResult] = await Promise.allSettled([
+        Promise.race([rolesPromise, timeoutPromise]),
+        Promise.race([propertiesPromise, timeoutPromise]),
+        Promise.race([departmentsPromise, timeoutPromise])
+      ]) as [PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>]
+
+      // Handle roles
+      if (rolesResult.status === 'fulfilled') {
+        const { data: directRoles, error: rolesError } = rolesResult.value
+        if (rolesError) {
+          console.error('Error loading roles:', rolesError)
+          console.error('Roles error code:', rolesError.code)
+          console.error('Roles error message:', rolesError.message)
+          console.error('Roles error details:', rolesError.details)
+        } else {
+          const rolesData = directRoles || []
+          if (rolesData.length > 0) {
+            setRoles(rolesData)
           }
-        } catch (rpcErr) {
-          // Fallback: query with admin context or use service role
-          // For now, we'll try a workaround by checking if user can see any roles
+          console.log('Roles loaded successfully:', rolesData.length)
         }
       } else {
-        rolesData = directRoles || []
-      }
-      
-      if (rolesData.length > 0) {
-        setRoles(rolesData)
+        console.error('Roles loading failed or timed out:', rolesResult.reason)
       }
 
-      // Load properties - try RPC first, fallback to direct query
-      const { data: rpcProps, error: rpcPropsError } = await supabase.rpc('get_user_properties', { user_uuid: userId })
-      
-      if (!rpcPropsError && rpcProps) {
-        // Convert RPC result to property objects
-        const props = rpcProps.map((p: any) => ({
-          id: p.property_id,
-          name: p.property_name,
-          address: null,
-          phone: null,
-          is_active: true,
-          created_at: new Date().toISOString(),
-        }))
-        setProperties(props)
-      } else {
-        // Fallback to direct query
-        const { data: directProps, error: propertiesError } = await supabase
-          .from('user_properties')
-          .select('property_id, properties(*)')
-          .eq('user_id', userId)
-
+      // Handle properties
+      if (propertiesResult.status === 'fulfilled') {
+        const { data: directProps, error: propertiesError } = propertiesResult.value
         if (propertiesError) {
           console.error('Error loading properties:', propertiesError)
+          console.error('Properties error code:', propertiesError.code)
+          console.error('Properties error message:', propertiesError.message)
         } else {
           const props = directProps?.map((up: any) => up.properties).filter(Boolean) || []
           setProperties(props)
-          console.log('Properties loaded (direct):', props.length)
+          console.log('Properties loaded successfully:', props.length)
         }
+      } else {
+        console.error('Properties loading failed or timed out:', propertiesResult.reason)
       }
 
-      // Load departments - try RPC first
-      const { data: rpcDepts, error: rpcDeptsError } = await supabase.rpc('get_user_departments', { user_uuid: userId })
-      
-      if (!rpcDeptsError && rpcDepts) {
-        // Convert RPC result to department objects
-        const depts = rpcDepts.map((d: any) => ({
-          id: d.department_id,
-          name: d.department_name,
-          property_id: null, // Would need to join if needed
-          is_active: true,
-          created_at: new Date().toISOString(),
-        }))
-        setDepartments(depts)
-      } else {
-        // Fallback to direct query
-        const { data: directDepts, error: departmentsError } = await supabase
-          .from('user_departments')
-          .select('department_id, departments(*)')
-          .eq('user_id', userId)
-
+      // Handle departments
+      if (departmentsResult.status === 'fulfilled') {
+        const { data: directDepts, error: departmentsError } = departmentsResult.value
         if (departmentsError) {
           console.error('Error loading departments:', departmentsError)
+          console.error('Departments error code:', departmentsError.code)
+          console.error('Departments error message:', departmentsError.message)
         } else {
           const depts = directDepts?.map((ud: any) => ud.departments).filter(Boolean) || []
           setDepartments(depts)
+          console.log('Departments loaded successfully:', depts.length)
         }
+      } else {
+        console.error('Departments loading failed or timed out:', departmentsResult.reason)
       }
-      
+
     } catch (error) {
       console.error('Unexpected error loading user data:', error)
     }
@@ -163,14 +158,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true
     let loadingState = true
 
-    // Safety timeout - ensure loading never stays true forever (reduced to 5 seconds)
+    console.log('AuthContext: Starting session check...')
+
+    // Safety timeout - ensure loading never stays true forever (reduced to 2 seconds)
     const timeoutId = setTimeout(() => {
       if (mounted && loadingState) {
-        console.warn('Loading timeout - forcing loading to false')
+        console.warn('Loading timeout - forcing loading to false after 2 seconds')
         setLoading(false)
         loadingState = false
       }
-    }, 5000) // 5 second timeout
+    }, 2000) // 2 second timeout
 
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
@@ -189,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Set loading to false immediately, load data in background
         loadingState = false
         setLoading(false)
+        console.log('Session found - Loading set to false for user:', session.user.id)
         clearTimeout(timeoutId)
         // Load user data asynchronously without blocking
         loadUserData(session.user.id).catch((err) => {
@@ -246,12 +244,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
-      
+
       // Mock authentication for local development
       if (import.meta.env.VITE_MOCK_AUTH === 'true') {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         // Mock user data matching the Supabase User interface
         const mockUser = {
           id: 'mock-user-id',
@@ -262,11 +260,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email_confirmed_at: new Date().toISOString(),
           phone_confirmed_at: undefined,
           last_sign_in_at: new Date().toISOString(),
-          app_metadata: { 
+          app_metadata: {
             provider: 'email',
             role: 'staff'
           },
-          user_metadata: { 
+          user_metadata: {
             name: email.split('@')[0],
             department: 'Housekeeping',
             property: 'Prime Hotel Downtown'
@@ -275,12 +273,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           factors: undefined,
           is_anonymous: false
         }
-        
+
         setUser(mockUser)
         setLoading(false)
         return { data: { user: mockUser }, error: null }
       }
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -331,16 +329,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const primaryRole = roles.length > 0
     ? roles.sort((a, b) => {
-        const order: Record<AppRole, number> = {
-          regional_admin: 1,
-          regional_hr: 2,
-          property_manager: 3,
-          property_hr: 4,
-          department_head: 5,
-          staff: 6,
-        }
-        return order[a.role] - order[b.role]
-      })[0]?.role || null
+      const order: Record<AppRole, number> = {
+        regional_admin: 1,
+        regional_hr: 2,
+        property_manager: 3,
+        property_hr: 4,
+        department_head: 5,
+        staff: 6,
+      }
+      return order[a.role] - order[b.role]
+    })[0]?.role || null
     : null
 
   return (

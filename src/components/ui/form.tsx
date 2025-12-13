@@ -15,8 +15,8 @@ const FormContext = React.createContext<{
   errors: {},
   touched: {},
   isSubmitting: false,
-  setFieldError: () => {},
-  clearFieldError: () => {}
+  setFieldError: () => { },
+  clearFieldError: () => { }
 })
 
 // Form component
@@ -32,7 +32,7 @@ interface FormProps extends React.FormHTMLAttributes<HTMLFormElement> {
 const Form = forwardRef<HTMLFormElement, FormProps>(
   ({ className, errors = {}, touched = {}, isSubmitting = false, setFieldError, clearFieldError, children, ...props }, ref) => {
     return (
-      <FormContext.Provider value={{ errors, touched, isSubmitting, setFieldError: setFieldError || (() => {}), clearFieldError: clearFieldError || (() => {}) }}>
+      <FormContext.Provider value={{ errors, touched, isSubmitting, setFieldError: setFieldError || (() => { }), clearFieldError: clearFieldError || (() => { }) }}>
         <form
           ref={ref}
           className={cn('space-y-6', className)}
@@ -227,7 +227,7 @@ const FormSubmitButton = forwardRef<HTMLButtonElement, FormSubmitButtonProps>(
         type="submit"
         disabled={disabled || currentlySubmitting}
         className={cn(
-          'inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2',
+          'inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:bg-muted disabled:text-muted-foreground bg-primary text-primary-foreground hover:bg-hotel-navy h-10 px-4 py-2',
           className
         )}
         {...props}
@@ -411,7 +411,7 @@ interface FormSummaryProps extends React.HTMLAttributes<HTMLDivElement> {
 const FormSummary = forwardRef<HTMLDivElement, FormSummaryProps>(
   ({ className, errors = {}, showOnlyOnSubmit = true, isSubmitted = false, ...props }, ref) => {
     const errorCount = Object.keys(errors).length
-  
+
     if (errorCount === 0 || (showOnlyOnSubmit && !isSubmitted)) {
       return null
     }

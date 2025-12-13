@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { crudToasts } from '@/lib/toastHelpers'
 import type { LeaveRequest } from '@/lib/types'
 
 export function useMyLeaveRequests() {
@@ -97,25 +98,34 @@ export function useSubmitLeaveRequest() {
       const propertyId = properties.length > 0 ? properties[0].id : null
       const departmentId = departments.length > 0 ? departments[0].id : null
 
+      const insertData = {
+        requester_id: user.id,
+        property_id: propertyId,
+        department_id: departmentId,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        type: data.type,
+        reason: data.reason || null
+      }
+
       const { data: result, error } = await supabase
         .from('leave_requests')
-        .insert({
-          requester_id: user.id,
-          property_id: propertyId,
-          department_id: departmentId,
-          start_date: data.start_date,
-          end_date: data.end_date,
-          type: data.type,
-          reason: data.reason || null
-        })
+        .insert(insertData)
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
+
       return result as LeaveRequest
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      crudToasts.submit.success('Leave request')
+    },
+    onError: () => {
+      crudToasts.submit.error('leave request')
     }
   })
 }
@@ -145,6 +155,10 @@ export function useApproveLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      crudToasts.approve.success('Leave request')
+    },
+    onError: () => {
+      crudToasts.approve.error('leave request')
     }
   })
 }
@@ -154,12 +168,12 @@ export function useRejectLeaveRequest() {
   const { user } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ 
-      requestId, 
-      reason 
-    }: { 
+    mutationFn: async ({
+      requestId,
+      reason
+    }: {
       requestId: string
-      reason?: string 
+      reason?: string
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
@@ -181,6 +195,10 @@ export function useRejectLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      crudToasts.reject.success('Leave request')
+    },
+    onError: () => {
+      crudToasts.reject.error('leave request')
     }
   })
 }
@@ -210,6 +228,10 @@ export function useCancelLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      crudToasts.delete.success('Leave request')
+    },
+    onError: () => {
+      crudToasts.delete.error('leave request')
     }
   })
 }
