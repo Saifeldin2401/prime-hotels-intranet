@@ -1,111 +1,75 @@
+/**
+ * MobileNavigation Component
+ * 
+ * Bottom navigation bar for mobile devices.
+ * Uses centralized navigation config for role-based quick actions.
+ */
+
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
-import {
-  Home,
-  FileText,
-  BookOpen,
-  CheckSquare,
-  Menu
-} from 'lucide-react'
-
-interface MobileNavItem {
-  title: string
-  href: string
-  icon: any
-  roles?: string[]
-}
-
-const mobileNavItems: MobileNavItem[] = [
-  {
-    title: 'Home',
-    href: '/',
-    icon: Home,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'Documents',
-    href: '/documents',
-    icon: FileText,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'Training',
-    href: '/training',
-    icon: BookOpen,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'Approvals',
-    href: '/approvals',
-    icon: CheckSquare,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
-  },
-  {
-    title: 'Menu',
-    href: '#',
-    icon: Menu,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  }
-]
+import { Menu } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { useNavigation } from '@/hooks/useNavigation'
+import { useTranslation } from 'react-i18next'
 
 interface MobileNavigationProps {
-  onClose?: () => void
+  onMenuClick?: () => void
 }
 
-export function MobileNavigation({ onClose }: MobileNavigationProps) {
+export function MobileNavigation({ onMenuClick }: MobileNavigationProps) {
+  const { t } = useTranslation('nav')
   const location = useLocation()
-  const { primaryRole } = useAuth()
+  const { quickActions, isPathActive } = useNavigation()
 
-  const filteredNavItems = mobileNavItems.filter(item =>
-    !item.roles || item.roles.includes(primaryRole || 'staff')
-  )
-
-  const isActive = (href: string) => {
-    if (href === '#') return false
-    if (href === '/') return location.pathname === '/'
-    return location.pathname.startsWith(href)
-  }
+  // Take first 4 quick actions + menu button
+  const displayItems = quickActions.slice(0, 4)
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border lg:hidden shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-[100] bg-background border-t border-border lg:hidden shadow-lg safe-area-inset-bottom">
       <div className="grid grid-cols-5 gap-0 pb-safe">
-        {filteredNavItems.map((item) => {
+        {displayItems.map((item) => {
           const Icon = item.icon
-          const isItemActive = isActive(item.href)
-
-          if (item.href === '#') {
-            return (
-              <button
-                key={item.title}
-                onClick={onClose}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors duration-200 touch-target",
-                  "text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
-                )}
-              >
-                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]">{item.title}</span>
-              </button>
-            )
-          }
+          const isActive = isPathActive(item.path)
 
           return (
             <Link
-              key={item.href}
-              to={item.href}
+              key={item.path}
+              to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors duration-200 touch-target",
-                isItemActive
-                  ? "text-primary font-semibold bg-primary/10"
+                "flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors duration-200 touch-target relative",
+                isActive
+                  ? "text-hotel-gold font-semibold bg-hotel-gold/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
               )}
             >
-              <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6", isItemActive && "fill-current")} />
-              <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]">{item.title}</span>
+              <div className="relative">
+                <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6", isActive && "text-hotel-gold")} />
+                {item.badgeCount && item.badgeCount > 0 && (
+                  <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-[16px] px-1 text-[9px] bg-hotel-gold text-hotel-navy border-0">
+                    {item.badgeCount > 9 ? '9+' : item.badgeCount}
+                  </Badge>
+                )}
+              </div>
+              <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]">
+                {t(item.title, { defaultValue: item.title.split('.').pop() })}
+              </span>
             </Link>
           )
         })}
+
+        {/* Menu button - always last */}
+        <button
+          onClick={onMenuClick}
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors duration-200 touch-target",
+            "text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
+          )}
+        >
+          <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+          <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]">
+            {t('menu', { defaultValue: 'Menu' })}
+          </span>
+        </button>
       </div>
     </div>
   )

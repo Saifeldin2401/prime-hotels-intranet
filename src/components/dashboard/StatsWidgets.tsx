@@ -2,21 +2,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileText, GraduationCap, Megaphone } from 'lucide-react'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { StatsCardSkeleton } from '@/components/loading/CardSkeleton'
+import { useTranslation } from 'react-i18next'
 
 export function DocumentsWidget() {
     const { data: stats, isLoading } = useDashboardStats()
+    const { t } = useTranslation('dashboard')
 
     if (isLoading) return <StatsCardSkeleton />
 
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Documents</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('widgets.documents')}</CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{stats?.documentsCount || 0}</div>
-                <p className="text-xs text-muted-foreground">Published documents</p>
+                <p className="text-xs text-muted-foreground">{t('widgets.documents_desc')}</p>
             </CardContent>
         </Card>
     )
@@ -24,19 +26,20 @@ export function DocumentsWidget() {
 
 export function TrainingWidget() {
     const { data: stats, isLoading } = useDashboardStats()
+    const { t } = useTranslation('dashboard')
 
     if (isLoading) return <StatsCardSkeleton />
 
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Training</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('widgets.training')}</CardTitle>
                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{stats?.completedTraining || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                    {stats?.inProgressTraining || 0} in progress
+                    {t('widgets.training_desc', { count: stats?.inProgressTraining || 0 })}
                 </p>
             </CardContent>
         </Card>
@@ -45,18 +48,19 @@ export function TrainingWidget() {
 
 export function AnnouncementsWidget() {
     const { data: stats, isLoading } = useDashboardStats()
+    const { t } = useTranslation('dashboard')
 
     if (isLoading) return <StatsCardSkeleton />
 
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Announcements</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('widgets.announcements')}</CardTitle>
                 <Megaphone className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{stats?.unreadAnnouncements || 0}</div>
-                <p className="text-xs text-muted-foreground">Unread announcements</p>
+                <p className="text-xs text-muted-foreground">{t('widgets.announcements_desc')}</p>
             </CardContent>
         </Card>
     )

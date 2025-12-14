@@ -334,7 +334,7 @@ export interface TrainingModule {
 export interface TrainingContentBlock {
   id: string
   training_module_id: string
-  type: 'text' | 'image' | 'video' | 'document_link'
+  type: 'text' | 'image' | 'video' | 'document_link' | 'quiz' | 'sop_reference'
   content: string
   content_url: string | null
   content_data: Record<string, unknown> | null
@@ -343,6 +343,11 @@ export interface TrainingContentBlock {
   created_at: string
 }
 
+/**
+ * @deprecated Use LearningQuiz and KnowledgeQuestion system instead.
+ * Legacy inline questions are no longer created via TrainingBuilder.
+ * Existing data may still be read for backwards compatibility.
+ */
 export interface TrainingQuiz {
   id: string
   training_module_id: string

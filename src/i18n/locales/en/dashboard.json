@@ -21,7 +21,10 @@
         "property": "property",
         "department": "department",
         "properties": "properties",
-        "departments": "departments"
+        "departments": "departments",
+        "documents_desc": "Published documents",
+        "training_desc": "{{count}} in progress",
+        "announcements_desc": "Unread announcements"
     },
     "analytics": {
         "title": "Analytics Dashboard",

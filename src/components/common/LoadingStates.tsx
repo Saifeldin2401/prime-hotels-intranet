@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg'
@@ -35,11 +36,14 @@ interface PageLoadingProps {
   message?: string
 }
 
-export function PageLoading({ message = 'Loading...' }: PageLoadingProps) {
+export function PageLoading({ message }: PageLoadingProps) {
+  const { t } = useTranslation('common')
+  const defaultMessage = message || t('common.loading')
+  
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
       <LoadingSpinner size="lg" />
-      <p className="text-gray-600">{message}</p>
+      <p className="text-gray-600">{defaultMessage}</p>
     </div>
   )
 }

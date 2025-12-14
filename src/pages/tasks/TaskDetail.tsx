@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Calendar, User, Send, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 
 const priorityColors = {
   low: 'bg-green-100 text-green-800',
@@ -20,8 +21,9 @@ const priorityColors = {
 
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>()
-  const navigate = useNavigate()
   const { user, profile } = useAuth()
+  const { t } = useTranslation('tasks')
+  const navigate = useNavigate()
 
   const { data: task, isLoading } = useTask(taskId!)
   const updateTask = useUpdateTask()
@@ -37,8 +39,8 @@ export default function TaskDetail() {
   if (!task) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <h2 className="text-xl font-bold mb-4">Task not found</h2>
-        <Button onClick={() => navigate('/tasks')}>Back to Tasks</Button>
+        <h2 className="text-xl font-bold mb-4">{t('task_not_found')}</h2>
+        <Button onClick={() => navigate('/tasks')}>{t('back_to_tasks')}</Button>
       </div>
     )
   }

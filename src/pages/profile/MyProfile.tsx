@@ -6,18 +6,22 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, Save, Upload, User as UserIcon } from 'lucide-react'
+import { Loader2, Save, Upload, User as UserIcon, Key, CheckCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import EmployeeDocuments from './EmployeeDocuments'
 import { getReportingLineDisplay } from '@/lib/displayHelpers'
+import { useToast } from '@/components/ui/use-toast'
 
 export default function MyProfile() {
     const { user, profile: authProfile, refreshSession } = useAuth()
     const { t, i18n } = useTranslation('profile')
+    const { toast } = useToast()
     const isRTL = i18n.dir() === 'rtl'
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
+    const [sendingReset, setSendingReset] = useState(false)
+    const [resetSent, setResetSent] = useState(false)
 
     // Form state
     const [fullName, setFullName] = useState('')
@@ -52,12 +56,48 @@ export default function MyProfile() {
             if (error) throw error
 
             await refreshSession()
-            alert('Profile updated successfully!')
+            toast({
+                title: 'Profile Updated',
+                description: 'Your profile has been updated successfully.'
+            })
         } catch (error) {
             console.error('Error updating profile:', error)
-            alert('Error updating profile')
+            toast({
+                title: 'Error',
+                description: 'Failed to update profile. Please try again.',
+                variant: 'destructive'
+            })
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handlePasswordReset = async () => {
+        if (!user?.email) return
+
+        try {
+            setSendingReset(true)
+
+            const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+                redirectTo: `${window.location.origin}/reset-password`
+            })
+
+            if (error) throw error
+
+            setResetSent(true)
+            toast({
+                title: 'Password Reset Email Sent',
+                description: `We've sent a password reset link to ${user.email}. Please check your inbox.`
+            })
+        } catch (error: any) {
+            console.error('Error sending password reset:', error)
+            toast({
+                title: 'Error',
+                description: error.message || 'Failed to send password reset email. Please try again.',
+                variant: 'destructive'
+            })
+        } finally {
+            setSendingReset(false)
         }
     }
 
@@ -94,11 +134,18 @@ export default function MyProfile() {
 
                 setAvatarUrl(data.publicUrl)
                 await refreshSession()
-                alert('Avatar updated!')
+                toast({
+                    title: 'Avatar Updated',
+                    description: 'Your avatar has been updated successfully.'
+                })
             }
         } catch (error) {
             console.error('Error uploading avatar:', error)
-            alert('Error uploading avatar')
+            toast({
+                title: 'Error',
+                description: 'Failed to upload avatar. Please try again.',
+                variant: 'destructive'
+            })
         } finally {
             setUploading(false)
         }
@@ -239,7 +286,25 @@ export default function MyProfile() {
                                         <Label>{t('password')}</Label>
                                         <p className="text-sm text-gray-600">{t('password_desc')}</p>
                                     </div>
-                                    <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => alert('Password reset flow logic would go here (e.g., send reset email).')}>{t('change_password')}</Button>
+                                    {resetSent ? (
+                                        <div className="flex items-center gap-2 text-green-600 text-sm">
+                                            <CheckCircle className="w-4 h-4" />
+                                            Email sent!
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                            onClick={handlePasswordReset}
+                                            disabled={sendingReset}
+                                        >
+                                            {sendingReset ? (
+                                                <Loader2 className="w-4 h-4 animate-spin me-2" />
+                                            ) : (
+                                                <Key className="w-4 h-4 me-2" />
+                                            )}
+                                            {t('change_password')}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </CardContent>
@@ -253,3 +318,4 @@ export default function MyProfile() {
         </div>
     )
 }
+

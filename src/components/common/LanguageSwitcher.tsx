@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,27 +18,19 @@ const languages = [
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation()
-  const [currentLang, setCurrentLang] = useState(i18n.language)
+  const currentLang = i18n.language
 
-  // Set initial direction on mount
-  useEffect(() => {
-    const savedLang = localStorage.getItem('preferred-language') || i18n.language
-    document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr'
-    setCurrentLang(savedLang)
-  }, [i18n.language])
+  console.log('LanguageSwitcher Render:', { currentLang, resolvedLang: i18n.resolvedLanguage })
 
   const handleLanguageChange = (langCode: string) => {
+    console.log('LanguageSwitcher: Changing to', langCode)
     i18n.changeLanguage(langCode)
-    setCurrentLang(langCode)
-
-    // Save preference to localStorage
-    localStorage.setItem('preferred-language', langCode)
-
-    // Update document direction for Arabic
-    document.documentElement.dir = langCode === 'ar' ? 'rtl' : 'ltr'
+      .then(() => console.log('LanguageSwitcher: Change success'))
+      .catch(err => console.error('LanguageSwitcher: Change failed', err))
+    // document.dir update and persistence is handled in i18n.ts
   }
 
-  const currentLanguage = languages.find(lang => lang.code === currentLang) || languages[0]
+  const currentLanguage = languages.find(lang => lang.code === currentLang) || languages.find(l => l.code === 'en') || languages[0]
 
   return (
     <DropdownMenu>

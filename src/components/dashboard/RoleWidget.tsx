@@ -6,7 +6,10 @@ import { useTranslation } from 'react-i18next'
 
 export function RoleWidget() {
     const { primaryRole, properties, departments } = useAuth()
-    const { t } = useTranslation('dashboard')
+    const { t } = useTranslation(['dashboard', 'common'])
+
+    // Initial check to avoid errors if primaryRole is undefined
+    if (!primaryRole) return null;
 
     return (
         <Card>
@@ -15,7 +18,7 @@ export function RoleWidget() {
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">
-                    {primaryRole ? ROLES[primaryRole].label : t('widgets.no_role')}
+                    {t(`common:roles.${primaryRole}`, { defaultValue: ROLES[primaryRole]?.label })}
                 </div>
                 <p className="text-xs text-muted-foreground">
                     {properties.length} {t('widgets.properties')} • {departments.length} {t('widgets.departments')}

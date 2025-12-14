@@ -114,7 +114,9 @@ i18n
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],
       lookupLocalStorage: 'preferred-language',
+      checkWhitelist: true,
     },
+    load: 'languageOnly', // forces en-US to en
 
     // React specific options
     react: {
@@ -124,6 +126,7 @@ i18n
 
 // Handle RTL direction on language change
 i18n.on('languageChanged', (lng) => {
+  console.log('i18n Event: languageChanged', lng);
   const direction = lng === 'ar' ? 'rtl' : 'ltr';
   document.documentElement.dir = direction;
   document.documentElement.lang = lng;

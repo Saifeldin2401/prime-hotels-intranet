@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Pin } from 'lucide-react'
+import { Plus, Pin, Loader2 } from 'lucide-react'
 import type { Announcement } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 
@@ -175,8 +175,8 @@ export default function AnnouncementFeed() {
             </CardHeader>
             <CardContent className="p-6">
               {isLoading ? (
-                <div className="text-center py-8 text-gray-600">
-                  {t('loading')}
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
                 </div>
               ) : announcements && announcements.length > 0 ? (
                 <div className="space-y-4">
@@ -325,6 +325,9 @@ export default function AnnouncementFeed() {
                     </Button>
                   )}
                   <Button type="submit" disabled={upsertMutation.isPending}>
+                    {upsertMutation.isPending && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
                     {upsertMutation.isPending
                       ? t('form.saving')
                       : editingAnnouncement

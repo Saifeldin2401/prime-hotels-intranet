@@ -8,5 +8,10 @@
     },
     "create_task": "إنشاء مهمة",
     "filter_tasks": "تصفية المهام",
-    "my_tasks": "مهامي"
+    "my_tasks": "مهامي",
+    "tasks": "المهام",
+    "board": "لوحة",
+    "create_new_task": "إنشاء مهمة جديدة",
+    "task_not_found": "المهمة غير موجودة",
+    "back_to_tasks": "العودة إلى المهام"
 }

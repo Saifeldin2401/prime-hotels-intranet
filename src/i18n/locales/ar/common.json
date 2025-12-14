@@ -123,10 +123,68 @@
     "super_admin": "مشرف عام",
     "admin": "مسؤول",
     "regional_admin": "مسؤول إقليمي",
+    "regional_hr": "موارد بشرية إقليمية",
     "property_manager": "مدير المنشأة",
-    "department_manager": "مدير القسم",
-    "hr_manager": "مدير الموارد البشرية",
-    "staff": "موظف",
-    "corporate_hr": "الموارد البشرية للشركة"
+    "property_hr": "موارد بشرية للمنشأة",
+    "department_head": "رئيس قسم",
+    "staff": "موظف"
+  },
+  "errors": {
+    "unauthorized": "غير مصرح به",
+    "unauthorized_description": "ليس لديك إذن للوصول إلى هذه الصفحة",
+    "go_to_home": "اذهب إلى الرئيسية",
+    "not_found": "غير موجود",
+    "task_not_found": "المهمة غير موجودة",
+    "back_to_tasks": "العودة إلى المهام"
+  },
+  "ui": {
+    "board": "لوحة",
+    "create_new_task": "إنشاء مهمة جديدة",
+    "increment": "زيادة",
+    "sort_by": "ترتيب حسب",
+    "created": "تم الإنشاء",
+    "updated": "تم التحديث",
+    "download_history": "سيظهر سجل التنزيل هنا",
+    "training_builder_test": "اختبار منشئ التدريب",
+    "assigned": "معين",
+    "in_progress": "قيد التنفيذ",
+    "completed": "مكتمل",
+    "overdue": "متأخر",
+    "no_training_assigned": "لم يتم تعيين أي تدريب",
+    "progress": "التقدم",
+    "switch_to_rtl": "التبديل إلى RTL",
+    "switch_to_ltr": "التبديل إلى LTR",
+    "tasks": "المهام"
+  },
+  "social": {
+    "ago": "مضت",
+    "share": "مشاركة",
+    "save": "حفظ",
+    "post_comment": "إرسال تعليق",
+    "write_comment": "أكتب تعليقاً..."
+  },
+  "confirm": {
+    "delete_title": "حذف {{item}}؟",
+    "delete_message": "هل أنت متأكد أنك تريد حذف هذا؟ لا يمكن التراجع عن هذا الإجراء.",
+    "delete": "حذف",
+    "logout_title": "تسجيل الخروج؟",
+    "logout_message": "هل أنت متأكد أنك تريد تسجيل الخروج؟ ستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى النظام.",
+    "logout": "تسجيل الخروج",
+    "archive_title": "أرشفة {{item}}؟",
+    "archive_message": "سيؤدي هذا إلى أرشفة العنصر وإخفائه من العروض النشطة. يمكنك استعادته لاحقاً إذا لزم الأمر.",
+    "archive": "أرشفة",
+    "discard_title": "تجاهل التغييرات؟",
+    "discard_message": "لديك تغييرات غير محفوظة. هل أنت متأكد أنك تريد المغادرة؟ سيتم فقدان تغييراتك.",
+    "discard": "تجاهل",
+    "keep_editing": "متابعة التحرير"
+  },
+  "action": {
+    "try_again": "حاول مرة أخرى",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "save": "حفظ",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "refresh": "تحديث"
   }
 }

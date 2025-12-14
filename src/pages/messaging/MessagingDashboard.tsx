@@ -9,6 +9,7 @@ import {
   useMarkMessageAsRead,
   useMessagingStats
 } from '@/hooks/useMessaging'
+import { useRealtimeMessaging } from '@/hooks/useRealtimeMessaging'
 import { useProfiles } from '@/hooks/useUsers'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
@@ -27,7 +28,9 @@ import {
   Users,
   Mail,
   AlertTriangle,
-  Plus
+  Plus,
+  Wifi,
+  WifiOff
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import type { Message } from '@/lib/types'
@@ -42,7 +45,7 @@ const priorityColors: Record<string, string> = {
 }
 
 const messageTypeColors: Record<string, string> = {
-  direct: 'bg-blue-100 text-blue-800',
+  direct: 'bg-blue-100 text-blue-700',
   broadcast: 'bg-purple-100 text-purple-800',
   system: 'bg-gray-100 text-gray-800'
 }
@@ -57,10 +60,16 @@ export default function MessagingDashboard() {
   const [typeFilter, setTypeFilter] = useState<Message['message_type'] | 'all'>('all')
   const [isComposeOpen, setIsComposeOpen] = useState(false)
 
+  // Real-time messaging
+  const { isConnected } = useRealtimeMessaging()
+
   const { data: messages, isLoading: messagesLoading } = useMessages({
     status: statusFilter === 'all' ? undefined : statusFilter,
     message_type: typeFilter === 'all' ? undefined : typeFilter
   })
+
+  console.log('MessagingDashboard - Messages data:', messages)
+  console.log('MessagingDashboard - Messages loading:', messagesLoading)
   const { data: conversations, isLoading: conversationsLoading } = useConversations()
   const { data: notifications, isLoading: notificationsLoading } = useNotifications()
   const { data: stats } = useMessagingStats()
@@ -117,7 +126,7 @@ export default function MessagingDashboard() {
                 {t(message.message_type)}
               </Badge>
               {message.status !== 'read' && (
-                <Badge className="bg-blue-100 text-blue-800 border border-blue-600 rounded-md text-blue-700 text-xs">
+                <Badge className="bg-blue-100 text-blue-700 border border-blue-600 rounded-md text-xs">
                   {t('unread')}
                 </Badge>
               )}
@@ -161,7 +170,24 @@ export default function MessagingDashboard() {
     <div className="space-y-6">
       <PageHeader
         title={t('title')}
-        description={t('description')}
+        description={
+          <div className="flex items-center gap-2">
+            <span>{t('description')}</span>
+            <div className="flex items-center gap-1">
+              {isConnected ? (
+                <div className="flex items-center gap-1 text-green-600">
+                  <Wifi className="w-3 h-3" />
+                  <span className="text-xs">Live</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-gray-500">
+                  <WifiOff className="w-3 h-3" />
+                  <span className="text-xs">Offline</span>
+                </div>
+              )}
+            </div>
+          </div>
+        }
         actions={
           <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
             <DialogTrigger asChild>
@@ -423,7 +449,7 @@ export default function MessagingDashboard() {
                       </p>
                     </div>
                     {!notification.is_read && (
-                      <Badge className="bg-blue-100 text-blue-800 border border-blue-600 rounded-md text-blue-700">
+                      <Badge className="bg-blue-100 text-blue-700 border border-blue-600 rounded-md text-blue-700">
                         {t('new')}
                       </Badge>
                     )}

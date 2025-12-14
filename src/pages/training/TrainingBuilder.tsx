@@ -25,12 +25,17 @@ import {
   Award,
   Upload,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileQuestion,
+  BookOpen,
+  Sparkles
 } from 'lucide-react'
 import type { TrainingModule } from '@/lib/types'
+import type { LearningQuiz } from '@/types/learning'
 import { useTranslation } from 'react-i18next'
+import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 
-type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive'
+type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference'
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank'
 type ViewMode = 'builder' | 'preview'
 
@@ -69,6 +74,36 @@ export default function TrainingBuilder() {
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
 
+  // Fetch available quizzes for the Quiz Block
+  const { data: availableQuizzes } = useQuery({
+    queryKey: ['available-quizzes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('learning_quizzes')
+        .select('*')
+        // Show all quizzes (published and draft) so users can preview/select
+        .order('title')
+
+      if (error) throw error
+      return data as LearningQuiz[]
+    }
+  })
+
+  // Fetch available SOPs for the SOP Reference Block
+  const { data: availableSOPs } = useQuery({
+    queryKey: ['available-sops'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sop_documents')
+        .select('id, title, category, department_id')
+        .eq('status', 'published')
+        .order('title')
+
+      if (error) throw error
+      return data as { id: string; title: string; category?: string; department_id?: string }[]
+    }
+  })
+
   // Module state
   const [moduleId, setModuleId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
@@ -105,6 +140,7 @@ export default function TrainingBuilder() {
   const [questions, setQuestions] = useState<QuestionForm[]>([])
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
   const [showQuestionDialog, setShowQuestionDialog] = useState(false)
+  const [showAIDialog, setShowAIDialog] = useState(false)
 
   // Current form states
   const [currentBlock, setCurrentBlock] = useState<ContentBlockForm>({
@@ -277,27 +313,16 @@ export default function TrainingBuilder() {
     }
 
     try {
+      // Note: training_modules table only has basic columns.
+      // Sections/content are stored separately in training_content_blocks
       const payload = {
         title: title.trim(),
         description: description.trim() || null,
-        estimated_duration_minutes: totalDuration,
-        passing_score: parseInt(passingScore),
-        max_attempts: parseInt(maxAttempts),
-        created_by: profile?.id,
-        content_data: {
-          sections: sections,
-          settings: {
-            allowRetake,
-            certificateOnCompletion,
-            timeLimit,
-            allowRetries,
-            showFeedback,
-            autoAdvance,
-            randomizeQuestions,
-            showAnswers
-          }
-        }
+        estimated_duration_minutes: totalDuration || null,
+        created_by: profile?.id
       }
+
+      let currentModuleId = moduleId
 
       if (moduleId) {
         const { error } = await supabase
@@ -312,7 +337,58 @@ export default function TrainingBuilder() {
           .select()
           .single()
         if (error) throw error
+        currentModuleId = data.id
         setModuleId(data.id)
+      }
+
+      // Save content blocks from sections
+      if (currentModuleId) {
+        // Delete existing blocks
+        await supabase
+          .from('training_content_blocks')
+          .delete()
+          .eq('training_module_id', currentModuleId)
+
+        // Flatten sections into content blocks
+        const allBlocks: any[] = []
+        let orderIndex = 0
+
+        for (const section of sections) {
+          for (const item of section.items) {
+            allBlocks.push({
+              training_module_id: currentModuleId,
+              type: item.type,
+              content: item.content || item.title || '',
+              content_url: item.content_url || null,
+              content_data: item.content_data || {},
+              order: orderIndex++,
+              is_mandatory: item.is_mandatory ?? true
+            })
+          }
+        }
+
+        // Also include any standalone content blocks
+        for (const block of contentBlocks) {
+          allBlocks.push({
+            training_module_id: currentModuleId,
+            type: block.type,
+            content: block.content || block.title || '',
+            content_url: block.content_url || null,
+            content_data: block.content_data || {},
+            order: orderIndex++,
+            is_mandatory: block.is_mandatory ?? true
+          })
+        }
+
+        if (allBlocks.length > 0) {
+          const { error: blocksError } = await supabase
+            .from('training_content_blocks')
+            .insert(allBlocks)
+          if (blocksError) {
+            console.error('Error saving blocks:', blocksError)
+            throw blocksError
+          }
+        }
       }
 
       alert(t('moduleSaved'))
@@ -444,11 +520,9 @@ export default function TrainingBuilder() {
       // First save the module
       await saveModuleMutation.mutateAsync()
 
-      // Then save content blocks and questions
-      await Promise.all([
-        saveContentBlocksMutation.mutateAsync(),
-        saveQuestionsMutation.mutateAsync()
-      ])
+      // Then save content blocks
+      // NOTE: saveQuestionsMutation is deprecated. Questions should now be added via Quiz blocks referencing the Knowledge Bank.
+      await saveContentBlocksMutation.mutateAsync()
 
       alert(t('moduleSaved'))
     } catch (error: any) {
@@ -570,6 +644,8 @@ export default function TrainingBuilder() {
       case 'image': return <Image className="w-4 h-4" />
       case 'video': return <Video className="w-4 h-4" />
       case 'document_link': return <Link className="w-4 h-4" />
+      case 'quiz': return <FileQuestion className="w-4 h-4" />
+      case 'sop_reference': return <BookOpen className="w-4 h-4" />
       default: return <FileText className="w-4 h-4" />
     }
   }
@@ -600,6 +676,15 @@ export default function TrainingBuilder() {
             >
               {viewMode === 'builder' ? <Eye className="w-4 h-4 mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
               {viewMode === 'builder' ? t('preview') : t('builderMode')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAIDialog(true)}
+              className="border-purple-300 text-purple-700 hover:bg-purple-50"
+            >
+              <Sparkles className="w-4 h-4 mr-1" />
+              {t('aiSuggest', 'AI Suggest')}
             </Button>
             <Button onClick={saveTraining} className="bg-primary hover:bg-hotel-navy shadow-sm transition-all duration-200">
               <Save className="w-4 h-4 mr-1" />
@@ -640,6 +725,58 @@ export default function TrainingBuilder() {
                   rows={3}
                   className={isRTL ? 'text-right' : ''}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Knowledge Integration Callout */}
+          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Sparkles className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-purple-900 mb-1">{t('knowledgeBankIntegration')}</h3>
+                  <p className="text-sm text-purple-700 mb-3">
+                    {t('knowledgeBankDescription')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                      onClick={() => {
+                        addSection()
+                        setTimeout(() => addContent('quiz'), 100)
+                      }}
+                    >
+                      <FileQuestion className="w-4 h-4 mr-1" />
+                      {t('addQuizBlock')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                      onClick={() => {
+                        addSection()
+                        setTimeout(() => addContent('sop_reference'), 100)
+                      }}
+                    >
+                      <BookOpen className="w-4 h-4 mr-1" />
+                      {t('addSopReference')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                      onClick={() => setShowAIDialog(true)}
+                    >
+                      <Sparkles className="w-4 h-4 mr-1" />
+                      {t('aiGenerateQuestions')}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -702,6 +839,7 @@ export default function TrainingBuilder() {
                             <div className="text-center py-8 border border-dashed rounded-lg bg-gray-50">
                               <p className="text-sm text-gray-500 mb-4">{t('noContent')}</p>
                               <div className="flex flex-wrap gap-2 justify-center">
+                                {/* Basic content types */}
                                 {(['text', 'video', 'image', 'document_link'] as ContentType[]).map((type) => (
                                   <Button
                                     key={type}
@@ -719,6 +857,25 @@ export default function TrainingBuilder() {
                                     </span>
                                   </Button>
                                 ))}
+                                {/* Knowledge Bank Integration - Highlighted */}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                  onClick={() => addContent('quiz')}
+                                >
+                                  <FileQuestion className="w-4 h-4" />
+                                  <span className="ml-2">Quiz from Bank</span>
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                  onClick={() => addContent('sop_reference')}
+                                >
+                                  <BookOpen className="w-4 h-4" />
+                                  <span className="ml-2">SOP Reference</span>
+                                </Button>
                               </div>
                             </div>
                           ) : (
@@ -811,6 +968,18 @@ export default function TrainingBuilder() {
                                   <div className="flex items-center gap-2">
                                     <Link className="w-4 h-4" />
                                     {t('documentContent')}
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="quiz">
+                                  <div className="flex items-center gap-2">
+                                    <FileQuestion className="w-4 h-4" />
+                                    {t('quizContent', 'Quiz')}
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="sop_reference">
+                                  <div className="flex items-center gap-2">
+                                    <BookOpen className="w-4 h-4" />
+                                    {t('sopReferenceContent', 'SOP Reference')}
                                   </div>
                                 </SelectItem>
                               </SelectContent>
@@ -974,6 +1143,83 @@ export default function TrainingBuilder() {
               />
             </div>
 
+            {currentBlock.type === 'quiz' && (
+              <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                <Label className="text-blue-900">{t('selectQuiz', 'Link Knowledge Quiz')}</Label>
+                <div className="mt-1.5">
+                  <Select
+                    value={(currentBlock.content_data?.quiz_id as string) || ''}
+                    onValueChange={(val) => {
+                      const quiz = availableQuizzes?.find(q => q.id === val)
+                      setCurrentBlock({
+                        ...currentBlock,
+                        // Only update title if it's generic/empty
+                        title: (!currentBlock.title || currentBlock.title === 'Quiz') ? (quiz?.title || '') : currentBlock.title,
+                        content_data: { ...currentBlock.content_data, quiz_id: val }
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="bg-white border-blue-200">
+                      <SelectValue placeholder={t('selectQuizPlaceholder', 'Choose a published quiz...')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableQuizzes?.length === 0 ? (
+                        <div className="p-2 text-sm text-gray-500 text-center">No published quizzes found</div>
+                      ) : (
+                        availableQuizzes?.map(q => (
+                          <SelectItem key={q.id} value={q.id}>
+                            <span className="font-medium">{q.title}</span>
+                            <span className="ml-2 text-xs text-gray-400">({q.question_count || 0} qs)</span>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-blue-600 mt-2">
+                  Select a quiz from the Knowledge Bank to embed in this training module.
+                </p>
+              </div>
+            )}
+
+            {currentBlock.type === 'sop_reference' && (
+              <div className="bg-emerald-50 p-4 rounded-md border border-emerald-100">
+                <Label className="text-emerald-900">{t('selectSop', 'Link SOP Document')}</Label>
+                <div className="mt-1.5">
+                  <Select
+                    value={(currentBlock.content_data?.sop_id as string) || ''}
+                    onValueChange={(val) => {
+                      const sop = availableSOPs?.find(s => s.id === val)
+                      setCurrentBlock({
+                        ...currentBlock,
+                        title: (!currentBlock.title || currentBlock.title === 'SOP Reference') ? (sop?.title || '') : currentBlock.title,
+                        content_data: { ...currentBlock.content_data, sop_id: val }
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="bg-white border-emerald-200">
+                      <SelectValue placeholder={t('selectSopPlaceholder', 'Choose a published SOP...')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSOPs?.length === 0 ? (
+                        <div className="p-2 text-sm text-gray-500 text-center">No published SOPs found</div>
+                      ) : (
+                        availableSOPs?.map(s => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <span className="font-medium">{s.title}</span>
+                            {s.category && <span className="ml-2 text-xs text-gray-400">({s.category})</span>}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-emerald-600 mt-2">
+                  Select a published SOP to reference. Trainees will see the live content from the SOP.
+                </p>
+              </div>
+            )}
+
             <div>
               <Label>{t('content')}</Label>
               <Textarea
@@ -1055,6 +1301,35 @@ export default function TrainingBuilder() {
                 {selectedContent ? t('save') : t('addContent')}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Question Generator Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              {t('aiQuestionGenerator', 'AI Question Generator')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {/* 
+              The AIQuestionGenerator uses sopContent. 
+              For Training Builder, we allow "general" mode where user pastes content.
+              In Phase 2.5, we could auto-extract from linked SOPs.
+            */}
+            <AIQuestionGenerator
+              sopId="general"
+              sopTitle={title || 'Training Module'}
+              sopContent=""
+              onQuestionsCreated={(count) => {
+                setShowAIDialog(false)
+                // Show toast or feedback
+                alert(`${count} questions saved to Knowledge Bank!`)
+              }}
+            />
           </div>
         </DialogContent>
       </Dialog>

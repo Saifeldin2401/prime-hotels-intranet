@@ -70,7 +70,9 @@
         "cancelled": "Cancelled",
         "paid": "Paid",
         "all": "All Status",
-        "applied": "Applied"
+        "applied": "Applied",
+        "received": "Received",
+        "review": "Review"
     },
     "history": {
         "title": "Promotion & Transfer History",

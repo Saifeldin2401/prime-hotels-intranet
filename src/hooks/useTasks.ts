@@ -113,15 +113,35 @@ export function useCreateTask() {
       const { data, error } = await supabase
         .from('tasks')
         .insert(task)
-        .select()
+        .select(`
+          *,
+          assigned_to:profiles!assigned_to_id(id, full_name)
+        `)
         .single()
 
       if (error) throw error
       return data
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
+
+      // Send notification to assigned user
+      if (data.assigned_to_id) {
+        try {
+          await supabase.from('notifications').insert({
+            user_id: data.assigned_to_id,
+            type: 'task_assigned',
+            title: 'New Task Assigned',
+            message: `You have been assigned a new task: "${data.title}"`,
+            link: `/tasks`,
+            data: { taskId: data.id, taskTitle: data.title }
+          })
+        } catch (err) {
+          console.error('Failed to send task notification:', err)
+        }
+      }
     },
   })
 }

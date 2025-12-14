@@ -19,7 +19,8 @@ import {
   Edit,
   Repeat,
   Search,
-  Bell
+  Bell,
+  Loader2
 } from 'lucide-react'
 import type {
   TrainingModule,
@@ -29,6 +30,7 @@ import type {
   Property
 } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
+import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 
 // Extended interfaces for assignment data
 interface AssignmentWithExtra extends Omit<TrainingAssignment, 'auto_enroll' | 'recurring_type'> {
@@ -61,6 +63,7 @@ export default function TrainingAssignments() {
   const queryClient = useQueryClient()
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
+  const { notifyTrainingAssigned, notifyTrainingAssignedBulk, notifyTrainingDeadline } = useNotificationTriggers()
 
   // State
   const [search, setSearch] = useState('')
@@ -176,13 +179,36 @@ export default function TrainingAssignments() {
         created_by_role: 'admin'
       }
 
-      const { error } = await supabase.from('training_assignments').insert(payload)
+      const { data: insertedData, error } = await supabase.from('training_assignments').insert(payload).select().single()
       if (error) throw error
+
+      // Get module title for notifications
+      const moduleTitle = modules?.find(m => m.id === data.module_id)?.title || 'Training Module'
+      const deadlineStr = data.deadline.toLocaleDateString()
+
+      return { insertedData, data, moduleTitle, deadlineStr }
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ['training-assignments'] })
       setShowAssignmentDialog(false)
       resetForm()
+
+      // Send notifications to assigned users
+      try {
+        if (result.data.target_type === 'users' && result.data.target_users.length > 0) {
+          await notifyTrainingAssignedBulk(
+            result.data.target_users,
+            result.insertedData.id,
+            result.moduleTitle,
+            result.deadlineStr
+          )
+        }
+        // For 'all', 'departments', or 'properties' - notifications would be sent via backend trigger
+        // since we need to resolve which users belong to those groups
+      } catch (notifyError) {
+        console.error('Failed to send training assignment notifications:', notifyError)
+      }
+
       alert(t('assignmentCreated'))
     }
   })
@@ -483,7 +509,9 @@ export default function TrainingAssignments() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-gray-700">{t('loading')}</div>
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+            </div>
           ) : filteredAssignments.length > 0 ? (
             <div className="space-y-4">
               {filteredAssignments.map((assignment) => (
@@ -743,6 +771,9 @@ export default function TrainingAssignments() {
                 {t('cancel')}
               </Button>
               <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" onClick={handleSubmit} disabled={createAssignmentMutation.isPending || updateAssignmentMutation.isPending}>
+                {createAssignmentMutation.isPending || updateAssignmentMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
                 {createAssignmentMutation.isPending || updateAssignmentMutation.isPending ? t('loading') :
                   editingAssignment ? t('update') : t('create')}
               </Button>

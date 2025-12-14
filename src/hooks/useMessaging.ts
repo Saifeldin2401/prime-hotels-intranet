@@ -12,32 +12,71 @@ export function useMessages(filters?: {
   sender_id?: string
   recipient_id?: string
 }) {
-  const { user, properties } = useAuth()
+  const { user, profile, properties } = useAuth()
 
   return useQuery({
-    queryKey: ['messages', user?.id, filters],
+    queryKey: ['messages', profile?.id, filters],
     queryFn: async () => {
-      if (!user?.id) return []
+      console.log('useMessages queryFn called, profile:', profile?.id)
+      if (!profile?.id) return []
+
+      // First, let's test a simple query to see what's in the database
+      const { data: allMessages, error: allError } = await supabase
+        .from('messages')
+        .select('*')
+        .limit(10)
+
+      console.log('Simple test query - all messages:', { 
+        allMessages, 
+        allError, 
+        count: allMessages?.length 
+      })
+
+      // Check the sender_id and recipient_id in the messages
+      if (allMessages && allMessages.length > 0) {
+        console.log('Message details:', allMessages.map(msg => ({
+          id: msg.id,
+          sender_id: msg.sender_id,
+          recipient_id: msg.recipient_id,
+          subject: msg.subject
+        })))
+        console.log('Current user profile ID:', profile.id)
+        console.log('User matches:', allMessages.map(msg => ({
+          message_id: msg.id,
+          is_sender: msg.sender_id === profile.id,
+          is_recipient: msg.recipient_id === profile.id,
+          matches_user: msg.sender_id === profile.id || msg.recipient_id === profile.id
+        })))
+      }
+
+      // Now let's test the user access filter directly
+      const { data: userMessages, error: userError } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
+        .limit(10)
+
+      console.log('User access filter test:', { 
+        userMessages, 
+        userError, 
+        count: userMessages?.length,
+        profileId: profile.id
+      })
 
       let query = supabase
         .from('messages')
-        .select(`
-          *,
-          sender:profiles(id, full_name, email, avatar_url),
-          recipient:profiles(id, full_name, email, avatar_url),
-          property:properties(id, name),
-          department:departments(id, name),
-          parent_message:messages(id, subject),
-          replies:messages(id, subject, created_at),
-          attachments:message_attachments(*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       // Apply filters
+      console.log('Applying filters:', filters)
+      console.log('Before filters query built')
       if (filters?.status) {
+        console.log('Applying status filter:', filters.status)
         query = query.eq('status', filters.status)
       }
       if (filters?.message_type) {
+        console.log('Applying message_type filter:', filters.message_type)
         query = query.eq('message_type', filters.message_type)
       }
       if (filters?.priority) {
@@ -51,41 +90,48 @@ export function useMessages(filters?: {
       }
 
       // Filter by user's access (sent or received messages)
-      query = query.or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+      console.log('Applying user access filter for profile:', profile.id)
+      query = query.or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
+      console.log('User access filter applied')
 
       // Filter by properties if user has property access
-      if (properties.length > 0 && !filters?.sender_id && !filters?.recipient_id) {
+      if (properties && properties.length > 0 && !filters?.sender_id && !filters?.recipient_id) {
         query = query.in('property_id', properties.map(p => p.id))
       }
 
-      const { data, error } = await query
+      const { data, error } = await query.limit(100)
+
+      console.log('useMessages query result:', { 
+        data, 
+        error, 
+        profileId: profile.id, 
+        messageCount: data?.length
+      })
 
       if (error) throw error
       return data as Message[]
     },
-    enabled: !!user?.id
+    enabled: !!profile?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always' // Always refetch when component mounts
   })
 }
 
 export function useMessage(messageId: string) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   return useQuery({
     queryKey: ['message', messageId],
     queryFn: async () => {
-      if (!user?.id || !messageId) return null
+      if (!profile?.id || !messageId) return null
 
       const { data, error } = await supabase
         .from('messages')
         .select(`
           *,
           sender:profiles!messages_sender_id_fkey(id, full_name, email, avatar_url),
-          recipient:profiles!messages_recipient_id_fkey(id, full_name, email, avatar_url),
-          property:properties(id, name),
-          department:departments(id, name),
-          parent_message:messages!messages_parent_message_id_fkey(*),
-          replies:messages!messages_parent_message_id_fkey(*, sender:profiles!messages_sender_id_fkey(id, full_name)),
-          attachments:message_attachments(*)
+          recipient:profiles!messages_recipient_id_fkey(id, full_name, email, avatar_url)
         `)
         .eq('id', messageId)
         .single()
@@ -93,13 +139,13 @@ export function useMessage(messageId: string) {
       if (error) throw error
       return data as Message
     },
-    enabled: !!user?.id && !!messageId
+    enabled: !!profile?.id && !!messageId
   })
 }
 
 export function useSendMessage() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   return useMutation({
     mutationFn: async (data: {
@@ -113,120 +159,67 @@ export function useSendMessage() {
       parent_message_id?: string
       attachments?: File[]
     }) => {
-      if (!user?.id) throw new Error('User must be authenticated')
+      if (!profile?.id) throw new Error('User must be authenticated')
 
       // Create or find conversation for direct messages
       let conversationId = null
       if (data.recipient_id && data.message_type === 'direct') {
         // Check if conversation already exists between these users
-        const { data: existingParticipants } = await supabase
-          .from('conversation_participants')
-          .select('conversation_id, participant_id')
-          .in('participant_id', [user.id, data.recipient_id])
+        const { data: existingConversations } = await supabase
+          .from('conversations')
+          .select('*')
+          .contains('participant_ids', [profile.id, data.recipient_id])
 
-        // Find conversation where both users are participants
-        const conversationsByUser = existingParticipants?.reduce((acc: any, participant: any) => {
-          if (!acc[participant.conversation_id]) {
-            acc[participant.conversation_id] = []
-          }
-          acc[participant.conversation_id].push(participant.participant_id)
-          return acc
-        }, {})
+        const existingConv = existingConversations?.find(conv => 
+          conv.participant_ids.includes(profile.id) && 
+          conv.participant_ids.includes(data.recipient_id!) &&
+          conv.participant_ids.length === 2
+        )
 
-        const existingConvId = Object.entries(conversationsByUser || {}).find(
-          ([_, participants]: [string, any]) =>
-            Array.isArray(participants) && participants.length === 2 &&
-            participants.includes(user.id) && participants.includes(data.recipient_id)
-        )?.[0]
-
-        if (existingConvId) {
-          conversationId = existingConvId
+        if (existingConv) {
+          conversationId = existingConv.id
         } else {
           // Create new conversation
           const { data: newConv } = await supabase
             .from('conversations')
             .insert({
               title: data.subject,
-              last_message_at: new Date().toISOString()
+              participant_ids: [profile.id, data.recipient_id]
             })
             .select()
             .single()
 
           if (newConv) {
             conversationId = newConv.id
-
-            // Add both participants to the conversation
-            await supabase
-              .from('conversation_participants')
-              .insert([
-                { conversation_id: conversationId, participant_id: user.id },
-                { conversation_id: conversationId, participant_id: data.recipient_id }
-              ])
           }
         }
       }
 
-      // Create message
-      const { data: message, error: messageError } = await supabase
+      // Insert the message
+      const { data: message, error } = await supabase
         .from('messages')
         .insert({
-          sender_id: user.id,
-          recipient_id: data.recipient_id || null,
+          sender_id: profile.id,
+          recipient_id: data.recipient_id,
           subject: data.subject,
           content: data.content,
           message_type: data.message_type,
           priority: data.priority || 'medium',
-          property_id: data.property_id || null,
-          department_id: data.department_id || null,
-          parent_message_id: data.parent_message_id || null,
           status: 'sent',
-          sent_at: new Date().toISOString()
+          sent_at: new Date().toISOString(),
+          parent_message_id: data.parent_message_id,
+          property_id: data.property_id,
+          department_id: data.department_id,
+          conversation_id: conversationId
         })
-        .select()
+        .select(`
+          *,
+          sender:profiles!messages_sender_id_fkey(id, full_name, email, avatar_url),
+          recipient:profiles!messages_recipient_id_fkey(id, full_name, email, avatar_url)
+        `)
         .single()
 
-      if (messageError) throw messageError
-
-      // Update conversation's last_message_at if this is part of a conversation
-      if (conversationId) {
-        await supabase
-          .from('conversations')
-          .update({
-            last_message_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', conversationId)
-      }
-
-      // Handle attachments
-      if (data.attachments && data.attachments.length > 0) {
-        for (const file of data.attachments) {
-          const fileName = `${Date.now()}_${file.name}`
-          const filePath = `message-attachments/${message.id}/${fileName}`
-
-          // Upload file to Supabase storage
-          const { error: uploadError } = await supabase.storage
-            .from('attachments')
-            .upload(filePath, file)
-
-          if (uploadError) throw uploadError
-
-          // Create attachment record
-          const { error: attachmentError } = await supabase
-            .from('message_attachments')
-            .insert({
-              message_id: message.id,
-              uploaded_by_id: user.id,
-              file_name: file.name,
-              file_path: filePath,
-              file_type: file.type,
-              file_size: file.size
-            })
-
-          if (attachmentError) throw attachmentError
-        }
-      }
-
+      if (error) throw error
       return message
     },
     onSuccess: () => {
@@ -427,26 +420,49 @@ export function useDeleteComment() {
 
 // Conversation Hooks
 export function useConversations() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   return useQuery({
-    queryKey: ['conversations', user?.id],
+    queryKey: ['conversations', profile?.id],
     queryFn: async () => {
-      if (!user?.id) return []
+      if (!profile?.id) return []
 
       const { data, error } = await supabase
         .from('conversations')
         .select(`
           *,
-          participants:profiles(id, full_name, email, avatar_url)
+          messages:messages(
+            id,
+            subject,
+            content,
+            sender_id,
+            created_at,
+            sender:profiles!sender_id(id, full_name, email, avatar_url)
+          )
         `)
-        .contains('participant_ids', [user.id])
+        .contains('participant_ids', [profile.id])
         .order('last_message_at', { ascending: false })
 
       if (error) throw error
-      return data as any[]
+      
+      // Get participant details for each conversation
+      const conversationsWithParticipants = await Promise.all(
+        (data || []).map(async (conv: any) => {
+          const { data: participants } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, avatar_url')
+            .in('id', conv.participant_ids)
+
+          return {
+            ...conv,
+            participants: participants || []
+          }
+        })
+      )
+
+      return conversationsWithParticipants
     },
-    enabled: !!user?.id
+    enabled: !!profile?.id
   })
 }
 

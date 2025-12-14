@@ -1,207 +1,31 @@
-import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+/**
+ * SidebarNavigation Component
+ * 
+ * Premium hotel-themed sidebar navigation using centralized navigation config.
+ * Features:
+ * - Role-based route filtering
+ * - Collapsible navigation groups
+ * - Dynamic badge counts
+ * - Theme/language switcher
+ * - Mobile responsive
+ */
+
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  Home,
-  FileText,
-  BookOpen,
-  Settings,
-  Users,
-  Wrench,
-  MessageSquare,
-  BarChart3,
   X,
   ChevronDown,
-  LogOut,
-  User,
-  Calendar,
-  ListTodo,
-  CheckSquare,
-  Megaphone,
-  Briefcase,
-  ArrowUp,
-  ArrowRightLeft,
-  ClipboardList
+  LogOut
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { useTranslation } from 'react-i18next'
-
-interface NavItem {
-  title: string
-  href: string
-  icon: any
-  badge?: string
-  children?: NavItem[]
-  roles?: string[]
-}
-
-const navigationItems: NavItem[] = [
-  // --- Common ---
-  {
-    title: 'dashboard',
-    href: '/dashboard', // Logic will redirect staff to /staff-dashboard if they land here, but we should show /staff-dashboard link for staff? No, let's just use / and let redirect handle it, or use conditional logic.
-    // Actually, distinct links:
-    icon: Home,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
-  },
-  {
-    title: 'staff_dashboard',
-    href: '/staff-dashboard',
-    icon: Home,
-    roles: ['staff']
-  },
-
-  // --- Staff Specific ---
-  {
-    title: 'my_training',
-    href: '/training/my',
-    icon: BookOpen,
-    roles: ['staff']
-  },
-  {
-    title: 'my_approvals',
-    href: '/approvals',
-    icon: CheckSquare,
-    roles: ['staff']
-  },
-  {
-    title: 'my_sops',
-    href: '/sop', // Staff view of SOPs
-    icon: FileText,
-    roles: ['staff']
-  },
-  {
-    title: 'my_certificates',
-    href: '/training/certificates',
-    icon: ClipboardList,
-    roles: ['staff']
-  },
-  {
-    title: 'my_requests',
-    href: '/hr/leave', // Assuming this covers leave requests
-    icon: Calendar,
-    roles: ['staff']
-  },
-  {
-    title: 'my_profile',
-    href: '/profile',
-    icon: User,
-    roles: ['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']
-  },
-
-  // --- Department Head ---
-  {
-    title: 'team_training',
-    href: '/training/dashboard', // Team overview
-    icon: Users,
-    roles: ['department_head']
-  },
-  {
-    title: 'sops_view',
-    href: '/sop',
-    icon: FileText,
-    roles: ['department_head']
-  },
-  {
-    title: 'my_department_staff',
-    href: '/directory',
-    icon: Users,
-    roles: ['department_head']
-  },
-
-  // --- Property HR ---
-  {
-    title: 'employees',
-    href: '/directory', // Manage users
-    icon: Users,
-    roles: ['property_hr']
-  },
-  {
-    title: 'sop_assignments',
-    href: '/training/assignments',
-    icon: ListTodo,
-    roles: ['property_hr', 'property_manager', 'regional_hr', 'regional_admin']
-  },
-  {
-    title: 'referrals',
-    href: '/hr/referrals',
-    icon: Users,
-    roles: ['property_hr', 'regional_hr', 'regional_admin']
-  },
-  {
-    title: 'jobs',
-    href: '/jobs',
-    icon: Briefcase,
-    roles: ['property_hr', 'regional_hr', 'regional_admin']
-  },
-
-  // --- Property Manager ---
-  {
-    title: 'department_status',
-    href: '/dashboard', // Part of main dashboard
-    icon: BarChart3,
-    roles: ['property_manager']
-  },
-  {
-    title: 'hr_approvals',
-    href: '/approvals',
-    icon: CheckSquare,
-    roles: ['property_manager', 'regional_admin', 'regional_hr', 'property_hr', 'department_head']
-  },
-  {
-    title: 'property_reports',
-    href: '/reports',
-    icon: FileText,
-    roles: ['property_manager', 'regional_admin', 'regional_hr']
-  },
-  {
-    title: 'sop_compliance',
-    href: '/sop', // View all SOPs compliance?
-    icon: ClipboardList,
-    roles: ['property_manager']
-  },
-
-  // --- Corporate / Admin (General Access) ---
-  {
-    title: 'admin_panel',
-    href: '/admin',
-    icon: Settings,
-    roles: ['regional_admin', 'regional_hr'],
-    children: [
-      { title: 'users', href: '/admin/users', icon: Users },
-      { title: 'properties', href: '/admin/properties', icon: Home },
-      { title: 'audit_logs', href: '/admin/audit', icon: BarChart3 }
-    ]
-  },
-  {
-    title: 'documents',
-    href: '/documents',
-    icon: FileText,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'announcements',
-    href: '/announcements', // "My Property Announcements" for staff
-    icon: Megaphone,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'messaging', // Using messaging key to avoid conflict with notifications object
-    href: '/messaging',
-    icon: MessageSquare,
-    roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
-  },
-  {
-    title: 'settings',
-    href: '/settings',
-    icon: Settings,
-    roles: ['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']
-  }
-]
+import { useNavigation } from '@/hooks/useNavigation'
+import type { NavigationGroupWithItems, NavigationItem } from '@/hooks/useNavigation'
 
 interface SidebarNavigationProps {
   isOpen: boolean
@@ -211,22 +35,36 @@ interface SidebarNavigationProps {
   isMobile?: boolean
 }
 
-export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggleCollapse, isMobile = false }: SidebarNavigationProps) {
+export function SidebarNavigation({
+  isOpen,
+  collapsed = false,
+  onClose,
+  onToggleCollapse,
+  isMobile = false
+}: SidebarNavigationProps) {
   const { t } = useTranslation(['nav', 'common'])
-  const location = useLocation()
   const navigate = useNavigate()
   const { primaryRole, profile, signOut } = useAuth()
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const { groupedNavigation } = useNavigation()
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([])
 
-  const filteredNavItems = navigationItems.filter(item =>
-    !item.roles || item.roles.includes(primaryRole || 'staff')
-  )
+  // Auto-expand groups with active items
+  useEffect(() => {
+    const activeGroups = groupedNavigation
+      .filter(group => group.items.some(item => item.isActive))
+      .map(group => group.config.id)
 
-  const toggleExpanded = (title: string) => {
-    setExpandedItems(prev =>
-      prev.includes(title)
-        ? prev.filter(item => item !== title)
-        : [...prev, title]
+    setExpandedGroups(prev => {
+      const newExpanded = [...new Set([...prev, ...activeGroups])]
+      return newExpanded
+    })
+  }, [groupedNavigation])
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev =>
+      prev.includes(groupId)
+        ? prev.filter(id => id !== groupId)
+        : [...prev, groupId]
     )
   }
 
@@ -235,9 +73,110 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
     navigate('/login')
   }
 
-  const isActive = (href: string) => {
-    if (href === '/') return location.pathname === '/'
-    return location.pathname.startsWith(href)
+  const handleNavClick = () => {
+    if (isMobile) onClose()
+  }
+
+  const renderNavItem = (item: NavigationItem) => {
+    const Icon = item.icon
+
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={handleNavClick}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",
+          item.isActive
+            ? "bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-hotel-navy shadow-lg shadow-black/20"
+            : "text-gray-300 hover:bg-hotel-navy-light hover:text-white hover:shadow-inner",
+          collapsed && "justify-center px-0"
+        )}
+        title={collapsed ? t(item.title, { defaultValue: item.title }) : undefined}
+      >
+        {/* Active indicator for collapsed mode */}
+        {item.isActive && collapsed && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-hotel-gold rounded-e-full" />
+        )}
+
+        <Icon className={cn(
+          "h-5 w-5 flex-shrink-0",
+          item.isActive ? "text-hotel-navy" : "text-white/60 group-hover:text-hotel-gold transition-colors"
+        )} />
+
+        {!collapsed && (
+          <>
+            <span className="flex-1 tracking-wide truncate">
+              {t(item.title, { defaultValue: item.title.split('.').pop() })}
+            </span>
+            {item.badgeCount && item.badgeCount > 0 && (
+              <Badge className={cn(
+                "ms-auto text-[10px] h-5 px-1.5 font-bold min-w-[20px] justify-center",
+                item.isActive ? "bg-hotel-navy/20 text-hotel-navy" : "bg-hotel-gold text-hotel-navy"
+              )}>
+                {item.badgeCount > 99 ? '99+' : item.badgeCount}
+              </Badge>
+            )}
+          </>
+        )}
+      </Link>
+    )
+  }
+
+  const renderGroup = (group: NavigationGroupWithItems) => {
+    const GroupIcon = group.config.icon
+    const isExpanded = expandedGroups.includes(group.config.id) || !group.config.collapsible
+    const hasActiveBadge = group.items.some(item => item.badgeCount && item.badgeCount > 0)
+
+    return (
+      <div key={group.config.id} className="mb-2">
+        {/* Group Header */}
+        {group.config.collapsible ? (
+          <button
+            onClick={() => toggleGroup(group.config.id)}
+            className={cn(
+              "flex items-center gap-3 w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors rounded-md",
+              "text-gray-400 hover:text-white hover:bg-hotel-navy-light/50",
+              collapsed && "justify-center px-0"
+            )}
+          >
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left">
+                  {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+                </span>
+                {hasActiveBadge && (
+                  <div className="w-2 h-2 rounded-full bg-hotel-gold animate-pulse" />
+                )}
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 transition-transform duration-200",
+                    isExpanded && "rotate-180"
+                  )}
+                />
+              </>
+            )}
+            {collapsed && <GroupIcon className="h-4 w-4" />}
+          </button>
+        ) : (
+          !collapsed && (
+            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+            </div>
+          )
+        )}
+
+        {/* Group Items */}
+        {(isExpanded || collapsed) && (
+          <div className={cn(
+            "space-y-1",
+            !collapsed && group.config.collapsible && "mt-1 ms-2 ps-2 border-s border-white/10"
+          )}>
+            {group.items.map(renderNavItem)}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -245,14 +184,14 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
       {/* Mobile overlay */}
       {isMobile && isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden animate-fade-in"
+          className="fixed inset-0 bg-black/60 z-[105] lg:hidden animate-fade-in"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar - Prime Connect Premium Navy Theme */}
+      {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 z-50 bg-hotel-navy text-white transform transition-all duration-300 ease-in-out shadow-2xl",
+        "fixed inset-y-0 z-[110] bg-hotel-navy text-white transform transition-all duration-300 ease-in-out shadow-2xl",
         "start-0 border-e border-hotel-navy-dark",
         isMobile ? "lg:hidden w-[85vw] max-w-[320px]" : "hidden lg:block lg:translate-x-0 w-[280px]",
         isOpen ? "translate-x-0" : (document.dir === 'rtl' ? "translate-x-full" : "-translate-x-full"),
@@ -265,32 +204,44 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
             collapsed && "justify-center px-0"
           )}>
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-md bg-gradient-to-br from-hotel-gold to-hotel-gold-dark flex items-center justify-center shadow-lg ring-1 ring-hotel-navy-light">
-                <span className="text-hotel-navy font-bold text-lg font-serif">P</span>
-              </div>
+              <img
+                src="/prime-logo-light.png"
+                alt="Prime Hotels"
+                className="h-8 w-auto"
+              />
               {!collapsed && (
-                <div className="animate-fade-in">
+                <div className="animate-fade-in sr-only">
                   <h1 className="text-lg font-bold text-white tracking-wide font-serif">
-                    PRIME <span className="text-hotel-gold">Connect</span>
+                    Prime Hotels
                   </h1>
                 </div>
               )}
             </div>
             {isMobile && (
-              <Button variant="ghost" size="icon" onClick={onClose} className="text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors"
+              >
                 <X className="h-5 w-5" />
               </Button>
             )}
             {!isMobile && !collapsed && onToggleCollapse && (
-              <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="ms-auto text-gray-400 hover:bg-hotel-navy-light hover:text-white h-8 w-8 transition-colors">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleCollapse}
+                className="ms-auto text-gray-400 hover:bg-hotel-navy-light hover:text-white h-8 w-8 transition-colors"
+              >
                 <ChevronDown className="h-4 w-4 ltr:rotate-90 rtl:-rotate-90" />
               </Button>
             )}
           </div>
 
-          {/* User Profile Summary (Desktop) */}
+          {/* User Profile Summary */}
           {!collapsed && (
-            <div className="px-4 py-6">
+            <div className="px-4 py-5">
               <div className="p-3 rounded-xl bg-hotel-navy-dark border border-hotel-navy-light">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-full bg-hotel-gold flex items-center justify-center border-2 border-hotel-navy shadow-sm">
@@ -312,120 +263,8 @@ export function SidebarNavigation({ isOpen, collapsed = false, onClose, onToggle
           )}
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
-            {filteredNavItems.map((item) => {
-              const Icon = item.icon
-              const isItemActive = isActive(item.href)
-              const isExpanded = expandedItems.includes(item.title)
-
-              return (
-                <div key={item.title}>
-                  {item.children ? (
-                    <button
-                      onClick={() => {
-                        if (isMobile) onClose()
-                        if (!collapsed) toggleExpanded(item.title)
-                      }}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all w-full text-left group min-h-touch",
-                        "text-gray-300 hover:bg-hotel-navy-light hover:text-white hover:shadow-inner",
-                        collapsed && "justify-center px-0"
-                      )}
-                      title={collapsed ? t(item.title) : undefined}
-                    >
-                      <Icon className={cn(
-                        "h-5 w-5 flex-shrink-0 transition-colors duration-200",
-                        isExpanded ? "text-hotel-gold" : "text-white/60 group-hover:text-hotel-gold"
-                      )} />
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1 tracking-wide">{t(item.title)}</span>
-                          {item.badge && (
-                            <Badge className="ms-auto bg-hotel-gold text-hotel-navy border-0 text-[10px] h-5 px-1.5 font-bold">
-                              {item.badge}
-                            </Badge>
-                          )}
-                          <ChevronDown
-                            className={cn(
-                              "h-3.5 w-3.5 transition-transform duration-200 opacity-50",
-                              isExpanded && "rotate-180 opacity-100 text-hotel-gold"
-                            )}
-                          />
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <Link
-                      to={item.href}
-                      onClick={() => {
-                        if (isMobile) onClose()
-                      }}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",
-                        isItemActive
-                          ? "bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-hotel-navy shadow-lg shadow-black/20"
-                          : "text-gray-300 hover:bg-hotel-navy-light hover:text-white hover:shadow-inner",
-                        collapsed && "justify-center px-0"
-                      )}
-                      title={collapsed ? t(item.title) : undefined}
-                    >
-                      {/* Active Indicator Line for collapsed mode */}
-                      {isItemActive && collapsed && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-hotel-gold rounded-e-full" />
-                      )}
-
-                      <Icon className={cn(
-                        "h-5 w-5 flex-shrink-0",
-                        isItemActive ? "text-hotel-navy" : "text-white/60 group-hover:text-hotel-gold transition-colors"
-                      )} />
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1 tracking-wide">{t(item.title)}</span>
-                          {item.badge && (
-                            <Badge className={cn(
-                              "ms-auto text-[10px] h-5 px-1.5 font-bold",
-                              isItemActive ? "bg-hotel-navy/20 text-hotel-navy" : "bg-hotel-gold text-hotel-navy"
-                            )}>
-                              {item.badge}
-                            </Badge>
-                          )}
-                        </>
-                      )}
-                    </Link>
-                  )}
-
-                  {/* Submenu */}
-                  {item.children && isExpanded && !collapsed && (
-                    <div className="mt-1 ms-4 space-y-0.5 ps-3 border-s border-white/10">
-                      {item.children.map((child) => {
-                        const ChildIcon = child.icon
-                        const isChildActive = isActive(child.href)
-                        const hasChildRole = !child.roles || child.roles.includes(primaryRole || 'staff')
-
-                        if (!hasChildRole) return null
-
-                        return (
-                          <Link
-                            key={child.href}
-                            to={child.href}
-                            onClick={() => isMobile && onClose()}
-                            className={cn(
-                              "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                              isChildActive
-                                ? "bg-hotel-navy-light text-hotel-gold font-medium border border-hotel-navy-dark"
-                                : "text-gray-400 hover:bg-hotel-navy-light hover:text-white"
-                            )}
-                          >
-                            <ChildIcon className={cn("h-4 w-4", isChildActive ? "text-hotel-gold" : "text-white/40")} />
-                            <span>{t(child.title)}</span>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+          <nav className="flex-1 px-3 py-2 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
+            {groupedNavigation.map(renderGroup)}
           </nav>
 
           {/* Footer */}

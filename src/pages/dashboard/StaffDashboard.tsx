@@ -24,6 +24,8 @@ import { CardSkeleton } from '@/components/loading/CardSkeleton'
 import { useStaffDashboardStats } from '@/hooks/useStaffDashboardStats'
 import { useUserTasks, useUserSchedule } from '@/hooks/useUserData'
 import { useProperty } from '@/contexts/PropertyContext'
+import { KnowledgeWidget } from '@/components/dashboard/KnowledgeWidget'
+import { DailyQuizWidget } from '@/components/questions'
 
 export function StaffDashboard() {
   const { user, profile, primaryRole } = useAuth()
@@ -257,17 +259,23 @@ export function StaffDashboard() {
           </div>
         </div>
 
-        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/maintenance/submit'}>
+        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/learning/my'}>
           <div className="prime-card-body p-6">
             <div className="text-center">
               <div className="h-14 w-14 rounded-full bg-green-50 group-hover:bg-green-100 flex items-center justify-center mx-auto mb-3 transition-colors">
-                <Activity className="h-7 w-7 text-green-600" />
+                <Award className="h-7 w-7 text-green-600" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.support')}</h3>
-              <p className="text-xs text-gray-500">{t('staff.quick_actions.get_help')}</p>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.my_training')}</h3>
+              <p className="text-xs text-gray-500">{t('staff.quick_actions.complete_training')}</p>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Knowledge & Quiz Widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <KnowledgeWidget />
+        <DailyQuizWidget />
       </div>
 
       {/* Main Content Tabs */}

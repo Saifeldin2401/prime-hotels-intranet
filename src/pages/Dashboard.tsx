@@ -27,7 +27,7 @@ export default function Dashboard() {
       <UserDataDebug />
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <RoleWidget />
         <DocumentsWidget />
         <TrainingWidget />
@@ -35,13 +35,13 @@ export default function Dashboard() {
       </div>
 
       {/* Activity Status Grid */}
-      <div className="grid gap-4 md:grid-cols-2 mb-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mb-4">
         <TaskWidget />
         <MaintenanceWidget />
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Left Column: Quick Actions & Pending */}
         <div className="space-y-4">
           <QuickActionsWidget />

@@ -216,8 +216,25 @@ export function useAssignMaintenanceTicket() {
       if (error) throw error
       return data as MaintenanceTicket
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
+
+      // Send notification to assigned user
+      if (data.assigned_to_id && data.assigned_to_id !== user?.id) {
+        try {
+          await supabase.from('notifications').insert({
+            user_id: data.assigned_to_id,
+            type: 'maintenance_assigned',
+            title: 'Maintenance Ticket Assigned',
+            message: `You have been assigned a ${data.priority} priority maintenance ticket: "${data.title}"`,
+            link: `/maintenance/${data.id}`,
+            data: { ticketId: data.id, priority: data.priority }
+          })
+        } catch (err) {
+          console.error('Notification failed:', err)
+        }
+      }
     }
   })
 }
