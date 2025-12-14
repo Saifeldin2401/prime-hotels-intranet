@@ -41,6 +41,8 @@ import enMessages from './locales/en/messages.json';
 import arMessages from './locales/ar/messages.json';
 import enApprovals from './locales/en/approvals.json';
 import arApprovals from './locales/ar/approvals.json';
+import enPublic from './locales/en/public.json';
+import arPublic from './locales/ar/public.json';
 
 // Define the resources
 const resources = {
@@ -64,6 +66,7 @@ const resources = {
     maintenance: enMaintenance,
     messages: enMessages,
     approvals: enApprovals,
+    public: enPublic,
   },
   ar: {
     common: arCommon,
@@ -85,6 +88,7 @@ const resources = {
     maintenance: arMaintenance,
     messages: arMessages,
     approvals: arApprovals,
+    public: arPublic,
   },
 };
 
