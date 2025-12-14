@@ -62,13 +62,11 @@ export function Header({
 
             {/* Logo Area */}
             <div className="flex items-center group">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-hotel-gold to-hotel-gold-dark flex items-center justify-center shadow-lg group-hover:shadow-hotel-gold/50 transition-all duration-300">
-                <Sparkles className="h-5 w-5 text-hotel-navy fill-current" />
-              </div>
-              <div className="ms-3 hidden md:block">
-                <h1 className="text-xl font-serif font-bold text-white tracking-wide">PRIME <span className="text-hotel-gold">Connect</span></h1>
-                <p className="text-[10px] uppercase tracking-widest text-hotel-gold-light font-medium">Employee Portal</p>
-              </div>
+              <img
+                src="/prime-logo-light.png"
+                alt="Prime Hotels"
+                className="h-12 w-auto opacity-90 transition-opacity hover:opacity-100"
+              />
             </div>
           </div>
 

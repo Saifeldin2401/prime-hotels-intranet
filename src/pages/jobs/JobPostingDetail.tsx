@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CreateReferralDialog } from '@/components/jobs/CreateReferralDialog'
 import {
     Building2,
     MapPin,
@@ -15,6 +16,7 @@ import {
     Edit,
     Trash2,
     Users,
+    UserPlus, // Imported UserPlus
     Mail,
     Phone,
     FileText,
@@ -42,6 +44,7 @@ export default function JobPostingDetail() {
     const queryClient = useQueryClient()
     const { t, i18n } = useTranslation('jobs')
     const [deleteJob, setDeleteJob] = useState(false)
+    const [referralJob, setReferralJob] = useState(false) // Added state
     const isRTL = i18n.dir() === 'rtl'
 
     const canManageJobs = (roles || []).some((userRole) =>
@@ -153,25 +156,39 @@ export default function JobPostingDetail() {
                     </div>
                 }
                 actions={
-                    canManageJobs ? (
-                        <div className="flex items-center gap-2">
-                            <Link to={`/jobs/${id}/edit`}>
-                                <Button variant="outline">
-                                    <Edit className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                                    {t('edit')}
+                    <div className="flex items-center gap-2">
+                        <Button onClick={() => setReferralJob(true)}>
+                            <UserPlus className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                            {t('referrals.refer_candidate', { defaultValue: 'Refer Candidate' })}
+                        </Button>
+
+                        {canManageJobs && (
+                            <>
+                                <Link to={`/jobs/${id}/edit`}>
+                                    <Button variant="outline">
+                                        <Edit className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                        {t('edit')}
+                                    </Button>
+                                </Link>
+                                <Button
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700"
+                                    onClick={() => setDeleteJob(true)}
+                                >
+                                    <Trash2 className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                    {t('delete')}
                                 </Button>
-                            </Link>
-                            <Button
-                                variant="outline"
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => setDeleteJob(true)}
-                            >
-                                <Trash2 className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                                {t('delete')}
-                            </Button>
-                        </div>
-                    ) : null
+                            </>
+                        )}
+                    </div>
                 }
+            />
+
+            <CreateReferralDialog
+                open={referralJob}
+                onOpenChange={setReferralJob}
+                jobId={job.id}
+                jobTitle={job.title}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

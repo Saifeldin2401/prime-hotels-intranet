@@ -52,7 +52,7 @@ const navigation = [
 
 const trainingMenu = [
   { name: 'Training Dashboard', href: '/training/dashboard', icon: LayoutDashboard, roles: ['all'] },
-  { name: 'My Training', href: '/training/my', icon: Target, roles: ['all'] },
+  { name: 'My Learning', href: '/learning/my', icon: Target, roles: ['all'] },
   { name: 'Training Modules', href: '/training/modules', icon: BookOpen, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
   { name: 'Training Builder', href: '/training/builder', icon: Building, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
   { name: 'Training Assignments', href: '/training/assignments', icon: Target, roles: ['regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
@@ -83,21 +83,24 @@ export function Sidebar() {
     )
 
   return (
-    <div className="flex flex-col w-64 bg-card border-e">
-      <div className="flex flex-col gap-4 p-6 border-b">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground font-bold">P</span>
-          </div>
-          <div className="overflow-hidden">
-            <h1 className="font-bold text-lg truncate">Prime Hotels</h1>
-            {!isMultiPropertyUser && currentProperty && (
-              <p className="text-xs text-muted-foreground truncate" title={currentProperty.name}>
-                {currentProperty.name}
-              </p>
-            )}
-          </div>
+    <div className="flex flex-col w-64 bg-card border-e h-screen">
+      <div className="flex flex-col gap-4 p-6 border-b bg-hotel-navy">
+        <div className="flex items-center justify-center">
+          <img
+            src="/prime-logo-light.png"
+            alt="Prime Hotels"
+            className="h-10 w-auto"
+          />
         </div>
+
+        {/* Property name display */}
+        {!isMultiPropertyUser && currentProperty && (
+          <div className="text-center">
+            <p className="text-xs text-white/70 font-medium truncate" title={currentProperty.name}>
+              {currentProperty.name}
+            </p>
+          </div>
+        )}
 
         {isMultiPropertyUser && (
           <Select

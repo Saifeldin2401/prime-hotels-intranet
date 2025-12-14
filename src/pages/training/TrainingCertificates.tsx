@@ -10,12 +10,12 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Award, 
-  Download, 
-  Search, 
-  ExternalLink, 
-  CheckCircle, 
+import {
+  Award,
+  Download,
+  Search,
+  ExternalLink,
+  CheckCircle,
   FileText,
   Shield,
   Printer,
@@ -23,11 +23,12 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
-import type { 
-  TrainingCertificate, 
-  TrainingProgress, 
+import { useTranslation } from 'react-i18next'
+import type {
+  TrainingCertificate,
+  TrainingProgress,
   TrainingModule,
-  Profile 
+  Profile
 } from '@/lib/types'
 
 // Extended type for certificates with joined data
@@ -38,114 +39,8 @@ interface CertificateWithDetails extends TrainingCertificate {
   }
 }
 
-// Bilingual labels
-const labels = {
-  en: {
-    certificates: 'Training Certificates',
-    myCertificates: 'My Certificates',
-    verifyCertificate: 'Verify Certificate',
-    allCertificates: 'All Certificates',
-    downloadHistory: 'Download History',
-    certificateDetails: 'Certificate Details',
-    issuedTo: 'Issued to',
-    issuedOn: 'Issued on',
-    expiresOn: 'Expires on',
-    verificationCode: 'Verification Code',
-    certificateId: 'Certificate ID',
-    trainingModule: 'Training Module',
-    score: 'Score',
-    status: 'Status',
-    valid: 'Valid',
-    expired: 'Expired',
-    revoked: 'Revoked',
-    pending: 'Pending',
-    download: 'Download',
-    print: 'Print',
-    share: 'Share',
-    verify: 'Verify',
-    searchCertificates: 'Search certificates...',
-    enterVerificationCode: 'Enter verification code',
-    verifyButton: 'Verify Certificate',
-    certificateValid: 'Certificate is valid',
-    certificateInvalid: 'Certificate is invalid or expired',
-    noCertificates: 'No certificates found',
-    loading: 'Loading...',
-    error: 'Error',
-    success: 'Success',
-    certificateDownloaded: 'Certificate downloaded successfully',
-    verificationSuccessful: 'Verification successful',
-    verificationFailed: 'Verification failed',
-    issuedBy: 'Issued by',
-    completionDate: 'Completion Date',
-    certificateType: 'Certificate Type',
-    standard: 'Standard',
-    advanced: 'Advanced',
-    excellence: 'Excellence',
-    viewCertificate: 'View Certificate',
-    downloadPDF: 'Download PDF',
-    printCertificate: 'Print Certificate',
-    copyLink: 'Copy Link',
-    qrCode: 'QR Code',
-  },
-  ar: {
-    certificates: 'شهادات التدريب',
-    myCertificates: 'شهاداتي',
-    verifyCertificate: 'تحقق من الشهادة',
-    allCertificates: 'جميع الشهادات',
-    downloadHistory: 'سجل التنزيل',
-    certificateDetails: 'تفاصيل الشهادة',
-    issuedTo: 'صدرت لـ',
-    issuedOn: 'صدرت في',
-    expiresOn: 'تنتهي في',
-    verificationCode: 'رمز التحقق',
-    certificateId: 'معرف الشهادة',
-    trainingModule: 'وحدة التدريب',
-    score: 'الدرجة',
-    status: 'الحالة',
-    valid: 'سارية',
-    expired: 'منتهية الصلاحية',
-    revoked: 'ملغاة',
-    pending: 'معلقة',
-    download: 'تنزيل',
-    print: 'طباعة',
-    share: 'مشاركة',
-    verify: 'تحقق',
-    searchCertificates: 'البحث عن الشهادات...',
-    enterVerificationCode: 'أدخل رمز التحقق',
-    verifyButton: 'تحقق من الشهادة',
-    certificateValid: 'الشهادة صالحة',
-    certificateInvalid: 'الشهادة غير صالحة أو منتهية الصلاحية',
-    noCertificates: 'لم يتم العثور على شهادات',
-    loading: 'جاري التحميل...',
-    error: 'خطأ',
-    success: 'نجح',
-    certificateDownloaded: 'تم تنزيل الشهادة بنجاح',
-    verificationSuccessful: 'نجح التحقق',
-    verificationFailed: 'فشل التحقق',
-    issuedBy: 'صدرت بواسطة',
-    completionDate: 'تاريخ الإنجاز',
-    certificateType: 'نوع الشهادة',
-    standard: 'قياسي',
-    advanced: 'متقدم',
-    excellence: 'ممتاز',
-    viewCertificate: 'عرض الشهادة',
-    downloadPDF: 'تنزيل PDF',
-    printCertificate: 'طباعة الشهادة',
-    copyLink: 'نسخ الرابط',
-    qrCode: 'رمز QR',
-  }
-}
-
-type Language = 'en' | 'ar'
 type CertificateStatus = 'valid' | 'expired' | 'revoked' | 'pending'
 type CertificateType = 'standard' | 'advanced' | 'excellence'
-
-interface CertificateWithDetails extends TrainingCertificate {
-  training_progress: (TrainingProgress & {
-    training_modules: TrainingModule
-    profiles: Profile
-  })
-}
 
 interface VerificationResult {
   valid: boolean
@@ -155,10 +50,9 @@ interface VerificationResult {
 
 export default function TrainingCertificates() {
   const { profile } = useAuth()
-  const [lang, setLang] = useState<Language>('en')
-  const t = labels[lang]
-  const isRTL = lang === 'ar'
-  const dateLocale = lang === 'ar' ? ar : enUS
+  const { t, i18n } = useTranslation('training')
+  const isRTL = i18n.language === 'ar'
+  const dateLocale = i18n.language === 'ar' ? ar : enUS
 
   // State
   const [search, setSearch] = useState('')
@@ -238,12 +132,12 @@ export default function TrainingCertificates() {
         .select('certificate_url')
         .eq('id', certificateId)
         .single()
-      
+
       if (error) throw error
-      
+
       // Log download (would integrate with download tracking)
       console.log('Certificate downloaded:', certificateId)
-      
+
       return data
     },
     onSuccess: () => {
@@ -311,11 +205,11 @@ export default function TrainingCertificates() {
   }
 
   // Filter certificates
-  const filteredMyCertificates = myCertificates?.filter(cert => 
+  const filteredMyCertificates = myCertificates?.filter(cert =>
     !search || cert.training_progress.training_modules.title.toLowerCase().includes(search.toLowerCase())
   ) || []
 
-  const filteredAllCertificates = allCertificates?.filter(cert => 
+  const filteredAllCertificates = allCertificates?.filter(cert =>
     !search || cert.training_progress.training_modules.title.toLowerCase().includes(search.toLowerCase()) ||
     cert.training_progress.profiles.full_name?.toLowerCase().includes(search.toLowerCase())
   ) || []
@@ -323,25 +217,16 @@ export default function TrainingCertificates() {
   return (
     <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
       <PageHeader
-        title={t.certificates}
-        description={isRTL ? 'عرض وإدارة شهادات التدريب والتحقق منها' : 'View and manage training certificates and verification'}
-        actions={
-          <Button
-            className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors"
-            size="sm"
-            onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
-          >
-            {lang === 'en' ? 'العربية' : 'English'}
-          </Button>
-        }
+        title={t('certificates')}
+        description={t('certificateDescription')}
       />
 
       <Tabs defaultValue="my-certificates" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="my-certificates">{t.myCertificates}</TabsTrigger>
-          <TabsTrigger value="verify">{t.verifyCertificate}</TabsTrigger>
-          <TabsTrigger value="all-certificates">{t.allCertificates}</TabsTrigger>
-          <TabsTrigger value="history">{t.downloadHistory}</TabsTrigger>
+          <TabsTrigger value="my-certificates">{t('myCertificates')}</TabsTrigger>
+          <TabsTrigger value="verify">{t('verifyCertificate')}</TabsTrigger>
+          <TabsTrigger value="all-certificates">{t('allCertificates')}</TabsTrigger>
+          <TabsTrigger value="history">{t('downloadHistory')}</TabsTrigger>
         </TabsList>
 
         {/* My Certificates */}
@@ -350,7 +235,7 @@ export default function TrainingCertificates() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder={t.searchCertificates}
+                placeholder={t('searchCertificates')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className={`pl-10 ${isRTL ? 'pr-10' : ''}`}
@@ -360,18 +245,18 @@ export default function TrainingCertificates() {
 
           <Card>
             <CardHeader>
-              <CardTitle>{t.myCertificates}</CardTitle>
+              <CardTitle>{t('myCertificates')}</CardTitle>
             </CardHeader>
             <CardContent>
               {myLoading ? (
-                <div className="text-center py-8 text-gray-700">{t.loading}</div>
+                <div className="text-center py-8 text-gray-700">{t('loading')}</div>
               ) : filteredMyCertificates.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredMyCertificates.map((certificate) => {
                     const status = getCertificateStatus(certificate)
                     const score = certificate.training_progress.quiz_score || 0
                     const type = getCertificateType(score)
-                    
+
                     return (
                       <Card key={certificate.id} className="hover:shadow-lg transition-shadow">
                         <CardContent className="p-6">
@@ -383,9 +268,9 @@ export default function TrainingCertificates() {
                                   {certificate.training_progress.training_modules.title}
                                 </h3>
                                 <div className="text-sm text-gray-600">
-                                  <div>{t.issuedOn}: {format(new Date(certificate.issued_at), 'PPP', { locale: dateLocale })}</div>
+                                  <div>{t('issuedOn')}: {format(new Date(certificate.issued_at), 'PPP', { locale: dateLocale })}</div>
                                   {certificate.expires_at && (
-                                    <div>{t.expiresOn}: {format(new Date(certificate.expires_at), 'PPP', { locale: dateLocale })}</div>
+                                    <div>{t('expiresOn')}: {format(new Date(certificate.expires_at), 'PPP', { locale: dateLocale })}</div>
                                   )}
                                 </div>
                               </div>
@@ -394,21 +279,21 @@ export default function TrainingCertificates() {
                               {t[status]}
                             </Badge>
                           </div>
-                          
+
                           <div className="space-y-2 mb-4">
                             <div className="flex justify-between text-sm">
-                              <span>{t.score}:</span>
+                              <span>{t('score')}:</span>
                               <span className="font-medium">{score}%</span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span>{t.certificateType}:</span>
+                              <span>{t('certificateType')}:</span>
                               <Badge className={`bg-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-100 text-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-800 border border-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'} rounded-md`}>
                                 {t[type]}
                               </Badge>
                             </div>
                             {certificate.expires_at && (
                               <div className="flex justify-between text-sm">
-                                <span>{t.expiresOn}:</span>
+                                <span>{t('expiresOn')}:</span>
                                 <span>{format(new Date(certificate.expires_at), 'PPP', { locale: dateLocale })}</span>
                               </div>
                             )}
@@ -417,11 +302,11 @@ export default function TrainingCertificates() {
                           <div className="flex items-center gap-2">
                             <Button size="sm" onClick={() => handleViewCertificate(certificate)}>
                               <FileText className="w-4 h-4 mr-2" />
-                              {t.viewCertificate}
+                              {t('viewCertificate')}
                             </Button>
                             <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleDownload(certificate.id)}>
                               <Download className="w-4 h-4 mr-2" />
-                              {t.download}
+                              {t('download')}
                             </Button>
                           </div>
 
@@ -429,7 +314,7 @@ export default function TrainingCertificates() {
                             <div className="mt-4 pt-4 border-t">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-gray-600">
-                                  {t.verificationCode}: {certificate.verification_code}
+                                  {t('verificationCode')}: {certificate.verification_code}
                                 </span>
                                 <Button size="sm" className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors" onClick={() => copyCertificateLink(certificate)}>
                                   <ExternalLink className="w-3 h-3" />
@@ -443,7 +328,7 @@ export default function TrainingCertificates() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-700">{t.noCertificates}</div>
+                <div className="text-center py-8 text-gray-700">{t('noCertificates')}</div>
               )}
             </CardContent>
           </Card>
@@ -455,22 +340,22 @@ export default function TrainingCertificates() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />
-                {t.verifyCertificate}
+                {t('verifyCertificate')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="verification-code">{t.enterVerificationCode}</Label>
+                <Label htmlFor="verification-code">{t('enterVerificationCode')}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="verification-code"
                     value={verificationCode}
                     onChange={(e) => setVerificationCode(e.target.value)}
-                    placeholder={t.enterVerificationCode}
+                    placeholder={t('enterVerificationCode')}
                     className="flex-1"
                   />
                   <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" onClick={handleVerify} disabled={verifyCertificateMutation.isPending}>
-                    {verifyCertificateMutation.isPending ? t.loading : t.verifyButton}
+                    {verifyCertificateMutation.isPending ? t('loading') : t('verifyButton')}
                   </Button>
                 </div>
               </div>
@@ -492,25 +377,25 @@ export default function TrainingCertificates() {
                     {verificationResult.certificate && (
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span>{t.trainingModule}:</span>
+                          <span>{t('trainingModule')}:</span>
                           <span className="font-medium">
                             {verificationResult.certificate.training_progress.training_modules.title}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>{t.issuedTo}:</span>
+                          <span>{t('issuedTo')}:</span>
                           <span className="font-medium">
                             {verificationResult.certificate.training_progress.profiles.full_name}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>{t.issuedOn}:</span>
+                          <span>{t('issuedOn')}:</span>
                           <span className="font-medium">
                             {format(new Date(verificationResult.certificate.issued_at), 'PPP', { locale: dateLocale })}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>{t.score}:</span>
+                          <span>{t('score')}:</span>
                           <span className="font-medium">
                             {verificationResult.certificate.training_progress.quiz_score}%
                           </span>
@@ -530,7 +415,7 @@ export default function TrainingCertificates() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder={t.searchCertificates}
+                placeholder={t('searchCertificates')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className={`pl-10 ${isRTL ? 'pr-10' : ''}`}
@@ -540,18 +425,18 @@ export default function TrainingCertificates() {
 
           <Card>
             <CardHeader>
-              <CardTitle>{t.allCertificates}</CardTitle>
+              <CardTitle>{t('allCertificates')}</CardTitle>
             </CardHeader>
             <CardContent>
               {allLoading ? (
-                <div className="text-center py-8 text-gray-700">{t.loading}</div>
+                <div className="text-center py-8 text-gray-700">{t('loading')}</div>
               ) : filteredAllCertificates.length > 0 ? (
                 <div className="space-y-4">
                   {filteredAllCertificates.map((certificate) => {
                     const status = getCertificateStatus(certificate)
                     const score = certificate.training_progress.quiz_score || 0
                     const type = getCertificateType(score)
-                    
+
                     return (
                       <div key={certificate.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50">
                         <div className="flex items-center gap-4">
@@ -564,8 +449,8 @@ export default function TrainingCertificates() {
                               {certificate.training_progress.profiles.full_name}
                             </p>
                             <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
-                              <span>{t.issuedOn}: {format(new Date(certificate.issued_at), 'PPP', { locale: dateLocale })}</span>
-                              <span>{t.score}: {score}%</span>
+                              <span>{t('issuedOn')}: {format(new Date(certificate.issued_at), 'PPP', { locale: dateLocale })}</span>
+                              <span>{t('score')}: {score}%</span>
                             </div>
                           </div>
                         </div>
@@ -577,7 +462,7 @@ export default function TrainingCertificates() {
                             {t[type]}
                           </Badge>
                           <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleViewCertificate(certificate)}>
-                            {t.viewCertificate}
+                            {t('viewCertificate')}
                           </Button>
                         </div>
                       </div>
@@ -585,7 +470,7 @@ export default function TrainingCertificates() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-700">{t.noCertificates}</div>
+                <div className="text-center py-8 text-gray-700">{t('noCertificates')}</div>
               )}
             </CardContent>
           </Card>
@@ -595,12 +480,12 @@ export default function TrainingCertificates() {
         <TabsContent value="history" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>{t.downloadHistory}</CardTitle>
+              <CardTitle>{t('downloadHistory')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8 text-gray-700">
                 <Download className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p>Download history will appear here</p>
+                <p>{t('downloadHistory')}</p>
               </div>
             </CardContent>
           </Card>
@@ -645,13 +530,13 @@ export default function TrainingCertificates() {
                   )}
                   <div className="flex justify-center gap-8 pt-4">
                     <div className="text-center">
-                      <p className="text-sm text-gray-600">{t.score}</p>
+                      <p className="text-sm text-gray-600">{t('score')}</p>
                       <p className="text-2xl font-bold text-gray-800">
                         {selectedCertificate.training_progress.quiz_score}%
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-600">{t.completionDate}</p>
+                      <p className="text-sm text-gray-600">{t('completionDate')}</p>
                       <p className="text-lg font-medium text-gray-800">
                         {format(new Date(selectedCertificate.issued_at), 'PPP', { locale: dateLocale })}
                       </p>
@@ -664,15 +549,15 @@ export default function TrainingCertificates() {
               <div className="flex justify-center gap-4">
                 <Button onClick={() => handleDownload(selectedCertificate.id)}>
                   <Download className="w-4 h-4 mr-2" />
-                  {t.downloadPDF}
+                  {t('download')}
                 </Button>
                 <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => window.print()}>
                   <Printer className="w-4 h-4 mr-2" />
-                  {t.printCertificate}
+                  {t('printCertificate')}
                 </Button>
                 <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => copyCertificateLink(selectedCertificate)}>
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  {t.copyLink}
+                  {t('copyLink')}
                 </Button>
               </div>
             </div>

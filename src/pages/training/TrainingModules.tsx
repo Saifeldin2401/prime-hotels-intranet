@@ -19,7 +19,8 @@ import {
   Users,
   Clock,
   Settings,
-  Eye
+  Eye,
+  Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -179,21 +180,24 @@ export default function TrainingModules() {
 
   const assignToAllMutation = useMutation({
     mutationFn: async ({ moduleId, deadline }: { moduleId: string; deadline?: string }) => {
+      // Using the unified learning_assignments table
       const { error } = await supabase
-        .from('user_training_assignments')
+        .from('learning_assignments')
         .insert([{
-          user_id: null, // Will be updated to assign to all users
-          training_module_id: moduleId,
+          target_type: 'everyone',  // Using correct enum value
+          target_id: null,          // null for everyone
+          content_type: 'module',
+          content_id: moduleId,
           assigned_by: profile?.id,
-          assigned_at: new Date().toISOString(),
-          deadline: deadline,
-          status: 'assigned'
+          due_date: deadline || null,
+          valid_from: new Date().toISOString(),
+          priority: 'normal'
         }])
 
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['training-assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
       setShowAssignDialog(false)
     }
   })
@@ -361,12 +365,12 @@ export default function TrainingModules() {
         </Select>
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Sort by" />
+            <SelectValue placeholder={t('sortBy')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="created_at">Created</SelectItem>
-            <SelectItem value="updated_at">Updated</SelectItem>
-            <SelectItem value="title">Name</SelectItem>
+            <SelectItem value="created_at">{t('created')}</SelectItem>
+            <SelectItem value="updated_at">{t('updated')}</SelectItem>
+            <SelectItem value="title">{t('title')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -374,7 +378,9 @@ export default function TrainingModules() {
       {/* Modules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          <div className="col-span-full text-center py-8 text-gray-700">{t('loading')}</div>
+          <div className="col-span-full flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+          </div>
         ) : modules && modules.length > 0 ? (
           modules.map((module) => (
             <Card key={module.id} className="hover:shadow-lg transition-shadow">
@@ -417,9 +423,11 @@ export default function TrainingModules() {
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
-                      className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors"
+                      className={`${module.status === 'published' ? 'bg-hotel-navy text-white hover:bg-hotel-navy-light' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} border border-hotel-navy rounded-md transition-colors`}
                       size="sm"
                       onClick={() => handleAssign(module.id)}
+                      disabled={module.status !== 'published'}
+                      title={module.status !== 'published' ? 'Only published modules can be assigned' : 'Assign to users'}
                     >
                       <Users className="h-4 w-4" />
                     </Button>
@@ -598,7 +606,7 @@ export default function TrainingModules() {
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={confirmDelete}
         itemName={moduleToDelete?.title || ''}
-        itemType="training module"
+        itemType={t('trainingModule')}
         isLoading={deleteModuleMutation.isPending}
       />
     </div>

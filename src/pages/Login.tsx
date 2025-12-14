@@ -1,6 +1,7 @@
 import { LoginForm } from '@/components/auth/LoginForm'
 import { Building2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 
 export default function Login() {
   const { t } = useTranslation('auth')
@@ -9,53 +10,68 @@ export default function Login() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Brand Side - Hidden on mobile */}
-      <div className="hidden lg:flex flex-col justify-between bg-primary p-10 text-primary-foreground relative overflow-hidden">
-        {/* Abstract Background Pattern */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-overlay"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-primary/40"></div>
+      <div className="hidden lg:flex flex-col justify-between bg-hotel-navy text-white relative overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 transform hover:scale-105"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')",
+          }}
+        />
+        <div className="absolute inset-0 bg-hotel-navy/60 backdrop-blur-[2px]"></div>
 
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-hotel-gold/90 text-primary shadow-lg border border-hotel-gold/50 backdrop-blur-sm">
-            <Building2 className="w-8 h-8" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight font-heading text-hotel-gold">Prime Hotels</span>
+        {/* Gradient Overlay for Depth */}
+        <div className="absolute inset-0 bg-gradient-to-t from-hotel-navy via-transparent to-transparent opacity-90"></div>
+
+        <div className="relative z-10 p-12 flex items-start justify-between">
+          <img
+            src="/prime-logo-light.png"
+            alt="Prime Hotels"
+            className="h-16 w-auto opacity-90"
+          />
+          <LanguageSwitcher />
         </div>
 
-        <div className="relative z-10 space-y-4 max-w-lg">
-          <h1 className="text-4xl font-bold tracking-tight">
+        <div className="relative z-10 p-12 space-y-6 max-w-2xl">
+          <h1 className="text-5xl font-bold tracking-tight font-heading text-white leading-tight">
             {t('welcome_title')}
           </h1>
-          <p className="text-primary-foreground/90 mt-2 text-lg leading-relaxed font-light">
+          <p className="text-white/80 text-xl leading-relaxed font-light max-w-lg">
             {t('welcome_subtitle')}
           </p>
         </div>
 
-        <div className="relative z-10 text-sm text-primary-foreground/60">
+        <div className="relative z-10 p-12 text-sm text-white/50 font-medium">
           {t('copyright', { year })}
         </div>
       </div>
 
       {/* Form Side */}
-      <div className="flex items-center justify-center bg-background p-4 sm:p-6 md:p-8 min-h-screen lg:min-h-0 pt-safe pb-safe">
-        <div className="w-full max-w-md space-y-6 sm:space-y-8">
-          {/* Mobile Logo */}
-          <div className="flex flex-col items-center lg:hidden mb-6">
-            <div className="p-3 rounded-xl bg-hotel-gold/90 text-primary shadow-lg border border-hotel-gold/50 mb-3">
-              <Building2 className="w-8 h-8" />
+      <div className="flex items-center justify-center bg-gray-50 p-4 sm:p-6 md:p-8 min-h-screen lg:min-h-0 pt-safe pb-safe">
+        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+          {/* Mobile Logo with Language Switcher */}
+          <div className="flex flex-col items-center lg:hidden mb-8">
+            <div className="w-full flex justify-between items-center mb-4">
+              <img
+                src="/prime-logo-dark.png"
+                alt="Prime Hotels"
+                className="h-12 w-auto"
+              />
+              <LanguageSwitcher />
             </div>
-            <span className="text-xl font-bold tracking-tight font-heading text-hotel-navy">Prime Hotels</span>
           </div>
 
-          <div className="flex flex-col space-y-2 text-center lg:text-left">
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{t('sign_in_title')}</h2>
-            <p className="text-gray-600 text-sm sm:text-base">
+          <div className="flex flex-col space-y-3 text-center mb-8">
+            <h2 className="text-3xl font-bold tracking-tight text-hotel-navy font-heading">{t('sign_in_title')}</h2>
+            <p className="text-gray-500 text-sm">
               {t('sign_in_subtitle')}
             </p>
           </div>
+
           <LoginForm />
 
           {/* Mobile copyright */}
-          <div className="text-center text-xs text-gray-400 lg:hidden pt-4">
+          <div className="text-center text-xs text-gray-400 lg:hidden pt-8">
             {t('copyright', { year })}
           </div>
         </div>

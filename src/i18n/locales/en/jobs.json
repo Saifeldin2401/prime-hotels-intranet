@@ -112,5 +112,17 @@
     "markHired": "Mark as Hired",
     "viewCv": "View CV",
     "noApplications": "No applications yet",
-    "noApplicationsDesc": "Applications will appear here once candidates apply."
+    "noApplicationsDesc": "Applications will appear here once candidates apply.",
+    "referrals": {
+        "create_title": "Refer a Candidate",
+        "create_desc": "Submit a referral for {{jobTitle}}. Drop their CV below.",
+        "candidate_name": "Candidate Name",
+        "candidate_email": "Email",
+        "candidate_phone": "Phone (Optional)",
+        "resume_upload": "Upload Resume / CV",
+        "drop_file": "Click to upload or drag and drop",
+        "resume_url": "LinkedIn / Portfolio URL (Optional)",
+        "notes": "Notes / Recommendation",
+        "submit": "Submit Referral"
+    }
 }

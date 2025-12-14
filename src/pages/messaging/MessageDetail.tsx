@@ -7,6 +7,7 @@ import {
   useMarkMessageAsRead,
   useUpdateMessage
 } from '@/hooks/useMessaging'
+import { useRealtimeMessaging } from '@/hooks/useRealtimeMessaging'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,9 +27,12 @@ import {
   Clock,
   CheckSquare,
   User,
-  Building
+  Building,
+  Wifi,
+  WifiOff
 } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
+import type { Message } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
@@ -69,6 +73,9 @@ export default function MessageDetail() {
   const sendMessageMutation = useSendMessage()
   const markAsReadMutation = useMarkMessageAsRead()
   const updateMessageMutation = useUpdateMessage()
+  
+  // Real-time messaging
+  const { isConnected } = useRealtimeMessaging()
 
   const handleReply = () => {
     if (!replyContent.trim() || !message) return

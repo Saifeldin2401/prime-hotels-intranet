@@ -21,7 +21,10 @@
         "property": "منشأة",
         "department": "قسم",
         "properties": "منشآت",
-        "departments": "أقسام"
+        "departments": "أقسام",
+        "documents_desc": "مستندات منشورة",
+        "training_desc": "{{count}} قيد التنفيذ",
+        "announcements_desc": "إعلانات غير مقروءة"
     },
     "analytics": {
         "title": "لوحة التحليلات",

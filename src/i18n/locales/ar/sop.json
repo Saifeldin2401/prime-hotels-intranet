@@ -163,5 +163,25 @@
       "compliance_issues": "لم يتم اكتشاف قضايا امتثال حرجة",
       "recent_activity": "لا يوجد نشاط حديث"
     }
-  }
+  },
+  "quizBuilder": "منشئ الاختبار",
+  "enterCorrectAnswer": "أدخل الإجابة الصحيحة",
+  "quizResults": "نتائج الاختبار",
+  "sopQuiz": "اختبار إجراءات التشغيل المعيارية",
+  "totalDocuments": "إجمالي المستندات",
+  "draft": "مسودة",
+  "underReview": "قيد المراجعة",
+  "approved": "معتمد",
+  "filterByStatus": "تصفية حسب الحالة",
+  "department": "القسم",
+  "category": "الفئة",
+  "status": "الحالة",
+  "priority": "الأولوية",
+  "enterSopTitle": "أدخل عنوان إجراءات التشغيل المعيارية",
+  "selectDepartment": "اختر القسم",
+  "enterSopDescription": "أدخل وصف إجراءات التشغيل المعيارية",
+  "selectCategory": "اختر الفئة",
+  "addTag": "إضافة علامة",
+  "switchToRtl": "التبديل إلى RTL",
+  "switchToLtr": "التبديل إلى LTR"
 }

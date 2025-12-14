@@ -7,11 +7,13 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import { Badge } from '@/components/ui/badge'
 import { Loader2, FileText, CheckSquare, User, Search } from 'lucide-react'
 import { format } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 
 export default function GlobalSearch() {
     const [searchParams] = useSearchParams()
     const query = searchParams.get('q') || ''
     const navigate = useNavigate()
+    const { t } = useTranslation('common')
 
     const { data: tasks = [], isLoading: tasksLoading } = useTasks({ search: query })
     const { data: documents = [], isLoading: docsLoading } = useDocuments({ search: query })
@@ -49,7 +51,7 @@ export default function GlobalSearch() {
                 <Tabs defaultValue="all" className="w-full">
                     <TabsList>
                         <TabsTrigger value="all">All Results</TabsTrigger>
-                        <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
+                        <TabsTrigger value="tasks">{t('ui.tasks')} ({tasks.length})</TabsTrigger>
                         <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
                         <TabsTrigger value="people">People ({profiles.length})</TabsTrigger>
                     </TabsList>
@@ -58,7 +60,7 @@ export default function GlobalSearch() {
                         {tasks.length > 0 && (
                             <div className="space-y-4">
                                 <h2 className="text-xl font-semibold flex items-center gap-2">
-                                    <CheckSquare className="w-5 h-5" /> Tasks
+                                    <CheckSquare className="w-5 h-5" /> {t('ui.tasks')}
                                 </h2>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     {tasks.slice(0, 3).map(task => (

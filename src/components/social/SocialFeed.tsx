@@ -24,15 +24,15 @@ import {
   Award,
   AlertCircle,
   CheckCircle,
-  Clock,
   ThumbsUp,
   Laugh,
   Star
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export interface FeedItem {
   id: string
-  type: 'sop_update' | 'training' | 'announcement' | 'task' | 'achievement' | 'hr_reminder'
+  type: 'sop_update' | 'training' | 'announcement' | 'task' | 'achievement' | 'hr_reminder' | 'recognition' | 'birthday'
   author: User
   title: string
   content: string
@@ -66,6 +66,7 @@ interface SocialFeedProps {
 }
 
 export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: SocialFeedProps) {
+  const { t } = useTranslation('common')
   const [newComment, setNewComment] = useState<Record<string, string>>({})
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
 
@@ -80,9 +81,12 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
       case 'task':
         return <Icons.CheckSquare className="h-5 w-5 text-purple-500" />
       case 'achievement':
+      case 'recognition':
         return <Icons.Trophy className="h-5 w-5 text-yellow-500" />
       case 'hr_reminder':
         return <Icons.Bell className="h-5 w-5 text-red-500" />
+      case 'birthday':
+        return <Icons.Heart className="h-5 w-5 text-pink-500" />
       default:
         return <Icons.FileText className="h-5 w-5 text-gray-500" />
     }
@@ -99,9 +103,12 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
       case 'task':
         return 'border-purple-200 bg-purple-50'
       case 'achievement':
+      case 'recognition':
         return 'border-yellow-200 bg-yellow-50'
       case 'hr_reminder':
         return 'border-red-200 bg-red-50'
+      case 'birthday':
+        return 'border-pink-200 bg-pink-50'
       default:
         return 'border-gray-200 bg-gray-50'
     }
@@ -160,7 +167,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                   <div className="flex items-center space-x-2 text-sm text-gray-500">
                     <span>{item.author.department}</span>
                     <span>•</span>
-                    <span>{formatDistanceToNow(item.timestamp)} ago</span>
+                    <span>{formatDistanceToNow(item.timestamp)} {t('social.ago')}</span>
                   </div>
                 </div>
               </div>
@@ -244,13 +251,13 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                     className="social-reaction-btn"
                   >
                     <Icons.Share2 className="h-4 w-4" />
-                    <span className="text-sm">Share</span>
+                    <span className="text-sm">{t('social.share')}</span>
                   </button>
                 </div>
 
                 <button className="social-reaction-btn">
                   <Icons.Bookmark className="h-4 w-4" />
-                  <span className="text-sm">Save</span>
+                  <span className="text-sm">{t('social.save')}</span>
                 </button>
               </div>
 
@@ -273,7 +280,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="font-medium text-sm">{comment.author.name}</span>
                             <span className="text-xs text-gray-500">
-                              {formatDistanceToNow(comment.timestamp)} ago
+                              {formatDistanceToNow(comment.timestamp)} {t('social.ago')}
                             </span>
                           </div>
                           <p className="text-sm text-gray-700">{comment.content}</p>
@@ -306,7 +313,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                     </Avatar>
                     <div className="flex-1">
                       <Textarea
-                        placeholder="Write a comment..."
+                        placeholder={t('social.write_comment')}
                         value={newComment[item.id] || ''}
                         onChange={(e) => setNewComment(prev => ({ ...prev, [item.id]: e.target.value }))}
                         className="min-h-[60px]"
@@ -317,7 +324,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                           onClick={() => handleCommentSubmit(item.id)}
                           disabled={!newComment[item.id]?.trim()}
                         >
-                          Post Comment
+                          {t('social.post_comment')}
                         </Button>
                       </div>
                     </div>

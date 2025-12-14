@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -227,7 +228,7 @@ export default function RequestDetail() {
   if (requestQuery.isLoading) {
     return (
       <div className="flex items-center justify-center py-10">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }

@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
 import { suggestSystemRole, getCommonJobTitles } from '@/lib/jobTitleMappings'
 import type { Profile, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useDepartments } from '@/hooks/useDepartments'
 
 interface UserFormProps {
@@ -24,6 +25,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [phone, setPhone] = useState('')
   const [jobTitle, setJobTitle] = useState('')
   const [role, setRole] = useState<AppRole | ''>('')
+  const [isActive, setIsActive] = useState(true)
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
 
@@ -53,6 +55,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       setFullName(user.full_name || '')
       setPhone(user.phone || '')
       setJobTitle(user.job_title || '')
+      setIsActive(user.is_active !== false) // Default to true if undefined
       // Load user's roles, properties, departments
       loadUserData()
     }
@@ -171,13 +174,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
     mutationFn: async () => {
       if (!user) return
 
-      // Update profile with job title
+      // Update profile with job title and active status
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           full_name: fullName,
           phone: phone || null,
-          job_title: jobTitle || null
+          job_title: jobTitle || null,
+          is_active: isActive
         })
         .eq('id', user.id)
 
@@ -313,6 +317,25 @@ export function UserForm({ user, onClose }: UserFormProps) {
               </p>
             </div>
 
+            {/* User Status Toggle - Only show for existing users */}
+            {user && (
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+                <div className="space-y-0.5">
+                  <Label htmlFor="is-active" className="font-medium">Account Status</Label>
+                  <p className="text-sm text-gray-500">
+                    {isActive
+                      ? 'User can log in and access the system'
+                      : 'User is deactivated and cannot log in'}
+                  </p>
+                </div>
+                <Switch
+                  id="is-active"
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Properties</Label>
               <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
@@ -362,6 +385,9 @@ export function UserForm({ user, onClose }: UserFormProps) {
                 Cancel
               </Button>
               <Button type="submit" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" disabled={createUserMutation.isPending || updateUserMutation.isPending}>
+                {(createUserMutation.isPending || updateUserMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
                 {user ? 'Update' : 'Create'} User
               </Button>
             </div>

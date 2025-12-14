@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,9 +52,9 @@ export function LoginForm() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="password">{t('password_label')}</Label>
-          <Button variant="link" className="p-0 h-auto font-normal text-xs" type="button">
+          <Link to="/forgot-password" className="text-xs text-primary hover:underline">
             {t('forgot_password')}
-          </Button>
+          </Link>
         </div>
         <Input
           id="password"

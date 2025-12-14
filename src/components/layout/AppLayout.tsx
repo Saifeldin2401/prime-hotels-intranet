@@ -17,6 +17,8 @@ import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { useSessionTimeout } from '@/hooks/useSessionTimeout'
+import { SessionTimeoutWarning } from '@/components/auth/SessionTimeoutWarning'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -24,7 +26,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const { t } = useTranslation(['nav', 'common'])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -43,12 +45,19 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const handleLogout = async () => {
     try {
-      // Simple logout without auth context logout method
+      await signOut()
       navigate('/login')
     } catch (error) {
       console.error('Failed to log out', error)
     }
   }
+
+  // Session timeout management (30 min inactivity, 5 min warning)
+  const { showWarning, remainingTimeFormatted, extendSession, logout } = useSessionTimeout({
+    timeoutMs: 30 * 60 * 1000,
+    warningMs: 5 * 60 * 1000,
+    enabled: true
+  })
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -92,8 +101,12 @@ export function AppLayout({ children }: AppLayoutProps) {
             >
               <Menu className="h-6 w-6" />
             </Button>
-            <div className="ml-2 h-8 w-8 rounded-lg bg-gradient-to-br from-hotel-navy to-hotel-navy-dark flex items-center justify-center">
-              <span className="text-white font-bold text-sm">PH</span>
+            <div className="ml-2 flex items-center justify-center">
+              <img
+                src="/prime-logo-dark.png"
+                alt="Prime Hotels"
+                className="h-8 w-auto" // Height 8 (32px) to fit in h-14/16 header
+              />
             </div>
           </div>
 
@@ -122,6 +135,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         onClose={() => setSidebarOpen(false)}
       />
 
+      {/* Session Timeout Warning */}
+      <SessionTimeoutWarning
+        open={showWarning}
+        remainingTime={remainingTimeFormatted}
+        onExtend={extendSession}
+        onLogout={logout}
+      />
 
     </div>
   )

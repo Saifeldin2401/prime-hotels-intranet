@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 import { Slot } from '@radix-ui/react-slot'
+import { Controller, type ControllerProps, type FieldPath, type FieldValues } from 'react-hook-form'
 import { Label } from '@/components/ui/label'
 import { useFormField } from '@/hooks/useFormField'
 
@@ -55,21 +56,18 @@ const FormFieldContext = React.createContext<FormFieldContextValue>({
   name: ''
 })
 
-const FormField = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
-    name: string
-  }
->(({ name, className, children, ...props }, ref) => {
+const FormField = <
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>({
+  ...props
+}: ControllerProps<TFieldValues, TName>) => {
   return (
-    <FormFieldContext.Provider value={{ name }}>
-      <div ref={ref} className={cn('space-y-2', className)} {...props}>
-        {children}
-      </div>
+    <FormFieldContext.Provider value={{ name: props.name }}>
+      <Controller {...props} />
     </FormFieldContext.Provider>
   )
-})
-FormField.displayName = 'FormField'
+}
 
 // Form item component
 const FormItem = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(

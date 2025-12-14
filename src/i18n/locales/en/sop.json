@@ -163,5 +163,25 @@
       "compliance_issues": "No critical compliance issues detected",
       "recent_activity": "No recent activity"
     }
-  }
+  },
+  "quizBuilder": "Quiz Builder",
+  "enterCorrectAnswer": "Enter the correct answer",
+  "quizResults": "Quiz Results",
+  "sopQuiz": "SOP Quiz",
+  "totalDocuments": "Total Documents",
+  "draft": "Draft",
+  "underReview": "Under Review",
+  "approved": "Approved",
+  "filterByStatus": "Filter by status",
+  "department": "Department",
+  "category": "Category",
+  "status": "Status",
+  "priority": "Priority",
+  "enterSopTitle": "Enter SOP title",
+  "selectDepartment": "Select department",
+  "enterSopDescription": "Enter SOP description",
+  "selectCategory": "Select category",
+  "addTag": "Add tag",
+  "switchToRtl": "Switch to RTL",
+  "switchToLtr": "Switch to LTR"
 }

@@ -8,5 +8,10 @@
     },
     "create_task": "Create Task",
     "filter_tasks": "Filter Tasks",
-    "my_tasks": "My Tasks"
+    "my_tasks": "My Tasks",
+    "tasks": "Tasks",
+    "board": "Board",
+    "create_new_task": "Create New Task",
+    "task_not_found": "Task not found",
+    "back_to_tasks": "Back to Tasks"
 }

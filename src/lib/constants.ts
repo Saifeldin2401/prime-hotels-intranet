@@ -1,4 +1,4 @@
-export type AppRole = 
+export type AppRole =
   | 'regional_admin'
   | 'regional_hr'
   | 'property_manager'
@@ -24,7 +24,7 @@ export const ROLE_HIERARCHY: AppRole[] = [
   'staff',
 ]
 
-export type DocumentStatus = 
+export type DocumentStatus =
   | 'DRAFT'
   | 'PENDING_REVIEW'
   | 'APPROVED'
@@ -39,7 +39,7 @@ export const DOCUMENT_STATUSES: Record<DocumentStatus, { label: string; color: s
   REJECTED: { label: 'Rejected', color: 'red' },
 }
 
-export type DocumentVisibility = 
+export type DocumentVisibility =
   | 'all_properties'
   | 'property'
   | 'department'
@@ -52,7 +52,7 @@ export const DOCUMENT_VISIBILITY_OPTIONS: { value: DocumentVisibility; label: st
   { value: 'role', label: 'Specific Role' },
 ]
 
-export type AnnouncementPriority = 
+export type AnnouncementPriority =
   | 'normal'
   | 'important'
   | 'critical'
@@ -64,18 +64,52 @@ export const ANNOUNCEMENT_PRIORITIES: Record<AnnouncementPriority, { label: stri
 }
 
 export type NotificationType =
+  // Approval workflow
   | 'approval_required'
   | 'request_approved'
   | 'request_rejected'
+  | 'request_submitted'
+  | 'request_returned'
+  | 'request_closed'
+  // Comments
+  | 'comment_added'
+  // Training
   | 'training_assigned'
   | 'training_deadline'
+  | 'training_completed'
+  | 'training_overdue'
+  // Documents
   | 'document_published'
   | 'document_acknowledgment_required'
+  | 'document_approved'
+  | 'document_rejected'
+  // Announcements
   | 'announcement_new'
+  // Escalation
   | 'escalation_alert'
+  // HR
   | 'referral_status_update'
+  | 'promotion_approved'
+  | 'transfer_approved'
+  // Maintenance
   | 'maintenance_assigned'
   | 'maintenance_resolved'
+  | 'maintenance_updated'
+  // Messaging
+  | 'message_received'
+  | 'mention'
+  // Tasks
+  | 'task_assigned'
+  | 'task_due_soon'
+  | 'task_overdue'
+  | 'task_completed'
+  // SOP
+  | 'sop_assigned'
+  | 'sop_quiz_required'
+  | 'sop_quiz_passed'
+  | 'sop_quiz_failed'
+  // System
+  | 'system'
 
 export type TrainingProgressStatus =
   | 'not_started'

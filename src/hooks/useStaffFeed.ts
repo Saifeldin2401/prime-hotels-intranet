@@ -13,8 +13,10 @@ export function useStaffFeed() {
             if (!user?.id) return []
 
             const feedItems: FeedItem[] = []
+            const now = new Date()
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-            // 1. Fetch recent announcements (without profile join to avoid PostgREST 400s)
+            // 1. Fetch recent announcements
             const { data: announcements } = await supabase
                 .from('announcements')
                 .select('*')
@@ -30,7 +32,7 @@ export function useStaffFeed() {
                         name: 'Admin',
                         email: '',
                         avatar: null,
-                        role: 'admin',
+                        role: 'corporate_admin',
                         department: 'Management',
                         property: 'System',
                         permissions: []
@@ -44,82 +46,40 @@ export function useStaffFeed() {
                 })
             })
 
-            // 2. Fetch recent SOPs created in last 30 days
-            const { data: sopDocuments, error: sopError } = await supabase
+            // 2. Fetch recent Knowledge Base / SOPs
+            const { data: sopDocuments } = await supabase
                 .from('sop_documents')
                 .select('*')
-                .eq('status', 'published')
-                .order('published_at', { ascending: false })
+                .gte('updated_at', thirtyDaysAgo.toISOString())
+                .order('updated_at', { ascending: false })
                 .limit(5)
 
-            if (sopError) {
-                console.error('Error fetching SOP documents for feed:', sopError)
-            } else {
-                console.log('Fetched SOP documents:', sopDocuments)
-            }
-
             sopDocuments?.forEach((d: any) => {
+                const isNew = new Date(d.created_at) > thirtyDaysAgo
                 feedItems.push({
                     id: `sop-${d.id}`,
                     type: 'sop_update',
                     author: {
                         id: d.created_by || 'system',
-                        name: 'System',
+                        name: 'Knowledge Base',
                         email: '',
                         avatar: null,
-                        role: 'admin',
+                        role: 'corporate_admin',
                         department: 'Operations',
                         property: 'System',
                         permissions: []
                     },
-                    title: `New SOP Published: ${d.title || 'Untitled Document'}`,
-                    content: d.description || 'A new standard operating procedure has been published.',
-                    timestamp: new Date(d.published_at || d.created_at),
-                    tags: ['SOP', d.compliance_level || 'Standard'],
+                    title: isNew
+                        ? `📚 New ${d.content_type?.toUpperCase() || 'Article'}: ${d.title}`
+                        : `📝 Updated: ${d.title}`,
+                    content: d.description || 'A Knowledge Base article has been updated.',
+                    timestamp: new Date(d.updated_at),
+                    tags: [d.content_type || 'SOP'].filter(Boolean),
                     reactions: {},
                     comments: [],
                     actionButton: {
-                        text: 'Read SOP',
-                        onClick: () => window.location.href = `/sop/${d.id}`
-                    }
-                })
-            })
-
-            // Keep fetching generic documents if needed, or remove if sop_documents replaces it. 
-            // For now, I'll keep the variable name generic 'documents' but fetch from 'documents' table as well just in case, but usually we want one source.
-            // If the user says "IT DIDNT SHOW", they likely mean the SOP they just made.
-
-            // 2b. Fetch generic documents (optional, keeping for backward compatibility if table exists)
-            const { data: documents } = await supabase
-                .from('documents')
-                .select('*')
-                .eq('status', 'PUBLISHED')
-                .order('created_at', { ascending: false })
-                .limit(2)
-
-            documents?.forEach((d: any) => {
-                feedItems.push({
-                    id: `doc-${d.id}`,
-                    type: 'sop_update',
-                    author: {
-                        id: d.created_by || 'system',
-                        name: 'System',
-                        email: '',
-                        avatar: null,
-                        role: 'admin',
-                        department: 'Operations',
-                        property: 'System',
-                        permissions: []
-                    },
-                    title: `New Document: ${d.title}`,
-                    content: d.description || 'A new document has been published.',
-                    timestamp: new Date(d.published_at || d.created_at),
-                    tags: [d.category],
-                    reactions: {},
-                    comments: [],
-                    actionButton: {
-                        text: 'View Document',
-                        onClick: () => window.location.href = `/documents/${d.id}`
+                        text: 'Read Article',
+                        onClick: () => window.location.href = `/knowledge/${d.id}`
                     }
                 })
             })
@@ -134,6 +94,8 @@ export function useStaffFeed() {
                 .limit(3)
 
             tasks?.forEach((t: any) => {
+                const dueDate = new Date(t.due_date)
+                const isOverdue = dueDate < now
                 feedItems.push({
                     id: `task-${t.id}`,
                     type: 'task',
@@ -142,12 +104,12 @@ export function useStaffFeed() {
                         name: 'Manager',
                         email: '',
                         avatar: null,
-                        role: 'manager',
+                        role: 'property_manager',
                         department: 'Management',
                         property: 'System',
                         permissions: []
                     },
-                    title: `Task Due: ${t.title}`,
+                    title: isOverdue ? `⚠️ Overdue Task: ${t.title}` : `📋 Task Due: ${t.title}`,
                     content: t.description || 'You have a pending task.',
                     timestamp: new Date(t.created_at),
                     priority: t.priority,
@@ -163,9 +125,11 @@ export function useStaffFeed() {
             // 4. Fetch my training assignments
             const { data: trainings } = await supabase
                 .from('training_assignments')
-                .select('*')
+                .select(`
+                    *,
+                    training:training_modules(id, title)
+                `)
                 .eq('assigned_to_user_id', user.id)
-                .is('completed_at', null)
                 .order('created_at', { ascending: false })
                 .limit(3)
 
@@ -174,17 +138,17 @@ export function useStaffFeed() {
                     id: `train-${t.id}`,
                     type: 'training',
                     author: {
-                        id: t.assigned_by_user_id || t.assigned_by || 'system',
+                        id: t.assigned_by || 'system',
                         name: 'Training Dept',
                         email: '',
                         avatar: null,
-                        role: 'hr',
+                        role: 'property_hr',
                         department: 'HR',
                         property: 'System',
                         permissions: []
                     },
-                    title: `Training Assigned: ${t.training_module_id}`,
-                    content: 'Please complete this training module.',
+                    title: `🎓 Training Assigned: ${t.training?.title || 'New Training'}`,
+                    content: t.deadline ? `Due by ${new Date(t.deadline).toLocaleDateString()}` : 'Please complete this training module.',
                     timestamp: new Date(t.created_at),
                     reactions: {},
                     comments: [],
@@ -195,9 +159,120 @@ export function useStaffFeed() {
                 })
             })
 
+            // 5. Fetch team achievements (completed training in last 7 days)
+            const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            const { data: achievements } = await supabase
+                .from('training_progress')
+                .select(`
+                    *,
+                    user:profiles!training_progress_user_id_fkey(id, full_name, avatar_url),
+                    training:training_modules!training_progress_training_id_fkey(id, title)
+                `)
+                .eq('status', 'completed')
+                .gte('completed_at', sevenDaysAgo.toISOString())
+                .neq('user_id', user.id) // Don't show own achievements
+                .order('completed_at', { ascending: false })
+                .limit(5)
+
+            achievements?.forEach((a: any) => {
+                if (a.user && a.training) {
+                    feedItems.push({
+                        id: `ach-${a.id}`,
+                        type: 'recognition',
+                        author: {
+                            id: a.user.id,
+                            name: a.user.full_name,
+                            email: '',
+                            avatar: a.user.avatar_url,
+                            role: 'staff',
+                            department: '',
+                            property: '',
+                            permissions: []
+                        },
+                        title: `🏆 ${a.user.full_name} completed "${a.training.title}"`,
+                        content: 'Congratulations on completing the training!',
+                        timestamp: new Date(a.completed_at),
+                        reactions: {},
+                        comments: []
+                    })
+                }
+            })
+
+            // 6. Fetch team birthdays (today and next 3 days)
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url, date_of_birth')
+                .not('date_of_birth', 'is', null)
+
+            profiles?.forEach((p: any) => {
+                if (p.date_of_birth) {
+                    const bday = new Date(p.date_of_birth)
+                    const thisYearBday = new Date(now.getFullYear(), bday.getMonth(), bday.getDate())
+                    const daysUntil = Math.ceil((thisYearBday.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+                    if (daysUntil >= 0 && daysUntil <= 3 && p.id !== user.id) {
+                        feedItems.push({
+                            id: `bday-${p.id}`,
+                            type: 'recognition',
+                            author: {
+                                id: p.id,
+                                name: p.full_name,
+                                email: '',
+                                avatar: p.avatar_url,
+                                role: 'staff',
+                                department: '',
+                                property: '',
+                                permissions: []
+                            },
+                            title: daysUntil === 0
+                                ? `🎂 Happy Birthday ${p.full_name}!`
+                                : `🎂 ${p.full_name}'s birthday in ${daysUntil} day${daysUntil > 1 ? 's' : ''}`,
+                            content: daysUntil === 0 ? 'Send your birthday wishes!' : '',
+                            timestamp: thisYearBday,
+                            reactions: {},
+                            comments: []
+                        })
+                    }
+                }
+            })
+
+            // 7. Fetch new team members (hired in last 14 days)
+            const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+            const { data: newJoiners } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url, hire_date, job_title')
+                .gte('hire_date', twoWeeksAgo.toISOString())
+                .neq('id', user.id)
+                .order('hire_date', { ascending: false })
+                .limit(3)
+
+            newJoiners?.forEach((j: any) => {
+                feedItems.push({
+                    id: `newjoiner-${j.id}`,
+                    type: 'recognition',
+                    author: {
+                        id: j.id,
+                        name: j.full_name,
+                        email: '',
+                        avatar: j.avatar_url,
+                        role: 'staff',
+                        department: '',
+                        property: '',
+                        permissions: []
+                    },
+                    title: `👋 Welcome ${j.full_name} to the team!`,
+                    content: j.job_title ? `Joined as ${j.job_title}` : 'Say hello to our new team member!',
+                    timestamp: new Date(j.hire_date),
+                    reactions: {},
+                    comments: []
+                })
+            })
+
             // Sort by timestamp desc
             return feedItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
         },
-        enabled: !!user?.id
+        enabled: !!user?.id,
+        staleTime: 1000 * 60 * 5 // Cache for 5 minutes
     })
 }
+

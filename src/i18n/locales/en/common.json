@@ -123,10 +123,68 @@
     "super_admin": "Super Admin",
     "admin": "Administrator",
     "regional_admin": "Regional Admin",
+    "regional_hr": "Regional HR",
     "property_manager": "Property Manager",
-    "department_manager": "Department Manager",
-    "hr_manager": "HR Manager",
-    "staff": "Staff",
-    "corporate_hr": "Corporate HR"
+    "property_hr": "Property HR",
+    "department_head": "Department Head",
+    "staff": "Staff"
+  },
+  "errors": {
+    "unauthorized": "Unauthorized",
+    "unauthorized_description": "You don't have permission to access this page",
+    "go_to_home": "Go to Home",
+    "not_found": "Not Found",
+    "task_not_found": "Task not found",
+    "back_to_tasks": "Back to Tasks"
+  },
+  "ui": {
+    "board": "Board",
+    "create_new_task": "Create New Task",
+    "increment": "Increment",
+    "sort_by": "Sort by",
+    "created": "Created",
+    "updated": "Updated",
+    "download_history": "Download history will appear here",
+    "training_builder_test": "Training Builder Test",
+    "assigned": "Assigned",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "overdue": "Overdue",
+    "no_training_assigned": "No training assigned",
+    "progress": "Progress",
+    "switch_to_rtl": "Switch to RTL",
+    "switch_to_ltr": "Switch to LTR",
+    "tasks": "Tasks"
+  },
+  "social": {
+    "ago": "ago",
+    "share": "Share",
+    "save": "Save",
+    "post_comment": "Post Comment",
+    "write_comment": "Write a comment..."
+  },
+  "confirm": {
+    "delete_title": "Delete {{item}}?",
+    "delete_message": "Are you sure you want to delete this? This action cannot be undone.",
+    "delete": "Delete",
+    "logout_title": "Log Out?",
+    "logout_message": "Are you sure you want to log out? You will need to sign in again to access the system.",
+    "logout": "Log Out",
+    "archive_title": "Archive {{item}}?",
+    "archive_message": "This will archive the item and hide it from active views. You can restore it later if needed.",
+    "archive": "Archive",
+    "discard_title": "Discard Changes?",
+    "discard_message": "You have unsaved changes. Are you sure you want to leave? Your changes will be lost.",
+    "discard": "Discard",
+    "keep_editing": "Keep Editing"
+  },
+  "action": {
+    "try_again": "Try Again",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "create": "Create",
+    "update": "Update",
+    "refresh": "Refresh"
   }
 }

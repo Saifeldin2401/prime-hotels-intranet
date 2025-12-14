@@ -1,14 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import type { 
-  TrainingModule, 
-  TrainingAssignment, 
-  TrainingProgress, 
+import type {
+  TrainingModule,
+  TrainingAssignment,
+  TrainingProgress,
   TrainingContentBlock,
   TrainingQuiz,
-  TrainingQuizAttempt 
+  TrainingQuizAttempt
 } from '@/lib/types'
+import { learningService } from '@/services/learningService'
+import type { QuestionStatus } from '@/types/questions'
+
 
 // Training Modules
 export function useTrainingModules(filters?: {
@@ -49,7 +52,7 @@ export function useTrainingModules(filters?: {
 
       const { data, error } = await query
       if (error) throw error
-      
+
       return data as (TrainingModule & {
         profiles?: { full_name: string; email: string }
         training_content_blocks?: TrainingContentBlock[]
@@ -84,7 +87,7 @@ export function useTrainingModule(moduleId: string) {
         .single()
 
       if (error) throw error
-      
+
       return data as TrainingModule & {
         profiles?: { full_name: string; email: string }
         training_content_blocks?: TrainingContentBlock[]
@@ -298,7 +301,7 @@ export function useTrainingAssignments(filters?: {
 
       const { data, error } = await query
       if (error) throw error
-      
+
       return data as (TrainingAssignment & {
         training_modules?: TrainingModule
         profiles?: { full_name: string; email: string }
@@ -366,7 +369,7 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
 
       const { data, error } = await query
       if (error) throw error
-      
+
       return data as (TrainingProgress & {
         training_modules?: TrainingModule
         training_assignments?: TrainingAssignment
@@ -379,9 +382,9 @@ export function useUpdateTrainingProgress() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ 
-      id, 
-      ...updates 
+    mutationFn: async ({
+      id,
+      ...updates
     }: Partial<TrainingProgress> & { id: string }) => {
       const { data, error } = await supabase
         .from('training_progress')
@@ -409,12 +412,12 @@ export function useStartTraining() {
   const { user } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ 
-      trainingId, 
-      assignmentId 
-    }: { 
+    mutationFn: async ({
+      trainingId,
+      assignmentId
+    }: {
       trainingId: string
-      assignmentId?: string 
+      assignmentId?: string
     }) => {
       if (!user) throw new Error('User must be authenticated')
 
@@ -444,13 +447,14 @@ export function useCompleteTraining() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ 
-      progressId, 
-      quizScore 
-    }: { 
+    mutationFn: async ({
+      progressId,
+      quizScore
+    }: {
       progressId: string
-      quizScore?: number 
+      quizScore?: number
     }) => {
+      // Update progress to completed
       const { data, error } = await supabase
         .from('training_progress')
         .update({
@@ -460,16 +464,52 @@ export function useCompleteTraining() {
           updated_at: new Date().toISOString(),
         })
         .eq('id', progressId)
-        .select()
+        .select(`
+          *,
+          training_modules(id, title)
+        `)
         .single()
 
       if (error) throw error
+
+      // Auto-generate certificate
+      if (data && data.training_modules) {
+        try {
+          // Get user info for certificate
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', user.id)
+              .single()
+
+            // Create certificate
+            await supabase.from('certificates').insert({
+              user_id: user.id,
+              recipient_name: profile?.full_name || user.email || 'Participant',
+              recipient_email: user.email,
+              certificate_type: 'training',
+              title: data.training_modules.title,
+              completion_date: new Date().toISOString(),
+              score: quizScore,
+              training_module_id: data.training_modules.id,
+              training_progress_id: progressId
+            })
+          }
+        } catch (certError) {
+          console.error('Certificate generation failed:', certError)
+          // Don't throw - training completion should succeed even if cert fails
+        }
+      }
+
       return data
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['training-progress'] })
       queryClient.invalidateQueries({ queryKey: ['my-training'] })
       queryClient.invalidateQueries({ queryKey: ['training-module', data.training_id] })
+      queryClient.invalidateQueries({ queryKey: ['certificates'] })
     },
   })
 }
@@ -560,9 +600,17 @@ export function useQuizAttempts(moduleId?: string, userId?: string) {
 
       const { data, error } = await query
       if (error) throw error
-      
+
       return data as TrainingQuizAttempt[]
     },
+  })
+}
+
+// Learning Quizzes (Standalone)
+export function useLearningQuizzes(status?: QuestionStatus) {
+  return useQuery({
+    queryKey: ['learning-quizzes', status],
+    queryFn: () => learningService.getQuizzes(status)
   })
 }
 
@@ -591,8 +639,8 @@ export function useTrainingStats() {
         totalAssigned: assignments?.length || 0,
         inProgress: progress?.filter(p => p.status === 'in_progress').length || 0,
         completed: progress?.filter(p => p.status === 'completed').length || 0,
-        overdue: assignments?.filter(a => 
-          a.deadline && new Date(a.deadline) < new Date() && 
+        overdue: assignments?.filter(a =>
+          a.deadline && new Date(a.deadline) < new Date() &&
           !progress?.find(p => p.training_id === a.training_module_id && p.status === 'completed')
         ).length || 0,
         averageScore: 0, // Could calculate from quiz attempts
@@ -600,5 +648,24 @@ export function useTrainingStats() {
 
       return stats
     },
+  })
+}
+
+// Assignment Progress
+export function useAssignmentProgress(assignmentId: string | null) {
+  return useQuery({
+    queryKey: ['assignment-progress', assignmentId],
+    queryFn: () => learningService.getAssignmentProgress(assignmentId!),
+    enabled: !!assignmentId
+  })
+}
+
+export function useMyAssignments() {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: ['my-assignments', user?.id],
+    queryFn: () => learningService.getMyAssignments(),
+    enabled: !!user?.id
   })
 }

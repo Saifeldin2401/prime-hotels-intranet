@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -9,6 +10,8 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { RoleBasedRedirect } from '@/components/auth/RoleBasedRedirect'
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
+import { useTranslation } from 'react-i18next'
 import Login from '@/pages/Login'
 import Unauthorized from '@/pages/Unauthorized'
 import { StaffDashboard } from '@/pages/dashboard/StaffDashboard'
@@ -17,15 +20,15 @@ import PropertyManagement from '@/pages/admin/PropertyManagement'
 import DocumentLibrary from '@/pages/documents/DocumentLibrary'
 import DocumentDetail from '@/pages/documents/DocumentDetail'
 import TrainingModules from '@/pages/training/TrainingModules'
-import MyTraining from '@/pages/training/MyTraining'
-import TrainingDashboard from '@/pages/training/TrainingDashboard'
+
+import MyCertificates from '@/pages/training/MyCertificates'
+
 import TrainingBuilder from '@/pages/training/TrainingBuilder'
 import TrainingAssignments from '@/pages/training/TrainingAssignments'
 import TrainingCertificates from '@/pages/training/TrainingCertificates'
 import TrainingPaths from '@/pages/training/TrainingPaths'
 import AnnouncementFeed from '@/pages/announcements/AnnouncementFeed'
-import SOPLibrary from '@/pages/sop/SOPLibrary'
-import SOPViewer from '@/pages/sop/SOPViewer'
+
 import SubmitTicket from '@/pages/maintenance/SubmitTicket'
 import MaintenanceDashboard from '@/pages/maintenance/MaintenanceDashboard'
 import MaintenanceTicketDetail from '@/pages/maintenance/MaintenanceTicketDetail'
@@ -56,8 +59,29 @@ import PromotionTransferHistory from '@/pages/hr/PromotionTransferHistory'
 import RequestDetail from '@/pages/hr/RequestDetail'
 import RequestsInbox from '@/pages/hr/RequestsInbox'
 import HROperationsCenter from '@/pages/hr/HROperationsCenter'
-import SOPQuizBuilder from '@/pages/sop/SOPQuizBuilder'
-import SOPQuizTaker from '@/pages/sop/SOPQuizTaker'
+
+import KnowledgeHome from '@/pages/knowledge/KnowledgeHome'
+import KnowledgeViewer from '@/pages/knowledge/KnowledgeViewer'
+import KnowledgeSearch from '@/pages/knowledge/KnowledgeSearch'
+import KnowledgeBrowse from '@/pages/knowledge/KnowledgeBrowse'
+import KnowledgeEditor from '@/pages/knowledge/KnowledgeEditor'
+import KnowledgeAnalytics from '@/pages/knowledge/KnowledgeAnalytics'
+import KnowledgeReview from '@/pages/knowledge/KnowledgeReview'
+import QuestionEditor from '@/pages/questions/QuestionEditor'
+import QuestionReview from '@/pages/questions/QuestionReview'
+import QuestionLibrary from '@/pages/questions/QuestionLibrary'
+import QuestionGeneratorPage from '@/pages/questions/QuestionGeneratorPage'
+import QuizBuilder from '@/pages/learning/QuizBuilder'
+import QuizList from '@/pages/learning/QuizList'
+import MyLearning from '@/pages/learning/MyLearning'
+import AssignmentManager from '@/pages/learning/AssignmentManager'
+import QuizPlayer from '@/pages/learning/QuizPlayer'
+import MicrolearningViewer from '@/pages/learning/MicrolearningViewer'
+import TrainingPlayer from '@/pages/training/TrainingPlayer'
+import TrainingAnalytics from '@/pages/training/TrainingAnalytics'
+import PublicHome from '@/pages/public/PublicHome'
+import ForgotPassword from '@/pages/auth/ForgotPassword'
+import ResetPassword from '@/pages/auth/ResetPassword'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,13 +94,20 @@ const queryClient = new QueryClient({
 
 function AppRoutes() {
   const { user, loading } = useAuth()
+  const { t, i18n } = useTranslation('common')
+
+  // Sync document direction and language with i18n
+  useEffect(() => {
+    document.documentElement.dir = i18n.dir()
+    document.documentElement.lang = i18n.language
+  }, [i18n.language])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
+          <p className="mt-4 text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     )
@@ -84,19 +115,33 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={user ? <Navigate to="/" replace /> : <Login />}
-      />
-      <Route path="/unauthorized" element={<Unauthorized />} />
+      {/* Public Home - Default route for non-authenticated users */}
       <Route
         path="/"
+        element={user ? <Navigate to="/home" replace /> : <PublicHome />}
+      />
+      {/* Authenticated Home - Redirects based on role */}
+      <Route
+        path="/home"
         element={
           <ProtectedRoute>
             <RoleBasedRedirect />
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/home" replace /> : <Login />}
+      />
+      <Route
+        path="/forgot-password"
+        element={user ? <Navigate to="/home" replace /> : <ForgotPassword />}
+      />
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
+      />
+      <Route path="/unauthorized" element={<Unauthorized />} />
       <Route
         path="/profile"
         element={
@@ -247,16 +292,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/training"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <TrainingDashboard />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
+
       <Route
         path="/training/modules"
         element={
@@ -269,24 +305,19 @@ function AppRoutes() {
       />
       <Route
         path="/training/my"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <MyTraining />
-            </AppLayout>
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/learning/my" replace />}
       />
       <Route
-        path="/training/dashboard"
+        path="/training/certificates"
         element={
           <ProtectedRoute>
             <AppLayout>
-              <TrainingDashboard />
+              <MyCertificates />
             </AppLayout>
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/training/builder"
         element={
@@ -327,6 +358,312 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      {/* Knowledge Base Routes */}
+      <Route
+        path="/knowledge"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <KnowledgeHome />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <KnowledgeViewer />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/search"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <KnowledgeSearch />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/browse"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <KnowledgeBrowse />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/create"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <KnowledgeEditor />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/:id/edit"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <KnowledgeEditor />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/analytics"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <KnowledgeAnalytics />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/review"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+            <AppLayout>
+              <KnowledgeReview />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/questions"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <QuestionLibrary />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/questions/new"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+            <AppLayout>
+              <QuestionEditor />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/questions/generate"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+            <AppLayout>
+              <QuestionGeneratorPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/questions/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <QuestionReview />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/questions/:id/edit"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+            <AppLayout>
+              <QuestionEditor />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Learning Management Routes */}
+      <Route
+        path="/learning/quizzes"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'department_head']}>
+            <AppLayout>
+              <QuizList />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learning/quizzes/new"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'department_head']}>
+            <AppLayout>
+              <QuizBuilder />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learning/quizzes/:id"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'department_head']}>
+            <AppLayout>
+              <QuizBuilder />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Legacy SOP Routes - Redirected */}
+      <Route path="/sop/quiz/builder" element={<Navigate to="/learning/quizzes/new" replace />} />
+      <Route path="/sop/quiz/:id" element={<Navigate to="/learning/quizzes/:id/take" replace />} />
+      <Route
+        path="/learning/quizzes/:id/take"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <QuizPlayer />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learning/assignments"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'department_head']}>
+            <AppLayout>
+              <AssignmentManager />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learning/my"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MyLearning />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learning/microlearning/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MicrolearningViewer />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learning/training/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingPlayer />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learning/analytics"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingAnalytics />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Training Routes */}
+      <Route
+        path="/training"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingModules />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/training/dashboard"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingAnalytics />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/training/modules"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingModules />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/training/builder"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingBuilder />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/training/builder/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingBuilder />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/training/assignments"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingAssignments />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/training/paths"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingPaths />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/training/certificates"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TrainingCertificates />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/announcements"
         element={
@@ -337,26 +674,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/sop"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <SOPLibrary />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/sop/:id"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <SOPViewer />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/sop" element={<Navigate to="/knowledge" replace />} />
+      <Route path="/sop/:id" element={<Navigate to="/knowledge/:id" replace />} />
       <Route
         path="/maintenance"
         element={
@@ -440,7 +759,7 @@ function AppRoutes() {
       <Route
         path="/hr/referrals"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+          <ProtectedRoute>
             <AppLayout>
               <EmployeeReferrals />
             </AppLayout>

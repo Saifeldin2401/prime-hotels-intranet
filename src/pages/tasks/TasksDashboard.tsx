@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, LayoutGrid, List as ListIcon, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 function StatCard({ label, value }: { label: string, value: number }) {
   return (
@@ -28,6 +29,7 @@ function StatCard({ label, value }: { label: string, value: number }) {
 
 export default function TasksDashboard() {
   const { user } = useAuth()
+  const { t } = useTranslation('tasks')
   const [view, setView] = useState<'list' | 'kanban'>('kanban')
   const [filters, setFilters] = useState({})
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -43,14 +45,14 @@ export default function TasksDashboard() {
     <div className="space-y-6 container mx-auto py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('tasks')}</h1>
           <p className="text-gray-600">
             Manage and track your tasks and projects.
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          New Task
+          {t('create_task')}
         </Button>
       </div>
 
@@ -73,7 +75,7 @@ export default function TasksDashboard() {
 
         <Tabs value={view} onValueChange={(v) => setView(v as any)} className="w-[200px]">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="kanban"><LayoutGrid className="w-4 h-4 mr-2" />Board</TabsTrigger>
+            <TabsTrigger value="kanban"><LayoutGrid className="w-4 h-4 mr-2" />{t('board')}</TabsTrigger>
             <TabsTrigger value="list"><ListIcon className="w-4 h-4 mr-2" />List</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -103,7 +105,7 @@ export default function TasksDashboard() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create New Task</DialogTitle>
+            <DialogTitle>{t('create_new_task')}</DialogTitle>
           </DialogHeader>
           <TaskForm
             onSuccess={() => setShowCreateDialog(false)}

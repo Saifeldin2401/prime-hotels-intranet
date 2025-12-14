@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { UserForm } from '@/components/admin/UserForm'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { Plus, Users } from 'lucide-react'
+import { Plus, Users, Loader2 } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 
 import { useTranslation } from 'react-i18next'
@@ -83,8 +83,8 @@ export default function UserManagement() {
           </div>
 
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('loading')}
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
             </div>
           ) : filteredUsers && filteredUsers.length > 0 ? (
             <div className="space-y-2">

@@ -1,0 +1,62 @@
+{
+    "title": "Knowledge Base",
+    "subtitle": "Your centralized hub for operational knowledge",
+    "search_placeholder": "Search articles, SOPs, policies...",
+    "featured": "Featured",
+    "recent": "Recently Updated",
+    "browse_by_type": "Browse by Type",
+    "view_all": "View all",
+    "required_reading": "Required Reading",
+    "pending": "pending",
+    "bookmarks": "Bookmarks",
+    "manage": "Manage Knowledge Base",
+    "create_article": "Create Article",
+    "review_pending": "Review Pending",
+    "analytics": "View Analytics",
+    "content_types": {
+        "sop": "Standard Operating Procedure",
+        "policy": "Policy Document",
+        "guide": "How-to Guide",
+        "checklist": "Interactive Checklist",
+        "reference": "Quick Reference",
+        "faq": "FAQ",
+        "video": "Video Tutorial",
+        "visual": "Diagram/Infographic"
+    },
+    "article": {
+        "back": "Back",
+        "on_this_page": "On This Page",
+        "info": "Article Info",
+        "type": "Type",
+        "version": "Version",
+        "department": "Department",
+        "next_review": "Next Review",
+        "tags": "Tags",
+        "views": "views",
+        "min_read": "min read",
+        "updated": "Updated"
+    },
+    "feedback": {
+        "helpful": "Was this article helpful?",
+        "yes": "Yes",
+        "no": "No",
+        "thanks": "Thank you for your feedback!"
+    },
+    "comments": {
+        "title": "Discussion",
+        "placeholder": "Ask a question or leave a comment...",
+        "mark_question": "Mark as question",
+        "post": "Post",
+        "no_comments": "No comments yet. Be the first to contribute!"
+    },
+    "acknowledgment": {
+        "title": "Acknowledge this article",
+        "description": "Confirm that you have read and understood this content.",
+        "button": "I Acknowledge"
+    },
+    "empty": {
+        "not_found": "Article Not Found",
+        "no_access": "The article you're looking for doesn't exist or you don't have access.",
+        "back_home": "Back to Knowledge Base"
+    }
+}

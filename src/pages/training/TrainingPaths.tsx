@@ -21,7 +21,8 @@ import {
   Edit,
   Trash2,
   Briefcase,
-  GraduationCap
+  GraduationCap,
+  Loader2
 } from 'lucide-react'
 import type {
   TrainingPath,
@@ -291,7 +292,9 @@ export default function TrainingPaths() {
             </CardHeader>
             <CardContent>
               {enrollmentsLoading ? (
-                <div className="text-center py-8 text-gray-700">{t('loading')}</div>
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+                </div>
               ) : myEnrollments && myEnrollments.length > 0 ? (
                 <div className="space-y-4">
                   {myEnrollments.map((enrollment) => (
@@ -346,7 +349,9 @@ export default function TrainingPaths() {
               </CardHeader>
               <CardContent>
                 {pathsLoading ? (
-                  <div className="text-center py-8 text-gray-700">{t('loading')}</div>
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+                  </div>
                 ) : paths && paths.length > 0 ? (
                   <div className="space-y-4">
                     {paths.map((path) => (
@@ -373,7 +378,7 @@ export default function TrainingPaths() {
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button size="sm" className="bg-red-500 text-white hover:bg-red-600 border border-red-500 rounded-md transition-colors" onClick={() => handleDelete(path)}>
-                            <Trash2 className="w-4 w-4" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
@@ -493,7 +498,7 @@ export default function TrainingPaths() {
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={confirmDelete}
         itemName={pathToDelete?.title || ''}
-        itemType="learning path"
+        itemType={t('learningPath')}
         isLoading={deletePathMutation.isPending}
       />
     </div>
