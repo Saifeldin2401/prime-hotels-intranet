@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Pin, Loader2 } from 'lucide-react'
 import type { Announcement } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
+import { PullToRefresh } from '@/components/mobile'
 
 type PriorityValue = Announcement['priority']
 
@@ -152,195 +153,202 @@ export default function AnnouncementFeed() {
 
   const isAdmin = primaryRole && ['regional_admin', 'regional_hr'].includes(primaryRole)
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['announcements'] })
+    await queryClient.invalidateQueries({ queryKey: ['announcement-reads', profile?.id] })
+  }
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={
-          isAdmin && (
-            <Button onClick={startCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('create')}
-            </Button>
-          )
-        }
-      />
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="space-y-6">
+        <PageHeader
+          title={t('title')}
+          description={t('description')}
+          actions={
+            isAdmin && (
+              <Button onClick={startCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('create')}
+              </Button>
+            )
+          }
+        />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('title')}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              {isLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
-                </div>
-              ) : announcements && announcements.length > 0 ? (
-                <div className="space-y-4">
-                  {announcements.map((announcement) => {
-                    const isRead = readIds?.includes(announcement.id)
-                    const priorityColor = {
-                      normal: '',
-                      important: 'border-yellow-400 bg-yellow-50',
-                      critical: 'border-red-400 bg-red-50',
-                    }[announcement.priority]
-                    return (
-                      <div
-                        key={announcement.id}
-                        className={`p-4 border rounded-lg hover:bg-accent ${priorityColor}`}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('title')}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+                  </div>
+                ) : announcements && announcements.length > 0 ? (
+                  <div className="space-y-4">
+                    {announcements.map((announcement) => {
+                      const isRead = readIds?.includes(announcement.id)
+                      const priorityColor = {
+                        normal: '',
+                        important: 'border-yellow-400 bg-yellow-50',
+                        critical: 'border-red-400 bg-red-50',
+                      }[announcement.priority]
+                      return (
+                        <div
+                          key={announcement.id}
+                          className={`p-4 border rounded-lg hover:bg-accent ${priorityColor}`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {announcement.pinned && <Pin className="w-4 h-4" />}
+                              <h3 className="font-semibold">{announcement.title}</h3>
+                            </div>
+                            <PriorityBadge priority={announcement.priority} />
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">{announcement.content}</p>
+                          <div className="flex items-center justify-between text-xs text-gray-600">
+                            <span>{new Date(announcement.created_at).toLocaleString()}</span>
+                            <div className="flex items-center gap-2">
+                              {!isRead && (
+                                <Button
+                                  size="sm"
+                                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                  onClick={() => handleMarkAsRead(announcement.id)}
+                                  disabled={markAsReadMutation.isPending}
+                                >
+                                  {t('actions.markRead')}
+                                </Button>
+                              )}
+                              {isAdmin && (
+                                <Button
+                                  size="sm"
+                                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                  onClick={() => startEdit(announcement)}
+                                >
+                                  {t('actions.edit')}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-600">
+                    {t('noAnnouncements')}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {isAdmin && (
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle>{editingAnnouncement ? t('edit') : t('create')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">{t('form.title')}</Label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="content">{t('form.content')}</Label>
+                    <Textarea
+                      id="content"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      rows={4}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('form.priority')}</Label>
+                    <Select value={priority} onValueChange={(v: PriorityValue) => setPriority(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {priorityOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="pinned"
+                      checked={pinned}
+                      onChange={(e) => setPinned(e.target.checked)}
+                    />
+                    <Label htmlFor="pinned">{t('form.pinned')}</Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="scheduledAt">{t('form.schedule')}</Label>
+                    <Input
+                      id="scheduledAt"
+                      type="datetime-local"
+                      value={scheduledAt}
+                      onChange={(e) => setScheduledAt(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="expiresAt">{t('form.expires')}</Label>
+                    <Input
+                      id="expiresAt"
+                      type="datetime-local"
+                      value={expiresAt}
+                      onChange={(e) => setExpiresAt(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    {editingAnnouncement && (
+                      <Button
+                        type="button"
+                        className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                        onClick={resetForm}
+                        disabled={upsertMutation.isPending}
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {announcement.pinned && <Pin className="w-4 h-4" />}
-                            <h3 className="font-semibold">{announcement.title}</h3>
-                          </div>
-                          <PriorityBadge priority={announcement.priority} />
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">{announcement.content}</p>
-                        <div className="flex items-center justify-between text-xs text-gray-600">
-                          <span>{new Date(announcement.created_at).toLocaleString()}</span>
-                          <div className="flex items-center gap-2">
-                            {!isRead && (
-                              <Button
-                                size="sm"
-                                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                onClick={() => handleMarkAsRead(announcement.id)}
-                                disabled={markAsReadMutation.isPending}
-                              >
-                                {t('actions.markRead')}
-                              </Button>
-                            )}
-                            {isAdmin && (
-                              <Button
-                                size="sm"
-                                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                onClick={() => startEdit(announcement)}
-                              >
-                                {t('actions.edit')}
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-600">
-                  {t('noAnnouncements')}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {isAdmin && (
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>{editingAnnouncement ? t('edit') : t('create')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                <div className="space-y-2">
-                  <Label htmlFor="title">{t('form.title')}</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="content">{t('form.content')}</Label>
-                  <Textarea
-                    id="content"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    rows={4}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t('form.priority')}</Label>
-                  <Select value={priority} onValueChange={(v: PriorityValue) => setPriority(v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {priorityOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="pinned"
-                    checked={pinned}
-                    onChange={(e) => setPinned(e.target.checked)}
-                  />
-                  <Label htmlFor="pinned">{t('form.pinned')}</Label>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="scheduledAt">{t('form.schedule')}</Label>
-                  <Input
-                    id="scheduledAt"
-                    type="datetime-local"
-                    value={scheduledAt}
-                    onChange={(e) => setScheduledAt(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="expiresAt">{t('form.expires')}</Label>
-                  <Input
-                    id="expiresAt"
-                    type="datetime-local"
-                    value={expiresAt}
-                    onChange={(e) => setExpiresAt(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  {editingAnnouncement && (
-                    <Button
-                      type="button"
-                      className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                      onClick={resetForm}
-                      disabled={upsertMutation.isPending}
-                    >
-                      {t('form.cancel')}
-                    </Button>
-                  )}
-                  <Button type="submit" disabled={upsertMutation.isPending}>
-                    {upsertMutation.isPending && (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {t('form.cancel')}
+                      </Button>
                     )}
-                    {upsertMutation.isPending
-                      ? t('form.saving')
-                      : editingAnnouncement
-                        ? t('update')
-                        : t('create')}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+                    <Button type="submit" disabled={upsertMutation.isPending}>
+                      {upsertMutation.isPending && (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      )}
+                      {upsertMutation.isPending
+                        ? t('form.saving')
+                        : editingAnnouncement
+                          ? t('update')
+                          : t('create')}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </PullToRefresh>
   )
 }
 

@@ -74,6 +74,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
+      {/* Mobile Sidebar Drawer */}
+      <SidebarNavigation
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        isMobile={true}
+      />
+
       <div className={cn(
         "flex-1 flex flex-col transition-all duration-300 ease-in-out",
         sidebarCollapsed ? "lg:ms-20" : "lg:ms-[280px]"
@@ -132,7 +139,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Mobile Navigation */}
       <MobileNavigation
-        onClose={() => setSidebarOpen(false)}
+        onMenuClick={() => setSidebarOpen(true)}
       />
 
       {/* Session Timeout Warning */}
