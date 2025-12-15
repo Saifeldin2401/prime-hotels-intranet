@@ -66,7 +66,7 @@
     "@tiptap/starter-kit": "^3.13.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cmdk": "^0.2.0",
+    "cmdk": "^1.0.0",
     "date-fns": "^4.1.0",
     "i18next": "^25.7.2",
     "i18next-browser-languagedetector": "^8.2.0",
