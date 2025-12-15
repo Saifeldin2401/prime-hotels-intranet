@@ -83,7 +83,7 @@ export function SidebarNavigation({
     return (
       <Link
         key={item.path}
-        to={item.path}
+        to={item.resolvedPath}
         onClick={handleNavClick}
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",

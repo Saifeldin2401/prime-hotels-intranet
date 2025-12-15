@@ -18,5 +18,22 @@
     "uploading": "جارٍ الرفع...",
     "saving": "جارٍ الحفظ...",
     "my_profile": "ملفي الشخصي",
-    "documents": "المستندات"
+    "documents": "المستندات",
+    "employee_documents": {
+        "title": "مستنداتي",
+        "description": "إدارة مستنداتك وسجلاتك الشخصية.",
+        "upload_button": "رفع مستند",
+        "uploaded_title": "المستندات المرفوعة",
+        "uploaded_description": "المستندات التي رفعتها إلى ملفك الشخصي.",
+        "no_documents": "لا توجد مستندات بعد",
+        "no_documents_hint": "ارفع سيرتك الذاتية أو الشهادات أو مستندات أخرى.",
+        "upload_first": "رفع أول مستند",
+        "download_failed": "فشل التحميل",
+        "download_failed_desc": "تعذر إنشاء رابط التحميل.",
+        "delete_confirm": "هل أنت متأكد من حذف هذا المستند؟",
+        "deleted": "تم حذف المستند",
+        "deleted_desc": "تمت إزالة المستند.",
+        "delete_failed": "فشل الحذف",
+        "delete_failed_desc": "تعذر حذف المستند."
+    }
 }

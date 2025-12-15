@@ -95,8 +95,8 @@ export function StaffDashboard() {
     }))
   }
 
-  const handleShare = (itemId: string) => {
-    console.log('Share item:', itemId)
+  const handleShare = (_itemId: string) => {
+    // Share functionality placeholder - to be implemented
   }
 
   if (loading) {

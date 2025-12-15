@@ -2,12 +2,12 @@
  * Related Articles Editor
  * 
  * Component for managing article-to-article relationships.
+ * Updated to use 'documents' table.
  */
 
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
     Select,
@@ -33,7 +33,6 @@ import {
     Link2,
     Plus,
     X,
-    Search,
     FileText,
     ArrowRight,
     Loader2
@@ -71,10 +70,11 @@ export function RelatedArticlesEditor({
         queryFn: async () => {
             if (!searchQuery.trim()) return []
             const { data, error } = await supabase
-                .from('sop_documents')
-                .select('id, title, content_type')
+                .from('documents') // Updated table
+                .select('id, title')
                 .neq('id', documentId)
                 .ilike('title', `%${searchQuery}%`)
+                .eq('status', 'PUBLISHED') // Only link published docs
                 .limit(10)
             if (error) throw error
             return data
@@ -99,6 +99,10 @@ export function RelatedArticlesEditor({
             setSearchOpen(false)
             setSearchQuery('')
             onUpdate()
+        },
+        onError: (error: any) => {
+            console.error('Failed to add relation:', error)
+            // alert('Failed to link article. Is the "knowledge_related_articles" table migrated?')
         }
     })
 
@@ -184,9 +188,6 @@ export function RelatedArticlesEditor({
                                                 <FileText className="h-4 w-4 mr-2 text-gray-400" />
                                                 <div className="flex-1">
                                                     <p className="text-sm">{article.title}</p>
-                                                    <p className="text-xs text-gray-500 capitalize">
-                                                        {article.content_type}
-                                                    </p>
                                                 </div>
                                             </CommandItem>
                                         ))}
@@ -216,9 +217,6 @@ export function RelatedArticlesEditor({
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium text-sm truncate">{article.title}</p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <Badge variant="outline" className="text-xs capitalize">
-                                            {article.content_type}
-                                        </Badge>
                                         <ArrowRight className="h-3 w-3 text-gray-400" />
                                         <Badge
                                             variant="secondary"

@@ -8,6 +8,8 @@
  * - Achievements (certifications)
  * - Team updates (birthdays, anniversaries, new joiners)
  * - Recognition
+ * 
+ * Updated to use 'documents' table for KB updates.
  */
 
 import { useMemo, useState } from 'react'
@@ -43,7 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { formatDistanceToNow } from 'date-fns'
 
 type FeedItemType =
@@ -82,22 +84,43 @@ const FEED_TYPE_CONFIG: Record<FeedItemType, { icon: any; color: string; label: 
     recognition: { icon: Star, color: 'text-amber-600 bg-amber-100', label: 'Recognition' },
 }
 
-async function fetchFeedItems(): Promise<FeedItem[]> {
+interface FetchFeedContext {
+    user: any
+    roles: any[]
+    departments: any[]
+    properties: any[]
+}
+
+async function fetchFeedItems({ user, roles, departments, properties }: FetchFeedContext): Promise<FeedItem[]> {
     const items: FeedItem[] = []
     const now = new Date()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
     try {
         // Fetch announcements
-        const { data: announcements } = await supabase
+        const { data: announcements, error } = await supabase
             .from('announcements')
-            .select('id, title, content, created_at, author:created_by(id, full_name, avatar_url)')
+            .select('id, title, content, created_at, created_by, target_audience, author:created_by(id, full_name, avatar_url)')
             .gte('created_at', thirtyDaysAgo.toISOString())
             .order('created_at', { ascending: false })
-            .limit(10)
+            .limit(20)
 
         if (announcements) {
-            items.push(...announcements.map(a => ({
+            const filteredAnnouncements = announcements.filter((announcement: any) => {
+                if (announcement.created_by === user?.id) return true
+                const audience = announcement.target_audience
+                if (!audience || audience.type === 'all') return true
+                const values = audience.values || []
+                switch (audience.type) {
+                    case 'role': return roles.some(userRole => values.includes(userRole.role))
+                    case 'department': return departments.some(dept => values.includes(dept.id))
+                    case 'property': return properties.some(prop => values.includes(prop.id))
+                    case 'individual': return values.includes(user?.id || '')
+                    default: return true
+                }
+            })
+
+            items.push(...filteredAnnouncements.slice(0, 10).map((a: any) => ({
                 id: `announcement-${a.id}`,
                 type: 'announcement' as FeedItemType,
                 title: a.title,
@@ -108,11 +131,12 @@ async function fetchFeedItems(): Promise<FeedItem[]> {
             })))
         }
 
-        // Fetch recent KB updates
+        // Fetch recent KB updates - MIGRATED to 'documents'
         const { data: kbUpdates } = await supabase
-            .from('sop_documents')
-            .select('id, title, content_type, updated_at, created_by:profiles!sop_documents_created_by_fkey(id, full_name, avatar_url)')
+            .from('documents') // Updated table
+            .select('id, title, updated_at, status, created_by:profiles!created_by(id, full_name, avatar_url)') // Using standard profiles relationship
             .gte('updated_at', thirtyDaysAgo.toISOString())
+            .eq('status', 'PUBLISHED') // Only show published
             .order('updated_at', { ascending: false })
             .limit(10)
 
@@ -120,11 +144,11 @@ async function fetchFeedItems(): Promise<FeedItem[]> {
             items.push(...kbUpdates.map(k => ({
                 id: `kb-${k.id}`,
                 type: 'kb_update' as FeedItemType,
-                title: `${k.content_type?.toUpperCase() || 'Article'} updated: ${k.title}`,
+                title: `Article updated: ${k.title}`,
                 author: k.created_by ? { id: k.created_by.id, name: k.created_by.full_name, avatar: k.created_by.avatar_url } : undefined,
                 link: `/knowledge/${k.id}`,
                 timestamp: new Date(k.updated_at),
-                metadata: { content_type: k.content_type }
+                metadata: { content_type: 'document' }
             })))
         }
 
@@ -143,7 +167,7 @@ async function fetchFeedItems(): Promise<FeedItem[]> {
             .limit(10)
 
         if (achievements) {
-            items.push(...achievements.map(a => ({
+            items.push(...achievements.map((a: any) => ({
                 id: `achievement-${a.id}`,
                 type: 'achievement' as FeedItemType,
                 title: `${a.user?.full_name || 'Someone'} completed "${a.training?.title || 'training'}"`,
@@ -153,7 +177,7 @@ async function fetchFeedItems(): Promise<FeedItem[]> {
             })))
         }
 
-        // Fetch birthdays happening today/this week
+        // Fetch birthdays
         const today = new Date()
         const { data: birthdays } = await supabase
             .from('profiles')
@@ -180,7 +204,7 @@ async function fetchFeedItems(): Promise<FeedItem[]> {
             })
         }
 
-        // Fetch new joiners (hired in last 30 days)
+        // Fetch new joiners
         const { data: newJoiners } = await supabase
             .from('profiles')
             .select('id, full_name, avatar_url, hire_date, job_title, departments:user_departments(department:departments(name))')
@@ -189,7 +213,7 @@ async function fetchFeedItems(): Promise<FeedItem[]> {
             .limit(5)
 
         if (newJoiners) {
-            items.push(...newJoiners.map(j => ({
+            items.push(...newJoiners.map((j: any) => ({
                 id: `newjoiner-${j.id}`,
                 type: 'new_joiner' as FeedItemType,
                 title: `Welcome ${j.full_name} to the team!`,
@@ -217,14 +241,15 @@ interface ActivityFeedProps {
 
 export default function ActivityFeed({ compact = false, maxItems = 10, filterTypes }: ActivityFeedProps) {
     const { t } = useTranslation('common')
-    const { user } = useAuth()
+    const { user, roles, departments, properties } = useAuth()
     const [enabledTypes, setEnabledTypes] = useState<FeedItemType[]>(
         filterTypes || ['announcement', 'kb_update', 'training', 'achievement', 'birthday', 'new_joiner']
     )
 
     const { data: allItems, isLoading } = useQuery({
-        queryKey: ['activity-feed', user?.id],
-        queryFn: fetchFeedItems,
+        queryKey: ['activity-feed', user?.id, roles.length, departments.length, properties.length],
+        queryFn: () => fetchFeedItems({ user, roles, departments, properties }),
+        enabled: !!user?.id,
         staleTime: 1000 * 60 * 5 // 5 minutes
     })
 

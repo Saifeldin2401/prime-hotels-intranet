@@ -99,6 +99,14 @@ const CONTENT_TYPES: {
             color: 'text-pink-600',
             gradient: 'from-pink-500 to-pink-600'
         },
+        {
+            type: 'document',
+            icon: FileText,
+            title: 'Documents',
+            description: 'General documents',
+            color: 'text-gray-600',
+            gradient: 'from-gray-500 to-gray-600'
+        },
     ]
 
 export default function KnowledgeBrowse() {

@@ -110,7 +110,7 @@ export default function TrainingCertificates() {
     mutationFn: async (code: string) => {
       // For now, we'll simulate verification since verification_code column doesn't exist
       // In a real implementation, you'd need to add verification_code to the table
-      console.log('Verifying certificate code:', code)
+
       return {
         valid: false,
         certificate: null,
@@ -141,7 +141,7 @@ export default function TrainingCertificates() {
       return data
     },
     onSuccess: () => {
-      alert(t.certificateDownloaded)
+      alert(t('certificateDownloaded'))
     }
   })
 
@@ -496,7 +496,7 @@ export default function TrainingCertificates() {
       <Dialog open={showCertificateDialog} onOpenChange={setShowCertificateDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t.certificateDetails}</DialogTitle>
+            <DialogTitle>{t('certificateDetails')}</DialogTitle>
           </DialogHeader>
           {selectedCertificate && (
             <div className="space-y-6">

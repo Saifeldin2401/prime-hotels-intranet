@@ -30,7 +30,7 @@ export interface QuestionFilters {
     type?: QuestionType
     difficulty?: QuestionDifficulty
     sop_id?: string
-    category_id?: string
+    // category_id removed
     ai_generated?: boolean
     search?: string
     tags?: string[]
@@ -46,8 +46,7 @@ export async function getQuestions(
         .select(`
       *,
       options:knowledge_question_options(*),
-      linked_sop:sop_documents(id, title),
-      category:sop_categories(id, name),
+      linked_sop:documents(id, title),
       created_by_profile:profiles!knowledge_questions_created_by_fkey(id, full_name)
     `, { count: 'exact' })
 
@@ -56,7 +55,7 @@ export async function getQuestions(
     if (filters.type) query = query.eq('question_type', filters.type)
     if (filters.difficulty) query = query.eq('difficulty_level', filters.difficulty)
     if (filters.sop_id) query = query.eq('linked_sop_id', filters.sop_id)
-    if (filters.category_id) query = query.eq('category_id', filters.category_id)
+    // category_id filter removed
     if (filters.ai_generated !== undefined) query = query.eq('ai_generated', filters.ai_generated)
     if (filters.search) query = query.ilike('question_text', `%${filters.search}%`)
     if (filters.tags?.length) query = query.overlaps('tags', filters.tags)
@@ -83,8 +82,7 @@ export async function getQuestionById(id: string): Promise<KnowledgeQuestion | n
         .select(`
       *,
       options:knowledge_question_options(*),
-      linked_sop:sop_documents(id, title),
-      category:sop_categories(id, name),
+      linked_sop:documents(id, title),
       created_by_profile:profiles!knowledge_questions_created_by_fkey(id, full_name),
       reviewed_by_profile:profiles!knowledge_questions_reviewed_by_fkey(id, full_name)
     `)

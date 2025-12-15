@@ -18,5 +18,22 @@
     "uploading": "Uploading...",
     "saving": "Saving...",
     "my_profile": "My Profile",
-    "documents": "Documents"
+    "documents": "Documents",
+    "employee_documents": {
+        "title": "My Documents",
+        "description": "Manage your personal documents and records.",
+        "upload_button": "Upload Document",
+        "uploaded_title": "Uploaded Documents",
+        "uploaded_description": "Documents you have uploaded to your profile.",
+        "no_documents": "No documents yet",
+        "no_documents_hint": "Upload your CV, certificates, or other documents.",
+        "upload_first": "Upload First Document",
+        "download_failed": "Download failed",
+        "download_failed_desc": "Could not generate download link.",
+        "delete_confirm": "Are you sure you want to delete this document?",
+        "deleted": "Document deleted",
+        "deleted_desc": "The document has been removed.",
+        "delete_failed": "Delete failed",
+        "delete_failed_desc": "Could not delete the document."
+    }
 }

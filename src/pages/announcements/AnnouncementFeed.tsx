@@ -6,27 +6,19 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pin, Loader2 } from 'lucide-react'
 import type { Announcement } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 import { PullToRefresh } from '@/components/mobile'
-
-type PriorityValue = Announcement['priority']
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { AnnouncementEditor } from '@/components/announcements/AnnouncementEditor'
 
 export default function AnnouncementFeed() {
-  const { profile, primaryRole } = useAuth()
+  const { user, profile, primaryRole, roles, properties, departments } = useAuth()
   const queryClient = useQueryClient()
   const { t } = useTranslation('announcements')
-
-  const priorityOptions: { value: PriorityValue; label: string }[] = [
-    { value: 'normal', label: t('priority.normal') },
-    { value: 'important', label: t('priority.important') },
-    { value: 'critical', label: t('priority.critical') },
-  ]
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
 
   const { data: announcements, isLoading } = useQuery({
     queryKey: ['announcements'],
@@ -40,6 +32,37 @@ export default function AnnouncementFeed() {
       if (error) throw error
       return data as Announcement[]
     },
+    select: (data) => {
+      if (!data) return []
+
+      return data.filter(announcement => {
+        // Always show if user is the creator
+        if (announcement.created_by === user?.id) return true
+
+        // Show if target audience is 'all' or missing
+        const audience = announcement.target_audience
+        if (!audience || audience.type === 'all') return true
+
+        const values = audience.values || []
+
+        switch (audience.type) {
+          case 'role':
+            return roles.some(userRole => values.includes(userRole.role))
+
+          case 'department':
+            return departments.some(dept => values.includes(dept.id))
+
+          case 'property':
+            return properties.some(prop => values.includes(prop.id))
+
+          case 'individual':
+            return values.includes(user?.id || '')
+
+          default:
+            return true
+        }
+      })
+    }
   })
 
   const { data: readIds } = useQuery({
@@ -54,58 +77,6 @@ export default function AnnouncementFeed() {
 
       if (error) throw error
       return (data || []).map((r) => r.announcement_id as string)
-    },
-  })
-
-  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [priority, setPriority] = useState<PriorityValue>('normal')
-  const [pinned, setPinned] = useState(false)
-  const [scheduledAt, setScheduledAt] = useState('')
-  const [expiresAt, setExpiresAt] = useState('')
-
-  const resetForm = () => {
-    setEditingAnnouncement(null)
-    setTitle('')
-    setContent('')
-    setPriority('normal')
-    setPinned(false)
-    setScheduledAt('')
-    setExpiresAt('')
-  }
-
-  const upsertMutation = useMutation({
-    mutationFn: async () => {
-      if (!title.trim() || !content.trim()) throw new Error('Title and content are required')
-
-      const payload = {
-        title: title.trim(),
-        content: content.trim(),
-        priority,
-        pinned,
-        scheduled_at: scheduledAt || null,
-        expires_at: expiresAt || null,
-      }
-
-      if (editingAnnouncement) {
-        const { error } = await supabase
-          .from('announcements')
-          .update(payload)
-          .eq('id', editingAnnouncement.id)
-
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from('announcements')
-          .insert(payload)
-
-        if (error) throw error
-      }
-    },
-    onSuccess: () => {
-      resetForm()
-      queryClient.invalidateQueries({ queryKey: ['announcements'] })
     },
   })
 
@@ -126,24 +97,19 @@ export default function AnnouncementFeed() {
     },
   })
 
-  const startCreate = () => {
-    resetForm()
+  const handleCreate = () => {
+    setEditingAnnouncement(null)
+    setIsEditorOpen(true)
   }
 
-  const startEdit = (announcement: Announcement) => {
+  const handleEdit = (announcement: Announcement) => {
     setEditingAnnouncement(announcement)
-    setTitle(announcement.title)
-    setContent(announcement.content)
-    setPriority(announcement.priority)
-    setPinned(announcement.pinned)
-    setScheduledAt(announcement.scheduled_at || '')
-    setExpiresAt(announcement.expires_at || '')
+    setIsEditorOpen(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (upsertMutation.isPending) return
-    upsertMutation.mutate()
+  const handleEditorClose = () => {
+    setIsEditorOpen(false)
+    setEditingAnnouncement(null)
   }
 
   const handleMarkAsRead = (announcementId: string) => {
@@ -166,7 +132,7 @@ export default function AnnouncementFeed() {
           description={t('description')}
           actions={
             isAdmin && (
-              <Button onClick={startCreate}>
+              <Button onClick={handleCreate}>
                 <Plus className="w-4 h-4 mr-2" />
                 {t('create')}
               </Button>
@@ -175,7 +141,7 @@ export default function AnnouncementFeed() {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <Card>
               <CardHeader>
                 <CardTitle>{t('title')}</CardTitle>
@@ -193,7 +159,7 @@ export default function AnnouncementFeed() {
                         normal: '',
                         important: 'border-yellow-400 bg-yellow-50',
                         critical: 'border-red-400 bg-red-50',
-                      }[announcement.priority]
+                      }[announcement.priority] || ''
                       return (
                         <div
                           key={announcement.id}
@@ -224,7 +190,7 @@ export default function AnnouncementFeed() {
                                 <Button
                                   size="sm"
                                   className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                  onClick={() => startEdit(announcement)}
+                                  onClick={() => handleEdit(announcement)}
                                 >
                                   {t('actions.edit')}
                                 </Button>
@@ -245,110 +211,20 @@ export default function AnnouncementFeed() {
           </div>
         </div>
 
-        {isAdmin && (
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>{editingAnnouncement ? t('edit') : t('create')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                  <div className="space-y-2">
-                    <Label htmlFor="title">{t('form.title')}</Label>
-                    <Input
-                      id="title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="content">{t('form.content')}</Label>
-                    <Textarea
-                      id="content"
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      rows={4}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t('form.priority')}</Label>
-                    <Select value={priority} onValueChange={(v: PriorityValue) => setPriority(v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {priorityOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="pinned"
-                      checked={pinned}
-                      onChange={(e) => setPinned(e.target.checked)}
-                    />
-                    <Label htmlFor="pinned">{t('form.pinned')}</Label>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="scheduledAt">{t('form.schedule')}</Label>
-                    <Input
-                      id="scheduledAt"
-                      type="datetime-local"
-                      value={scheduledAt}
-                      onChange={(e) => setScheduledAt(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="expiresAt">{t('form.expires')}</Label>
-                    <Input
-                      id="expiresAt"
-                      type="datetime-local"
-                      value={expiresAt}
-                      onChange={(e) => setExpiresAt(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    {editingAnnouncement && (
-                      <Button
-                        type="button"
-                        className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                        onClick={resetForm}
-                        disabled={upsertMutation.isPending}
-                      >
-                        {t('form.cancel')}
-                      </Button>
-                    )}
-                    <Button type="submit" disabled={upsertMutation.isPending}>
-                      {upsertMutation.isPending && (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      )}
-                      {upsertMutation.isPending
-                        ? t('form.saving')
-                        : editingAnnouncement
-                          ? t('update')
-                          : t('create')}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+          <DialogContent className="max-w-4xl p-0 overflow-hidden" aria-describedby="announcement-editor-desc">
+            <DialogTitle className="sr-only">Create Announcement</DialogTitle>
+            <DialogDescription id="announcement-editor-desc" className="sr-only">
+              Form to create or edit an announcement
+            </DialogDescription>
+            <AnnouncementEditor
+              initialData={editingAnnouncement || undefined}
+              onClose={handleEditorClose}
+              onSave={handleRefresh}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </PullToRefresh>
   )
 }
-

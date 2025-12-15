@@ -7,6 +7,7 @@ import {
   useNotifications,
   useSendMessage,
   useMarkMessageAsRead,
+  useArchiveMessage,
   useMessagingStats
 } from '@/hooks/useMessaging'
 import { useRealtimeMessaging } from '@/hooks/useRealtimeMessaging'
@@ -72,8 +73,6 @@ export default function MessagingDashboard() {
     message_type: typeFilter === 'all' ? undefined : typeFilter
   })
 
-  console.log('MessagingDashboard - Messages data:', messages)
-  console.log('MessagingDashboard - Messages loading:', messagesLoading)
   const { data: conversations, isLoading: conversationsLoading } = useConversations()
   const { data: notifications, isLoading: notificationsLoading } = useNotifications()
   const { data: stats } = useMessagingStats()
@@ -81,6 +80,7 @@ export default function MessagingDashboard() {
 
   const sendMessageMutation = useSendMessage()
   const markAsReadMutation = useMarkMessageAsRead()
+  const archiveMessageMutation = useArchiveMessage()
 
   const [newMessage, setNewMessage] = useState({
     recipient_id: '',
@@ -122,8 +122,7 @@ export default function MessagingDashboard() {
   }
 
   const handleArchive = (messageId: string) => {
-    // TODO: Implement archive mutation
-    console.log('Archive message:', messageId)
+    archiveMessageMutation.mutate(messageId)
   }
 
   const MessageCard = ({ message }: { message: Message }) => {
@@ -490,7 +489,7 @@ export default function MessagingDashboard() {
                         </p>
                       </div>
                       {!notification.is_read && (
-                        <Badge className="bg-blue-100 text-blue-700 border border-blue-600 rounded-md text-blue-700">
+                        <Badge className="bg-blue-100 text-blue-700 border border-blue-600 rounded-md">
                           {t('new')}
                         </Badge>
                       )}

@@ -31,7 +31,7 @@ import { crudToasts } from '@/lib/toastHelpers'
 
 
 
-export default function JobPostings() {
+export default function JobPostings({ embedded = false }: { embedded?: boolean }) {
     const { roles } = useAuth()
     const { t } = useTranslation('jobs')
     const queryClient = useQueryClient()
@@ -122,20 +122,22 @@ export default function JobPostings() {
 
     return (
         <div className="space-y-6">
-            <PageHeader
-                title={t('title')}
-                description={t('description')}
-                actions={
-                    canManageJobs ? (
-                        <Link to="/jobs/new">
-                            <Button className="bg-hotel-navy hover:bg-hotel-navy-light">
-                                <Plus className="h-4 w-4 me-2" />
-                                {t('create')}
-                            </Button>
-                        </Link>
-                    ) : null
-                }
-            />
+            {!embedded && (
+                <PageHeader
+                    title={t('title')}
+                    description={t('description')}
+                    actions={
+                        canManageJobs ? (
+                            <Link to="/jobs/new">
+                                <Button className="bg-hotel-navy hover:bg-hotel-navy-light">
+                                    <Plus className="h-4 w-4 me-2" />
+                                    {t('create')}
+                                </Button>
+                            </Link>
+                        ) : null
+                    }
+                />
+            )}
 
             {/* Filters */}
             <div className="prime-card">
@@ -173,8 +175,8 @@ export default function JobPostings() {
                 {filteredJobs?.length === 0 && jobs?.length === 0 && (
                     <EmptyState
                         icon={Briefcase}
-                        title="No job postings yet"
-                        description="Create your first job posting to start attracting talented candidates."
+                        title={t('noJobsFound')}
+                        description={t('createFirst')}
                         action={canManageJobs ? {
                             label: t('create'),
                             onClick: () => window.location.href = '/jobs/new',
@@ -185,11 +187,12 @@ export default function JobPostings() {
                 {filteredJobs?.length === 0 && jobs && jobs.length > 0 && (
                     <EmptyState
                         icon={Search}
-                        title="No jobs found"
-                        description="Try adjusting your search or filter criteria to find what you're looking for."
+                        title={t('noJobsFound')}
+                        description={t('tryAdjusting')}
                         action={{
-                            label: "Clear filters",
+                            label: t('filters.clear'),
                             onClick: () => {
+                                setSearchTerm('')
                                 setSearchTerm('')
                                 setStatusFilter('all')
                             }

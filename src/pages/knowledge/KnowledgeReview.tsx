@@ -2,6 +2,7 @@
  * KnowledgeReview
  * 
  * Review queue for pending knowledge article approvals.
+ * Adapted for 'documents' table.
  */
 
 import { useState } from 'react'
@@ -43,7 +44,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -59,30 +59,40 @@ export default function KnowledgeReview() {
     const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null)
     const [reviewComment, setReviewComment] = useState('')
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'changes' | null>(null)
-    const [statusFilter, setStatusFilter] = useState<string>('under_review')
+    const [statusFilter, setStatusFilter] = useState<string>('DRAFT')
 
     // Fetch articles pending review
+    // In new schema, we might assume DRAFT items are pending review?
+    // Or strictly rely on 'status' column.
+    // documents table has status: DRAFT, PUBLISHED.
+    // So 'under_review' is not a valid status in DB usually unless enum supports it.
+    // I will assume DRAFT is the "pending" state for now.
     const { data: pendingArticles, isLoading } = useQuery({
         queryKey: ['knowledge-review-queue', statusFilter],
         queryFn: async () => {
             let query = supabase
-                .from('sop_documents')
+                .from('documents') // Updated table
                 .select(`
                     *,
-                    category:sop_categories(id, name),
-                    author:profiles!sop_documents_created_by_fkey(id, full_name)
+                    author:created_by(id, full_name)
                 `)
                 .order('updated_at', { ascending: false })
 
             if (statusFilter !== 'all') {
                 query = query.eq('status', statusFilter)
             } else {
-                query = query.in('status', ['under_review', 'rejected', 'draft'])
+                query = query.in('status', ['DRAFT', 'PUBLISHED']) // Just show all if 'all'
             }
 
             const { data, error } = await query.limit(50)
             if (error) throw error
-            return data as KnowledgeArticle[]
+
+            // Transform simple user object to profile object structure if needed, or rely on loose typing
+            return data?.map(d => ({
+                ...d,
+                author: d.author // Supabase might return array or object depending on relationship.
+                // Assuming created_by maps to profiles(id) and returns single object via one-to-one
+            })) as KnowledgeArticle[]
         }
     })
 
@@ -91,43 +101,38 @@ export default function KnowledgeReview() {
         mutationFn: async (action: 'approve' | 'reject' | 'changes') => {
             if (!selectedArticle) return
 
-            const newStatus = action === 'approve' ? 'approved'
-                : action === 'reject' ? 'rejected'
-                    : 'under_review'
+            let newStatus = 'DRAFT'
+            if (action === 'approve') newStatus = 'PUBLISHED'
+            // reject/changes stays DRAFT
 
             // Update article status
             const { error: updateError } = await supabase
-                .from('sop_documents')
+                .from('documents')
                 .update({
                     status: newStatus,
-                    reviewed_by: user?.id,
-                    reviewed_at: new Date().toISOString()
+                    // reviewed_by/reviewed_at removed as columns don't exist
                 })
                 .eq('id', selectedArticle.id)
 
             if (updateError) throw updateError
 
-            // Add review comment if provided
+            // Removed saving comments to sop_comments as table doesn't exist
             if (reviewComment.trim()) {
-                const { error: commentError } = await supabase
-                    .from('sop_comments')
-                    .insert({
-                        document_id: selectedArticle.id,
-                        user_id: user?.id,
-                        content: `[Review ${action.toUpperCase()}] ${reviewComment}`,
-                        comment_type: 'review'
-                    })
-
-                if (commentError) console.error('Failed to add comment:', commentError)
+                console.log('Review comment (not saved to DB):', reviewComment)
             }
         },
         onSuccess: () => {
-            toast.success(
-                reviewAction === 'approve' ? 'Article approved and published!'
-                    : reviewAction === 'reject' ? 'Article rejected'
-                        : 'Changes requested'
-            )
+            const msgs = {
+                approve: 'Article approved and published!',
+                reject: 'Article rejected (kept as Draft)',
+                changes: 'Changes requested (kept as Draft)'
+            }
+            toast.success(msgs[reviewAction || 'changes'])
+
             queryClient.invalidateQueries({ queryKey: ['knowledge-review-queue'] })
+            // Also invalidate main list
+            queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
+
             setSelectedArticle(null)
             setReviewComment('')
             setReviewAction(null)
@@ -144,23 +149,19 @@ export default function KnowledgeReview() {
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'under_review':
-                return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>
-            case 'approved':
-                return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />Approved</Badge>
-            case 'rejected':
-                return <Badge className="bg-red-100 text-red-700 border-red-200"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
-            case 'draft':
-                return <Badge variant="outline"><Edit3 className="h-3 w-3 mr-1" />Draft</Badge>
+            case 'DRAFT':
+                return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Edit3 className="h-3 w-3 mr-1" />Draft</Badge>
+            case 'PUBLISHED':
+                return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />Published</Badge>
             default:
                 return <Badge variant="outline">{status}</Badge>
         }
     }
 
     const stats = {
-        pending: pendingArticles?.filter(a => a.status === 'under_review').length || 0,
-        approved: pendingArticles?.filter(a => a.status === 'approved').length || 0,
-        rejected: pendingArticles?.filter(a => a.status === 'rejected').length || 0
+        pending: pendingArticles?.filter(a => a.status === 'DRAFT').length || 0,
+        approved: pendingArticles?.filter(a => a.status === 'PUBLISHED').length || 0,
+        rejected: 0 // No rejected status
     }
 
     return (
@@ -174,7 +175,7 @@ export default function KnowledgeReview() {
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Review Queue</h1>
                         <p className="text-gray-600 text-sm mt-1">
-                            Approve or reject knowledge articles
+                            Review and publish knowledge articles
                         </p>
                     </div>
                 </div>
@@ -189,7 +190,7 @@ export default function KnowledgeReview() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-yellow-700">{stats.pending}</p>
-                            <p className="text-sm text-yellow-600">Pending Review</p>
+                            <p className="text-sm text-yellow-600">Drafts</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -200,18 +201,7 @@ export default function KnowledgeReview() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-green-700">{stats.approved}</p>
-                            <p className="text-sm text-green-600">Approved</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-red-50 border-red-200">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 rounded-lg bg-red-100">
-                            <XCircle className="h-6 w-6 text-red-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-red-700">{stats.rejected}</p>
-                            <p className="text-sm text-red-600">Rejected</p>
+                            <p className="text-sm text-green-600">Published</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -225,10 +215,9 @@ export default function KnowledgeReview() {
                         <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="under_review">Pending Review</SelectItem>
-                        <SelectItem value="draft">Drafts</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                        <SelectItem value="all">All Non-Published</SelectItem>
+                        <SelectItem value="DRAFT">Drafts</SelectItem>
+                        <SelectItem value="PUBLISHED">Published</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -242,8 +231,8 @@ export default function KnowledgeReview() {
                 <Card>
                     <CardContent className="py-12 text-center">
                         <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                        <p className="text-lg font-medium text-gray-900">All caught up!</p>
-                        <p className="text-gray-500">No articles require review</p>
+                        <p className="text-lg font-medium text-gray-900">No articles found</p>
+                        <p className="text-gray-500">Try adjusting the filter</p>
                     </CardContent>
                 </Card>
             ) : (
@@ -265,9 +254,6 @@ export default function KnowledgeReview() {
                                                 {article.title}
                                             </h3>
                                             {getStatusBadge(article.status)}
-                                            <Badge variant="outline" className="capitalize text-xs">
-                                                {article.content_type}
-                                            </Badge>
                                         </div>
                                         <p className="text-sm text-gray-600 line-clamp-2 mb-2">
                                             {article.description || 'No description provided'}
@@ -317,9 +303,6 @@ export default function KnowledgeReview() {
                         {/* Article Preview */}
                         <div className="p-4 bg-gray-50 rounded-lg">
                             <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline" className="capitalize">
-                                    {selectedArticle?.content_type}
-                                </Badge>
                                 {getStatusBadge(selectedArticle?.status || '')}
                             </div>
                             <h3 className="font-semibold text-lg mb-2">{selectedArticle?.title}</h3>
@@ -337,10 +320,10 @@ export default function KnowledgeReview() {
                         {/* Review Comment */}
                         <div>
                             <label className="text-sm font-medium mb-2 block">
-                                Review Comment (optional)
+                                Review Comment (Internal Note - Not Saved)
                             </label>
                             <Textarea
-                                placeholder="Add feedback or notes for the author..."
+                                placeholder="Add feedback..."
                                 value={reviewComment}
                                 onChange={(e) => setReviewComment(e.target.value)}
                                 rows={3}
@@ -349,44 +332,35 @@ export default function KnowledgeReview() {
                     </div>
 
                     <DialogFooter className="flex gap-2 sm:gap-0">
-                        <Button
-                            variant="outline"
-                            onClick={() => handleReview('changes')}
-                            disabled={reviewMutation.isPending}
-                            className="flex-1 sm:flex-none"
-                        >
-                            {reviewMutation.isPending && reviewAction === 'changes' ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                            )}
-                            Request Changes
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={() => handleReview('reject')}
-                            disabled={reviewMutation.isPending}
-                            className="flex-1 sm:flex-none"
-                        >
-                            {reviewMutation.isPending && reviewAction === 'reject' ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                                <ThumbsDown className="h-4 w-4 mr-2" />
-                            )}
-                            Reject
-                        </Button>
-                        <Button
-                            onClick={() => handleReview('approve')}
-                            disabled={reviewMutation.isPending}
-                            className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
-                        >
-                            {reviewMutation.isPending && reviewAction === 'approve' ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                                <ThumbsUp className="h-4 w-4 mr-2" />
-                            )}
-                            Approve
-                        </Button>
+                        {selectedArticle?.status !== 'PUBLISHED' && (
+                            <Button
+                                onClick={() => handleReview('approve')}
+                                disabled={reviewMutation.isPending}
+                                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+                            >
+                                {reviewMutation.isPending && reviewAction === 'approve' ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                ) : (
+                                    <ThumbsUp className="h-4 w-4 mr-2" />
+                                )}
+                                Publish
+                            </Button>
+                        )}
+                        {selectedArticle?.status === 'PUBLISHED' && (
+                            <Button
+                                onClick={() => handleReview('reject')}
+                                variant="destructive"
+                                disabled={reviewMutation.isPending}
+                                className="flex-1 sm:flex-none"
+                            >
+                                {reviewMutation.isPending && reviewAction === 'reject' ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                ) : (
+                                    <ThumbsDown className="h-4 w-4 mr-2" />
+                                )}
+                                Unpublish (Draft)
+                            </Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

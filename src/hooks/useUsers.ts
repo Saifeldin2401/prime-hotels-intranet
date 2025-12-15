@@ -29,6 +29,18 @@ export function useProfiles(filters?: {
                 query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,job_title.ilike.%${filters.search}%`)
             }
 
+            if (filters?.property_id) {
+                // Filter by users who have a user_properties entry for this property
+                // This requires a join filter or a subquery. Supabase postgrest supports filtering on joined tables.
+                // However, user_properties is M:N. Simplest is !inner join if we want users belonging to property.
+                // Let's use the relation filtering syntax:
+                query = query.not('user_properties', 'is', null).eq('user_properties.property_id', filters.property_id)
+            }
+
+            if (filters?.department_id) {
+                query = query.not('user_departments', 'is', null).eq('user_departments.department_id', filters.department_id)
+            }
+
             // In a real app, strict RLS would handle this, but for now we might filter here
             // e.g. Staff sees only their property coworkers?
             // For now, let everyone see everyone for directory purposes.

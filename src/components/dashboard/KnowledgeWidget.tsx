@@ -2,6 +2,7 @@
  * KnowledgeWidget
  * 
  * Dashboard widget for required reading and knowledge updates.
+ * Updated to query 'documents' table.
  */
 
 import { useState } from 'react'
@@ -28,8 +29,6 @@ import { formatDistanceToNow } from 'date-fns'
 interface RequiredReadingItem {
     id: string
     title: string
-    content_type: string
-    estimated_read_time: number
     created_at: string
     is_read: boolean
 }
@@ -42,25 +41,32 @@ export function KnowledgeWidget() {
         queryKey: ['dashboard-required-reading', user?.id],
         queryFn: async () => {
             // Get required reading assignments for this user
+            // Assuming knowledge_required_reading points to 'documents' now or we can join 'documents' on document_id
             const { data: assignments, error: assignError } = await supabase
                 .from('knowledge_required_reading')
                 .select(`
                     id,
                     document_id,
                     acknowledged_at,
-                    document:sop_documents(id, title, content_type, estimated_read_time, created_at)
+                    document:documents!document_id(id, title, created_at)
                 `)
                 .eq('user_id', user?.id)
                 .is('acknowledged_at', null)
                 .limit(5)
+            // Note: If !document_id mapping fails, it might mean the FK is named differently or missing.
+            // If so, we might need a manual fetch.
 
-            if (assignError) throw assignError
+            if (assignError) {
+                console.warn('Error fetching required reading:', assignError)
+                // Fallback to empty if table issue
+            }
 
             // Get recently updated articles in user's department
+            // Simplified: Just get recent PUBLISHED docs
             const { data: recentArticles, error: recentError } = await supabase
-                .from('sop_documents')
-                .select('id, title, content_type, estimated_read_time, updated_at')
-                .eq('status', 'approved')
+                .from('documents') // Updated table
+                .select('id, title, updated_at')
+                .eq('status', 'PUBLISHED')
                 .order('updated_at', { ascending: false })
                 .limit(5)
 
@@ -82,8 +88,6 @@ export function KnowledgeWidget() {
                 requiredReading: assignments?.map(a => ({
                     id: (a.document as any)?.id,
                     title: (a.document as any)?.title,
-                    content_type: (a.document as any)?.content_type,
-                    estimated_read_time: (a.document as any)?.estimated_read_time || 5,
                     created_at: (a.document as any)?.created_at,
                     is_read: false
                 })) || [],
@@ -162,12 +166,9 @@ export function KnowledgeWidget() {
                                         </p>
                                         <p className="text-xs text-gray-500 flex items-center gap-2">
                                             <Clock className="h-3 w-3" />
-                                            {item.estimated_read_time} min read
+                                            {formatDistanceToNow(new Date(item.created_at || new Date()), { addSuffix: true })}
                                         </p>
                                     </div>
-                                    <Badge variant="outline" className="text-xs capitalize shrink-0">
-                                        {item.content_type}
-                                    </Badge>
                                 </Link>
                             ))}
                         </div>

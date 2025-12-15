@@ -6,12 +6,12 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { ModuleFormDialog, type ModuleFormValues } from './components/ModuleFormDialog'
+import { AssignmentDialog } from './components/AssignmentDialog'
+import { useNavigate } from 'react-router-dom'
 import {
   Plus,
   Search,
@@ -20,7 +20,9 @@ import {
   Clock,
   Settings,
   Eye,
-  Loader2
+  Loader2,
+  FileText,
+  Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -47,6 +49,7 @@ interface TrainingModule {
 
 export default function TrainingModules() {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { t } = useTranslation('training')
 
@@ -56,23 +59,18 @@ export default function TrainingModules() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('created_at')
   const [sortOrder] = useState<'asc' | 'desc'>('desc')
+
+  // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [editingModule, setEditingModule] = useState<TrainingModule | null>(null)
+
+  // Delete states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [moduleToDelete, setModuleToDelete] = useState<TrainingModule | null>(null)
 
-  // Form states
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [estimatedDuration, setEstimatedDuration] = useState('')
-  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner')
-  const [category, setCategory] = useState('')
-  const [status, setStatus] = useState<ModuleStatus>('draft')
-
-  // Assignment states
+  // Assignment states (only need ID now, rest handled by dialog)
   const [assigningModuleId, setAssigningModuleId] = useState<string | null>(null)
-  const [assignTargetType, setAssignTargetType] = useState<'all' | 'users' | 'departments' | 'properties'>('all')
 
   // Data fetching
   const { data: modules, isLoading } = useQuery({
@@ -101,7 +99,34 @@ export default function TrainingModules() {
     }
   })
 
-  // Get categories for filter
+  // Default values to seed the dropdowns
+  const DEFAULT_CATEGORIES = [
+    'Front Office',
+    'Housekeeping',
+    'Food & Beverage',
+    'Maintenance',
+    'Security',
+    'Human Resources',
+    'Sales & Marketing',
+    'Management',
+    'General'
+  ]
+
+  const DEFAULT_DURATIONS = [
+    '15 minutes',
+    '30 minutes',
+    '45 minutes',
+    '1 hour',
+    '1.5 hours',
+    '2 hours',
+    '3 hours',
+    '4 hours',
+    '1 day',
+    '2 days',
+    '1 week'
+  ]
+
+  // Get categories for filter and form
   const { data: categories } = useQuery({
     queryKey: ['module-categories'],
     queryFn: async () => {
@@ -110,14 +135,81 @@ export default function TrainingModules() {
         .select('category')
         .not('category', 'is', null)
 
-      const uniqueCategories = [...new Set(data?.map(item => item.category) || [])]
-      return uniqueCategories
+      const uniqueCategories = new Set([
+        ...DEFAULT_CATEGORIES,
+        ...(data?.map(item => item.category) || [])
+      ])
+      return Array.from(uniqueCategories).sort()
     }
+  })
+
+  // Get durations for form
+  const { data: durations } = useQuery({
+    queryKey: ['module-durations'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('training_modules')
+        .select('estimated_duration')
+        .not('estimated_duration', 'is', null)
+
+      const uniqueDurations = new Set([
+        ...DEFAULT_DURATIONS,
+        ...(data?.map(item => item.estimated_duration) || [])
+      ])
+      return Array.from(uniqueDurations) // Keep default order mostly, or sort if needed. Let's rely on set order for now or maybe not sort durations alphabetically.
+    }
+  })
+
+  // Fetch users for assignment
+  const { data: availableUsers } = useQuery({
+    queryKey: ['users-for-assignment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .eq('status', 'active')
+        .order('first_name')
+
+      if (error) throw error
+      return data || []
+    },
+    enabled: showAssignDialog
+  })
+
+  // Fetch departments for assignment
+  const { data: availableDepartments } = useQuery({
+    queryKey: ['departments-for-assignment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name')
+        .order('name')
+
+      if (error) throw error
+      return data || []
+    },
+    enabled: showAssignDialog
+  })
+
+  // Fetch properties for assignment
+  const { data: availableProperties } = useQuery({
+    queryKey: ['properties-for-assignment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name')
+
+      if (error) throw error
+      return data || []
+    },
+    enabled: showAssignDialog
   })
 
   // Mutations
   const createModuleMutation = useMutation({
-    mutationFn: async (moduleData: Partial<TrainingModule>) => {
+    mutationFn: async (moduleData: ModuleFormValues) => {
       const { data, error } = await supabase
         .from('training_modules')
         .insert([{
@@ -136,12 +228,12 @@ export default function TrainingModules() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
       setShowCreateDialog(false)
-      resetForm()
+      setEditingModule(null)
     }
   })
 
   const updateModuleMutation = useMutation({
-    mutationFn: async ({ id, ...moduleData }: TrainingModule) => {
+    mutationFn: async ({ id, ...moduleData }: ModuleFormValues & { id: string }) => {
       const { data, error } = await supabase
         .from('training_modules')
         .update({
@@ -159,8 +251,7 @@ export default function TrainingModules() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
       setShowCreateDialog(false)
-      setShowAssignDialog(false)
-      resetForm()
+      setEditingModule(null)
     }
   })
 
@@ -178,40 +269,66 @@ export default function TrainingModules() {
     }
   })
 
-  const assignToAllMutation = useMutation({
-    mutationFn: async ({ moduleId, deadline }: { moduleId: string; deadline?: string }) => {
-      // Using the unified learning_assignments table
-      const { error } = await supabase
-        .from('learning_assignments')
-        .insert([{
-          target_type: 'everyone',  // Using correct enum value
-          target_id: null,          // null for everyone
+  // Assignment Mutation (Unified)
+  const assignMutation = useMutation({
+    mutationFn: async ({
+      targetType,
+      targetIds,
+      deadline
+    }: {
+      targetType: 'all' | 'users' | 'departments' | 'properties'
+      targetIds: string[]
+      deadline?: string
+    }) => {
+      if (!assigningModuleId) throw new Error("No module selected")
+
+      const assignments = []
+
+      if (targetType === 'all') {
+        assignments.push({
+          target_type: 'everyone',
+          target_id: null,
           content_type: 'module',
-          content_id: moduleId,
+          content_id: assigningModuleId,
           assigned_by: profile?.id,
           due_date: deadline || null,
           valid_from: new Date().toISOString(),
           priority: 'normal'
-        }])
+        })
+      } else {
+        const typeMap = {
+          users: 'user',
+          departments: 'department',
+          properties: 'property'
+        }
+
+        targetIds.forEach(id => {
+          assignments.push({
+            target_type: typeMap[targetType],
+            target_id: id,
+            content_type: 'module',
+            content_id: assigningModuleId,
+            assigned_by: profile?.id,
+            due_date: deadline || null,
+            valid_from: new Date().toISOString(),
+            priority: 'normal'
+          })
+        })
+      }
+
+      const { error } = await supabase
+        .from('learning_assignments')
+        .insert(assignments)
 
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
       setShowAssignDialog(false)
+      setAssigningModuleId(null)
     }
   })
 
-  // Utility functions
-  const resetForm = () => {
-    setTitle('')
-    setDescription('')
-    setEstimatedDuration('')
-    setDifficulty('beginner')
-    setCategory('')
-    setStatus('draft')
-    setEditingModule(null)
-  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -233,18 +350,12 @@ export default function TrainingModules() {
 
   // Event handlers
   const handleCreate = () => {
-    resetForm()
+    setEditingModule(null)
     setShowCreateDialog(true)
   }
 
   const handleEdit = (module: TrainingModule) => {
     setEditingModule(module)
-    setTitle(module.title || '')
-    setDescription(module.description || '')
-    setEstimatedDuration(module.estimated_duration || '')
-    setDifficulty(module.difficulty || 'beginner')
-    setCategory(module.category || '')
-    setStatus(module.status || 'draft')
     setShowCreateDialog(true)
   }
 
@@ -260,29 +371,15 @@ export default function TrainingModules() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const handleSubmit = async (values: ModuleFormValues) => {
     try {
       if (editingModule) {
         await updateModuleMutation.mutateAsync({
           id: editingModule.id,
-          title,
-          description,
-          estimated_duration: estimatedDuration,
-          difficulty,
-          category,
-          status
+          ...values
         })
       } else {
-        await createModuleMutation.mutateAsync({
-          title,
-          description,
-          estimated_duration: estimatedDuration,
-          difficulty,
-          category,
-          status
-        })
+        await createModuleMutation.mutateAsync(values)
       }
     } catch (error) {
       console.error('Error saving module:', error)
@@ -294,24 +391,12 @@ export default function TrainingModules() {
     setShowAssignDialog(true)
   }
 
-  const handleAssignSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!assigningModuleId) return
-
-    try {
-      const deadline = (e.target as HTMLFormElement).deadline?.value
-
-      switch (assignTargetType) {
-        case 'all':
-          await assignToAllMutation.mutateAsync({ moduleId: assigningModuleId, deadline })
-          break
-        default:
-          console.log('Assignment type not implemented yet:', assignTargetType)
-      }
-    } catch (error) {
-      console.error('Error assigning module:', error)
-    }
+  const handleAssignSubmit = async (data: {
+    targetType: 'all' | 'users' | 'departments' | 'properties'
+    targetIds: string[]
+    deadline?: string
+  }) => {
+    await assignMutation.mutateAsync(data)
   }
 
   return (
@@ -339,266 +424,208 @@ export default function TrainingModules() {
         }
       />
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-4">
-        <Select value={statusFilter} onValueChange={(value: ModuleStatus | 'all') => setStatusFilter(value)}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder={t('status')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allModules')}</SelectItem>
-            <SelectItem value="published">{t('published')}</SelectItem>
-            <SelectItem value="draft">{t('draft')}</SelectItem>
-            <SelectItem value="archived">{t('archived')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder={t('category')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allCategories')}</SelectItem>
-            {categories?.map(cat => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder={t('sortBy')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="created_at">{t('created')}</SelectItem>
-            <SelectItem value="updated_at">{t('updated')}</SelectItem>
-            <SelectItem value="title">{t('title')}</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Premium Filters Bar */}
+      <div className="mb-8 p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-wrap gap-4 w-full md:w-auto">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-hotel-muted" />
+            <Input
+              type="text"
+              placeholder={t('search')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 w-full md:w-64 border-gray-200 bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all"
+            />
+          </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[160px] border-gray-200 bg-gray-50/50">
+              <SelectValue placeholder={t('category')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allCategories')}</SelectItem>
+              {categories?.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={(value: ModuleStatus | 'all') => setStatusFilter(value)}>
+            <SelectTrigger className="w-[140px] border-gray-200 bg-gray-50/50">
+              <SelectValue placeholder={t('status')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allModules')}</SelectItem>
+              <SelectItem value="published">{t('published')}</SelectItem>
+              <SelectItem value="draft">{t('draft')}</SelectItem>
+              <SelectItem value="archived">{t('archived')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <span className="text-sm text-muted-foreground mr-2 hidden md:inline-block">{t('sortBy')}</span>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[160px] border-gray-200 bg-gray-50/50">
+              <SelectValue placeholder={t('sortBy')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_at">{t('created')}</SelectItem>
+              <SelectItem value="updated_at">{t('updated')}</SelectItem>
+              <SelectItem value="title">{t('title')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Modules Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
-          <div className="col-span-full flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+          <div className="col-span-full flex justify-center py-20">
+            <Loader2 className="h-10 w-10 animate-spin text-hotel-gold" />
           </div>
         ) : modules && modules.length > 0 ? (
           modules.map((module) => (
-            <Card key={module.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold line-clamp-2">{module.title}</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-3">
-                      {module.description}
+            <Card key={module.id} className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-gray-100 overflow-hidden bg-white/50 backdrop-blur-sm">
+              <div className={`h-2 w-full ${module.status === 'published' ? 'bg-hotel-navy' : module.status === 'draft' ? 'bg-gray-300' : 'bg-red-400'}`} />
+              <CardHeader className="pb-3 pt-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-1">
+                    <CardTitle className="text-xl font-medium font-serif text-hotel-navy line-clamp-1 group-hover:text-hotel-gold transition-colors">
+                      {module.title}
+                    </CardTitle>
+                    <p className="text-sm text-gray-500 line-clamp-2 min-h-[40px]">
+                      {module.description || t('noDescription', 'No description provided')}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Badge className={cn(getStatusColor(module.status || 'draft'))}>
-                      {module.status}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Badge variant="secondary" className={cn("rounded-sm font-normal", getStatusColor(module.status || 'draft'))}>
+                    {module.status}
+                  </Badge>
+                  <Badge variant="outline" className={cn("rounded-sm font-normal", getDifficultyColor(module.difficulty || 'beginner'))}>
+                    {module.difficulty}
+                  </Badge>
+                  {module.category && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-normal">
+                      {module.category}
                     </Badge>
-                    <Badge className={cn(getDifficultyColor(module.difficulty || 'beginner'))}>
-                      {module.difficulty}
-                    </Badge>
-                  </div>
+                  )}
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
+              <CardContent className="pt-2">
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-6 px-1">
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{module.estimated_duration || ''} {t('duration')}</span>
+                    <div className="flex items-center gap-1.5" title="Estimated Duration">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{module.estimated_duration || '0 min'}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
-                      <span>{module.view_count || 0} {t('views')}</span>
+                    <div className="flex items-center gap-1.5" title="Total Views">
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>{module.view_count || 0}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors"
-                      size="sm"
-                      onClick={() => handleEdit(module)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      className={`${module.status === 'published' ? 'bg-hotel-navy text-white hover:bg-hotel-navy-light' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} border border-hotel-navy rounded-md transition-colors`}
-                      size="sm"
-                      onClick={() => handleAssign(module.id)}
-                      disabled={module.status !== 'published'}
-                      title={module.status !== 'published' ? 'Only published modules can be assigned' : 'Assign to users'}
-                    >
-                      <Users className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      className="bg-red-500 text-white hover:bg-red-600 rounded-md transition-colors"
-                      size="sm"
-                      onClick={() => handleDelete(module)}
-                      disabled={deleteModuleMutation.isPending}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full border-gray-200 hover:bg-hotel-gold hover:text-white hover:border-hotel-gold transition-colors"
+                    size="sm"
+                    onClick={() => handleEdit(module)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    {t('edit', 'Info')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-gray-200 hover:bg-hotel-navy hover:text-white hover:border-hotel-navy transition-colors"
+                    size="sm"
+                    onClick={() => navigate(`/training/builder/${module.id}`)}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    {t('content', 'Content')}
+                  </Button>
+                  <Button
+                    className={cn(
+                      "w-full transition-colors",
+                      module.status === 'published'
+                        ? "bg-hotel-navy text-white hover:bg-hotel-navy-light"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    )}
+                    size="sm"
+                    onClick={() => {
+                      if (module.status !== 'published') {
+                        alert(t('onlyPublishedModulesCanBeAssigned', 'Only published modules can be assigned. Please publish this module first.'));
+                        return;
+                      }
+                      handleAssign(module.id);
+                    }}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    {t('assign', 'Assign')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200"
+                    size="sm"
+                    onClick={() => handleDelete(module)}
+                    disabled={deleteModuleMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t('delete', 'Delete')}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))
         ) : (
-          <div className="col-span-full text-center py-8 text-gray-700">
-            {t('noModulesFound')}
+          <div className="col-span-full flex flex-col items-center justify-center py-20 text-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+            <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+              <Search className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">{t('noModulesFound')}</h3>
+            <p className="text-gray-500 max-w-sm mx-auto mb-6">
+              {search || categoryFilter !== 'all' || statusFilter !== 'all'
+                ? t('adjustFilters', 'Try adjusting your search or filters to find what you are looking for.')
+                : t('createFirstModule', 'Get started by creating your first training module.')}
+            </p>
+            {!(search || categoryFilter !== 'all' || statusFilter !== 'all') && (
+              <Button onClick={handleCreate} className="bg-hotel-navy text-white hover:bg-hotel-navy-light">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('createModule')}
+              </Button>
+            )}
           </div>
         )}
       </div>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingModule ? t('editModule') : t('createModule')}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">{t('title')}</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={t('enterTitle')}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">{t('description')}</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t('enterDescription')}
-                  rows={3}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="estimatedDuration">{t('duration')}</Label>
-                <Input
-                  id="estimatedDuration"
-                  value={estimatedDuration}
-                  onChange={(e) => setEstimatedDuration(e.target.value)}
-                  placeholder="e.g., 2 hours"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="difficulty">{t('difficulty')}</Label>
-                <Select value={difficulty} onValueChange={(value: 'beginner' | 'intermediate' | 'advanced') => setDifficulty(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beginner">{t('beginner')}</SelectItem>
-                    <SelectItem value="intermediate">{t('intermediate')}</SelectItem>
-                    <SelectItem value="advanced">{t('advanced')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">{t('category')}</Label>
-                <Input
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder={t('enterCategory')}
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">{t('status')}</Label>
-              <Select value={status} onValueChange={(value: ModuleStatus) => setStatus(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">{t('draft')}</SelectItem>
-                  <SelectItem value="published">{t('published')}</SelectItem>
-                  <SelectItem value="archived">{t('archived')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                onClick={() => setShowCreateDialog(false)}
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                type="submit"
-                className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors"
-                disabled={createModuleMutation.isPending || updateModuleMutation.isPending}
-              >
-                {editingModule ? t('update') : t('create')}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ModuleFormDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        initialData={editingModule ? {
+          title: editingModule.title,
+          description: editingModule.description,
+          estimated_duration: editingModule.estimated_duration || '',
+          difficulty: editingModule.difficulty || 'beginner',
+          category: editingModule.category || '',
+          status: editingModule.status,
+        } : null}
+        onSubmit={handleSubmit}
+        isSubmitting={createModuleMutation.isPending || updateModuleMutation.isPending}
+        existingCategories={categories || []}
+        existingDurations={durations || []}
+      />
 
       {/* Assignment Dialog */}
-      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('assignModule')}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAssignSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('assignTo')}</Label>
-              <Select value={assignTargetType} onValueChange={(value: 'all' | 'users' | 'departments' | 'properties') => setAssignTargetType(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('allUsers')}</SelectItem>
-                  <SelectItem value="users">{t('specificUsers')}</SelectItem>
-                  <SelectItem value="departments">{t('departments')}</SelectItem>
-                  <SelectItem value="properties">{t('properties')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="deadline">{t('deadline')}</Label>
-              <Input
-                id="deadline"
-                type="datetime-local"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                onClick={() => setShowAssignDialog(false)}
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                type="submit"
-                className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors"
-                disabled={assignToAllMutation.isPending}
-              >
-                {t('assign')}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <AssignmentDialog
+        open={showAssignDialog}
+        onOpenChange={setShowAssignDialog}
+        users={availableUsers || []}
+        departments={availableDepartments || []}
+        properties={availableProperties || []}
+        onAssign={handleAssignSubmit}
+        isAssigning={assignMutation.isPending}
+      />
 
       {/* Delete Confirmation */}
       <DeleteConfirmation

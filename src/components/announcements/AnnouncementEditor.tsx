@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { ROLES } from '@/lib/constants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,22 +13,24 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { 
-  Send, 
-  Calendar, 
-  Clock, 
-  Image, 
-  Video, 
-  FileText, 
-  Target, 
-  Users, 
+import {
+  Send,
+  Calendar,
+  Clock,
+  Image,
+  Video,
+  FileText,
+  Target,
+  Users,
   Eye,
   Bell,
   Settings,
   Save,
   X,
   Plus,
-  Trash2
+  Trash2,
+  Building,
+  MapPin
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -55,7 +58,7 @@ interface MediaAttachment {
 export function AnnouncementEditor({ initialData, onClose, onSave }: AnnouncementEditorProps) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  
+
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     content: initialData?.content || '',
@@ -74,11 +77,11 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   const [targetAudience, setTargetAudience] = useState<TargetAudience>(
     initialData?.target_audience || { type: 'all', values: [] }
   )
-  
+
   const [attachments, setAttachments] = useState<MediaAttachment[]>(
     initialData?.attachments || []
   )
-  
+
   const [activeTab, setActiveTab] = useState('content')
 
   const { data: departments } = useQuery({
@@ -99,6 +102,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
     }
   })
 
+  /* 
   const { data: roles } = useQuery({
     queryKey: ['user-roles'],
     queryFn: async () => {
@@ -106,21 +110,29 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       if (error) throw error
       return data
     }
-  })
+  }) 
+  */
+  const roles = Object.entries(ROLES).map(([id, config]) => ({
+    id,
+    name: config.label
+  }))
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log('Creating announcement with data:', { ...data, created_by: user?.id })
       const { data: result, error } = await supabase
         .from('announcements')
         .insert({
           ...data,
           created_by: user?.id,
-          updated_by: user?.id
         })
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error creating announcement:', error)
+        throw error
+      }
       return result
     },
     onSuccess: (data) => {
@@ -130,7 +142,8 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       onClose?.()
     },
     onError: (error) => {
-      toast.error('Failed to create announcement')
+      console.error('Failed to create announcement:', error)
+      toast.error('Failed to create announcement: ' + error.message)
     }
   })
 
@@ -140,7 +153,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         .from('announcements')
         .update({
           ...data,
-          updated_by: user?.id
+
         })
         .eq('id', initialData.id)
         .select()
@@ -178,8 +191,8 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
       return {
         id: Math.random().toString(36),
-        type: file.type.startsWith('image/') ? 'image' : 
-              file.type.startsWith('video/') ? 'video' : 'document',
+        type: file.type.startsWith('image/') ? 'image' :
+          file.type.startsWith('video/') ? 'video' : 'document',
         url: publicUrl,
         name: file.name,
         size: file.size
@@ -200,23 +213,38 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   }
 
   const handleSubmit = () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
-      toast.error('Title and content are required')
-      return
-    }
+    try {
+      console.log('handleSubmit called', formData)
 
-    const announcementData = {
-      ...formData,
-      target_audience,
-      attachments,
-      scheduled_at: formData.is_scheduled ? formData.scheduled_at : null,
-      expires_at: formData.expires_at || null
-    }
+      if (!formData.title.trim() || !formData.content.trim()) {
+        console.log('Validation failed: Title or content missing')
+        toast.error('Title and content are required')
+        return
+      }
 
-    if (initialData?.id) {
-      updateAnnouncementMutation.mutate(announcementData)
-    } else {
-      createAnnouncementMutation.mutate(announcementData)
+      console.log('Validation passed')
+
+      const { is_pinned, is_scheduled, ...restFormData } = formData
+
+      const announcementData = {
+        ...restFormData,
+        pinned: is_pinned,
+        target_audience: targetAudience,
+        attachments,
+        scheduled_at: is_scheduled && formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : null,
+        expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null
+      }
+
+      console.log('Submitting data:', announcementData)
+
+      if (initialData?.id) {
+        updateAnnouncementMutation.mutate(announcementData)
+      } else {
+        createAnnouncementMutation.mutate(announcementData)
+      }
+    } catch (e: any) {
+      console.error('handleSubmit error:', e)
+      toast.error('Error submitting form: ' + e.message)
     }
   }
 
@@ -476,10 +504,9 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="important">Important</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

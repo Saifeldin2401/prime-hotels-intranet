@@ -58,5 +58,49 @@
         "not_found": "Article Not Found",
         "no_access": "The article you're looking for doesn't exist or you don't have access.",
         "back_home": "Back to Knowledge Base"
+    },
+    "question_library": {
+        "title": "Question Library",
+        "description": "Manage quiz questions for SOPs and training",
+        "generate_with_ai": "Generate with AI",
+        "create_question": "Create Question",
+        "stats": {
+            "total": "Total",
+            "published": "Published",
+            "pending_review": "Pending Review",
+            "ai_generated": "AI Generated"
+        },
+        "search_placeholder": "Search questions...",
+        "all_types": "All Types",
+        "tabs": {
+            "all": "All",
+            "drafts": "Drafts",
+            "pending_review": "Pending Review",
+            "published": "Published",
+            "archived": "Archived"
+        },
+        "no_questions": "No questions found",
+        "create_first": "Create your first question",
+        "approve": "Approve",
+        "view": "View",
+        "edit": "Edit",
+        "delete": "Delete"
+    },
+    "editor": {
+        "create_title": "Create Document"
+    },
+    "browse": {
+        "title": "Browse Knowledge Base",
+        "subtitle": "Explore content by type",
+        "most_popular": "Most Popular",
+        "recently_updated": "Recently Updated"
+    },
+    "search": {
+        "title": "Search Knowledge Base",
+        "subtitle": "Find SOPs, policies, guides, and more",
+        "placeholder": "Search articles, SOPs, policies...",
+        "results_count": "{{count}} articles found",
+        "no_results": "No articles found",
+        "no_results_hint": "Try adjusting your search or filters"
     }
 }

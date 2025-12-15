@@ -60,6 +60,7 @@ const CONTENT_TYPE_CONFIG: Record<KnowledgeContentType, { icon: any; label: stri
     faq: { icon: HelpCircle, label: 'FAQ', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
     video: { icon: Video, label: 'Video', color: 'bg-red-100 text-red-700 border-red-200' },
     visual: { icon: Image, label: 'Visual', color: 'bg-pink-100 text-pink-700 border-pink-200' },
+    document: { icon: FileText, label: 'Document', color: 'bg-gray-100 text-gray-700 border-gray-200' },
 }
 
 const SORT_OPTIONS = [

@@ -84,6 +84,12 @@ export interface RouteConfig {
     hideFromNav?: boolean
     /** Child routes (for expandable menus) */
     children?: Omit<RouteConfig, 'group' | 'children'>[]
+    /**
+     * Role-specific path overrides
+     * Same nav label routes to different destinations per role
+     * Example: Dashboard -> /dashboard/property-manager for property_manager
+     */
+    rolePathOverrides?: Partial<Record<AppRole, string>>
 }
 
 export interface NavigationGroupConfig {
@@ -204,19 +210,19 @@ export const ROUTES: RouteConfig[] = [
         path: '/dashboard',
         title: 'nav.dashboard',
         icon: BarChart3,
-        description: 'Analytics and overview dashboard',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        description: 'Your personalized dashboard',
+        allowedRoles: 'all',
         group: 'home',
-        order: 1
-    },
-    {
-        path: '/staff-dashboard',
-        title: 'nav.staff_dashboard',
-        icon: Home,
-        description: 'Personal dashboard for staff members',
-        allowedRoles: ['staff'],
-        group: 'home',
-        order: 2
+        order: 1,
+        // Role-specific dashboard routing - same label, different destinations
+        rolePathOverrides: {
+            staff: '/staff-dashboard',
+            department_head: '/dashboard/department-head',
+            property_manager: '/dashboard/property-manager',
+            property_hr: '/dashboard/property-hr',
+            regional_hr: '/dashboard/regional-hr',
+            regional_admin: '/dashboard/corporate-admin'
+        }
     },
 
     // -------------------------------------------------------------------------
@@ -568,6 +574,15 @@ export const ROUTES: RouteConfig[] = [
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Resolve the actual path for a route based on user's role
+ * Handles rolePathOverrides for same-label-different-destination routes
+ */
+export function resolvePathForRole(route: RouteConfig, role: AppRole | null): string {
+    if (!role) return route.path
+    return route.rolePathOverrides?.[role] || route.path
+}
 
 /**
  * Check if a role can access a route

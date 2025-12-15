@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Search, Filter, MoreVertical, FileText, CheckCircle2, AlertCircle, Clock, Sparkles } from 'lucide-react'
+import { Plus, Search, Filter, MoreVertical, Sparkles, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -18,7 +18,6 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { learningService } from '@/services/learningService'
-import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
 import type { QuestionStatus } from '@/types/questions'
@@ -67,11 +66,11 @@ export default function QuizList() {
     }
 
     const handleOpenGenerate = async () => {
-        // Fetch available SOPs for selection
+        // Fetch available documents for selection
         const { data } = await supabase
-            .from('sop_documents')
+            .from('documents') // Updated table
             .select('id, title')
-            .eq('status', 'published') // Only published SOPs
+            .eq('status', 'PUBLISHED') // Updated status case
             .order('title')
 
         if (data) setSops(data)
@@ -82,9 +81,10 @@ export default function QuizList() {
         if (!selectedSOP) return
 
         const sop = sops.find(s => s.id === selectedSOP)
+        // Pass title to help naming the quiz
         await generateQuizFromSOP(selectedSOP, sop ? `Assessment: ${sop.title}` : undefined)
         setShowGenerateDialog(false)
-        refetch() // Refresh list (though we navigate away usually, refreshing is good practice)
+        refetch()
     }
 
 
@@ -105,7 +105,7 @@ export default function QuizList() {
                         className="gap-2"
                     >
                         <Sparkles className={`h-4 w-4 ${generating ? 'animate-pulse text-purple-600' : 'text-purple-600'}`} />
-                        {generating ? 'Generating...' : 'Generate from SOP'}
+                        {generating ? 'Generating...' : 'Generate from Document'}
                     </Button>
                     <Button onClick={() => navigate('/learning/quizzes/new')}>
                         <Plus className="mr-2 h-4 w-4" />
@@ -213,15 +213,15 @@ export default function QuizList() {
             <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Generate Quiz from SOP</DialogTitle>
+                        <DialogTitle>Generate Quiz from Document</DialogTitle>
                         <DialogDescription>
-                            Select an existing SOP. AI will analyze it and generate 5 multiple choice questions.
+                            Select an existing Knowledge Base document (SOP). AI will analyze it and generate 5 multiple choice questions.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                         <Select value={selectedSOP} onValueChange={setSelectedSOP}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select a Standard Operating Procedure" />
+                                <SelectValue placeholder="Select a Document" />
                             </SelectTrigger>
                             <SelectContent className="max-h-[300px]">
                                 {sops.map(sop => (

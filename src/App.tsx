@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
+import { NotificationProvider } from '@/contexts/NotificationContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -15,14 +16,19 @@ import { useTranslation } from 'react-i18next'
 import Login from '@/pages/Login'
 import Unauthorized from '@/pages/Unauthorized'
 import { StaffDashboard } from '@/pages/dashboard/StaffDashboard'
+import { PropertyManagerDashboard } from '@/pages/dashboard/PropertyManagerDashboard'
+import { PropertyHRDashboard } from '@/pages/dashboard/PropertyHRDashboard'
+import { DepartmentHeadDashboard } from '@/pages/dashboard/DepartmentHeadDashboard'
+import { AreaManagerDashboard } from '@/pages/dashboard/AreaManagerDashboard'
+import { CorporateAdminDashboard } from '@/pages/dashboard/CorporateAdminDashboard'
+import DepartmentDetails from '@/pages/dashboard/DepartmentDetails'
 import UserManagement from '@/pages/admin/UserManagement'
 import PropertyManagement from '@/pages/admin/PropertyManagement'
+import PropertyDetails from '@/pages/dashboard/PropertyDetails'
 import DocumentLibrary from '@/pages/documents/DocumentLibrary'
 import DocumentDetail from '@/pages/documents/DocumentDetail'
 import TrainingModules from '@/pages/training/TrainingModules'
-
 import MyCertificates from '@/pages/training/MyCertificates'
-
 import TrainingBuilder from '@/pages/training/TrainingBuilder'
 import TrainingAssignments from '@/pages/training/TrainingAssignments'
 import TrainingCertificates from '@/pages/training/TrainingCertificates'
@@ -212,6 +218,67 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      {/* Role-Specific Dashboard Routes */}
+      <Route
+        path="/dashboard/property-manager"
+        element={
+          <ProtectedRoute allowedRoles={['property_manager']}>
+            <AppLayout>
+              <PropertyManagerDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/property-hr"
+        element={
+          <ProtectedRoute allowedRoles={['property_hr']}>
+            <AppLayout>
+              <PropertyHRDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/department-head"
+        element={
+          <ProtectedRoute allowedRoles={['department_head']}>
+            <AppLayout>
+              <DepartmentHeadDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/regional-hr"
+        element={
+          <ProtectedRoute allowedRoles={['regional_hr']}>
+            <AppLayout>
+              <AreaManagerDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/corporate-admin"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin']}>
+            <AppLayout>
+              <CorporateAdminDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/departments/:id"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <DepartmentDetails />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin/users"
         element={
@@ -228,6 +295,16 @@ function AppRoutes() {
           <ProtectedRoute allowedRoles={['regional_admin']}>
             <AppLayout>
               <PropertyManagement />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/properties/:id"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
+            <AppLayout>
+              <PropertyDetails />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -909,7 +986,9 @@ function App() {
           <BrowserRouter>
             <AuthProvider>
               <PropertyProvider>
-                <AppRoutes />
+                <NotificationProvider>
+                  <AppRoutes />
+                </NotificationProvider>
               </PropertyProvider>
             </AuthProvider>
           </BrowserRouter>
