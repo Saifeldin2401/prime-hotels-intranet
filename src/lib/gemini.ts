@@ -124,14 +124,12 @@ export const aiService = {
 
     // Try each model in the list until one works
     for (const model of FALLBACK_MODELS) {
-      console.log(`🔄 Attempting AI Analysis with model: ${model}`)
       try {
         const generatedText = await callHuggingFace(model, prompt)
         const cleanJson = generatedText.replace(/```json\n?|\n?```/g, '').trim()
         const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
 
         if (jsonMatch) {
-          console.log(`✅ Success with ${model}!`)
           return JSON.parse(jsonMatch[0])
         }
       } catch (e: any) {

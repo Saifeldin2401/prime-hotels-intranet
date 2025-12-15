@@ -5,8 +5,6 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 // Import language resources directly to prevent loading flickers
 import enCommon from './locales/en/common.json';
 import arCommon from './locales/ar/common.json';
-import enSOP from './locales/en/sop.json';
-import arSOP from './locales/ar/sop.json';
 import enAuth from './locales/en/auth.json';
 import arAuth from './locales/ar/auth.json';
 import enNav from './locales/en/nav.json';
@@ -41,12 +39,13 @@ import enMessages from './locales/en/messages.json';
 import arMessages from './locales/ar/messages.json';
 import enApprovals from './locales/en/approvals.json';
 import arApprovals from './locales/ar/approvals.json';
+import enPublic from './locales/en/public.json';
+import arPublic from './locales/ar/public.json';
 
 // Define the resources
 const resources = {
   en: {
     common: enCommon,
-    sop: enSOP,
     auth: enAuth,
     nav: enNav,
     dashboard: enDashboard,
@@ -64,10 +63,10 @@ const resources = {
     maintenance: enMaintenance,
     messages: enMessages,
     approvals: enApprovals,
+    public: enPublic,
   },
   ar: {
     common: arCommon,
-    sop: arSOP,
     auth: arAuth,
     nav: arNav,
     dashboard: arDashboard,
@@ -85,10 +84,9 @@ const resources = {
     maintenance: arMaintenance,
     messages: arMessages,
     approvals: arApprovals,
+    public: arPublic,
   },
 };
-
-console.log('Antigravity Debug: i18n resources loaded:', resources);
 
 i18n
   // detect user language
@@ -114,7 +112,6 @@ i18n
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],
       lookupLocalStorage: 'preferred-language',
-      checkWhitelist: true,
     },
     load: 'languageOnly', // forces en-US to en
 
@@ -126,11 +123,10 @@ i18n
 
 // Handle RTL direction on language change
 i18n.on('languageChanged', (lng) => {
-  console.log('i18n Event: languageChanged', lng);
   const direction = lng === 'ar' ? 'rtl' : 'ltr';
   document.documentElement.dir = direction;
   document.documentElement.lang = lng;
-  // Also save to local storage for persistence across reloads (handled by detector but good to be explicit)
+  // Persist language preference
   localStorage.setItem('preferred-language', lng);
 });
 

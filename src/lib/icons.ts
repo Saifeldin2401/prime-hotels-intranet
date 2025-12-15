@@ -1,0 +1,60 @@
+import {
+    Home,
+    FileText,
+    BookOpen,
+    Settings,
+    Users,
+    Wrench,
+    MessageSquare,
+    BarChart3,
+    User,
+    Calendar,
+    CheckSquare,
+    Megaphone,
+    Briefcase,
+    Award,
+    ClipboardList,
+    FolderOpen,
+    ArrowUp,
+    ArrowRightLeft,
+    Bell,
+    Search,
+    Shield,
+    Building,
+    ListTodo,
+    GraduationCap,
+    FileQuestion,
+    type LucideIcon
+} from 'lucide-react'
+
+export const iconMap: Record<string, LucideIcon> = {
+    Home,
+    FileText,
+    BookOpen,
+    Settings,
+    Users,
+    Wrench,
+    MessageSquare,
+    BarChart3,
+    User,
+    Calendar,
+    CheckSquare,
+    Megaphone,
+    Briefcase,
+    Award,
+    ClipboardList,
+    FolderOpen,
+    ArrowUp,
+    ArrowRightLeft,
+    Bell,
+    Search,
+    Shield,
+    Building,
+    ListTodo,
+    GraduationCap,
+    FileQuestion
+}
+
+export function getIcon(name: string): LucideIcon {
+    return iconMap[name] || FileQuestion // Default fallback
+}

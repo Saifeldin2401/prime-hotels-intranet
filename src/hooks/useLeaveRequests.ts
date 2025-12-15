@@ -173,16 +173,21 @@ export function useRejectLeaveRequest() {
       reason
     }: {
       requestId: string
-      reason?: string
+      reason: string // Changed from optional to required
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
+
+      // Validate reason is provided and not empty
+      if (!reason || reason.trim().length === 0) {
+        throw new Error('Rejection reason is required')
+      }
 
       const { data, error } = await supabase
         .from('leave_requests')
         .update({
           status: 'rejected',
           rejected_by_id: user.id,
-          rejection_reason: reason || null,
+          rejection_reason: reason,
           updated_at: new Date().toISOString()
         })
         .eq('id', requestId)
@@ -197,8 +202,12 @@ export function useRejectLeaveRequest() {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
       crudToasts.reject.success('Leave request')
     },
-    onError: () => {
-      crudToasts.reject.error('leave request')
+    onError: (error: Error) => {
+      if (error.message === 'Rejection reason is required') {
+        crudToasts.reject.error('Rejection reason is required')
+      } else {
+        crudToasts.reject.error('leave request')
+      }
     }
   })
 }

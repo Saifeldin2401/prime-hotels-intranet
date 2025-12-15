@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -9,19 +9,69 @@ import type { User } from '@/lib/rbac'
 import { useTeamLeaveRequests, useApproveLeaveRequest, useRejectLeaveRequest } from '@/hooks/useLeaveRequests'
 import { format } from 'date-fns'
 import { CheckCircle, XCircle } from 'lucide-react'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAnnouncements } from '@/hooks/useAnnouncements'
+import { useAuth } from '@/hooks/useAuth'
+import { useHRStats } from '@/hooks/useDashboardStats'
+import JobPostings from '@/pages/jobs/JobPostings'
+import { KnowledgeComplianceWidget } from '@/components/knowledge/KnowledgeComplianceWidget'
+import { useProfiles } from '@/hooks/useUsers'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { useNavigate } from 'react-router-dom'
 
 export function PropertyHRDashboard() {
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const { currentProperty } = useProperty()
+  const { user, profile, primaryRole } = useAuth()
+  const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
+  const { data: hrStatsData, isLoading: statsLoading } = useHRStats(currentProperty?.id)
+  const { data: staffMembers = [], isLoading: staffLoading } = useProfiles({ property_id: currentProperty?.id })
+  const [staffSearchTerm, setStaffSearchTerm] = useState('')
+  const navigate = useNavigate()
 
-  // Mock user object for SocialFeed component
-  const mockUser: User = {
-    id: 'hr-1',
-    name: 'Property HR',
-    email: 'hr@primehotels.com',
-    role: 'property_hr',
-    property: 'Riyadh Downtown',
+  // Create real user object from auth context
+  const currentUser: User = {
+    id: user?.id || 'guest',
+    name: profile?.full_name || user?.email || 'Property HR',
+    email: user?.email || '',
+    role: (primaryRole as User['role']) || 'property_hr',
+    property: currentProperty?.name || '',
     permissions: []
+  }
+
+  // Transform announcements to feed items format
+  const feedItems: FeedItem[] = announcements.map(announcement => ({
+    id: announcement.id,
+    type: 'announcement' as const,
+    author: {
+      id: announcement.created_by || 'system',
+      name: announcement.created_by_profile?.full_name || 'HR System',
+      email: '',
+      role: 'property_hr' as const,
+      department: 'Human Resources',
+      property: currentProperty?.name || '',
+      permissions: []
+    },
+    title: announcement.title,
+    content: announcement.content,
+    timestamp: new Date(announcement.created_at),
+    tags: announcement.pinned ? ['pinned'] : [],
+    priority: (announcement.priority === 'critical' ? 'high' : announcement.priority === 'important' ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+    reactions: {},
+    comments: []
+  }))
+
+  const loading = announcementsLoading || statsLoading
+
+  // Use real stats or defaults
+  const hrStats = hrStatsData || {
+    totalStaff: 0,
+    presentToday: 0,
+    pendingLeaveRequests: 0,
+    newHiresThisMonth: 0,
+    trainingCompliance: 0,
+    openPositions: 0
   }
 
   const { data: leaveRequests, isLoading: leaveLoading } = useTeamLeaveRequests()
@@ -34,135 +84,24 @@ export function PropertyHRDashboard() {
 
   const handleReject = (requestId: string) => {
     const reason = prompt('Please provide a reason for rejection:')
-    if (reason) {
+    if (reason && reason.trim()) {
       rejectMutation.mutate({ requestId, reason })
     }
   }
-  const [hrStats] = useState({
-    totalStaff: 85,
-    presentToday: 78,
-    pendingLeaveRequests: 5,
-    newHiresThisMonth: 3,
-    trainingCompliance: 92,
-    openPositions: 4
-  })
 
-  useEffect(() => {
-    // Mock data for Property HR dashboard
-    const mockFeedItems: FeedItem[] = [
-      {
-        id: '1',
-        type: 'hr_reminder',
-        author: {
-          id: '3',
-          name: 'HR System',
-          email: 'hr@primehotels.com',
-          role: 'property_hr',
-          department: 'Human Resources',
-          property: 'Riyadh Downtown',
-          permissions: []
-        },
-        title: 'Performance Review Cycle Starting',
-        content: 'Q4 performance review cycle begins next week. Please ensure all managers have completed their team assessments.',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        tags: ['performance', 'reviews', 'deadline'],
-        priority: 'high',
-        reactions: { like: 8 },
-        comments: [],
-        actionButton: {
-          text: 'Prepare Reviews',
-          onClick: () => console.log('Prepare Reviews')
-        }
-      },
-      {
-        id: '2',
-        type: 'announcement',
-        author: {
-          id: '4',
-          name: 'Lisa Anderson',
-          email: 'lisa.a@primehotels.com',
-          role: 'corporate_admin',
-          department: 'Corporate',
-          property: 'Head Office',
-          permissions: []
-        },
-        title: 'New HR Policy Updates',
-        content: 'Updated remote work policy and employee handbook now available. Please review and acknowledge by month end.',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        tags: ['policy', 'handbook', 'mandatory'],
-        priority: 'medium',
-        reactions: { like: 15, clap: 8 },
-        comments: []
-      },
-      {
-        id: '3',
-        type: 'task',
-        author: {
-          id: '3',
-          name: 'System',
-          email: 'system@primehotels.com',
-          role: 'corporate_admin',
-          department: 'Management',
-          property: 'System',
-          permissions: []
-        },
-        title: 'Onboarding Schedule - New Hires',
-        content: '3 new hires starting next week. Prepare onboarding materials and schedule orientation sessions.',
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-        tags: ['onboarding', 'new-hires', 'schedule'],
-        priority: 'medium',
-        reactions: {},
-        comments: [],
-        actionButton: {
-          text: 'View Schedule',
-          onClick: () => console.log('View Schedule')
-        }
-      }
-    ]
 
-    setFeedItems(mockFeedItems)
-    setLoading(false)
-  }, [])
-
-  const handleReact = (itemId: string, reaction: string) => {
-    setFeedItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const currentReactions = item.reactions[reaction] || 0
-        return {
-          ...item,
-          reactions: {
-            ...item.reactions,
-            [reaction]: currentReactions + 1
-          }
-        }
-      }
-      return item
-    }))
+  const handleReact = (_itemId: string, _reaction: string) => {
+    // Reaction functionality placeholder - to be implemented
   }
 
-  const handleComment = (itemId: string, content: string) => {
-    const newComment = {
-      id: Date.now().toString(),
-      author: mockUser,
-      content,
-      timestamp: new Date(),
-      reactions: {}
-    }
-
-    setFeedItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          comments: [...item.comments, newComment]
-        }
-      }
-      return item
-    }))
+  const handleComment = (_itemId: string, _content: string) => {
+    // Comment functionality placeholder - to be implemented
   }
 
-  const handleShare = (itemId: string) => {
-    console.log('Share item:', itemId)
+  const handleShare = (_itemId: string) => {
+    // Share functionality placeholder - to be implemented
   }
+
 
   if (loading) {
     return (
@@ -199,8 +138,8 @@ export function PropertyHRDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{hrStats.presentToday}/{hrStats.totalStaff}</div>
-            <Progress value={(hrStats.presentToday / hrStats.totalStaff) * 100} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">92% attendance rate</p>
+            <Progress value={hrStats.totalStaff > 0 ? (hrStats.presentToday / hrStats.totalStaff) * 100 : 0} className="mt-2" />
+            <p className="text-xs text-gray-600 mt-1">Daily attendance</p>
           </CardContent>
         </Card>
 
@@ -210,7 +149,7 @@ export function PropertyHRDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{hrStats.pendingLeaveRequests}</div>
-            <p className="text-xs text-gray-600 mt-1">2 urgent, 3 regular</p>
+            <p className="text-xs text-gray-600 mt-1">Pending approval</p>
           </CardContent>
         </Card>
 
@@ -221,7 +160,7 @@ export function PropertyHRDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{hrStats.trainingCompliance}%</div>
             <Progress value={hrStats.trainingCompliance} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Above target (90%)</p>
+            <p className="text-xs text-gray-600 mt-1">Completion rate</p>
           </CardContent>
         </Card>
 
@@ -250,7 +189,7 @@ export function PropertyHRDashboard() {
 
         <TabsContent value="feed" className="space-y-6">
           <SocialFeed
-            user={mockUser}
+            user={currentUser}
             feedItems={feedItems}
             onReact={handleReact}
             onComment={handleComment}
@@ -339,121 +278,77 @@ export function PropertyHRDashboard() {
 
         <TabsContent value="staff" className="space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center space-x-2">
                 <Icons.Users className="h-5 w-5" />
                 <span>Staff Directory</span>
               </CardTitle>
+              <div className="w-1/3">
+                <Input
+                  placeholder="Search staff..."
+                  value={staffSearchTerm}
+                  onChange={(e) => setStaffSearchTerm(e.target.value)}
+                  className="h-8"
+                />
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { name: 'John Smith', department: 'Front Desk', role: 'Receptionist', status: 'active', hireDate: '2022-03-15' },
-                { name: 'Sarah Johnson', department: 'Front Desk', role: 'Team Lead', status: 'active', hireDate: '2021-08-20' },
-                { name: 'Mike Wilson', department: 'Housekeeping', role: 'Supervisor', status: 'active', hireDate: '2020-11-10' },
-                { name: 'Lisa Chen', department: 'Food & Beverage', role: 'Server', status: 'on-leave', hireDate: '2023-01-05' }
-              ].map((staff, index) => (
-                <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-2 sm:gap-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm sm:text-base">{staff.name}</p>
-                      <p className="text-xs sm:text-sm text-gray-600">{staff.role} • {staff.department}</p>
-                      <p className="text-xs text-gray-500">Hired: {staff.hireDate}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={
-                      staff.status === 'active'
-                        ? 'bg-green-100 text-green-800 text-xs'
-                        : 'bg-yellow-100 text-yellow-800 text-xs'
-                    }>
-                      {staff.status}
-                    </Badge>
-                    <button className="px-2.5 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 min-h-touch sm:min-h-0">
-                      View
-                    </button>
-                  </div>
+            <CardContent>
+              {staffLoading ? (
+                <div className="text-center py-8 text-gray-500">Loading staff...</div>
+              ) : staffMembers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Icons.Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>No staff members found.</p>
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-4">
+                  {staffMembers
+                    .filter(m =>
+                      m.full_name?.toLowerCase().includes(staffSearchTerm.toLowerCase()) ||
+                      m.email?.toLowerCase().includes(staffSearchTerm.toLowerCase())
+                    )
+                    .map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <Avatar>
+                            <AvatarImage src={member.avatar_url || ''} />
+                            <AvatarFallback>{member.full_name?.charAt(0) || '?'}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-gray-900">{member.full_name}</p>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span>{member.job_title || 'No Job Title'}</span>
+                              <span>•</span>
+                              <span>{member.departments?.[0]?.name || 'No Dept'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                            {member.status || 'Unknown'}
+                          </Badge>
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/profile/${member.id}`)}>
+                            View Profile
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="recruitment" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Icons.UserPlus className="h-5 w-5" />
-                <span>Recruitment Pipeline</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { position: 'Front Desk Agent', department: 'Front Desk', applicants: 12, stage: 'interview', urgency: 'high' },
-                { position: 'Housekeeping Staff', department: 'Housekeeping', applicants: 8, stage: 'screening', urgency: 'medium' },
-                { position: 'Restaurant Server', department: 'Food & Beverage', applicants: 15, stage: 'final-round', urgency: 'high' },
-                { position: 'Maintenance Technician', department: 'Maintenance', applicants: 5, stage: 'assessment', urgency: 'low' }
-              ].map((position, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{position.position}</p>
-                    <p className="text-sm text-gray-600">{position.department} • {position.applicants} applicants</p>
-                    <p className="text-xs text-gray-500">Stage: {position.stage}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={
-                      position.urgency === 'high'
-                        ? 'bg-red-100 text-red-800'
-                        : position.urgency === 'medium'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-blue-100 text-blue-800'
-                    }>
-                      {position.urgency}
-                    </Badge>
-                    <button className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700">
-                      Review
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <CardContent className="pt-6">
+              <JobPostings embedded />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="compliance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Icons.Shield className="h-5 w-5" />
-                <span>Compliance Overview</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { item: 'Safety Training Completion', percentage: 95, status: 'compliant', deadline: '2024-12-31' },
-                { item: 'HR Policy Acknowledgment', percentage: 88, status: 'attention', deadline: '2024-10-31' },
-                { item: 'Background Checks', percentage: 100, status: 'compliant', deadline: 'Completed' },
-                { item: 'Certification Renewals', percentage: 72, status: 'critical', deadline: '2024-11-15' }
-              ].map((item, index) => (
-                <div key={index} className="p-3 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium">{item.item}</p>
-                    <Badge className={
-                      item.status === 'compliant'
-                        ? 'bg-green-100 text-green-800'
-                        : item.status === 'attention'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                    }>
-                      {item.status}
-                    </Badge>
-                  </div>
-                  <Progress value={item.percentage} className="mb-2" />
-                  <p className="text-sm text-gray-600">{item.percentage}% complete • Deadline: {item.deadline}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <KnowledgeComplianceWidget propertyId={currentProperty?.id} variant="department" />
         </TabsContent>
       </Tabs>
     </div>

@@ -292,6 +292,8 @@ export interface Document {
   current_version: number
   created_at: string
   updated_at: string
+  view_count: number
+  content_type: string
 }
 
 export interface DocumentVersion {
@@ -329,6 +331,15 @@ export interface TrainingModule {
   created_by: string
   created_at: string
   updated_at: string
+  // Added fields
+  category: string | null
+  status: string
+  difficulty_level: string | null
+  estimated_duration: string | null
+  is_active: boolean
+  views_count: number
+  property_id: string | null
+  updated_by: string | null
 }
 
 export interface TrainingContentBlock {
@@ -453,6 +464,17 @@ export interface Announcement {
   created_by: string
   created_at: string
   updated_at: string
+  target_audience: {
+    type: 'all' | 'role' | 'department' | 'property' | 'individual'
+    values: string[]
+  } | null
+  attachments: {
+    id: string
+    type: 'image' | 'video' | 'document'
+    url: string
+    name: string
+    size?: number
+  }[] | null
 }
 
 export interface AnnouncementTarget {
@@ -522,16 +544,6 @@ export interface EscalationRule {
   is_active: boolean
   created_at: string
   updated_at: string | null
-}
-
-export interface MaintenanceComment {
-  id: string
-  ticket_id: string
-  author_id: string
-  comment: string
-  internal_only: boolean
-  created_at: string
-  author?: Profile
 }
 
 export interface EmployeeReferral {

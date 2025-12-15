@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -6,154 +7,107 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SocialFeed, type FeedItem } from '@/components/social/SocialFeed'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAnnouncements } from '@/hooks/useAnnouncements'
+import { OverdueBadge } from '@/components/escalation/OverdueBadge'
+import { DepartmentKPIWidget } from '@/components/dashboard/DepartmentKPIWidget'
+import { LeaveCoverageCalendar } from '@/components/leave/LeaveCoverageCalendar'
+import { KnowledgeComplianceWidget } from '@/components/knowledge/KnowledgeComplianceWidget'
+import { useAuth } from '@/hooks/useAuth'
+import { usePropertyManagerStats } from '@/hooks/useDashboardStats'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useAssignedMaintenanceTickets } from '@/hooks/useMaintenanceTickets'
+import { useDepartmentKPIs } from '@/hooks/useDepartmentKPIs'
+import { Users, Building2, CheckSquare } from 'lucide-react'
 
 export function PropertyManagerDashboard() {
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const { currentProperty } = useProperty()
+  const { user, profile, primaryRole } = useAuth()
+  const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
 
-  // Mock user object for SocialFeed component
-  const mockUser: User = {
-    id: 'pm-1',
-    name: 'Property Manager',
-    email: 'pm@primehotels.com',
-    role: 'property_manager',
-    property: 'Riyadh Downtown',
+  // Create real user object from auth context
+  const currentUser: User = {
+    id: user?.id || 'guest',
+    name: profile?.full_name || user?.email || 'Property Manager',
+    email: user?.email || '',
+    role: (primaryRole as User['role']) || 'property_manager',
+    property: currentProperty?.name || '',
     permissions: []
   }
-  const [propertyStats] = useState({
-    occupancyRate: 87,
-    guestSatisfaction: 4.6,
-    revenueTarget: 92,
-    staffCompliance: 95,
-    maintenanceIssues: 5,
-    trainingCompletion: 88
+
+  const navigate = useNavigate()
+
+  const feedItems: FeedItem[] = announcements.map(announcement => ({
+    id: announcement.id,
+    type: 'announcement' as const,
+    author: {
+      id: announcement.created_by || 'system',
+      name: announcement.created_by_profile?.full_name || 'System',
+      email: '',
+      role: 'property_manager' as const,
+      department: 'Management',
+      property: currentProperty?.name || '',
+      permissions: []
+    },
+    title: announcement.title,
+    content: announcement.content,
+    timestamp: new Date(announcement.created_at),
+    tags: announcement.pinned ? ['pinned'] : [],
+    priority: (announcement.priority === 'critical' ? 'high' : announcement.priority === 'important' ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+    reactions: {},
+    comments: []
+  }))
+
+  // Use real stats from database
+  const { data: propertyStats, isLoading: statsLoading } = usePropertyManagerStats()
+  const { departments, isLoading: deptsLoading } = useDepartments()
+  const { data: maintenanceTickets = [] } = useAssignedMaintenanceTickets()
+  const { data: departmentKPIs } = useDepartmentKPIs(currentProperty?.id)
+  const loading = announcementsLoading || statsLoading || deptsLoading
+
+  // Default stats while loading
+  // Default stats while loading
+  const stats = propertyStats || {
+    totalStaff: 0,
+    pendingTasks: 0,
+    activeDepartments: 0,
+    staffCompliance: 0,
+    maintenanceIssues: 0,
+    trainingCompletion: 0
+  }
+
+  // Build department details from real data
+  const departmentDetails = departments.map(dept => {
+    const kpi = departmentKPIs?.find(k => k.department_id === dept.id)
+    return {
+      id: dept.id,
+      name: dept.name,
+      head: 'Not assigned', // Would need another query or join
+      staff: kpi?.staff_count || 0,
+      performance: kpi?.overall_score ? (kpi.overall_score / 20).toFixed(1) : 'N/A',
+      compliance: kpi?.metrics?.sop_compliance_rate || 0,
+      attendance: kpi?.metrics?.attendance_rate || 0
+    }
   })
 
-  useEffect(() => {
-    // Mock data for Property Manager dashboard
-    const mockFeedItems: FeedItem[] = [
-      {
-        id: '1',
-        type: 'announcement',
-        author: {
-          id: '4',
-          name: 'Emily Wilson',
-          email: 'emily.w@primehotels.com',
-          role: 'property_manager',
-          department: 'Management',
-          property: 'Riyadh Downtown',
-          permissions: []
-        },
-        title: 'Monthly Performance Review Meeting',
-        content: 'Monthly performance review scheduled for Thursday 2 PM. All department heads required to attend with KPI reports.',
-        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        tags: ['meeting', 'mandatory', 'performance'],
-        priority: 'high',
-        reactions: { like: 12, clap: 6 },
-        comments: []
-      },
-      {
-        id: '2',
-        type: 'task',
-        author: {
-          id: '3',
-          name: 'System',
-          email: 'system@primehotels.com',
-          role: 'corporate_admin',
-          department: 'Management',
-          property: 'System',
-          permissions: []
-        },
-        title: 'Quarterly Audit Preparation',
-        content: 'Corporate audit scheduled for next week. Please ensure all departmental reports and compliance documents are ready.',
-        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-        tags: ['audit', 'compliance', 'deadline'],
-        priority: 'high',
-        reactions: {},
-        comments: [],
-        actionButton: {
-          text: 'Prepare Documents',
-          onClick: () => console.log('Prepare Documents')
-        }
-      },
-      {
-        id: '3',
-        type: 'sop_update',
-        author: {
-          id: '2',
-          name: 'Sarah Johnson',
-          email: 'sarah.j@primehotels.com',
-          role: 'department_head',
-          department: 'Front Desk',
-          property: 'Riyadh Downtown',
-          permissions: []
-        },
-        title: 'Emergency Procedure Update Request',
-        content: 'Request to update emergency evacuation procedures based on recent safety inspection recommendations.',
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-        tags: ['safety', 'emergency', 'procedures'],
-        priority: 'medium',
-        reactions: { like: 8 },
-        comments: [],
-        actionButton: {
-          text: 'Review Request',
-          onClick: () => console.log('Review Request')
-        }
-      }
-    ]
 
-    setFeedItems(mockFeedItems)
-    setLoading(false)
-  }, [])
-
-  const handleReact = (itemId: string, reaction: string) => {
-    setFeedItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const currentReactions = item.reactions[reaction] || 0
-        return {
-          ...item,
-          reactions: {
-            ...item.reactions,
-            [reaction]: currentReactions + 1
-          }
-        }
-      }
-      return item
-    }))
+  const handleReact = (_itemId: string, _reaction: string) => {
+    // Reaction functionality placeholder - to be implemented
   }
 
-  const handleComment = (itemId: string, content: string) => {
-    const newComment = {
-      id: Date.now().toString(),
-      author: mockUser,
-      content,
-      timestamp: new Date(),
-      reactions: {}
-    }
-
-    setFeedItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          comments: [...item.comments, newComment]
-        }
-      }
-      return item
-    }))
+  const handleComment = (_itemId: string, _content: string) => {
+    // Comment functionality placeholder - to be implemented
   }
 
-  const handleShare = (itemId: string) => {
-    console.log('Share item:', itemId)
+  const handleShare = (_itemId: string) => {
+    // Share functionality placeholder - to be implemented
   }
+
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map(i => (
-            <Card key={i} className="loading-skeleton h-32" />
-          ))}
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <Icons.Loader className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
@@ -163,65 +117,65 @@ export function PropertyManagerDashboard() {
       {/* Welcome Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Property Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{currentProperty?.name || 'Property'} Dashboard</h1>
           <p className="text-gray-600">Oversee property operations and performance</p>
         </div>
         <div className="flex items-center space-x-4">
-          <Badge className="text-sm bg-orange-100 text-orange-800">
-            {propertyStats.occupancyRate}% Occupancy
+          <OverdueBadge type="total" />
+          <Badge className="text-sm bg-blue-100 text-blue-800">
+            {stats.totalStaff} Active Staff
           </Badge>
         </div>
       </div>
 
       {/* Property KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="role-property-manager">
+        <Card className="role-property-manager cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/directory')}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Occupancy Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
+              Total Staff
+              <Users className="h-4 w-4 text-gray-500" />
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{propertyStats.occupancyRate}%</div>
-            <Progress value={propertyStats.occupancyRate} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Above target (85%)</p>
+            <div className="text-2xl font-bold text-gray-900">{stats.totalStaff}</div>
+            <p className="text-xs text-gray-600 mt-1">Active team members</p>
           </CardContent>
         </Card>
 
-        <Card className="role-property-manager">
+        <Card className="role-property-manager cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/settings')}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Guest Satisfaction</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
+              Departments
+              <Building2 className="h-4 w-4 text-gray-500" />
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{propertyStats.guestSatisfaction}/5.0</div>
-            <div className="flex space-x-1 mt-2">
-              {[1, 2, 3, 4, 5].map(star => (
-                <Icons.Star
-                  key={star}
-                  className={`h-4 w-4 ${star <= Math.floor(propertyStats.guestSatisfaction) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                />
-              ))}
-            </div>
-            <p className="text-xs text-gray-600 mt-1">4.6 average rating</p>
+            <div className="text-2xl font-bold text-blue-600">{stats.activeDepartments}</div>
+            <p className="text-xs text-gray-600 mt-1">Operational departments</p>
           </CardContent>
         </Card>
 
-        <Card className="role-property-manager">
+        <Card className="role-property-manager cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/tasks')}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Revenue Target</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
+              Pending Tasks
+              <CheckSquare className="h-4 w-4 text-gray-500" />
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{propertyStats.revenueTarget}%</div>
-            <Progress value={propertyStats.revenueTarget} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">$2.3M of $2.5M target</p>
+            <div className="text-2xl font-bold text-purple-600">{stats.pendingTasks}</div>
+            <p className="text-xs text-gray-600 mt-1">Tasks requiring attention</p>
           </CardContent>
         </Card>
 
-        <Card className="role-property-manager">
+        <Card className="role-property-manager cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/training')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Staff Compliance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{propertyStats.staffCompliance}%</div>
-            <Progress value={propertyStats.staffCompliance} className="mt-2" />
+            <div className="text-2xl font-bold text-orange-600">{stats.staffCompliance}%</div>
+            <Progress value={stats.staffCompliance} className="mt-2" />
             <p className="text-xs text-gray-600 mt-1">Training & SOP compliance</p>
           </CardContent>
         </Card>
@@ -239,7 +193,7 @@ export function PropertyManagerDashboard() {
 
         <TabsContent value="feed" className="space-y-6">
           <SocialFeed
-            user={mockUser}
+            user={currentUser}
             feedItems={feedItems}
             onReact={handleReact}
             onComment={handleComment}
@@ -248,21 +202,28 @@ export function PropertyManagerDashboard() {
         </TabsContent>
 
         <TabsContent value="departments" className="space-y-6">
+          {/* Real Department KPIs */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <DepartmentKPIWidget propertyId={currentProperty?.id} />
+            <KnowledgeComplianceWidget variant="department" propertyId={currentProperty?.id} />
+          </div>
+
+          {/* Leave Coverage Calendar */}
+          <LeaveCoverageCalendar />
+
+          {/* Department Details */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.Building className="h-5 w-5" />
-                <span>Department Overview</span>
+                <span>Department Details</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                { name: 'Front Desk', head: 'Sarah Johnson', staff: 12, performance: 4.8, compliance: 95 },
-                { name: 'Housekeeping', head: 'Mike Wilson', staff: 18, performance: 4.6, compliance: 92 },
-                { name: 'Food & Beverage', head: 'Lisa Chen', staff: 25, performance: 4.7, compliance: 88 },
-                { name: 'Maintenance', head: 'Tom Davis', staff: 8, performance: 4.5, compliance: 100 }
-              ].map((dept, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+              {departmentDetails.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No departments found</p>
+              ) : departmentDetails.map((dept, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/departments/${dept.id}`)}>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-medium">{dept.name}</p>
@@ -276,7 +237,10 @@ export function PropertyManagerDashboard() {
                       <span>Compliance: {dept.compliance}%</span>
                     </div>
                   </div>
-                  <button className="ml-4 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                  <button className="ml-4 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700" onClick={(e) => {
+                    e.stopPropagation()
+                    navigate(`/departments/${dept.id}`)
+                  }}>
                     View Details
                   </button>
                 </div>
@@ -295,24 +259,24 @@ export function PropertyManagerDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {[
-                  { issue: 'Elevator B - Service Required', priority: 'high', location: 'Main Lobby', reported: '2 hours ago' },
-                  { issue: 'Room 304 - AC Not Working', priority: 'medium', location: 'Floor 3', reported: '4 hours ago' },
-                  { issue: 'Restaurant Kitchen - Equipment', priority: 'low', location: 'Restaurant', reported: '1 day ago' }
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 border rounded">
+                {maintenanceTickets.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No maintenance tickets</p>
+                ) : maintenanceTickets.slice(0, 5).map((ticket, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/maintenance/tickets/${ticket.id}`)}>
                     <div>
-                      <p className="text-sm font-medium">{item.issue}</p>
-                      <p className="text-xs text-gray-600">{item.location} • {item.reported}</p>
+                      <p className="text-sm font-medium">{ticket.title}</p>
+                      <p className="text-xs text-gray-600">
+                        {ticket.room_number ? `Room ${ticket.room_number}` : 'Common Area'} • {new Date(ticket.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                     <Badge className={
-                      item.priority === 'high'
+                      ticket.priority === 'high'
                         ? 'bg-red-100 text-red-800'
-                        : item.priority === 'medium'
+                        : ticket.priority === 'medium'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-blue-100 text-blue-800'
                     }>
-                      {item.priority}
+                      {ticket.priority}
                     </Badge>
                   </div>
                 ))}
@@ -327,18 +291,19 @@ export function PropertyManagerDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {[
-                  { department: 'Front Desk', present: 10, total: 12, absent: 2 },
-                  { department: 'Housekeeping', present: 16, total: 18, absent: 2 },
-                  { department: 'Food & Beverage', present: 22, total: 25, absent: 3 },
-                  { department: 'Maintenance', present: 8, total: 8, absent: 0 }
-                ].map((dept, index) => (
+                {departmentDetails.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No staff data available</p>
+                ) : departmentDetails.map((dept, index) => (
                   <div key={index} className="flex items-center justify-between p-2 border rounded">
                     <div>
-                      <p className="text-sm font-medium">{dept.department}</p>
-                      <p className="text-xs text-gray-600">{dept.present}/{dept.total} present</p>
+                      <p className="text-sm font-medium">{dept.name}</p>
+                      <p className="text-xs text-gray-600">{dept.staff} total staff</p>
                     </div>
-                    <Progress value={(dept.present / dept.total) * 100} className="w-20" />
+                    {/* Real attendance data from shifts */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-500">Attendance</span>
+                      <Progress value={dept.attendance || 0} className="w-16" />
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -355,31 +320,10 @@ export function PropertyManagerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                { name: 'Monthly Financial Report', period: 'September 2024', status: 'ready', type: 'financial' },
-                { name: 'Guest Satisfaction Analysis', period: 'Q3 2024', status: 'ready', type: 'guest' },
-                { name: 'Staff Performance Summary', period: 'September 2024', status: 'processing', type: 'hr' },
-                { name: 'Operational Efficiency Report', period: 'Last 30 days', status: 'ready', type: 'operations' }
-              ].map((report, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{report.name}</p>
-                    <p className="text-sm text-gray-600">{report.period} • {report.type}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={
-                      report.status === 'ready'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }>
-                      {report.status}
-                    </Badge>
-                    <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                      Download
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <div className="text-center py-8 text-gray-500">
+                <Icons.FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p>No reports generated for this period.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -393,33 +337,10 @@ export function PropertyManagerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                { audit: 'Corporate Quarterly Audit', date: 'Oct 15-20, 2024', status: 'upcoming', readiness: 75 },
-                { audit: 'Safety Inspection', date: 'Oct 25, 2024', status: 'upcoming', readiness: 90 },
-                { audit: 'Health Department Review', date: 'Nov 5, 2024', status: 'upcoming', readiness: 85 },
-                { audit: 'Fire Safety Check', date: 'Completed Sep 28', status: 'completed', readiness: 100 }
-              ].map((audit, index) => (
-                <div key={index} className="p-3 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium">{audit.audit}</p>
-                    <Badge className={
-                      audit.status === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                        : audit.status === 'upcoming'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                    }>
-                      {audit.status}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">Date: {audit.date}</p>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-gray-500">Readiness:</span>
-                    <Progress value={audit.readiness} className="flex-1" />
-                    <span className="text-xs font-medium">{audit.readiness}%</span>
-                  </div>
-                </div>
-              ))}
+              <div className="text-center py-8 text-gray-500">
+                <Icons.Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p>No upcoming audits scheduled.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

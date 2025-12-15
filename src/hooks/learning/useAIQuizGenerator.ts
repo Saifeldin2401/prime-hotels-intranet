@@ -14,14 +14,14 @@ export const useAIQuizGenerator = () => {
         try {
             setGenerating(true)
 
-            // 1. Fetch SOP Content
+            // 1. Fetch Document Content (formerly SOP)
             const { data: sop, error: sopError } = await supabase
-                .from('sop_documents')
+                .from('documents') // Updated table
                 .select('title, content')
                 .eq('id', sopId)
                 .single()
 
-            if (sopError) throw new Error('Failed to fetch SOP content')
+            if (sopError) throw new Error('Failed to fetch document content')
 
             // 2. Generate Questions via AI
             // We pass the RAW HTML content to the AI service
@@ -41,11 +41,10 @@ export const useAIQuizGenerator = () => {
                 randomize_questions: true,
                 show_feedback_during: true,
                 status: 'draft', // Always draft first for review
-                linked_sop_id: sopId
+                linked_sop_id: sopId // Storing document ID here. Assumes FK constraint is removed or compatible.
             })
 
             // 4. Create Questions in `knowledge_questions` AND Link to Quiz
-            // This is the tricky part - we need to create the actual question records first
             const questionIds: string[] = []
 
             for (const q of generatedQuestions) {
@@ -58,9 +57,9 @@ export const useAIQuizGenerator = () => {
                         options: q.options,
                         correct_answer: q.correct_answer,
                         points: q.points,
-                        linked_sop_id: sopId,
+                        linked_sop_id: sopId, // Storing document ID here too.
                         difficulty: 'medium',
-                        status: 'draft', // Draft until quiz is published? Or published? Let's say draft.
+                        status: 'draft',
                         usage_type: 'quiz',
                         created_by: (await supabase.auth.getUser()).data.user?.id
                     })

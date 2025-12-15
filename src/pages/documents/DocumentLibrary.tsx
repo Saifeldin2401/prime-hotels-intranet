@@ -82,12 +82,14 @@ export default function DocumentLibrary() {
     { id: 'published', name: t('folders.published'), count: stats?.published || 0, icon: FileCheck, color: 'from-green-400 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
   ]
 
-  // Storage stats
+  // Storage stats - calculated from actual document count
+  // Storage estimation: average document ~500KB, converted to GB
+  const estimatedStorageGB = ((stats?.total || 0) * 0.5) / 1024; // 500KB per doc average
   const storageStats = {
-    used: 2.3, // GB - mocked for now
-    total: 10, // GB
+    used: Math.round(estimatedStorageGB * 100) / 100 || 0, // Rounded to 2 decimal places
+    total: 10, // GB quota
     documents: stats?.total || 0,
-    shared: 0 // Mocked
+    shared: stats?.published || 0 // Published documents are shared
   }
 
   // Filter documents based on search and status

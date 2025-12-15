@@ -25,21 +25,26 @@ export function MobileNavigation({ onMenuClick }: MobileNavigationProps) {
   const displayItems = quickActions.slice(0, 4)
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[100] bg-background border-t border-border lg:hidden shadow-lg safe-area-inset-bottom">
-      <div className="grid grid-cols-5 gap-0 pb-safe">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-[100] bg-background border-t border-border lg:hidden shadow-lg"
+      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      aria-label={t('nav.mobileNav', { defaultValue: 'Mobile navigation' })}
+    >
+      <div className="grid grid-cols-5 gap-0">
         {displayItems.map((item) => {
           const Icon = item.icon
-          const isActive = isPathActive(item.path)
+          const isActive = isPathActive(item.resolvedPath)
 
           return (
             <Link
               key={item.path}
-              to={item.path}
+              to={item.resolvedPath}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors duration-200 touch-target relative",
+                "flex flex-col items-center justify-center gap-0.5 py-2.5 px-1 transition-all duration-150 touch-target relative",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-hotel-gold",
                 isActive
                   ? "text-hotel-gold font-semibold bg-hotel-gold/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/80"
               )}
             >
               <div className="relative">
@@ -61,16 +66,19 @@ export function MobileNavigation({ onMenuClick }: MobileNavigationProps) {
         <button
           onClick={onMenuClick}
           className={cn(
-            "flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors duration-200 touch-target",
-            "text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
+            "flex flex-col items-center justify-center gap-0.5 py-2.5 px-1 transition-all duration-150 touch-target",
+            "text-muted-foreground hover:text-foreground hover:bg-accent",
+            "active:scale-95 active:bg-accent/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-hotel-gold"
           )}
+          aria-label={t('nav.openMenu', { defaultValue: 'Open navigation menu' })}
+          aria-expanded="false"
         >
           <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
-          <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]">
-            {t('menu', { defaultValue: 'Menu' })}
+          <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]" aria-hidden="true">
+            {t('nav.menu', { defaultValue: 'Menu' })}
           </span>
         </button>
       </div>
-    </div>
+    </nav>
   )
 }

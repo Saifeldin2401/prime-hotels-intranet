@@ -19,6 +19,7 @@ export type KnowledgeContentType =
     | 'faq'
     | 'video'
     | 'visual'
+    | 'document'
 
 export type KnowledgeVisibility =
     | 'global'
@@ -270,7 +271,8 @@ export const CONTENT_TYPE_CONFIG: ContentTypeConfig[] = [
     { type: 'reference', label: 'Reference', icon: 'FileSearch', color: 'gray', description: 'Quick reference' },
     { type: 'faq', label: 'FAQ', icon: 'HelpCircle', color: 'yellow', description: 'Frequently asked questions' },
     { type: 'video', label: 'Video', icon: 'Video', color: 'red', description: 'Video tutorial' },
-    { type: 'visual', label: 'Visual', icon: 'Image', color: 'pink', description: 'Diagram/infographic' }
+    { type: 'visual', label: 'Visual', icon: 'Image', color: 'pink', description: 'Diagram/infographic' },
+    { type: 'document', label: 'Document', icon: 'File', color: 'gray', description: 'General document' }
 ]
 
 export const STATUS_CONFIG = {

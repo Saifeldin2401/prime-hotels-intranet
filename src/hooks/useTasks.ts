@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useProperty } from '@/contexts/PropertyContext'
 import type { Task, TaskComment, TaskStats } from '@/lib/types'
 
 // Fetch tasks
@@ -11,9 +12,12 @@ export function useTasks(filters?: {
   propertyId?: string
   departmentId?: string
   search?: string
+  ignorePropertyFilter?: boolean // Allow bypassing property filter for regional admins
 }) {
+  const { currentProperty } = useProperty()
+
   return useQuery({
-    queryKey: ['tasks', filters],
+    queryKey: ['tasks', filters, currentProperty?.id],
     queryFn: async () => {
       let query = supabase
         .from('tasks')
@@ -38,9 +42,15 @@ export function useTasks(filters?: {
       if (filters?.createdBy) {
         query = query.eq('created_by_id', filters.createdBy)
       }
-      if (filters?.propertyId) {
-        query = query.eq('property_id', filters.propertyId)
+
+      // Auto-filter by current property unless explicitly disabled or overridden
+      if (!filters?.ignorePropertyFilter) {
+        const propertyIdToUse = filters?.propertyId || currentProperty?.id
+        if (propertyIdToUse) {
+          query = query.eq('property_id', propertyIdToUse)
+        }
       }
+
       if (filters?.departmentId) {
         query = query.eq('department_id', filters.departmentId)
       }

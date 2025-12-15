@@ -139,7 +139,7 @@ export default function ReportsDashboard() {
                                             <div className="w-8 bg-primary rounded-t transition-all hover:bg-primary/80"
                                                 style={{ height: `${Math.max(trend.created * 20, 4)}px`, maxHeight: '160px' }}></div>
                                             <span className="text-xs text-muted-foreground">{format(new Date(trend.date), 'dd MMM')}</span>
-                                            <div className="absolute bottom-full mb-2 bg-popover text-popover-foreground text-xs rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="absolute bottom-full mb-2 bg-white dark:bg-slate-900 text-foreground text-xs rounded p-1 shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity z-50">
                                                 {trend.created} Created
                                             </div>
                                         </div>

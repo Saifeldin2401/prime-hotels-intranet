@@ -80,20 +80,20 @@ export function QuestionLibrary() {
             {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Question Library</h1>
-                    <p className="text-gray-500">Manage quiz questions for SOPs and training</p>
+                    <h1 className="text-2xl font-bold text-foreground">{t('question_library.title')}</h1>
+                    <p className="text-muted-foreground">{t('question_library.description')}</p>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" asChild className="hidden sm:flex">
                         <Link to="/questions/generate">
                             <Sparkles className="h-4 w-4 mr-2 text-purple-600" />
-                            Generate with AI
+                            {t('question_library.generate_with_ai')}
                         </Link>
                     </Button>
                     <Button asChild>
                         <Link to="/questions/new">
                             <Plus className="h-4 w-4 mr-2" />
-                            Create Question
+                            {t('question_library.create_question')}
                         </Link>
                     </Button>
                 </div>
@@ -105,7 +105,7 @@ export function QuestionLibrary() {
                     <CardContent className="pt-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500">Total</p>
+                                <p className="text-sm text-muted-foreground">{t('question_library.stats.total')}</p>
                                 <p className="text-2xl font-bold">{data?.total || 0}</p>
                             </div>
                             <Brain className="h-8 w-8 text-blue-500" />
@@ -116,7 +116,7 @@ export function QuestionLibrary() {
                     <CardContent className="pt-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500">Published</p>
+                                <p className="text-sm text-muted-foreground">{t('question_library.stats.published')}</p>
                                 <p className="text-2xl font-bold text-green-600">
                                     {data?.questions?.filter(q => q.status === 'published').length || 0}
                                 </p>
@@ -129,7 +129,7 @@ export function QuestionLibrary() {
                     <CardContent className="pt-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500">Pending Review</p>
+                                <p className="text-sm text-muted-foreground">{t('question_library.stats.pending_review')}</p>
                                 <p className="text-2xl font-bold text-yellow-600">
                                     {pendingData?.total || 0}
                                 </p>
@@ -142,7 +142,7 @@ export function QuestionLibrary() {
                     <CardContent className="pt-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500">AI Generated</p>
+                                <p className="text-sm text-muted-foreground">{t('question_library.stats.ai_generated')}</p>
                                 <p className="text-2xl font-bold text-purple-600">
                                     {data?.questions?.filter(q => q.ai_generated).length || 0}
                                 </p>
@@ -158,7 +158,7 @@ export function QuestionLibrary() {
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                        placeholder="Search questions..."
+                        placeholder={t('question_library.search_placeholder')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="pl-10"
@@ -168,12 +168,12 @@ export function QuestionLibrary() {
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline">
                             <Filter className="h-4 w-4 mr-2" />
-                            {typeFilter ? QUESTION_TYPE_CONFIG[typeFilter]?.label : 'All Types'}
+                            {typeFilter ? QUESTION_TYPE_CONFIG[typeFilter]?.label : t('question_library.all_types')}
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                         <DropdownMenuItem onClick={() => handleTypeFilter(null)}>
-                            All Types
+                            {t('question_library.all_types')}
                         </DropdownMenuItem>
                         {Object.entries(QUESTION_TYPE_CONFIG).map(([type, config]) => (
                             <DropdownMenuItem
@@ -190,18 +190,18 @@ export function QuestionLibrary() {
             {/* Tabs */}
             <Tabs value={tab} onValueChange={handleTabChange}>
                 <TabsList>
-                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="all">{t('question_library.tabs.all')}</TabsTrigger>
                     <TabsTrigger value="draft">
-                        Drafts
+                        {t('question_library.tabs.drafts')}
                     </TabsTrigger>
                     <TabsTrigger value="pending_review" className="relative">
-                        Pending Review
+                        {t('question_library.tabs.pending_review')}
                         {pendingData?.total ? (
                             <Badge className="ml-2 bg-yellow-500">{pendingData.total}</Badge>
                         ) : null}
                     </TabsTrigger>
-                    <TabsTrigger value="published">Published</TabsTrigger>
-                    <TabsTrigger value="archived">Archived</TabsTrigger>
+                    <TabsTrigger value="published">{t('question_library.tabs.published')}</TabsTrigger>
+                    <TabsTrigger value="archived">{t('question_library.tabs.archived')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value={tab} className="mt-6">
@@ -219,10 +219,10 @@ export function QuestionLibrary() {
                     ) : data?.questions?.length === 0 ? (
                         <Card>
                             <CardContent className="pt-6 text-center">
-                                <Brain className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500">No questions found</p>
+                                <Brain className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                                <p className="text-muted-foreground">{t('question_library.no_questions')}</p>
                                 <Button asChild className="mt-4">
-                                    <Link to="/questions/new">Create your first question</Link>
+                                    <Link to="/questions/new">{t('question_library.create_first')}</Link>
                                 </Button>
                             </CardContent>
                         </Card>

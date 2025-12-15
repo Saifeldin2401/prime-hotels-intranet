@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -10,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
   Plus,
   Save,
@@ -70,6 +71,7 @@ interface TrainingSection {
 }
 
 export default function TrainingBuilder() {
+  const { id } = useParams()
   const { profile } = useAuth()
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
@@ -94,9 +96,9 @@ export default function TrainingBuilder() {
     queryKey: ['available-sops'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('sop_documents')
-        .select('id, title, category, department_id')
-        .eq('status', 'published')
+        .from('documents') // Updated to documents
+        .select('id, title') // Removed category, department_id
+        .eq('status', 'PUBLISHED')
         .order('title')
 
       if (error) throw error
@@ -105,14 +107,40 @@ export default function TrainingBuilder() {
   })
 
   // Module state
-  const [moduleId, setModuleId] = useState<string | null>(null)
+  const [moduleId, setModuleId] = useState<string | null>(id || null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [estimatedDuration] = useState('')
+  const [estimatedDuration, setEstimatedDuration] = useState('')
   const [passingScore, setPassingScore] = useState('80')
   const [maxAttempts, setMaxAttempts] = useState('3')
   const [allowRetake, setAllowRetake] = useState(true)
   const [isPublished] = useState(false)
+
+  // Load module data if editing (moved up and assigned)
+  const { data: moduleData } = useQuery({
+    queryKey: ['training-module', moduleId],
+    queryFn: async () => {
+      if (!moduleId) return null
+      const { data, error } = await supabase
+        .from('training_modules')
+        .select('*')
+        .eq('id', moduleId)
+        .single()
+      if (error) throw error
+      return data as TrainingModule
+    },
+    enabled: !!moduleId
+  })
+
+  // Sync state with loaded module data
+  useEffect(() => {
+    if (moduleData) {
+      setTitle(moduleData.title)
+      setDescription(moduleData.description || '')
+      setEstimatedDuration(moduleData.estimated_duration_minutes?.toString() || '')
+      // Sync other fields if needed
+    }
+  }, [moduleData])
 
   // Enhanced state for drag-and-drop
   const [sections, setSections] = useState<TrainingSection[]>([])
@@ -1131,6 +1159,9 @@ export default function TrainingBuilder() {
             <DialogTitle>
               {selectedContent ? t('editContent') : t('addContent')}
             </DialogTitle>
+            <DialogDescription>
+              {t('contentDialogDescription', 'Add or edit content for this training section')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-5 py-4">
             <div>
@@ -1207,7 +1238,7 @@ export default function TrainingBuilder() {
                         availableSOPs?.map(s => (
                           <SelectItem key={s.id} value={s.id}>
                             <span className="font-medium">{s.title}</span>
-                            {s.category && <span className="ml-2 text-xs text-gray-400">({s.category})</span>}
+                            {/* s.category removed */}
                           </SelectItem>
                         ))
                       )}
@@ -1313,6 +1344,9 @@ export default function TrainingBuilder() {
               <Sparkles className="w-5 h-5 text-purple-600" />
               {t('aiQuestionGenerator', 'AI Question Generator')}
             </DialogTitle>
+            <DialogDescription>
+              {t('aiDialogDescription', 'Generate questions using AI based on your content')}
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {/* 

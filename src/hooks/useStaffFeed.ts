@@ -5,10 +5,10 @@ import { useAuth } from '@/hooks/useAuth'
 import type { FeedItem } from '@/components/social/SocialFeed'
 
 export function useStaffFeed() {
-    const { user } = useAuth()
+    const { user, roles, departments, properties } = useAuth()
 
     return useQuery({
-        queryKey: ['staff-feed', user?.id],
+        queryKey: ['staff-feed', user?.id, roles.length, departments.length, properties.length],
         queryFn: async () => {
             if (!user?.id) return []
 
@@ -21,43 +21,74 @@ export function useStaffFeed() {
                 .from('announcements')
                 .select('*')
                 .order('created_at', { ascending: false })
-                .limit(5)
+                .limit(20) // Fetch more to allow for filtering
 
-            announcements?.forEach((a: any) => {
-                feedItems.push({
-                    id: `ann-${a.id}`,
-                    type: 'announcement',
-                    author: {
-                        id: a.created_by_id || a.created_by || 'system',
-                        name: 'Admin',
-                        email: '',
-                        avatar: null,
-                        role: 'corporate_admin',
-                        department: 'Management',
-                        property: 'System',
-                        permissions: []
-                    },
-                    title: a.title,
-                    content: a.content,
-                    timestamp: new Date(a.created_at),
-                    priority: a.priority,
-                    reactions: {},
-                    comments: []
+            if (announcements) {
+                const filteredAnnouncements = announcements.filter((announcement: any) => {
+                    // Always show if user is the creator
+                    if (announcement.created_by === user?.id) return true
+
+                    // Show if target audience is 'all' or missing
+                    const audience = announcement.target_audience
+                    if (!audience || audience.type === 'all') return true
+
+                    const values = audience.values || []
+
+                    switch (audience.type) {
+                        case 'role':
+                            return roles?.some(userRole => values.includes(userRole.role)) ?? false
+
+                        case 'department':
+                            return departments?.some(dept => values.includes(dept.id)) ?? false
+
+                        case 'property':
+                            return properties?.some(prop => values.includes(prop.id)) ?? false
+
+                        case 'individual':
+                            return values.includes(user?.id || '')
+
+                        default:
+                            return true
+                    }
                 })
-            })
 
-            // 2. Fetch recent Knowledge Base / SOPs
-            const { data: sopDocuments } = await supabase
-                .from('sop_documents')
+                filteredAnnouncements.slice(0, 5).forEach((a: any) => {
+                    feedItems.push({
+                        id: `ann-${a.id}`,
+                        type: 'announcement',
+                        author: {
+                            id: a.created_by_id || a.created_by || 'system',
+                            name: 'Admin',
+                            email: '',
+                            avatar: null,
+                            role: 'corporate_admin',
+                            department: 'Management',
+                            property: 'System',
+                            permissions: []
+                        },
+                        title: a.title,
+                        content: a.content,
+                        timestamp: new Date(a.created_at),
+                        priority: a.priority,
+                        reactions: {},
+                        comments: []
+                    })
+                })
+            }
+
+            // 2. Fetch recent Knowledge Base
+            const { data: recentDocs } = await supabase
+                .from('documents')
                 .select('*')
+                .eq('status', 'PUBLISHED')
                 .gte('updated_at', thirtyDaysAgo.toISOString())
                 .order('updated_at', { ascending: false })
                 .limit(5)
 
-            sopDocuments?.forEach((d: any) => {
+            recentDocs?.forEach((d: any) => {
                 const isNew = new Date(d.created_at) > thirtyDaysAgo
                 feedItems.push({
-                    id: `sop-${d.id}`,
+                    id: `doc-${d.id}`,
                     type: 'sop_update',
                     author: {
                         id: d.created_by || 'system',
@@ -70,11 +101,11 @@ export function useStaffFeed() {
                         permissions: []
                     },
                     title: isNew
-                        ? `📚 New ${d.content_type?.toUpperCase() || 'Article'}: ${d.title}`
+                        ? `📚 New Article: ${d.title}`
                         : `📝 Updated: ${d.title}`,
                     content: d.description || 'A Knowledge Base article has been updated.',
                     timestamp: new Date(d.updated_at),
-                    tags: [d.content_type || 'SOP'].filter(Boolean),
+                    tags: ['Knowledge Base'],
                     reactions: {},
                     comments: [],
                     actionButton: {

@@ -266,14 +266,34 @@ export function useCompleteMaintenanceTicket() {
           notes: notes || null
         })
         .eq('id', ticketId)
-        .select()
+        .select(`
+          *,
+          reported_by:profiles!reported_by_id(id, full_name),
+          property:properties(id, name)
+        `)
         .single()
 
       if (error) throw error
       return data as MaintenanceTicket
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+
+      // Send notification to reporter when ticket is completed
+      if (data.reported_by_id && data.reported_by_id !== user?.id) {
+        try {
+          await supabase.from('notifications').insert({
+            user_id: data.reported_by_id,
+            type: 'maintenance_completed',
+            title: 'Maintenance Ticket Completed',
+            message: `Your maintenance request "${data.title}" has been completed.`,
+            link: `/maintenance/${data.id}`,
+            data: { ticketId: data.id, priority: data.priority }
+          })
+        } catch (err) {
+          console.error('Failed to send completion notification:', err)
+        }
+      }
     }
   })
 }

@@ -128,7 +128,7 @@ export function Header({
                 className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark transition-all duration-200"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
-                <div className="flex flex-col items-end hidden md:flex">
+                <div className="hidden md:flex flex-col items-end">
                   <span className="text-sm font-medium text-white leading-none mb-1">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </span>
@@ -160,25 +160,25 @@ export function Header({
                     <div className="py-2">
                       <a
                         href="/profile"
-                        className="flex items-center px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                        className="flex items-center px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                       >
                         <User className="me-3 h-4 w-4 text-hotel-gold" />
-                        {t('nav:profile')}
+                        <span>My Profile</span>
                       </a>
                       <a
                         href="/settings"
-                        className="flex items-center px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                        className="flex items-center px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                       >
                         <Settings className="me-3 h-4 w-4 text-hotel-gold" />
-                        {t('nav:settings')}
+                        <span>Settings</span>
                       </a>
                       <div className="h-px bg-border my-2 mx-4" />
                       <button
                         onClick={handleLogout}
-                        className="w-full text-start flex items-center px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-colors font-medium"
+                        className="w-full text-start flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
                       >
                         <LogOut className="me-3 h-4 w-4" />
-                        {t('nav:logout')}
+                        <span>Log Out</span>
                       </button>
                     </div>
                   </div>

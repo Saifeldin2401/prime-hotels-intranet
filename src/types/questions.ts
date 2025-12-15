@@ -43,7 +43,7 @@ export interface KnowledgeQuestion {
     // Links
     linked_sop_id?: string
     linked_sop_section?: string
-    category_id?: string
+    // category_id removed
 
     // Metadata
     tags: string[]
@@ -76,10 +76,7 @@ export interface KnowledgeQuestion {
         id: string
         title: string
     }
-    category?: {
-        id: string
-        name: string
-    }
+    // category removed
     created_by_profile?: {
         id: string
         full_name: string
@@ -229,7 +226,7 @@ export interface QuestionFormData {
     hint_ar?: string
     linked_sop_id?: string
     linked_sop_section?: string
-    category_id?: string
+    // category_id removed
     tags: string[]
     estimated_time_seconds: number
     points: number

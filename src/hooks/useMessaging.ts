@@ -11,57 +11,14 @@ export function useMessages(filters?: {
   priority?: Message['priority']
   sender_id?: string
   recipient_id?: string
+  propertyId?: string
 }) {
-  const { user, profile, properties } = useAuth()
+  const { profile, properties } = useAuth()
 
   return useQuery({
     queryKey: ['messages', profile?.id, filters],
     queryFn: async () => {
-      console.log('useMessages queryFn called, profile:', profile?.id)
       if (!profile?.id) return []
-
-      // First, let's test a simple query to see what's in the database
-      const { data: allMessages, error: allError } = await supabase
-        .from('messages')
-        .select('*')
-        .limit(10)
-
-      console.log('Simple test query - all messages:', { 
-        allMessages, 
-        allError, 
-        count: allMessages?.length 
-      })
-
-      // Check the sender_id and recipient_id in the messages
-      if (allMessages && allMessages.length > 0) {
-        console.log('Message details:', allMessages.map(msg => ({
-          id: msg.id,
-          sender_id: msg.sender_id,
-          recipient_id: msg.recipient_id,
-          subject: msg.subject
-        })))
-        console.log('Current user profile ID:', profile.id)
-        console.log('User matches:', allMessages.map(msg => ({
-          message_id: msg.id,
-          is_sender: msg.sender_id === profile.id,
-          is_recipient: msg.recipient_id === profile.id,
-          matches_user: msg.sender_id === profile.id || msg.recipient_id === profile.id
-        })))
-      }
-
-      // Now let's test the user access filter directly
-      const { data: userMessages, error: userError } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
-        .limit(10)
-
-      console.log('User access filter test:', { 
-        userMessages, 
-        userError, 
-        count: userMessages?.length,
-        profileId: profile.id
-      })
 
       let query = supabase
         .from('messages')
@@ -69,14 +26,10 @@ export function useMessages(filters?: {
         .order('created_at', { ascending: false })
 
       // Apply filters
-      console.log('Applying filters:', filters)
-      console.log('Before filters query built')
       if (filters?.status) {
-        console.log('Applying status filter:', filters.status)
         query = query.eq('status', filters.status)
       }
       if (filters?.message_type) {
-        console.log('Applying message_type filter:', filters.message_type)
         query = query.eq('message_type', filters.message_type)
       }
       if (filters?.priority) {
@@ -90,9 +43,7 @@ export function useMessages(filters?: {
       }
 
       // Filter by user's access (sent or received messages)
-      console.log('Applying user access filter for profile:', profile.id)
       query = query.or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
-      console.log('User access filter applied')
 
       // Filter by properties if user has property access
       if (properties && properties.length > 0 && !filters?.sender_id && !filters?.recipient_id) {
@@ -100,13 +51,6 @@ export function useMessages(filters?: {
       }
 
       const { data, error } = await query.limit(100)
-
-      console.log('useMessages query result:', { 
-        data, 
-        error, 
-        profileId: profile.id, 
-        messageCount: data?.length
-      })
 
       if (error) throw error
       return data as Message[]
@@ -170,8 +114,8 @@ export function useSendMessage() {
           .select('*')
           .contains('participant_ids', [profile.id, data.recipient_id])
 
-        const existingConv = existingConversations?.find(conv => 
-          conv.participant_ids.includes(profile.id) && 
+        const existingConv = existingConversations?.find(conv =>
+          conv.participant_ids.includes(profile.id) &&
           conv.participant_ids.includes(data.recipient_id!) &&
           conv.participant_ids.length === 2
         )
@@ -284,6 +228,35 @@ export function useMarkMessageAsRead() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    }
+  })
+}
+
+export function useArchiveMessage() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (messageId: string) => {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({
+          status: 'archived',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', messageId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] })
+      queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
+      crudToasts.update.success('Message archived')
+    },
+    onError: () => {
+      crudToasts.update.error('message')
     }
   })
 }
@@ -444,7 +417,7 @@ export function useConversations() {
         .order('last_message_at', { ascending: false })
 
       if (error) throw error
-      
+
       // Get participant details for each conversation
       const conversationsWithParticipants = await Promise.all(
         (data || []).map(async (conv: any) => {

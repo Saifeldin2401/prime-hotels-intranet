@@ -57,10 +57,8 @@ export default function MyLeaveRequests() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Form data:', formData)
 
     if (!formData.start_date || !formData.end_date || !formData.type) {
-      console.log('Validation failed - missing fields')
       return
     }
 
@@ -71,7 +69,6 @@ export default function MyLeaveRequests() {
       reason: formData.reason || undefined
     }, {
       onSuccess: (data) => {
-        console.log('Leave request submitted successfully:', data)
         setIsDialogOpen(false)
         setFormData({ start_date: undefined, end_date: undefined, type: undefined, reason: '' })
       },

@@ -7,6 +7,7 @@ import { DocumentUploader } from '@/components/documents/DocumentUploader'
 import { FileText, Download, Trash2, Plus, Loader2, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/components/ui/use-toast'
+import { useTranslation } from 'react-i18next'
 // import { PageHeader } from '@/components/layout/PageHeader'
 
 export default function EmployeeDocuments() {
@@ -15,6 +16,7 @@ export default function EmployeeDocuments() {
     const deleteDocument = useDeleteEmployeeDocument()
     const downloadDocument = useDownloadEmployeeDocument()
     const { toast } = useToast()
+    const { t } = useTranslation('profile')
 
     const handleDownload = async (doc: EmployeeDocument) => {
         try {
@@ -23,27 +25,27 @@ export default function EmployeeDocuments() {
         } catch (error) {
             console.error('Download failed:', error)
             toast({
-                title: 'Download failed',
-                description: 'Could not generate download link.',
+                title: t('employee_documents.download_failed'),
+                description: t('employee_documents.download_failed_desc'),
                 variant: 'destructive'
             })
         }
     }
 
     const handleDelete = async (doc: EmployeeDocument) => {
-        if (!confirm('Are you sure you want to delete this document?')) return
+        if (!confirm(t('employee_documents.delete_confirm'))) return
 
         try {
             await deleteDocument.mutateAsync(doc)
             toast({
-                title: 'Document deleted',
-                description: 'The document has been removed.'
+                title: t('employee_documents.deleted'),
+                description: t('employee_documents.deleted_desc')
             })
         } catch (error) {
             console.error('Delete failed:', error)
             toast({
-                title: 'Delete failed',
-                description: 'Could not delete the document.',
+                title: t('employee_documents.delete_failed'),
+                description: t('employee_documents.delete_failed_desc'),
                 variant: 'destructive'
             })
         }
@@ -60,23 +62,20 @@ export default function EmployeeDocuments() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-lg font-semibold tracking-tight">My Documents</h2>
-                    <p className="text-sm text-muted-foreground">Manage your personal documents and records.</p>
+                    <h2 className="text-lg font-semibold tracking-tight">{t('employee_documents.title')}</h2>
+                    <p className="text-sm text-muted-foreground">{t('employee_documents.description')}</p>
                 </div>
-                <Button onClick={() => {
-                    console.log('Upload button clicked')
-                    setIsUploaderOpen(true)
-                }}>
+                <Button onClick={() => setIsUploaderOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Upload Document
+                    {t('employee_documents.upload_button')}
                 </Button>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Uploaded Documents</CardTitle>
+                    <CardTitle>{t('employee_documents.uploaded_title')}</CardTitle>
                     <CardDescription>
-                        Documents you have uploaded to your profile.
+                        {t('employee_documents.uploaded_description')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -86,11 +85,11 @@ export default function EmployeeDocuments() {
                         </div>
                     ) : documents?.length === 0 ? (
                         <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                            <FileText className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                            <h3 className="text-lg font-medium text-gray-900">No documents yet</h3>
-                            <p className="text-gray-500 mb-4">Upload your CV, certificates, or other documents.</p>
+                            <FileText className="mx-auto h-12 w-12 text-muted-foreground/30 mb-3" />
+                            <h3 className="text-lg font-medium text-foreground">{t('employee_documents.no_documents')}</h3>
+                            <p className="text-muted-foreground mb-4">{t('employee_documents.no_documents_hint')}</p>
                             <Button variant="outline" onClick={() => setIsUploaderOpen(true)}>
-                                Upload First Document
+                                {t('employee_documents.upload_first')}
                             </Button>
                         </div>
                     ) : (
@@ -145,9 +144,6 @@ export default function EmployeeDocuments() {
                     )}
                 </CardContent>
             </Card>
-
-            {/* Debug info */}
-            <div className="hidden">Uploader Open: {isUploaderOpen ? 'Yes' : 'No'}</div>
 
             <DocumentUploader
                 open={isUploaderOpen}

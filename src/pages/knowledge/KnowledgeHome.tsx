@@ -56,7 +56,8 @@ const CONTENT_TYPE_ICONS: Record<KnowledgeContentType, any> = {
     reference: FileSearch,
     faq: HelpCircle,
     video: Video,
-    visual: Image
+    visual: Image,
+    document: FileText
 }
 
 export default function KnowledgeHome() {

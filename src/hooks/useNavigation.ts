@@ -17,6 +17,7 @@ import {
     getMobileQuickActions,
     getGroupConfig,
     canAccessRoute,
+    resolvePathForRole,
     type RouteConfig,
     type NavigationGroup,
     type NavigationGroupConfig
@@ -25,6 +26,8 @@ import {
 export interface NavigationItem extends RouteConfig {
     isActive: boolean
     badgeCount?: number
+    /** The resolved path for the current user's role */
+    resolvedPath: string
 }
 
 export interface NavigationGroupWithItems {
@@ -48,6 +51,14 @@ export interface UseNavigationReturn {
     getRoute: (path: string) => RouteConfig | undefined
 }
 
+// All possible dashboard paths for active state detection
+const DASHBOARD_PATHS = [
+    '/dashboard', '/staff-dashboard',
+    '/dashboard/property-manager', '/dashboard/property-hr',
+    '/dashboard/department-head', '/dashboard/regional-hr',
+    '/dashboard/corporate-admin'
+]
+
 export function useNavigation(): UseNavigationReturn {
     const { primaryRole } = useAuth()
     const location = useLocation()
@@ -64,19 +75,31 @@ export function useNavigation(): UseNavigationReturn {
         } as Record<string, number | undefined>
     }, [counts])
 
-    // Check if a path is active
+    // Check if a path is active (handles dashboard variants)
     const isPathActive = (path: string): boolean => {
         if (path === '/') return location.pathname === '/'
-        // Exact match or prefix match for nested routes
+
+        // Special handling for dashboard - any dashboard variant activates it
+        if (DASHBOARD_PATHS.includes(path)) {
+            return DASHBOARD_PATHS.some(dp =>
+                location.pathname === dp || location.pathname.startsWith(dp + '/')
+            )
+        }
+
+        // Standard: exact match or prefix match for nested routes
         return location.pathname === path || location.pathname.startsWith(path + '/')
     }
 
-    // Enrich route with active state and badge count
-    const enrichRoute = (route: RouteConfig): NavigationItem => ({
-        ...route,
-        isActive: isPathActive(route.path),
-        badgeCount: route.badgeKey ? badgeCounts[route.badgeKey] : undefined
-    })
+    // Enrich route with active state, badge count, and resolved path
+    const enrichRoute = (route: RouteConfig): NavigationItem => {
+        const resolvedPath = resolvePathForRole(route, primaryRole)
+        return {
+            ...route,
+            resolvedPath,
+            isActive: isPathActive(resolvedPath),
+            badgeCount: route.badgeKey ? badgeCounts[route.badgeKey] : undefined
+        }
+    }
 
     // Grouped navigation for sidebar
     const groupedNavigation = useMemo((): NavigationGroupWithItems[] => {

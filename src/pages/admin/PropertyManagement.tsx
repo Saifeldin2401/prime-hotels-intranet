@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { Plus, Building2, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Building2, Pencil, Trash2, Layers } from 'lucide-react'
 import type { Property } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/components/ui/use-toast'
+import { useDepartments } from '@/hooks/useDepartments'
 
 import {
     Dialog,
@@ -22,13 +23,109 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog'
+import { Separator } from '@/components/ui/separator'
+
+// --- Department Manager Component (Inside Property Management) ---
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+
+const STANDARD_DEPARTMENTS = [
+    "Front Office",
+    "Housekeeping",
+    "Food & Beverage",
+    "Kitchen / Culinary",
+    "Engineering & Maintenance",
+    "Security",
+    "Sales & Marketing",
+    "Human Resources",
+    "Finance / Accounting",
+    "IT",
+    "Executive Office",
+    "Spa & Recreation",
+    "Concierge",
+    "Reservations"
+]
+
+function DepartmentManager({ property }: { property: Property }) {
+    const { departments, createDepartment, updateDepartment, deleteDepartment, isLoading } = useDepartments(property.id)
+    const [selectedDept, setSelectedDept] = useState<string>('')
+    const { toast } = useToast()
+
+    const handleAdd = () => {
+        if (!selectedDept) return
+
+        // Check if already exists
+        if (departments.some(d => d.name === selectedDept)) {
+            toast({ title: 'Error', description: 'Department already exists for this property', variant: 'destructive' })
+            return
+        }
+
+        createDepartment.mutate({ name: selectedDept, property_id: property.id }, {
+            onSuccess: () => {
+                setSelectedDept('')
+                toast({ title: 'Department Added', description: `${selectedDept} has been added to ${property.name}.` })
+            },
+            onError: (err) => toast({ title: 'Error', description: err.message, variant: 'destructive' })
+        })
+    }
+
+    const handleDelete = (id: string) => {
+        if (!confirm('Are you sure? This will remove the department.')) return
+        deleteDepartment.mutate(id, {
+            onSuccess: () => toast({ title: 'Department Deleted' }),
+            onError: (err) => toast({ title: 'Failed to delete', description: err.message, variant: 'destructive' })
+        })
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-2">
+                <Select value={selectedDept} onValueChange={setSelectedDept}>
+                    <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {STANDARD_DEPARTMENTS.map(dept => (
+                            <SelectItem key={dept} value={dept}>
+                                {dept}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Button onClick={handleAdd} disabled={createDepartment.isPending || !selectedDept} size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark">
+                    <Plus className="w-4 h-4 mr-1" /> Add
+                </Button>
+            </div>
+            <Separator />
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {isLoading ? <p className="text-sm text-gray-500">Loading departments...</p> :
+                    departments.length === 0 ? <p className="text-sm text-gray-400 italic">No departments yet.</p> :
+                        departments.map(dept => (
+                            <div key={dept.id} className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 bg-white shadow-sm">
+                                <span className="font-medium text-sm text-gray-800">{dept.name}</span>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => handleDelete(dept.id)}>
+                                    <Trash2 className="w-3 h-3" />
+                                </Button>
+                            </div>
+                        ))}
+            </div>
+        </div>
+    )
+}
 
 export default function PropertyManagement() {
-    const { t } = useTranslation('common') // Using common for now, create specific translations later if needed
+    const { t } = useTranslation('common')
     const { toast } = useToast()
     const queryClient = useQueryClient()
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false)
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
+    const [managingProperty, setManagingProperty] = useState<Property | null>(null)
 
     // Form State
     const [formData, setFormData] = useState({
@@ -109,6 +206,11 @@ export default function PropertyManagement() {
         setIsDialogOpen(true)
     }
 
+    const handleManageDepartments = (property: Property) => {
+        setManagingProperty(property)
+        setIsDeptDialogOpen(true)
+    }
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         mutation.mutate(formData)
@@ -154,6 +256,10 @@ export default function PropertyManagement() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
+                                        <Button variant="outline" size="sm" onClick={() => handleManageDepartments(property)}>
+                                            <Layers className="w-4 h-4 mr-2" />
+                                            Departments
+                                        </Button>
                                         <Badge variant={property.is_active ? 'default' : 'secondary'}>
                                             {property.is_active ? 'Active' : 'Inactive'}
                                         </Badge>
@@ -179,6 +285,7 @@ export default function PropertyManagement() {
                 </div>
             </div>
 
+            {/* Edit Property Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
                 if (!open) resetForm()
                 setIsDialogOpen(open)
@@ -238,6 +345,19 @@ export default function PropertyManagement() {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Manage Departments Dialog */}
+            <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Manage Departments</DialogTitle>
+                        <DialogDescription>
+                            {managingProperty?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {managingProperty && <DepartmentManager property={managingProperty} />}
                 </DialogContent>
             </Dialog>
         </div>

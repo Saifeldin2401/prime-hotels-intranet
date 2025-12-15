@@ -20,13 +20,8 @@ export function LanguageSwitcher() {
   const { i18n } = useTranslation()
   const currentLang = i18n.language
 
-  console.log('LanguageSwitcher Render:', { currentLang, resolvedLang: i18n.resolvedLanguage })
-
   const handleLanguageChange = (langCode: string) => {
-    console.log('LanguageSwitcher: Changing to', langCode)
-    i18n.changeLanguage(langCode)
-      .then(() => console.log('LanguageSwitcher: Change success'))
-      .catch(err => console.error('LanguageSwitcher: Change failed', err))
+    i18n.changeLanguage(langCode).catch(err => console.error('LanguageSwitcher: Change failed', err))
     // document.dir update and persistence is handled in i18n.ts
   }
 
