@@ -18,27 +18,27 @@ export function QuickActionsWidget() {
             </CardHeader>
             <CardContent className="space-y-2">
                 <Link to="/documents">
-                    <Button variant="outline" className="w-full justify-start">
-                        <FileText className="w-4 h-4 mr-2" />
+                    <Button variant="outline" className="w-full justify-start group">
+                        <FileText className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                         {t('widgets.view_documents')}
                     </Button>
                 </Link>
                 <Link to="/training">
-                    <Button variant="outline" className="w-full justify-start">
-                        <GraduationCap className="w-4 h-4 mr-2" />
+                    <Button variant="outline" className="w-full justify-start group">
+                        <GraduationCap className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                         {t('widgets.view_training')}
                     </Button>
                 </Link>
                 <Link to="/announcements">
-                    <Button variant="outline" className="w-full justify-start">
-                        <Megaphone className="w-4 h-4 mr-2" />
+                    <Button variant="outline" className="w-full justify-start group">
+                        <Megaphone className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                         {t('widgets.view_announcements')}
                     </Button>
                 </Link>
                 {(primaryRole === 'regional_admin' || primaryRole === 'regional_hr') && (
                     <Link to="/admin/users">
-                        <Button variant="outline" className="w-full justify-start">
-                            <Users className="w-4 h-4 mr-2" />
+                        <Button variant="outline" className="w-full justify-start group">
+                            <Users className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110" />
                             {t('widgets.manage_users')}
                         </Button>
                     </Link>

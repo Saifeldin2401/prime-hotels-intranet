@@ -39,11 +39,11 @@ export function ActivityWidget() {
                             <GraduationCap className="w-5 h-5 text-green-500 mt-0.5" />
                             <div>
                                 <p className="font-medium">
-                                    {assignment.training_modules?.title || 'Training Assignment'}
+                                    {assignment.training_modules?.title || t('widgets.activity_widget.default_training_title')}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                    Assigned {formatRelativeTime(assignment.created_at)}
-                                    {assignment.deadline && ` • Due ${formatRelativeTime(assignment.deadline)}`}
+                                    {t('widgets.activity_widget.assigned', { date: formatRelativeTime(assignment.created_at) })}
+                                    {assignment.deadline && ` • ${t('widgets.activity_widget.due', { date: formatRelativeTime(assignment.deadline) })}`}
                                 </p>
                             </div>
                         </div>

@@ -64,6 +64,7 @@ export interface CreateNotificationParams {
   entityType?: string
   entityId?: string
   metadata?: Record<string, unknown>
+  link?: string | null
 }
 
 export interface BulkNotificationParams {
@@ -74,13 +75,14 @@ export interface BulkNotificationParams {
   entityType?: string
   entityId?: string
   metadata?: Record<string, unknown>
+  link?: string | null
 }
 
 /**
  * Create a single notification for a user
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
-  const { userId, type, title, message, entityType, entityId, metadata } = params
+  const { userId, type, title, message, entityType, entityId, metadata, link } = params
 
   const { error } = await supabase.from('notifications').insert({
     user_id: userId,
@@ -90,6 +92,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
     entity_type: entityType || null,
     entity_id: entityId || null,
     metadata: metadata || null,
+    link: link || null,
   })
 
   if (error) {
@@ -102,7 +105,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
  * Create notifications for multiple users (e.g., department-wide announcements)
  */
 export async function createBulkNotifications(params: BulkNotificationParams): Promise<void> {
-  const { userIds, type, title, message, entityType, entityId, metadata } = params
+  const { userIds, type, title, message, entityType, entityId, metadata, link } = params
 
   if (userIds.length === 0) return
 
@@ -114,6 +117,7 @@ export async function createBulkNotifications(params: BulkNotificationParams): P
     entity_type: entityType || null,
     entity_id: entityId || null,
     metadata: metadata || null,
+    link: link || null,
   }))
 
   const { error } = await supabase.from('notifications').insert(notifications)

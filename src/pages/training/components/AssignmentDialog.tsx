@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -7,16 +7,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
 import { useTranslation } from 'react-i18next'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -54,7 +45,8 @@ export function AssignmentDialog({
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [deadline, setDeadline] = useState('')
 
-    const getListItems = (): AssignableEntity[] => {
+    // Memoize list items to prevent render loops
+    const listItems = useMemo((): AssignableEntity[] => {
         switch (targetType) {
             case 'users':
                 return users.map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`, details: u.email }))
@@ -65,15 +57,20 @@ export function AssignmentDialog({
             default:
                 return []
         }
-    }
+    }, [targetType, users, departments, properties])
 
-    const handleToggle = (id: string, checked: boolean) => {
-        if (checked) {
-            setSelectedIds(prev => [...prev, id])
-        } else {
-            setSelectedIds(prev => prev.filter(item => item !== id))
-        }
-    }
+    const handleToggle = useCallback((id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(item => item !== id)
+                : [...prev, id]
+        )
+    }, [])
+
+    const handleTargetTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        setTargetType(e.target.value as 'all' | 'users' | 'departments' | 'properties')
+        setSelectedIds([])
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -82,10 +79,9 @@ export function AssignmentDialog({
             targetIds: selectedIds,
             deadline: deadline || undefined
         })
-        // Reset on success handled by parent or effect
     }
 
-    const listItems = getListItems()
+    if (!open) return null
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -98,62 +94,51 @@ export function AssignmentDialog({
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
                         <Label className="text-hotel-navy font-medium">{t('assignTo')}</Label>
-                        <Select
+                        {/* Use native HTML select to avoid Radix infinite loop */}
+                        <select
                             value={targetType}
-                            onValueChange={(value: 'all' | 'users' | 'departments' | 'properties') => {
-                                setTargetType(value)
-                                setSelectedIds([])
-                            }}
+                            onChange={handleTargetTypeChange}
+                            className="w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none"
                         >
-                            <SelectTrigger className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{t('allUsers')}</SelectItem>
-                                <SelectItem value="users">{t('specificUsers')}</SelectItem>
-                                <SelectItem value="departments">{t('departments')}</SelectItem>
-                                <SelectItem value="properties">{t('properties')}</SelectItem>
-                            </SelectContent>
-                        </Select>
+                            <option value="all">{t('allUsers', 'All Users')}</option>
+                            <option value="users">{t('specificUsers', 'Specific Users')}</option>
+                            <option value="departments">{t('departments', 'Departments')}</option>
+                            <option value="properties">{t('properties', 'Properties')}</option>
+                        </select>
                     </div>
 
                     {targetType !== 'all' && (
                         <div className="space-y-2">
                             <Label className="text-hotel-navy font-medium">
-                                {t(
-                                    targetType === 'users'
-                                        ? 'selectUsers'
-                                        : targetType === 'departments'
-                                            ? 'selectDepartments'
-                                            : 'selectProperties'
-                                )}
+                                {targetType === 'users' ? t('selectUsers', 'Select Users') :
+                                    targetType === 'departments' ? t('selectDepartments', 'Select Departments') :
+                                        t('selectProperties', 'Select Properties')}
                             </Label>
                             <ScrollArea className="h-64 border border-gray-200 rounded-md p-2 bg-gray-50/30">
                                 <div className="space-y-1">
                                     {listItems.length > 0 ? (
                                         listItems.map((item) => (
-                                            <div key={item.id} className="flex items-start space-x-3 p-2 hover:bg-white hover:shadow-sm rounded transition-all cursor-pointer" onClick={() => handleToggle(item.id, !selectedIds.includes(item.id))}>
-                                                <Checkbox
-                                                    id={item.id}
+                                            <label
+                                                key={item.id}
+                                                className="flex items-start space-x-3 p-2 hover:bg-white hover:shadow-sm rounded transition-all cursor-pointer"
+                                            >
+                                                <input
+                                                    type="checkbox"
                                                     checked={selectedIds.includes(item.id)}
-                                                    onCheckedChange={(checked) => handleToggle(item.id, checked as boolean)}
-                                                    className="mt-1 data-[state=checked]:bg-hotel-gold data-[state=checked]:border-hotel-gold"
+                                                    onChange={() => handleToggle(item.id)}
+                                                    className="mt-1 h-4 w-4 rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold"
                                                 />
                                                 <div className="grid gap-0.5">
-                                                    <Label
-                                                        htmlFor={item.id}
-                                                        className="cursor-pointer font-medium text-sm text-gray-700"
-                                                        onClick={(e) => e.stopPropagation()} // Prevent double toggle
-                                                    >
+                                                    <span className="font-medium text-sm text-gray-700">
                                                         {item.name}
-                                                    </Label>
+                                                    </span>
                                                     {item.details && (
                                                         <span className="text-gray-500 text-xs">
                                                             {item.details}
                                                         </span>
                                                     )}
                                                 </div>
-                                            </div>
+                                            </label>
                                         ))
                                     ) : (
                                         <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
@@ -169,13 +154,13 @@ export function AssignmentDialog({
                     )}
 
                     <div className="space-y-2">
-                        <Label htmlFor="deadline" className="text-hotel-navy font-medium">{t('deadline')} (Optional)</Label>
-                        <Input
+                        <Label htmlFor="deadline" className="text-hotel-navy font-medium">{t('deadline', 'Deadline')} (Optional)</Label>
+                        <input
                             id="deadline"
                             type="date"
                             value={deadline}
                             onChange={(e) => setDeadline(e.target.value)}
-                            className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50"
+                            className="w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none"
                         />
                     </div>
 
@@ -186,18 +171,14 @@ export function AssignmentDialog({
                             onClick={() => onOpenChange(false)}
                             className="border-gray-200 text-gray-700 hover:bg-gray-50"
                         >
-                            {t('cancel')}
+                            {t('cancel', 'Cancel')}
                         </Button>
                         <Button
                             type="submit"
                             className="bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-md min-w-[120px]"
                             disabled={isAssigning || (targetType !== 'all' && selectedIds.length === 0)}
                         >
-                            {isAssigning ? (
-                                <span className="flex items-center gap-2">Assigning...</span>
-                            ) : (
-                                t('assign')
-                            )}
+                            {isAssigning ? 'Assigning...' : t('assign', 'Assign')}
                         </Button>
                     </div>
                 </form>

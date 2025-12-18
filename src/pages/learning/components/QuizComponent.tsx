@@ -122,7 +122,8 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                 score: Math.round(percentage),
                 passed,
                 correctCount,
-                totalQuestions
+                totalQuestions,
+                gradedAnswers // Add detailed answers for review
             }
 
             setResult(finalResult)
@@ -190,7 +191,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
 
     if (result) {
         return (
-            <div className="max-w-2xl mx-auto space-y-6 pt-10">
+            <div className="max-w-2xl mx-auto space-y-6 pt-10 pb-20">
                 <Card className="text-center p-8">
                     <CardContent className="space-y-6">
                         {result.passed ? (
@@ -229,6 +230,59 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                                 <div className="text-xs text-muted-foreground uppercase tracking-wide">Total</div>
                             </div>
                         </div>
+
+                        {/* REVIEW ANSWERS SECTION */}
+                        <div className="text-left space-y-6 mt-8 border-t pt-6">
+                            <h3 className="font-semibold text-lg">Answer Review</h3>
+                            {result.gradedAnswers?.map((answer: any, index: number) => {
+                                const question = quiz.questions?.find(q => q.question_id === answer.question_id)?.question
+                                if (!question) return null
+
+                                const isMCQ = question.question_type === 'mcq'
+                                const userAnswerText = isMCQ
+                                    ? question.options?.find(o => o.id === answer.answer)?.option_text
+                                    : answer.answer
+
+                                const correctAnswerText = isMCQ
+                                    ? question.options?.find(o => o.is_correct)?.option_text
+                                    : question.correct_answer
+
+                                return (
+                                    <div key={index} className={`p-4 rounded-lg border ${answer.correct ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                        <div className="flex gap-2">
+                                            <span className="font-bold text-sm text-gray-500">{index + 1}.</span>
+                                            <div className="flex-1">
+                                                <p className="font-medium mb-2">{question.question_text}</p>
+
+                                                <div className="text-sm space-y-1">
+                                                    <p className={answer.correct ? 'text-green-700' : 'text-red-700'}>
+                                                        <strong>Your Answer:</strong> {userAnswerText || '(No Answer)'}
+                                                    </p>
+                                                    {!answer.correct && (
+                                                        <p className="text-green-700">
+                                                            <strong>Correct Answer:</strong> {correctAnswerText}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* EXPLANATION */}
+                                                {question.explanation && (
+                                                    <div className="mt-3 text-sm bg-white/50 p-2 rounded text-gray-700 italic border border-gray-100">
+                                                        <strong>Explanation:</strong> {question.explanation}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {answer.correct ? (
+                                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                                            ) : (
+                                                <XCircle className="h-5 w-5 text-red-600 shrink-0" />
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+
 
                         <div className="pt-6">
                             {onExit && (

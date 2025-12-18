@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import { EmptyState } from '@/components/shared/EmptyState'
 import {
@@ -41,6 +42,11 @@ interface PathForm {
   estimated_duration_hours: number
   is_mandatory: boolean
   certificate_enabled: boolean
+  module_ids: string[]
+  target_role?: string | null
+  target_department_id?: string | null
+  target_property_id?: string | null
+  target_user_ids: string[]
 }
 
 export default function TrainingPaths() {
@@ -59,7 +65,12 @@ export default function TrainingPaths() {
     path_type: 'skills',
     estimated_duration_hours: 0,
     is_mandatory: false,
-    certificate_enabled: true
+    certificate_enabled: true,
+    module_ids: [],
+    target_role: null,
+    target_department_id: null,
+    target_property_id: null,
+    target_user_ids: []
   })
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [pathToDelete, setPathToDelete] = useState<TrainingPath | null>(null)
@@ -120,6 +131,57 @@ export default function TrainingPaths() {
     enabled: !!profile?.id
   })
 
+  // Fetch available modules
+  const { data: availableModules } = useQuery({
+    queryKey: ['available-training-modules'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('training_modules')
+        .select('id, title, estimated_duration_minutes')
+        .eq('is_deleted', false)
+      if (error) throw error
+      return data as TrainingModule[]
+    }
+  })
+
+  // Fetch departments for targeting
+  const { data: departments } = useQuery({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name')
+      if (error) throw error
+      return data as { id: string; name: string }[]
+    }
+  })
+
+  // Fetch properties for targeting
+  const { data: properties } = useQuery({
+    queryKey: ['properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, name')
+      if (error) throw error
+      return data as { id: string; name: string }[]
+    }
+  })
+
+  // Fetch active staff for specific targeting
+  const { data: staffList } = useQuery({
+    queryKey: ['active-staff'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, job_title')
+        .eq('is_deleted', false)
+        .order('full_name')
+      if (error) throw error
+      return data as { id: string; full_name: string; job_title: string }[]
+    }
+  })
+
   // Create/update path mutation
   const pathMutation = useMutation({
     mutationFn: async (data: PathForm & { id?: string }) => {
@@ -134,10 +196,33 @@ export default function TrainingPaths() {
             estimated_duration_hours: data.estimated_duration_hours,
             is_mandatory: data.is_mandatory,
             certificate_enabled: data.certificate_enabled,
+            target_role: data.target_role || null,
+            target_department_id: data.target_department_id || null,
+            target_property_id: data.target_property_id || null,
+            target_user_ids: data.target_user_ids || [],
             updated_at: new Date().toISOString()
           })
           .eq('id', data.id)
         if (error) throw error
+
+        // Sync modules for update
+        await supabase
+          .from('training_path_modules')
+          .delete()
+          .eq('path_id', data.id)
+
+        if (data.module_ids.length > 0) {
+          const pathModules = data.module_ids.map((moduleId, index) => ({
+            path_id: data.id,
+            module_id: moduleId,
+            sequence: index + 1,
+            is_mandatory: true
+          }))
+          const { error: modulesError } = await supabase
+            .from('training_path_modules')
+            .insert(pathModules)
+          if (modulesError) throw modulesError
+        }
       } else {
         // Create new path
         const { data: newPath, error } = await supabase
@@ -149,11 +234,30 @@ export default function TrainingPaths() {
             estimated_duration_hours: data.estimated_duration_hours,
             is_mandatory: data.is_mandatory,
             certificate_enabled: data.certificate_enabled,
+            target_role: data.target_role || null,
+            target_department_id: data.target_department_id || null,
+            target_property_id: data.target_property_id || null,
+            target_user_ids: data.target_user_ids || [],
             created_by: profile?.id
           })
           .select()
           .single()
         if (error) throw error
+
+        // Save modules
+        if (newPath && data.module_ids.length > 0) {
+          const pathModules = data.module_ids.map((moduleId, index) => ({
+            path_id: newPath.id,
+            module_id: moduleId,
+            sequence: index + 1,
+            is_mandatory: true
+          }))
+          const { error: modulesError } = await supabase
+            .from('training_path_modules')
+            .insert(pathModules)
+          if (modulesError) throw modulesError
+        }
+
         return newPath
       }
     },
@@ -194,7 +298,12 @@ export default function TrainingPaths() {
       path_type: 'skills',
       estimated_duration_hours: 0,
       is_mandatory: false,
-      certificate_enabled: true
+      certificate_enabled: true,
+      module_ids: [],
+      target_role: null,
+      target_department_id: null,
+      target_property_id: null,
+      target_user_ids: []
     })
   }
 
@@ -206,7 +315,12 @@ export default function TrainingPaths() {
       path_type: path.path_type,
       estimated_duration_hours: path.estimated_duration_hours,
       is_mandatory: path.is_mandatory,
-      certificate_enabled: path.certificate_enabled
+      certificate_enabled: path.certificate_enabled,
+      module_ids: (path as any).training_path_modules?.map((m: any) => m.module_id) || [],
+      target_role: path.target_role || null,
+      target_department_id: path.target_department_id || null,
+      target_property_id: path.target_property_id || null,
+      target_user_ids: path.target_user_ids || []
     })
     setShowPathDialog(true)
   }
@@ -243,8 +357,8 @@ export default function TrainingPaths() {
   }
 
   const calculateProgress = (enrollment: any) => {
-    if (!enrollment.training_paths.training_path_modules) return 0
-    const totalModules = enrollment.training_paths.training_path_modules.length
+    if (!enrollment.training_paths?.training_path_modules) return 0
+    const totalModules = (enrollment.training_paths as any).training_path_modules.length
     if (totalModules === 0) return 0
 
     // This would need to be calculated based on actual progress
@@ -410,84 +524,221 @@ export default function TrainingPaths() {
               {editingPath ? t('editPath') : t('createPath')}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label>{t('pathTitle')}</Label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder={isRTL ? 'أدخل عنوان المسار' : 'Enter path title'}
-              />
-            </div>
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="general">{t('general')}</TabsTrigger>
+              <TabsTrigger value="modules">{t('modules')}</TabsTrigger>
+              <TabsTrigger value="targeting">{t('targeting')}</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2">
-              <Label>{t('pathDescription')}</Label>
-              <Input
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder={isRTL ? 'أدخل وصف المسار' : 'Enter path description'}
-              />
-            </div>
+            <TabsContent value="general" className="space-y-4 pt-4 text-left">
+              <div className="space-y-2">
+                <Label>{t('pathTitle')}</Label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder={isRTL ? 'أدخل عنوان المسار' : 'Enter path title'}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>{t('pathType')}</Label>
-              <Select
-                value={formData.path_type}
-                onValueChange={(value: PathType) => setFormData({ ...formData, path_type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new_hire">{t('newHire')}</SelectItem>
-                  <SelectItem value="department">{t('department')}</SelectItem>
-                  <SelectItem value="leadership">{t('leadership')}</SelectItem>
-                  <SelectItem value="compliance">{t('compliance')}</SelectItem>
-                  <SelectItem value="skills">{t('skills')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label>{t('pathDescription')}</Label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder={isRTL ? 'أدخل وصف المسار' : 'Enter path description'}
+                  rows={3}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>{t('estimatedDuration')} (hours)</Label>
-              <Input
-                type="number"
-                value={formData.estimated_duration_hours}
-                onChange={(e) => setFormData({ ...formData, estimated_duration_hours: parseInt(e.target.value) || 0 })}
-                placeholder="0"
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t('pathType')}</Label>
+                  <Select
+                    value={formData.path_type}
+                    onValueChange={(value: PathType) => setFormData({ ...formData, path_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new_hire">{t('newHire')}</SelectItem>
+                      <SelectItem value="department">{t('department')}</SelectItem>
+                      <SelectItem value="leadership">{t('leadership')}</SelectItem>
+                      <SelectItem value="compliance">{t('compliance')}</SelectItem>
+                      <SelectItem value="skills">{t('skills')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="mandatory"
-                checked={formData.is_mandatory}
-                onChange={(e) => setFormData({ ...formData, is_mandatory: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <Label htmlFor="mandatory">{t('mandatory')}</Label>
-            </div>
+                <div className="space-y-2">
+                  <Label>{t('estimatedDuration')} (hours)</Label>
+                  <Input
+                    type="number"
+                    value={formData.estimated_duration_hours}
+                    onChange={(e) => setFormData({ ...formData, estimated_duration_hours: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="certificate"
-                checked={formData.certificate_enabled}
-                onChange={(e) => setFormData({ ...formData, certificate_enabled: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <Label htmlFor="certificate">{t('certificateEnabled')}</Label>
-            </div>
+              <div className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="mandatory"
+                    checked={formData.is_mandatory}
+                    onChange={(e) => setFormData({ ...formData, is_mandatory: e.target.checked })}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="mandatory">{t('mandatory')}</Label>
+                </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => setShowPathDialog(false)}>
-                {t('cancel')}
-              </Button>
-              <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" onClick={handleSubmit} disabled={pathMutation.isPending}>
-                {pathMutation.isPending ? t('loading') : t('save')}
-              </Button>
-            </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="certificate"
+                    checked={formData.certificate_enabled}
+                    onChange={(e) => setFormData({ ...formData, certificate_enabled: e.target.checked })}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="certificate">{t('certificateEnabled')}</Label>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="modules" className="space-y-4 pt-4 text-left">
+              <div className="space-y-2">
+                <Label>{t('selectModules')}</Label>
+                <div className="border rounded-md p-4 max-h-[300px] overflow-y-auto space-y-2">
+                  {availableModules?.map(module => (
+                    <div key={module.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded border">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.module_ids.includes(module.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({ ...formData, module_ids: [...formData.module_ids, module.id] })
+                            } else {
+                              setFormData({ ...formData, module_ids: formData.module_ids.filter(id => id !== module.id) })
+                            }
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm font-medium">{module.title}</span>
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">
+                        {module.estimated_duration_minutes} min
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-500 italic">
+                  * Modules will be presented to the user in the order they are selected.
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="targeting" className="space-y-4 pt-4 text-left">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t('targetHotel')}</Label>
+                  <Select
+                    value={formData.target_property_id || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, target_property_id: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('selectAllHotels')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t('allHotels')}</SelectItem>
+                      {properties?.map(prop => (
+                        <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('targetDepartment')}</Label>
+                  <Select
+                    value={formData.target_department_id || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, target_department_id: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('selectDepartment')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t('allDepartments')}</SelectItem>
+                      {departments?.map(dept => (
+                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('targetRole')}</Label>
+                <Select
+                  value={formData.target_role || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, target_role: value === 'none' ? null : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('selectRole')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('everyone')}</SelectItem>
+                    <SelectItem value="staff">{t('staff')}</SelectItem>
+                    <SelectItem value="department_head">{t('departmentHead')}</SelectItem>
+                    <SelectItem value="property_manager">{t('propertyManager')}</SelectItem>
+                    <SelectItem value="property_hr">{t('propertyHR')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('specificEmployees')} ({formData.target_user_ids.length})</Label>
+                <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto space-y-1">
+                  {staffList?.map(staff => (
+                    <div key={staff.id} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded text-sm">
+                      <input
+                        type="checkbox"
+                        checked={formData.target_user_ids.includes(staff.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({ ...formData, target_user_ids: [...formData.target_user_ids, staff.id] })
+                          } else {
+                            setFormData({ ...formData, target_user_ids: formData.target_user_ids.filter(id => id !== staff.id) })
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="font-medium">{staff.full_name}</span>
+                      <span className="text-gray-500 text-[11px]">— {staff.job_title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 text-blue-800 text-[11px] rounded border border-blue-100 flex items-start gap-2">
+                <Target className="w-4 h-4 mt-0.5 text-blue-600" />
+                <p>
+                  <strong>Targeting Logic:</strong> Employees matching <em>any</em> of the criteria above (Hotel, Dept, Role, or Specific Name) will be enrolled in this Learning Path.
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-2 pt-6 border-t mt-4">
+            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => setShowPathDialog(false)}>
+              {t('cancel')}
+            </Button>
+            <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors px-6" onClick={handleSubmit} disabled={pathMutation.isPending}>
+              {pathMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {pathMutation.isPending ? t('saving') : t('savePath')}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

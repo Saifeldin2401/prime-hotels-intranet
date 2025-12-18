@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Bell } from 'lucide-react'
+import { motion, useAnimation } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '@/hooks/useNotifications'
+import { bellVariants } from '@/lib/motion'
 import {
   Popover,
   PopoverContent,
@@ -18,24 +20,31 @@ export function NotificationBell() {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const controls = useAnimation()
+  const prevUnreadCount = useRef(unreadCount)
+
+  // Trigger shake only on NEW unread notifications
+  useEffect(() => {
+    if (unreadCount > prevUnreadCount.current) {
+      controls.start('shake')
+    }
+    prevUnreadCount.current = unreadCount
+  }, [unreadCount, controls])
 
   const getNotificationLink = (notification: Notification): string | null => {
-    // Check if metadata has specific link
-    if (notification.metadata?.link) return notification.metadata.link
-
-    const type = notification.notification_type || (notification as any).type // Handle type alias
-
+    if (notification.link) return notification.link
+    const type = notification.type
     switch (type) {
       case 'approval_required':
       case 'request_approved':
       case 'request_rejected':
-        return '/approvals' // Or specific ID if available
+        return '/approvals'
       case 'training_assigned':
       case 'training_deadline':
         return '/training'
       case 'document_published':
       case 'document_acknowledgment_required':
-        return '/documents' // or /profile?tab=documents
+        return '/documents'
       case 'announcement_new':
         return '/announcements'
       case 'maintenance_assigned':
@@ -49,11 +58,9 @@ export function NotificationBell() {
   }
 
   const handleNotificationClick = (notification: Notification) => {
-    // Mark as read if not already
     if (!notification.is_read) {
       markAsRead.mutate(notification.id)
     }
-
     const link = getNotificationLink(notification)
     if (link) {
       navigate(link)
@@ -64,16 +71,25 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-muted-foreground" />
-          {unreadCount > 0 && (
-            <Badge
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white rounded-full text-xs"
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
-          )}
-        </Button>
+        <motion.div
+          variants={bellVariants}
+          initial="idle"
+          animate={controls}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="inline-block"
+        >
+          <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-700 hover:bg-gray-100/50">
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <Badge
+                className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 bg-red-500 text-white rounded-full text-[10px] border-2 border-white"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
+          </Button>
+        </motion.div>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">

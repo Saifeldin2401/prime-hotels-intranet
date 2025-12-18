@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useToast } from '@/components/ui/use-toast'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,11 +9,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
-import { suggestSystemRole, getCommonJobTitles } from '@/lib/jobTitleMappings'
+
 import type { Profile, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useDepartments } from '@/hooks/useDepartments'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface UserFormProps {
   user?: Profile
@@ -20,6 +36,7 @@ interface UserFormProps {
 }
 
 export function UserForm({ user, onClose }: UserFormProps) {
+  const { toast } = useToast()
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
@@ -48,6 +65,21 @@ export function UserForm({ user, onClose }: UserFormProps) {
     for persistent 400 Bad Request API errors.
   */
   const { departments } = useDepartments()
+
+  // Fetch Job Titles from DB
+  const { data: jobTitlesList } = useQuery({
+    queryKey: ['job_titles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('job_titles')
+        .select('*')
+        .order('title', { ascending: true })
+
+      if (error) throw error
+      return data as { id: string; title: string; default_role: AppRole; category: string }[]
+    },
+  })
+  const [openJobTitle, setOpenJobTitle] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -95,14 +127,18 @@ export function UserForm({ user, onClose }: UserFormProps) {
     }
   }
 
-  // Handle job title change and auto-suggest role
-  const handleJobTitleChange = (newJobTitle: string) => {
-    setJobTitle(newJobTitle)
+  // Handle job title selection from DB
+  const handleJobTitleSelect = (selectedTitle: string) => {
+    setJobTitle(selectedTitle)
+    setOpenJobTitle(false)
 
-    // Auto-suggest system role if no role is selected yet
-    if (!role && newJobTitle.trim()) {
-      const suggestedRole = suggestSystemRole(newJobTitle)
-      setRole(suggestedRole)
+    // Find the corresponding job title object to get the role
+    const titleObj = jobTitlesList?.find(t => t.title === selectedTitle)
+    if (titleObj) {
+      setRole(titleObj.default_role)
+    } else {
+      // Fallback to heuristic if somehow manually entered (though Combobox handles this differently)
+      // or just keep existing logic if we allow custom
     }
   }
 
@@ -112,62 +148,79 @@ export function UserForm({ user, onClose }: UserFormProps) {
         throw new Error('Please fill in all required fields')
       }
 
-      // Call Edge Function via Supabase client so it sends the current user's JWT
+      // Prepare payload for atomic creation
+      const payload = {
+        email,
+        fullName,
+        phone: phone || undefined,
+        jobTitle: jobTitle || undefined,
+        role,
+        propertyIds: selectedProperties,
+        departmentIds: selectedDepartments
+      }
+
+      console.log('Creating user with payload:', payload)
+
       const { data, error: fnError } = await supabase.functions.invoke('create-user', {
-        body: { email, fullName },
+        body: payload,
       })
 
       if (fnError) {
-        throw new Error(fnError.message || 'Failed to create user')
+        // If function returns valid JSON error caught by wrapper
+        throw new Error(fnError.message || JSON.stringify(fnError))
       }
 
-      const { userId } = (data || {}) as { userId?: string }
-      if (!userId) throw new Error('User ID not returned from create-user function')
-
-      // Update profile with job title
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: fullName,
-          phone: phone || null,
-          job_title: jobTitle || null
-        })
-        .eq('id', userId)
-
-      if (profileError) throw profileError
-
-      // Assign role
-      if (role) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role })
-
-        if (roleError) throw roleError
+      // Check for error in response body if wrapper didn't catch 500
+      if (data?.error) {
+        throw new Error(data.error)
       }
 
-      // Assign properties
-      if (selectedProperties.length > 0) {
-        const { error: propError } = await supabase
-          .from('user_properties')
-          .insert(selectedProperties.map((propertyId) => ({ user_id: userId, property_id: propertyId })))
+      const response = (data || {}) as { userId?: string, tempPassword?: string, message?: string }
+      if (!response.userId) throw new Error('User ID not returned from create-user function')
 
-        if (propError) throw propError
-      }
-
-      // Assign departments
-      if (selectedDepartments.length > 0) {
-        const { error: deptError } = await supabase
-          .from('user_departments')
-          .insert(selectedDepartments.map((departmentId) => ({ user_id: userId, department_id: departmentId })))
-
-        if (deptError) throw deptError
-      }
-
-      return userId
+      console.log('Create user response:', response)
+      return response
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log('User creation success, response:', response)
+
+      if (response?.tempPassword) {
+        // Automatically copy password to clipboard
+        navigator.clipboard.writeText(response.tempPassword).then(() => {
+          toast({
+            title: "✅ User Created - Password Copied!",
+            description: `Password "${response.tempPassword}" copied to clipboard. User must change it on first login.`,
+            duration: 10000,
+          })
+        }).catch(() => {
+          // If clipboard fails, just show the password
+          toast({
+            title: "✅ User Created Successfully",
+            description: `Temporary Password: ${response.tempPassword} (User must change on first login)`,
+            duration: 30000,
+          })
+        })
+
+        // Also log to console for backup
+        console.log('==== NEW USER TEMPORARY PASSWORD ====')
+        console.log(`Password: ${response.tempPassword}`)
+        console.log('=====================================')
+      } else {
+        toast({
+          title: "User Created",
+          description: "User created successfully",
+        })
+      }
+
       onClose()
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create user",
+        description: error.message,
+        variant: "destructive"
+      })
+    }
   })
 
   const updateUserMutation = useMutation({
@@ -278,21 +331,61 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="jobTitle">Job Title *</Label>
-              <Input
-                id="jobTitle"
-                value={jobTitle}
-                onChange={(e) => handleJobTitleChange(e.target.value)}
-                placeholder="e.g., Front Office Manager, Room Attendant"
-                list="job-titles-datalist"
-                required
-              />
-              <datalist id="job-titles-datalist">
-                {getCommonJobTitles().map((title) => (
-                  <option key={title} value={title} />
-                ))}
-              </datalist>
+              <Popover open={openJobTitle} onOpenChange={setOpenJobTitle}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openJobTitle}
+                    className="w-full justify-between font-normal text-left"
+                  >
+                    {jobTitle || "Select job title..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search job title..." />
+                    <CommandList>
+                      <CommandEmpty>No job title found.</CommandEmpty>
+                      <CommandGroup>
+                        {jobTitlesList?.map((item) => (
+                          <CommandItem
+                            key={item.id}
+                            value={item.title}
+                            onSelect={() => {
+                              handleJobTitleSelect(item.title)
+                            }}
+                            className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
+                          >
+                            <div
+                              className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                              onPointerDown={(e) => {
+                                e.preventDefault()
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleJobTitleSelect(item.title)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  jobTitle === item.title ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <p className="text-xs text-gray-600">
-                Actual hotel job position (will be displayed throughout the system)
+                Start typing to search available job positions
               </p>
             </div>
 
@@ -358,25 +451,52 @@ export function UserForm({ user, onClose }: UserFormProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label>Departments</Label>
-              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
-                {departments?.map((department) => (
-                  <label key={department.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedDepartments.includes(department.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedDepartments([...selectedDepartments, department.id])
-                        } else {
-                          setSelectedDepartments(selectedDepartments.filter((id) => id !== department.id))
-                        }
-                      }}
-                    />
-                    <span className="text-sm">{department.name}</span>
-                  </label>
-                ))}
+              <div className="max-h-60 overflow-y-auto border rounded-md p-4 space-y-4">
+                {selectedProperties.length > 0 ? (
+                  properties?.filter(p => selectedProperties.includes(p.id)).map((property) => {
+                    const propertyDepts = departments?.filter(d => d.property_id === property.id)
+
+                    if (!propertyDepts || propertyDepts.length === 0) return null
+
+                    return (
+                      <div key={property.id} className="space-y-2">
+                        <h4 className="text-sm font-semibold font-sans text-gray-900 sticky top-0 bg-white py-1 border-b flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-hotel-gold"></span>
+                          {property.name}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {propertyDepts.map((department) => (
+                            <label key={department.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold"
+                                checked={selectedDepartments.includes(department.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedDepartments([...selectedDepartments, department.id])
+                                  } else {
+                                    setSelectedDepartments(selectedDepartments.filter((id) => id !== department.id))
+                                  }
+                                }}
+                              />
+                              <span className="text-sm text-gray-600">{department.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8 bg-gray-50 rounded-lg flex flex-col items-center justify-center border border-dashed">
+                    <span className="mb-1">🏢</span>
+                    Select a property above to view departments
+                  </p>
+                )}
+                {selectedProperties.length > 0 && (!departments || departments.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No departments found for selected properties.</p>
+                )}
               </div>
             </div>
 

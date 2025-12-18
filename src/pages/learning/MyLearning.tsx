@@ -215,7 +215,7 @@ export default function MyLearning() {
                                             {item.progress?.completed_at ? format(new Date(item.progress.completed_at), 'MMM d, yyyy') : '-'}
                                         </td>
                                         <td className="px-4 py-3 font-mono">
-                                            {item.progress?.score_percentage !== undefined ? `${item.progress.score_percentage}%` : 'N/A'}
+                                            {item.progress?.score_percentage != null ? `${item.progress.score_percentage}%` : 'N/A'}
                                         </td>
                                         <td className="px-4 py-3">
                                             <Button size="sm" variant="ghost" onClick={() => navigate(`/training/certificates`)}>

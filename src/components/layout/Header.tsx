@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProperty } from '@/contexts/PropertyContext'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
@@ -91,7 +92,7 @@ export function Header({
             {isMultiPropertyUser && (
               <div className="hidden md:flex items-center me-2">
                 <Select value={currentProperty?.id} onValueChange={switchProperty}>
-                  <SelectTrigger className="w-[180px] h-9 bg-hotel-navy-light border-hotel-navy-dark text-white hover:bg-hotel-navy focus:ring-hotel-gold transition-colors">
+                  <SelectTrigger className="w-[260px] h-9 bg-hotel-navy-light border-hotel-navy-dark text-white hover:bg-hotel-navy focus:ring-hotel-gold transition-colors">
                     <div className="flex items-center gap-2 truncate">
                       <Building className="h-3.5 w-3.5 text-hotel-gold" />
                       <SelectValue placeholder="Select Property" />
@@ -109,7 +110,7 @@ export function Header({
             )}
 
             {/* Notification Bell - Light Variant for Navy Header */}
-            <div className="text-white">
+            <div id="notifications-button" className="text-white">
               <NotificationBell />
             </div>
 
@@ -122,7 +123,7 @@ export function Header({
             <div className="h-8 w-px bg-hotel-navy-dark mx-1" />
 
             {/* User Menu */}
-            <div className="relative ms-1">
+            <div id="user-menu" className="relative ms-1">
               <Button
                 variant="ghost"
                 className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark transition-all duration-200"
@@ -160,24 +161,24 @@ export function Header({
                     <div className="py-2">
                       <a
                         href="/profile"
-                        className="flex items-center px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="flex items-center px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
                       >
-                        <User className="me-3 h-4 w-4 text-hotel-gold" />
+                        <User className="me-3 h-4 w-4 text-hotel-gold transition-transform duration-300 group-hover:scale-110" />
                         <span>My Profile</span>
                       </a>
                       <a
                         href="/settings"
-                        className="flex items-center px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="flex items-center px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
                       >
-                        <Settings className="me-3 h-4 w-4 text-hotel-gold" />
+                        <Settings className="me-3 h-4 w-4 text-hotel-gold transition-transform duration-300 group-hover:rotate-90" />
                         <span>Settings</span>
                       </a>
                       <div className="h-px bg-border my-2 mx-4" />
                       <button
                         onClick={handleLogout}
-                        className="w-full text-start flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                        className="w-full text-start flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium group"
                       >
-                        <LogOut className="me-3 h-4 w-4" />
+                        <LogOut className="me-3 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                         <span>Log Out</span>
                       </button>
                     </div>

@@ -124,9 +124,9 @@ export function KnowledgeWidget() {
                         Knowledge Base
                     </CardTitle>
                     <Link to="/knowledge">
-                        <Button variant="ghost" size="sm" className="h-8">
+                        <Button variant="ghost" size="sm" className="h-8 group">
                             View All
-                            <ArrowRight className="h-4 w-4 ml-1" />
+                            <ArrowRight className="h-4 w-4 ml-1 transition-transform duration-300 group-hover:translate-x-1" />
                         </Button>
                     </Link>
                 </div>
@@ -187,10 +187,10 @@ export function KnowledgeWidget() {
                                 <Link
                                     key={article.id}
                                     to={`/knowledge/${article.id}`}
-                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
                                 >
-                                    <div className="p-2 rounded-lg bg-gray-100">
-                                        <FileText className="h-4 w-4 text-gray-600" />
+                                    <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-gray-200 transition-colors">
+                                        <FileText className="h-4 w-4 text-gray-600 transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-0.5" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-gray-900 truncate">

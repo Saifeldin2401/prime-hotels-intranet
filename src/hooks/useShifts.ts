@@ -32,11 +32,11 @@ export interface CreateShiftInput {
 }
 
 /**
- * Hook to fetch shifts for a user
+ * Hook to fetch shifts for a user, optionally filtered by department
  */
-export function useShifts(userId?: string, dateRange?: { start: Date; end: Date }) {
+export function useShifts(userId?: string, dateRange?: { start: Date; end: Date }, departmentId?: string) {
     return useQuery({
-        queryKey: ['shifts', userId, dateRange],
+        queryKey: ['shifts', userId, dateRange, departmentId],
         queryFn: async () => {
             let query = supabase
                 .from('shifts')
@@ -45,6 +45,10 @@ export function useShifts(userId?: string, dateRange?: { start: Date; end: Date 
 
             if (userId) {
                 query = query.eq('user_id', userId)
+            }
+
+            if (departmentId) {
+                query = query.eq('department_id', departmentId)
             }
 
             if (dateRange) {
@@ -58,7 +62,7 @@ export function useShifts(userId?: string, dateRange?: { start: Date; end: Date 
             if (error) throw error
             return data as Shift[]
         },
-        enabled: !!userId
+        enabled: !!userId || !!departmentId
     })
 }
 

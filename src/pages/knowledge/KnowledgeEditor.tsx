@@ -17,8 +17,10 @@ import {
     ArrowLeft,
     Wand2,
     RefreshCw,
-    Link as LinkIcon
+    Link as LinkIcon,
+    Languages
 } from 'lucide-react'
+import { marked } from 'marked'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { RichTextEditor } from '@/components/ui/RichTextEditor'
@@ -44,13 +46,33 @@ import type { KnowledgeVisibility } from '@/types/knowledge'
 import { RelatedArticlesEditor } from '@/components/knowledge'
 import { useRelatedArticles } from '@/hooks/useKnowledge'
 import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useProperties } from '@/hooks/useProperties'
 
-const VISIBILITY_OPTIONS: { value: KnowledgeVisibility; label: string }[] = [
-    { value: 'all_properties', label: 'Everyone' },
-    { value: 'property', label: 'Property Only' },
-    { value: 'department', label: 'Department Only' },
-    { value: 'role', label: 'Specific Roles' },
+
+const VISIBILITY_OPTIONS: { value: KnowledgeVisibility; label: string; description: string }[] = [
+    {
+        value: 'all_properties' as KnowledgeVisibility,
+        label: 'All Properties',
+        description: 'Visible across entire hotel chain'
+    },
+    {
+        value: 'property',
+        label: 'This Property Only',
+        description: 'Only visible at selected property'
+    },
+    {
+        value: 'department',
+        label: 'This Department Only',
+        description: 'Only visible to department members at selected property'
+    },
+    {
+        value: 'role',
+        label: 'Specific Role',
+        description: 'Visible to users with a specific role'
+    },
 ]
+
 
 interface ArticleFormData {
     title: string
@@ -58,21 +80,18 @@ interface ArticleFormData {
     content: string
     file_url: string
     content_type: string
-    visibility: KnowledgeVisibility | 'all_properties' // Allow mapping global to all_properties
+    visibility: KnowledgeVisibility
     requires_acknowledgment: boolean
-    featured: boolean // Note: 'featured' not in documents schema I saw earlier, but might be there or I should omit. 
-    // Schema check: id, title, description, file_url, visibility, property_id, department_id, status, requires_acknowledgment, created_by, current_version, created_at, updated_at
-    // No 'featured'. I will omit 'featured' from save logic or check if I missed it.
-    // I'll omit it to be safe, or check status query again.
-    // Actually `knowledgeService` used 'featured' in `getFeaturedArticles`?
-    // Let's assume 'featured' is NOT in documents. I'll remove it from UI or mock it.
+    featured: boolean
+    department_id: string | null
+    target_property_id: string | null
 }
 
 export default function KnowledgeEditor() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { t } = useTranslation(['knowledge', 'common'])
-    const { user } = useAuth()
+    const { user, profile, roles, primaryRole } = useAuth()
     const { currentProperty } = useProperty()
     const queryClient = useQueryClient()
     const isEditing = Boolean(id)
@@ -83,9 +102,11 @@ export default function KnowledgeEditor() {
         content: '',
         file_url: '',
         content_type: 'document',
-        visibility: 'all_properties',
+        visibility: 'all_properties' as KnowledgeVisibility,
         requires_acknowledgment: false,
-        featured: false
+        featured: false,
+        department_id: null,
+        target_property_id: null
     })
 
     // Fetch existing data if editing
@@ -99,10 +120,19 @@ export default function KnowledgeEditor() {
     // Or simpler: Load it here.
 
     const { data: relatedArticles = [], refetch: refetchRelated } = useRelatedArticles(id || '')
+    const { departments } = useDepartments(currentProperty?.id)
+    const { data: properties } = useProperties()
+
+    // Debug: Log departments
+    console.log('🏢 Departments loaded:', departments)
+    console.log('🏨 Current Property:', currentProperty)
+    console.log('👤 Primary Role:', primaryRole)
+    console.log('👤 Roles:', roles)
 
     const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
     const [isSaving, setIsSaving] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
+    const [aiLanguage, setAiLanguage] = useState('English')
 
     // Load Data Effect
     useState(() => {
@@ -117,12 +147,14 @@ export default function KnowledgeEditor() {
                         setFormData({
                             title: data.title || '',
                             description: data.description || '',
-                            content: data.content || '', // Added column
+                            content: data.content || '',
                             file_url: data.file_url || '',
                             content_type: data.content_type || 'document',
-                            visibility: (data.visibility === 'global' ? 'all_properties' : data.visibility) || 'all_properties',
+                            visibility: data.visibility || 'all_properties',
                             requires_acknowledgment: data.requires_acknowledgment || false,
-                            featured: false // Not in schema
+                            featured: false,
+                            department_id: data.department_id || null,
+                            target_property_id: data.property_id || null
                         })
                     }
                 })
@@ -133,8 +165,33 @@ export default function KnowledgeEditor() {
         field: K,
         value: ArticleFormData[K]
     ) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
+        setFormData(prev => {
+            const updated = { ...prev, [field]: value }
+
+            // Smart validation: Auto-adjust visibility based on department selection
+            if (field === 'department_id') {
+                // If department is set to None (null), reset visibility if it requires department
+                if (value === null && updated.visibility === 'department') {
+                    updated.visibility = 'all_properties' as KnowledgeVisibility
+                }
+            }
+
+            // Smart validation: If visibility requires department but none selected, show warning
+            if (field === 'visibility') {
+                const visValue = value as KnowledgeVisibility
+                // If switching to department-based visibility without a department, auto-select cannot proceed
+                // Just update the value, validation will show warning
+            }
+
+            return updated
+        })
     }, [])
+
+    // Computed validation warnings
+    const validationWarnings = {
+        departmentRequired: formData.visibility === 'department' && !formData.department_id,
+        propertyIrrelevant: formData.visibility === 'all_properties' && formData.target_property_id,
+    }
 
     // AI
     const generateWithAI = async (action: 'outline' | 'expand' | 'improve') => {
@@ -145,16 +202,38 @@ export default function KnowledgeEditor() {
         setIsGenerating(true)
         try {
             let result: string | null = null
+
             // Reusing basic AI service calls
             if (action === 'outline') {
-                result = await aiService.improveContent(`Outline for: ${formData.title}`, 'expand')
+                result = await aiService.improveContent(`Outline for: ${formData.title}`, 'expand', aiLanguage)
             } else if (action === 'expand') {
-                result = await aiService.improveContent(formData.content, 'expand')
+                result = await aiService.improveContent(formData.content, 'expand', aiLanguage)
             } else if (action === 'improve') {
-                result = await aiService.improveContent(formData.content, 'professional')
+                result = await aiService.improveContent(formData.content, 'professional', aiLanguage)
             }
 
-            if (result) updateField('content', result)
+            if (result) {
+                // Parse AI markdown response to HTML
+                const htmlContent = await marked(result)
+                updateField('content', htmlContent)
+
+                // Auto-generate description if missing
+                if (!formData.description) {
+                    try {
+                        // Use the raw result (markdown) to generate a summary
+                        const summary = await aiService.improveContent(
+                            `Generate a 1-sentence summary for this SOP: ${result.substring(0, 500)}...`,
+                            'shorten',
+                            aiLanguage
+                        )
+                        if (summary) {
+                            updateField('description', summary)
+                        }
+                    } catch (err) {
+                        console.warn('Failed to auto-generate description:', err)
+                    }
+                }
+            }
             toast.success('AI generation complete!')
         } catch (error) {
             toast.error('AI failed')
@@ -169,6 +248,12 @@ export default function KnowledgeEditor() {
             return
         }
 
+        // Validate department is selected when required
+        if (formData.visibility === 'department' && !formData.department_id) {
+            toast.error('Please select a department for department-based visibility')
+            return
+        }
+
         setIsSaving(true)
         try {
             const articleData = {
@@ -179,8 +264,9 @@ export default function KnowledgeEditor() {
                 content_type: formData.content_type,
                 visibility: formData.visibility,
                 requires_acknowledgment: formData.requires_acknowledgment,
-                status: status, // Uppercase
-                property_id: currentProperty?.id,
+                status: status,
+                property_id: formData.target_property_id || currentProperty?.id,
+                department_id: formData.department_id,
                 created_by: user?.id,
                 updated_at: new Date().toISOString()
             }
@@ -272,9 +358,23 @@ export default function KnowledgeEditor() {
                     {/* AI Assistant */}
                     <Card className="border-hotel-gold/30 bg-hotel-gold/5">
                         <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Sparkles className="h-5 w-5 text-hotel-gold" />
-                                AI Writing Assistant
+                            <CardTitle className="flex items-center justify-between text-base">
+                                <span className="flex items-center gap-2">
+                                    <Sparkles className="h-5 w-5 text-hotel-gold" />
+                                    AI Writing Assistant
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <Select value={aiLanguage} onValueChange={setAiLanguage}>
+                                        <SelectTrigger className="w-[140px] h-8 text-xs bg-white">
+                                            <SelectValue placeholder="Language" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="English">English Only</SelectItem>
+                                            <SelectItem value="Arabic">Arabic Only</SelectItem>
+                                            <SelectItem value="English and Arabic">Bilingual (En/Ar)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -303,7 +403,13 @@ export default function KnowledgeEditor() {
                         </CardHeader>
                         <CardContent>
                             {activeTab === 'edit' ? (
-                                <RichTextEditor value={formData.content} onChange={v => updateField('content', v)} placeholder="Write content..." minHeight={400} />
+                                <RichTextEditor
+                                    value={formData.content}
+                                    onChange={v => updateField('content', v)}
+                                    placeholder="Write content..."
+                                    minHeight={400}
+                                    direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
+                                />
                             ) : (
                                 <div className="prose max-w-none min-h-[400px] p-4 border rounded bg-white">
                                     <div dangerouslySetInnerHTML={{ __html: formData.content || '<p class="text-gray-400">Empty</p>' }} />
@@ -322,13 +428,95 @@ export default function KnowledgeEditor() {
                         <CardHeader><CardTitle className="text-base">Settings</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div>
+                                <Label>Department</Label>
+                                <Select value={formData.department_id || 'none'} onValueChange={v => updateField('department_id', v === 'none' ? null : v)}>
+                                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select department" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">None (Global)</SelectItem>
+                                        {departments?.map(dept => (
+                                            <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {formData.visibility === 'department' && formData.department_id && 'Document will only be visible to members of this department'}
+                                    {formData.visibility === 'department' && !formData.department_id && '⚠️ Select a department for department-only visibility'}
+                                </p>
+                            </div>
+                            {/* Target Property Selector - Temporarily visible to all for testing */}
+                            {user && (
+                                <div>
+                                    <Label>Target Property (Admin)</Label>
+                                    <Select
+                                        value={formData.target_property_id || 'current'}
+                                        onValueChange={v => updateField('target_property_id', v === 'current' ? null : v)}
+                                    >
+                                        <SelectTrigger className="mt-1">
+                                            <SelectValue placeholder="Select property" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="current">
+                                                Current Property ({currentProperty?.name || 'None'})
+                                            </SelectItem>
+                                            {properties?.map(prop => (
+                                                <SelectItem key={prop.id} value={prop.id}>
+                                                    {prop.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-blue-600 mt-1">
+                                        {formData.target_property_id
+                                            ? `Document will be assigned to: ${properties?.find(p => p.id === formData.target_property_id)?.name}`
+                                            : `Document will be assigned to: ${currentProperty?.name || 'Current property'}`
+                                        }
+                                    </p>
+                                </div>
+                            )}
+
+                            <div>
                                 <Label>Visibility</Label>
                                 <Select value={formData.visibility} onValueChange={v => updateField('visibility', v as KnowledgeVisibility)}>
                                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                                     <SelectContent>
-                                        {VISIBILITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                                        {VISIBILITY_OPTIONS.map(o => (
+                                            <SelectItem key={o.value} value={o.value}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{o.label}</span>
+                                                    <span className="text-xs text-gray-500">{o.description}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {VISIBILITY_OPTIONS.find(o => o.value === formData.visibility)?.description}
+                                    {(formData.visibility === 'property' || formData.visibility === 'department') && (
+                                        <span className="block mt-1 text-blue-600">
+                                            📍 Assigned to: <strong>
+                                                {formData.target_property_id
+                                                    ? properties?.find(p => p.id === formData.target_property_id)?.name
+                                                    : currentProperty?.name || 'Current property'}
+                                            </strong>
+                                        </span>
+                                    )}
+                                    {/* Validation warnings */}
+                                    {validationWarnings.departmentRequired && (
+                                        <span className="block mt-1 text-orange-600">
+                                            ⚠️ Department visibility requires selecting a department above
+                                        </span>
+                                    )}
+                                    {validationWarnings.propertyIrrelevant && (
+                                        <span className="block mt-1 text-gray-500 italic">
+                                            ℹ️ Target Property won't limit visibility (visible to all properties)
+                                        </span>
+                                    )}
+                                    {formData.visibility === 'all_properties' && !formData.department_id && (
+                                        <span className="block mt-1 text-green-600">
+                                            ✓ Document will be visible to everyone in the hotel chain
+                                        </span>
+                                    )}
+                                </p>
                             </div>
                             <div className="flex items-center justify-between">
                                 <div><Label>Requires Acknowledgment</Label></div>

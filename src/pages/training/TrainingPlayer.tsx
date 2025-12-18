@@ -26,8 +26,10 @@ import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { QuizComponent } from '@/pages/learning/components/QuizComponent'
 import { learningService } from '@/services/learningService'
+import { skillsService } from '@/services/skillsService'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
 import type { TrainingModule, TrainingContentBlock } from '@/lib/types'
+import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
 
 export default function TrainingPlayer() {
     const { t } = useTranslation('training')
@@ -68,7 +70,19 @@ export default function TrainingPlayer() {
 
             if (blocksError) throw blocksError
 
-            return { module, blocks: blocks as TrainingContentBlock[] }
+            // Fetch Linked Quiz ID (Standalone Certification)
+            const { data: linkedQuizzes } = await supabase
+                .from('learning_quizzes')
+                .select('id')
+                .eq('training_module_id', id)
+                .eq('status', 'published')
+                .limit(1)
+
+            return {
+                module,
+                blocks: blocks as TrainingContentBlock[],
+                linkedQuizId: linkedQuizzes?.[0]?.id
+            }
         },
         enabled: !!id
     })
@@ -123,9 +137,17 @@ export default function TrainingPlayer() {
                 status: 'completed',
                 progress_percentage: 100,
                 passed: true,
-                score_percentage: quizScore || undefined,
+                score_percentage: quizScore !== null ? quizScore : undefined,
                 completed_at: new Date().toISOString()
             })
+
+            // Award Skills
+            try {
+                await skillsService.awardModuleSkills(user.id, moduleData.module.id)
+            } catch (skillError) {
+                console.error('Failed to award skills:', skillError)
+                // Don't fail the module completion
+            }
 
             // 🏆 AUTO-GENERATE CERTIFICATE for 100% quiz score in training module!
             if (quizScore === 100 && user && moduleData.module) {
@@ -162,6 +184,14 @@ export default function TrainingPlayer() {
                 description: t('trainingCompletedDescription'),
                 variant: 'default'
             })
+
+            // If there's a linked quiz, ask if they want to take it now
+            if (moduleData.linkedQuizId) {
+                if (window.confirm("Module Completed! Would you like to take the certification quiz now?")) {
+                    navigate(`/learning/quizzes/${moduleData.linkedQuizId}/take`)
+                    return
+                }
+            }
 
             navigate('/learning/my')
 
@@ -256,23 +286,7 @@ export default function TrainingPlayer() {
                     </div>
                 )
             case 'document_link':
-                return (
-                    <div className="p-6 border rounded-lg bg-slate-50 flex items-center gap-4">
-                        <LinkIcon className="h-8 w-8 text-blue-500" />
-                        <div>
-                            <h4 className="font-medium">{t('attachedDocument')}</h4>
-                            <a
-                                href={block.content_url || '#'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-600 hover:underline break-all"
-                            >
-                                {block.content_url || t('noLinkProvided')}
-                            </a>
-                            <div className="mt-2 text-sm text-gray-500" dangerouslySetInnerHTML={{ __html: block.content }} />
-                        </div>
-                    </div>
-                )
+                return <DocumentBlockRenderer block={block} />
             case 'sop_reference':
                 const sopId = block.content_data?.sop_id as string
                 if (!sopId) return <div className="text-red-500">{t('sopReferenceNotConfigured')}</div>
@@ -288,7 +302,7 @@ export default function TrainingPlayer() {
                         <p className="text-sm text-gray-600">
                             {t('thisSectionReferencesSop', { sopId })}
                             <a
-                                href={`/knowledge/sop/${sopId}`}
+                                href={`/documents/${sopId}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="ml-2 text-emerald-600 underline"

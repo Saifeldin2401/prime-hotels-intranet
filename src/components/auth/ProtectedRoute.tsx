@@ -4,6 +4,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import type { AppRole } from '@/lib/constants'
 import type { Permission } from '@/hooks/usePermissions'
 import { getDashboardPathForRole } from './RoleBasedRedirect'
+import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -75,7 +76,11 @@ export function ProtectedRoute({
     return <Navigate to={fallbackPath} replace />
   }
 
-  return <>{children}</>
+  return (
+    <PasswordEnforcementGuard>
+      {children}
+    </PasswordEnforcementGuard>
+  )
 }
 
 

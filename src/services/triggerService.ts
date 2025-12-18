@@ -193,16 +193,19 @@ async function assignTrainingToUsers(
         : null
 
     const assignments = userIds.map(userId => ({
-        training_id: trainingId,
-        user_id: userId,
+        content_type: 'module',
+        content_id: trainingId,
+        target_type: 'user',
+        target_id: userId,
         status: 'assigned',
         due_date: dueDate,
-        assigned_at: new Date().toISOString()
+        created_at: new Date().toISOString()
     }))
 
+    // Note: Upsert conflict on generic (target_id, content_id) if constraint exists
     const { error } = await supabase
-        .from('training_assignments')
-        .upsert(assignments, { onConflict: 'training_id,user_id' })
+        .from('learning_assignments')
+        .upsert(assignments) // removed specific conflict target constraint name as it might differ
 
     if (error) throw error
 }
@@ -217,15 +220,17 @@ async function assignQuizToUsers(
         : null
 
     const assignments = userIds.map(userId => ({
-        quiz_id: quizId,
-        user_id: userId,
+        content_type: 'quiz',
+        content_id: quizId,
+        target_type: 'user',
+        target_id: userId,
         status: 'assigned',
         due_date: dueDate
     }))
 
     const { error } = await supabase
         .from('learning_assignments')
-        .upsert(assignments, { onConflict: 'quiz_id,user_id' })
+        .upsert(assignments)
 
     if (error) throw error
 }

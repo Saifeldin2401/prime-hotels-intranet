@@ -35,7 +35,7 @@ export async function getArticles(
             .from('documents')
             .select(`
           id, title, description,
-          status,
+          status, content_type,
           property_id, department_id,
           requires_acknowledgment,
           created_at, updated_at,
@@ -46,7 +46,9 @@ export async function getArticles(
         if (filters.query) {
             query = query.or(`title.ilike.%${filters.query}%,description.ilike.%${filters.query}%`)
         }
-        // content_type not available in new schema
+        if (filters.content_type) {
+            query = query.eq('content_type', filters.content_type)
+        }
         if (filters.status) {
             query = query.eq('status', filters.status)
         }
@@ -90,7 +92,7 @@ export async function getArticleById(id: string): Promise<KnowledgeArticle | nul
     try {
         const { data, error } = await supabase
             .from('documents')
-            .select('*')
+            .select('*, sop:sop_documents(linked_training_id, linked_quiz_id)')
             .eq('id', id)
             .single()
 
@@ -113,7 +115,7 @@ export async function getFeaturedArticles(limit = 5): Promise<KnowledgeArticle[]
     try {
         const { data, error } = await supabase
             .from('documents')
-            .select(`id, title, description, status, updated_at, view_count`)
+            .select(`id, title, description, status, content_type, updated_at, view_count`)
             .eq('status', 'PUBLISHED') // Assuming uppercase or standard
             .order('updated_at', { ascending: false })
             .limit(limit)
@@ -133,7 +135,7 @@ export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]>
     try {
         const { data, error } = await supabase
             .from('documents')
-            .select(`id, title, description, status, updated_at, view_count`)
+            .select(`id, title, description, status, content_type, updated_at, view_count`)
             .eq('status', 'PUBLISHED')
             .order('updated_at', { ascending: false })
             .limit(limit)
@@ -172,7 +174,7 @@ export async function getRequiredReading(userId: string): Promise<RequiredReadin
                 id: d.id,
                 document_id: d.id,
                 title: d.title,
-                content_type: 'document',
+                content_type: (d.content_type?.toLowerCase() as any) || 'document',
                 is_acknowledged: false,
                 due_date: new Date().toISOString(), // Placeholder
                 is_overdue: false,
@@ -234,13 +236,13 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
             const ids = data.map(d => d.related_document_id)
             const { data: docs } = await supabase
                 .from('documents')
-                .select('id, title, description, status')
+                .select('id, title, description, status, content_type')
                 .in('id', ids)
 
             return (docs || []).map(d => ({
                 id: d.id,
                 title: d.title,
-                content_type: 'document' as any, // Placeholder
+                content_type: (d.content_type?.toLowerCase() as any) || 'document',
                 relation_type: 'see_also'
             }))
         }
@@ -255,10 +257,15 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
 // ============================================================================
 
 function formatArticle(data: any): KnowledgeArticle {
+    // Handle polymorphic/linked SOP data if present from join
+    const sopData = Array.isArray(data.sop) ? data.sop[0] : data.sop
+
     return {
         ...data,
-        content_type: 'document', // Default
-        department: data.department_id ? { id: data.department_id, name: 'Department' } : undefined, // Simplify
+        content_type: (data.content_type?.toLowerCase() as any) || 'document',
+        linked_training_id: data.linked_training_id || sopData?.linked_training_id,
+        linked_quiz_id: data.linked_quiz_id || sopData?.linked_quiz_id,
+        department: data.department_id ? { id: data.department_id, name: 'Department' } : undefined,
         category: undefined,
         author: undefined,
         tags: []

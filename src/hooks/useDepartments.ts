@@ -17,7 +17,7 @@ export function useDepartments(propertyId?: string) { // Optional filter
   const { data: departments = [], isLoading, error } = useQuery({
     queryKey: ['departments', propertyId],
     queryFn: async () => {
-      let query = supabase.from('departments').select('*').order('name');
+      let query = supabase.from('departments').select('*').eq('is_deleted', false).order('name');
       if (propertyId) {
         query = query.eq('property_id', propertyId);
       }
@@ -53,7 +53,7 @@ export function useDepartments(propertyId?: string) { // Optional filter
   // Delete
   const deleteDepartment = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('departments').delete().eq('id', id);
+      const { error } = await supabase.from('departments').update({ is_deleted: true }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

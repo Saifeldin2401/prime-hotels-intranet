@@ -2,6 +2,8 @@
     "title": "Job Postings",
     "board_title": "Internal Job Board",
     "create_new": "Create New Job",
+    "create": "Create Job",
+    "jobPosting": "Job Posting",
     "search_placeholder": "Search jobs...",
     "filters": {
         "department": "Department",

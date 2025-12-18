@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Activity, FileText, CheckSquare, MessageSquare, AlertTriangle, Clock, Download } from 'lucide-react'
 import { format } from 'date-fns'
-import { exportToCSV } from '@/lib/exportUtils'
+import { downloadCSV } from '@/lib/exportUtils'
 
 export default function ReportsDashboard() {
     const { user } = useAuth()
@@ -45,7 +45,11 @@ export default function ReportsDashboard() {
                 { Metric: 'Pending Documents', Value: docStats.pending },
                 { Metric: 'Rejected Documents', Value: docStats.rejected },
             ]
-            exportToCSV(overviewData, `system_overview_report_${format(new Date(), 'yyyy-MM-dd')}`)
+            const columns = [
+                { key: 'Metric', header: 'Metric' },
+                { key: 'Value', header: 'Value' }
+            ]
+            downloadCSV(overviewData, columns, `system_overview_report_${format(new Date(), 'yyyy-MM-dd')}`)
         }
     }
 

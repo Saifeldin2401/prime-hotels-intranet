@@ -171,13 +171,15 @@ export const aiService = {
         if (jsonMatch) {
           return JSON.parse(jsonMatch[0])
         }
-      } catch (e) { }
+      } catch (e) {
+        console.warn(`Quiz generation model ${model} failed:`, e)
+      }
     }
 
     return heuristicQuiz()
   },
 
-  async improveContent(text: string, instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic'): Promise<string | null> {
+  async improveContent(text: string, instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic', language: string = 'English'): Promise<string | null> {
     const prompts = {
       grammar: "Fix grammar and spelling errors. Maintain the original meaning.",
       expand: "Expand this text with necessary operational details. Use a clear, helpful tone suitable for hotel staff.",
@@ -186,17 +188,41 @@ export const aiService = {
       arabic: "Translate this text to professional Arabic (Modern Standard Arabic) suitable for business."
     }
 
-    const fullPrompt = `You are a Senior Hotel Operations Manager. Your goal is to rewrite the text below.
+    const isArabicOnly = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only';
+
+    // Dynamic Rules Construction
+    let rules = `1. Your output MUST be in ${language}.\n`;
+
+    if (isArabicOnly) {
+      rules += `    2. CRITICAL: OUTPUT ONLY IN ARABIC. Translate and EXPAND content. Do NOT summarize.\n`;
+      rules += `    3. DO NOT output the English input text. Start directly with the Arabic response.\n`;
+      rules += `    4. NO English text allowed in the output (except proper nouns).\n`;
+    } else {
+      rules += `    2. If Target Language is "English and Arabic" or "Bilingual", provide the English text first, followed immediately by the Arabic translation.\n`;
+    }
+
+    rules += `    5. Ensure the output is comprehensive and detailed. Do not cut corners.\n`;
+    rules += `    6. Do NOT translate the "System" instructions above. Only process the text inside the <content> tags.\n`;
+
+    const fullPrompt = `System: You are a Senior Hotel Operations Manager.
+    
+    Task: Rewrite the text provided inside the <content> tags based on the instructions below.
     
     Instruction: ${prompts[instruction]}
+    
+    CRITICAL OUTPUT RULES:
+    ${rules}
     
     Guidelines:
     - Use "We" language where appropriate to build team spirit.
     - Be direct but polite.
     - Return ONLY the improved text. Do not add quotes, preambles, or "Here is the text".
 
-    Text to Improve:
-    ${text}`
+    <content>
+    ${text}
+    </content>
+    
+    Assistant (Improved Content in ${language}):`
 
     for (const model of FALLBACK_MODELS) {
       try {

@@ -51,12 +51,13 @@ export default function MyCertificates() {
     }
 
     const getTypeIcon = (type: string) => {
+        const baseClasses = "w-5 h-5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12"
         switch (type) {
-            case 'training': return <BookOpen className="w-5 h-5 text-blue-600" />
-            case 'sop_quiz': return <Shield className="w-5 h-5 text-green-600" />
-            case 'compliance': return <CheckCircle className="w-5 h-5 text-purple-600" />
-            case 'achievement': return <Award className="w-5 h-5 text-yellow-600" />
-            default: return <Award className="w-5 h-5 text-gray-600" />
+            case 'training': return <BookOpen className={`${baseClasses} text-blue-600`} />
+            case 'sop_quiz': return <Shield className={`${baseClasses} text-green-600`} />
+            case 'compliance': return <CheckCircle className={`${baseClasses} text-purple-600`} />
+            case 'achievement': return <Award className={`${baseClasses} text-yellow-600`} />
+            default: return <Award className={`${baseClasses} text-gray-600`} />
         }
     }
 
@@ -84,7 +85,7 @@ export default function MyCertificates() {
     }
 
     const CertificateCard = ({ certificate }: { certificate: Certificate }) => (
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
             <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
@@ -130,7 +131,7 @@ export default function MyCertificates() {
                         {downloadCertificate.isPending ? (
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
-                            <Download className="w-4 h-4 mr-2" />
+                            <Download className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:translate-y-1" />
                         )}
                         {t('downloadPdf')}
                     </Button>

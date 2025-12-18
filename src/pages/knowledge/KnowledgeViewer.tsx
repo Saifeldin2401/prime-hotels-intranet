@@ -35,7 +35,12 @@ import {
     Eye,
     FileText,
     Loader2,
-    Download
+    Download,
+    GraduationCap,
+    Lightbulb,
+    PlayCircle,
+    Pencil,
+    Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -51,6 +56,9 @@ import {
 import { STATUS_CONFIG } from '@/types/knowledge'
 import { RelatedArticles } from '@/components/knowledge'
 import { useRelatedArticles } from '@/hooks/useKnowledge'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
 interface TOCItem {
     id: string
@@ -70,6 +78,7 @@ export default function KnowledgeViewer() {
     const [showComments, setShowComments] = useState(false)
     const [newComment, setNewComment] = useState('')
     const [isQuestion, setIsQuestion] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     // Ensure useKnowledgeArticle handles the 'documents' table correctly via knowledgeService
     const { data: article, isLoading, error } = useKnowledgeArticle(id)
@@ -85,6 +94,33 @@ export default function KnowledgeViewer() {
     const submitFeedback = useSubmitFeedback()
 
     const isBookmarked = bookmarks?.some(b => b.document_id === id)
+
+    // Check if user can edit
+    const { primaryRole } = useAuth()
+    // Temporarily allow all authenticated users to edit for testing
+    const canEdit = !!user && !!article
+
+    // Delete function
+    const handleDelete = async () => {
+        if (!id) return
+
+        setIsDeleting(true)
+        try {
+            const { error } = await supabase
+                .from('documents')
+                .update({ is_deleted: true })
+                .eq('id', id)
+
+            if (error) throw error
+
+            toast.success('Document deleted')
+            navigate('/knowledge')
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to delete document')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
 
     // Parse TOC from content
     useEffect(() => {
@@ -174,6 +210,101 @@ export default function KnowledgeViewer() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            {/* Styles for Rich Text Content */}
+            <style>{`
+                /* RTL Support */
+                .prose[dir="rtl"],
+                .prose [dir="rtl"] {
+                    text-align: right;
+                    direction: rtl;
+                    font-family: 'Noto Sans Arabic', system-ui, sans-serif;
+                }
+                
+                .prose ul[dir="rtl"], 
+                .prose ol[dir="rtl"] {
+                    padding-inline-start: 1.5rem;
+                    padding-inline-end: 0;
+                }
+
+                /* Structured Headings */
+                .prose h1 {
+                    font-size: 2.25rem;
+                    font-weight: 800;
+                    color: #111827;
+                    border-bottom: 2px solid #e5e7eb;
+                    padding-bottom: 0.5rem;
+                    margin-top: 2rem;
+                    margin-bottom: 1rem;
+                }
+                .prose h2 {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: #1f2937;
+                    margin-top: 1.5rem;
+                    margin-bottom: 0.75rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                .prose h3 {
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    color: #374151;
+                    margin-top: 1.25rem;
+                    margin-bottom: 0.5rem;
+                }
+
+                /* Smart Alerts */
+                .smart-alert {
+                    padding: 1.25rem;
+                    border-radius: 0.5rem;
+                    margin: 1.5rem 0;
+                    border-left: 4px solid transparent;
+                    font-size: 0.95rem;
+                }
+                .smart-alert-important {
+                    background-color: #fefce8;
+                    border-color: #eab308;
+                    color: #854d0e;
+                }
+                .smart-alert-warning {
+                    background-color: #fef2f2;
+                    border-color: #ef4444;
+                    color: #b91c1c;
+                }
+                .smart-alert-note {
+                    background-color: #eff6ff;
+                    border-color: #3b82f6;
+                    color: #1e40af;
+                }
+                .smart-alert-caution {
+                    background-color: #fff7ed;
+                    border-color: #f97316;
+                    color: #9a3412;
+                }
+
+                /* Tables */
+                .prose table {
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    margin: 1.5rem 0;
+                    width: 100%;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 0.5rem;
+                    overflow: hidden;
+                }
+                .prose table td,
+                .prose table th {
+                    border: 1px solid #e5e7eb;
+                    padding: 0.75rem 1rem;
+                }
+                .prose table th {
+                    background: #f8fafc;
+                    font-weight: 600;
+                    color: #475569;
+                    text-align: left;
+                }
+            `}</style>
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-10">
                 <div className="container mx-auto px-4 py-4">
@@ -197,6 +328,51 @@ export default function KnowledgeViewer() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                            {canEdit && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => navigate(`/knowledge/${id}/edit`)}
+                                    >
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </Button>
+
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            >
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently delete "{article.title}". This action cannot be undone.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    onClick={handleDelete}
+                                                    disabled={isDeleting}
+                                                    className="bg-red-600 hover:bg-red-700"
+                                                >
+                                                    {isDeleting ? 'Deleting...' : 'Delete'}
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+
+                                    <Separator orientation="vertical" className="h-6" />
+                                </>
+                            )}
                             <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)}>
                                 {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-hotel-gold" /> : <Bookmark className="h-4 w-4" />}
                             </Button>
@@ -349,6 +525,46 @@ export default function KnowledgeViewer() {
                         )}
                         {relatedArticles && relatedArticles.length > 0 && (
                             <RelatedArticles articles={relatedArticles} />
+                        )}
+
+                        {/* Linked Learning Resources */}
+                        {(article.linked_training_id || article.linked_quiz_id) && (
+                            <Card className="border-hotel-gold/30 bg-hotel-gold/5">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-semibold uppercase text-hotel-gold flex items-center gap-2">
+                                        <GraduationCap className="h-4 w-4" />
+                                        Linked Learning
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    {article.linked_training_id && (
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-gray-500">Practice what you just read with a training module.</p>
+                                            <Button
+                                                className="w-full bg-hotel-gold hover:bg-hotel-gold/90 text-white"
+                                                onClick={() => navigate(`/learning/training/${article.linked_training_id}`)}
+                                            >
+                                                <PlayCircle className="h-4 w-4 mr-2" />
+                                                Start Training
+                                            </Button>
+                                        </div>
+                                    )}
+                                    {article.linked_quiz_id && (
+                                        <div className="space-y-2">
+                                            {article.linked_training_id && <Separator />}
+                                            <p className="text-xs text-gray-500">Test your knowledge with a certification quiz.</p>
+                                            <Button
+                                                variant="outline"
+                                                className="w-full border-hotel-gold text-hotel-gold hover:bg-hotel-gold/10"
+                                                onClick={() => navigate(`/learning/quizzes/${article.linked_quiz_id}/take`)}
+                                            >
+                                                <Lightbulb className="h-4 w-4 mr-2" />
+                                                Take Quiz
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         )}
                     </div>
                 </div>

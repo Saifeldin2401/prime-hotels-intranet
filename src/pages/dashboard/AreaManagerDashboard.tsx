@@ -56,9 +56,8 @@ export function AreaManagerDashboard() {
   // Use real stats or defaults
   const areaStats = stats || {
     totalProperties: 0,
-    avgOccupancy: 0,
-    totalRevenue: 0,
-    guestSatisfaction: 0,
+    maintenanceEfficiency: 0,
+    openVacancies: 0,
     staffCompliance: 0,
     openIssues: 0
   }
@@ -101,7 +100,7 @@ export function AreaManagerDashboard() {
             REGIONAL ADMIN
           </Badge>
           <Badge className="text-sm bg-green-100 text-green-800">
-            ${areaStats.totalRevenue}M Total Revenue
+            {areaStats.totalProperties} Active Properties
           </Badge>
         </div>
       </div>
@@ -110,40 +109,34 @@ export function AreaManagerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="role-area-manager">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Average Occupancy</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Maintenance Efficiency</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{areaStats.avgOccupancy}%</div>
-            <Progress value={areaStats.avgOccupancy} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Across all properties</p>
+            <div className="text-2xl font-bold text-green-600">{areaStats.maintenanceEfficiency}%</div>
+            <Progress value={areaStats.maintenanceEfficiency} className="mt-2" />
+            <p className="text-xs text-gray-600 mt-1">Resolution rate (30d)</p>
           </CardContent>
         </Card>
 
         <Card className="role-area-manager">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Guest Satisfaction</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Recruitment</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{areaStats.guestSatisfaction}/5.0</div>
-            <div className="flex space-x-1 mt-2">
-              {[1, 2, 3, 4, 5].map(star => (
-                <Icons.Star
-                  key={star}
-                  className={`h-4 w-4 ${star <= Math.floor(areaStats.guestSatisfaction) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                />
-              ))}
-            </div>
-            <p className="text-xs text-gray-600 mt-1">Combined rating</p>
+            <div className="text-2xl font-bold text-blue-600">{areaStats.openVacancies}</div>
+            <p className="text-sm font-medium mt-1">Open Positions</p>
+            <p className="text-xs text-gray-600 mt-1">Active job postings</p>
           </CardContent>
         </Card>
 
         <Card className="role-area-manager">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Training Compliance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">${areaStats.totalRevenue}M</div>
-            <p className="text-xs text-gray-600 mt-1">Monthly revenue</p>
+            <div className="text-2xl font-bold text-purple-600">{areaStats.staffCompliance}%</div>
+            <Progress value={areaStats.staffCompliance} className="mt-2" />
+            <p className="text-xs text-gray-600 mt-1">Completion rate</p>
           </CardContent>
         </Card>
 
@@ -153,7 +146,7 @@ export function AreaManagerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{areaStats.openIssues}</div>
-            <p className="text-xs text-gray-600 mt-1">Pending resolution</p>
+            <p className="text-xs text-gray-600 mt-1">Pending tasks/tickets</p>
           </CardContent>
         </Card>
       </div>

@@ -42,6 +42,7 @@ export function useTrainingModules(filters?: {
           )
         `)
         .order('created_at', { ascending: false })
+        .eq('is_deleted', false)
 
       if (filters?.created_by) {
         query = query.eq('created_by', filters.created_by)
@@ -84,6 +85,7 @@ export function useTrainingModule(moduleId: string) {
           )
         `)
         .eq('id', moduleId)
+        .eq('is_deleted', false)
         .single()
 
       if (error) throw error
@@ -203,7 +205,7 @@ export function useDeleteContentBlock() {
 
       const { error } = await supabase
         .from('training_content_blocks')
-        .delete()
+        .update({ is_deleted: true })
         .eq('id', blockId)
 
       if (error) throw error
@@ -270,16 +272,10 @@ export function useTrainingAssignments(filters?: {
     queryKey: ['training-assignments', filters],
     queryFn: async () => {
       let query = supabase
-        .from('training_assignments')
+        .from('learning_assignments')
         .select(`
           *,
-          training_modules(
-            id,
-            title,
-            description,
-            estimated_duration_minutes
-          ),
-          profiles!training_assignments_assigned_by_fkey(
+          profiles!learning_assignments_assigned_by_fkey(
             full_name,
             email
           )
@@ -287,22 +283,47 @@ export function useTrainingAssignments(filters?: {
         .order('created_at', { ascending: false })
 
       if (filters?.assigned_to_user_id) {
-        query = query.eq('assigned_to_user_id', filters.assigned_to_user_id)
+        query = query.eq('target_type', 'user').eq('target_id', filters.assigned_to_user_id)
       }
       if (filters?.assigned_to_department_id) {
-        query = query.eq('assigned_to_department_id', filters.assigned_to_department_id)
+        query = query.eq('target_type', 'department').eq('target_id', filters.assigned_to_department_id)
       }
       if (filters?.assigned_to_property_id) {
-        query = query.eq('assigned_to_property_id', filters.assigned_to_property_id)
+        query = query.eq('target_type', 'property').eq('target_id', filters.assigned_to_property_id)
       }
       if (filters?.training_module_id) {
-        query = query.eq('training_module_id', filters.training_module_id)
+        query = query.eq('content_type', 'module').eq('content_id', filters.training_module_id)
       }
 
-      const { data, error } = await query
+      const { data: assignments, error } = await query
       if (error) throw error
 
-      return data as (TrainingAssignment & {
+      // Manual join for modules
+      if (assignments && assignments.length > 0) {
+        const moduleIds = assignments
+          .filter((a: any) => a.content_type === 'module')
+          .map((a: any) => a.content_id)
+
+        if (moduleIds.length > 0) {
+          const { data: modules } = await supabase
+            .from('training_modules')
+            .select('id, title, description, estimated_duration_minutes')
+            .in('id', moduleIds)
+
+          if (modules) {
+            const moduleMap = new Map(modules.map(m => [m.id, m]))
+            return assignments.map((a: any) => ({
+              ...a,
+              training_modules: a.content_type === 'module' ? moduleMap.get(a.content_id) : null
+            })) as (TrainingAssignment & {
+              training_modules?: TrainingModule
+              profiles?: { full_name: string; email: string }
+            })[]
+          }
+        }
+      }
+
+      return assignments as (TrainingAssignment & {
         training_modules?: TrainingModule
         profiles?: { full_name: string; email: string }
       })[]
@@ -319,7 +340,7 @@ export function useCreateTrainingAssignment() {
       if (!user) throw new Error('User must be authenticated')
 
       const { data, error } = await supabase
-        .from('training_assignments')
+        .from('learning_assignments')
         .insert({
           ...assignment,
           assigned_by: user.id,
@@ -352,13 +373,13 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
             description,
             estimated_duration_minutes
           ),
-          training_assignments(
+          learning_assignments(
             id,
-            deadline,
-            reminder_sent
+            due_date
           )
         `)
         .order('created_at', { ascending: false })
+        .eq('is_deleted', false)
 
       if (userId) {
         query = query.eq('user_id', userId)
@@ -372,7 +393,7 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
 
       return data as (TrainingProgress & {
         training_modules?: TrainingModule
-        training_assignments?: TrainingAssignment
+        learning_assignments?: LearningAssignment
       })[]
     },
   })
@@ -631,17 +652,18 @@ export function useTrainingStats() {
 
       // Get user's assignments
       const { data: assignments } = await supabase
-        .from('training_assignments')
-        .select('deadline, training_module_id')
-        .eq('assigned_to_user_id', user.id)
+        .from('learning_assignments')
+        .select('due_date, content_id')
+        .eq('target_id', user.id)
+        .eq('target_type', 'user')
 
       const stats = {
         totalAssigned: assignments?.length || 0,
         inProgress: progress?.filter(p => p.status === 'in_progress').length || 0,
         completed: progress?.filter(p => p.status === 'completed').length || 0,
-        overdue: assignments?.filter(a =>
-          a.deadline && new Date(a.deadline) < new Date() &&
-          !progress?.find(p => p.training_id === a.training_module_id && p.status === 'completed')
+        overdue: assignments?.filter((a: any) =>
+          a.due_date && new Date(a.due_date) < new Date() &&
+          !progress?.find(p => p.training_id === a.content_id && p.status === 'completed')
         ).length || 0,
         averageScore: 0, // Could calculate from quiz attempts
       }

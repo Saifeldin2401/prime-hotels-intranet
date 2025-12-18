@@ -38,6 +38,8 @@ interface EmptyStateProps {
     /** Additional className for container */
     className?: string
     /** Compact mode for inline usage */
+    animationData?: any
+    /** Compact mode for inline usage */
     compact?: boolean
 }
 
@@ -68,10 +70,13 @@ const defaultProps: Record<EmptyStateVariant, {
     },
 }
 
+import { AnimatedState } from '@/components/ui/AnimatedState'
+
 export function EmptyState({
     variant = 'no-data',
     icon,
     iconElement,
+    animationData,
     title,
     description,
     action,
@@ -92,20 +97,28 @@ export function EmptyState({
                 className
             )}
         >
-            {/* Icon */}
+            {/* Icon or Animation */}
             <div
                 className={cn(
-                    'flex items-center justify-center rounded-full bg-muted/50 mb-4',
-                    compact ? 'w-12 h-12' : 'w-16 h-16'
+                    'flex items-center justify-center mb-4',
+                    animationData ? 'w-48 h-48' : (compact ? 'w-12 h-12 rounded-full bg-muted/50' : 'w-16 h-16 rounded-full bg-muted/50')
                 )}
             >
-                {iconElement || (
-                    <IconComponent
-                        className={cn(
-                            'text-muted-foreground',
-                            compact ? 'w-6 h-6' : 'w-8 h-8'
-                        )}
+                {animationData ? (
+                    <AnimatedState
+                        animationData={animationData}
+                        height={compact ? 120 : 200}
+                        width={compact ? 120 : 200}
                     />
+                ) : (
+                    iconElement || (
+                        <IconComponent
+                            className={cn(
+                                'text-muted-foreground',
+                                compact ? 'w-6 h-6' : 'w-8 h-8'
+                            )}
+                        />
+                    )
                 )}
             </div>
 

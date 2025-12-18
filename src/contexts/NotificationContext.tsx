@@ -43,6 +43,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
             if (error) throw error
 
+            console.log('🔔 Fetched notifications count:', (data || []).length)
+
             return (data || []).map((n: any) => ({
                 ...n,
                 is_read: !!n.read_at
@@ -56,7 +58,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     useEffect(() => {
         if (!user) return
 
-        console.log('🔌 NotificationProvider: Subscribing to realtime updates...')
+        console.log('🔌 Subscribing to realtime for user', user.id)
 
         const channel = supabase
             .channel('global-notifications')
@@ -69,7 +71,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     filter: `user_id=eq.${user.id}`,
                 },
                 (payload) => {
-                    // Verify we have a record
+                    console.log('🔔 Realtime payload received:', payload)
                     if (!payload.new) return
 
                     // 1. Invalidate Query to fetch new data
@@ -94,7 +96,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     }
                 }
             )
-            .subscribe()
+            .subscribe((status) => {
+                console.log('🔌 Realtime subscription status:', status)
+            })
 
         return () => {
             console.log('🔌 NotificationProvider: Unsubscribing...')

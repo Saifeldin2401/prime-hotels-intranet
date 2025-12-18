@@ -1,0 +1,70 @@
+{
+    "last_updated": "2025-12-18",
+    "region": "Saudi Arabia",
+    "regulations": [
+        {
+            "id": "REG-MOT-2025-01",
+            "authority": "Ministry of Tourism (MoT)",
+            "title": "Hotel Classification & Operational Standards 2025",
+            "summary": "Mandates a point-based classification system for 1-6 stars. Specifically requires a 20-hour minimum between check-in and check-out (effective Aug 2025). Boutique hotels (10-100 rooms) must be at least 3-star.",
+            "sources": [
+                "https://mt.gov.sa",
+                "Royal Decree M/175"
+            ],
+            "impacted_areas": [
+                "Front Office",
+                "Housekeeping",
+                "Revenue Management"
+            ]
+        },
+        {
+            "id": "REG-MHRSD-NIT-2025",
+            "authority": "Ministry of Human Resources and Social Development (MHRSD)",
+            "title": "Nitaqat & Saudization Rules 2025",
+            "summary": "100% Saudization for Front Desk/Reception roles by April 2026. Requirement for at least one Saudi receptionist on duty by Oct 2025. Minimum wage of SAR 4,000 for 1:1 Saudization count in Nitaqat.",
+            "sources": [
+                "https://qiwa.sa",
+                "MHRSD Procedural Guide 2025"
+            ],
+            "impacted_areas": [
+                "HR",
+                "Front Office",
+                "Recruitment"
+            ]
+        },
+        {
+            "id": "REG-SDAIA-PDPL",
+            "authority": "Saudi Data & AI Authority (SDAIA)",
+            "title": "Personal Data Protection Law (PDPL)",
+            "summary": "Governs the processing of guest and employee personal data. Requires data localization and strict consent/access protocols. Fines up to SAR 5M for violations.",
+            "sources": [
+                "https://sdaia.gov.sa"
+            ],
+            "impacted_areas": [
+                "IT",
+                "Front Office",
+                "HR"
+            ]
+        },
+        {
+            "id": "REG-SFDA-HALAL",
+            "authority": "Saudi Food & Drug Authority (SFDA)",
+            "title": "Halal Compliance & Food Safety Standards",
+            "summary": "Strict Halal certification for all imported meat. Kitchens must follow HACCP/SFDA guidelines for storage and cross-contamination.",
+            "sources": [
+                "https://sfda.gov.sa"
+            ],
+            "impacted_areas": [
+                "Kitchen",
+                "F&B",
+                "Purchasing"
+            ]
+        }
+    ],
+    "verification_checklist": [
+        "Verify National ID/Iqama via Absher/Muqeem during check-in.",
+        "Ensure MoT License is displayed at reception and updated yearly.",
+        "Confirm Saudi receptionist presence per shifts.",
+        "Audit Halal certificates for all meat suppliers."
+    ]
+}

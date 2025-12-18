@@ -18,6 +18,7 @@ export function useDocuments(filters?: {
       let query = supabase
         .from('documents')
         .select('*')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       // Apply filters
@@ -56,6 +57,7 @@ export function useDocument(documentId: string) {
         .from('documents')
         .select('*')
         .eq('id', documentId)
+        .eq('is_deleted', false)
         .single()
 
       if (error) throw error
@@ -121,7 +123,7 @@ export function useDeleteDocument() {
     mutationFn: async (documentId: string) => {
       const { error } = await supabase
         .from('documents')
-        .delete()
+        .update({ is_deleted: true })
         .eq('id', documentId)
 
       if (error) throw error

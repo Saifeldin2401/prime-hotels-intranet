@@ -1,6 +1,7 @@
 {
     "title": "User Management",
     "description": "Manage users, roles, and permissions",
+    "user": "User",
     "add_user": "Add User",
     "directory": "User Directory",
     "search_placeholder": "Search users...",

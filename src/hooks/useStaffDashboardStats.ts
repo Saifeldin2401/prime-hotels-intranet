@@ -56,9 +56,10 @@ export function useStaffDashboardStats() {
 
             // Fetch training progress
             const { data: trainingAssignments } = await supabase
-                .from('training_assignments')
+                .from('learning_assignments')
                 .select('id, status')
-                .eq('assigned_to', user.id)
+                .eq('target_type', 'user')
+                .eq('target_id', user.id)
 
             const completedTraining = trainingAssignments?.filter(t => t.status === 'completed').length || 0
             const totalTraining = trainingAssignments?.length || 0

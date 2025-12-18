@@ -103,7 +103,7 @@ export default function MaintenanceDashboard() {
     const Icon = categoryIcons[ticket.category] || Wrench
 
     return (
-      <div className={cn("bg-card border border-border rounded-lg p-4 group hover:shadow-md transition-shadow duration-200", isRTL ? "border-r-4 border-r-primary/50" : "border-l-4 border-l-primary/50")}>
+      <div className={cn("bg-card border border-border rounded-lg p-4 group hover:shadow-md hover:-translate-y-1 transition-all duration-200", isRTL ? "border-r-4 border-r-primary/50" : "border-l-4 border-l-primary/50")}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-3 gap-3">
             <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
@@ -165,7 +165,7 @@ export default function MaintenanceDashboard() {
             )}
             <Button
               size="sm"
-              className={cn("h-8 text-xs bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors", ticket.status !== 'open' && ticket.status !== 'in_progress' ? "w-full" : "w-auto")}
+              className={cn("h-8 text-xs bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-all active:scale-95 hover:shadow-md", ticket.status !== 'open' && ticket.status !== 'in_progress' ? "w-full" : "w-auto")}
               onClick={() => navigate(`/maintenance/tickets/${ticket.id}`)}
             >
               {t('view')}
@@ -197,10 +197,16 @@ export default function MaintenanceDashboard() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('dashboard.title')}</h1>
           <p className="text-gray-600 mt-1">{t('dashboard.description')}</p>
         </div>
-        <Button onClick={() => navigate('/maintenance/submit')} className="bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm rounded-md transition-colors">
-          <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-          {t('new_ticket')}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate('/maintenance/preventive')} variant="outline" className="shadow-sm rounded-md transition-colors border-hotel-gold text-hotel-gold hover:bg-hotel-gold/10">
+            <Calendar className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            Schedules
+          </Button>
+          <Button onClick={() => navigate('/maintenance/submit')} className="bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm rounded-md transition-colors">
+            <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            {t('new_ticket')}
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}

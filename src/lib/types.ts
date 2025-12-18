@@ -1,4 +1,7 @@
 import type { AppRole, DocumentStatus, DocumentVisibility, AnnouncementPriority, TrainingProgressStatus } from './constants'
+import type { Database } from '@/types/supabase'
+
+export type EntityStatus = Database['public']['Enums']['entity_status']
 
 export interface Profile {
   id: string
@@ -12,6 +15,9 @@ export interface Profile {
   is_active: boolean
   created_at: string
   updated_at: string
+  is_temp_password?: boolean
+  password_initialized?: boolean
+  password_last_changed_at?: string | null
 
   // Relations
   reporting_to_profile?: Profile // Populated when fetching with joins
@@ -56,7 +62,7 @@ export interface UserDepartment {
 }
 
 // Task Management Interfaces
-export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'completed' | 'cancelled'
+export type TaskStatus = EntityStatus
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 
 export interface Task {
@@ -220,6 +226,7 @@ export interface Notification {
   entity_type: string | null
   entity_id: string | null
   metadata: Record<string, any> | null
+  link?: string | null
   is_read: boolean
   read_at: string | null
   created_at: string
@@ -247,6 +254,7 @@ export interface PIIAccessLog {
   user?: Profile
   accessed_by_profile?: Profile
   approved_by_profile?: Profile
+  password_history?: Record<string, any>[] // Placeholder for join
 }
 
 export interface PIIAccessSummary {
@@ -340,6 +348,7 @@ export interface TrainingModule {
   views_count: number
   property_id: string | null
   updated_by: string | null
+  validity_period_days: number | null
 }
 
 export interface TrainingContentBlock {
@@ -431,6 +440,10 @@ export interface TrainingPath {
   estimated_duration_hours: number
   is_mandatory: boolean
   certificate_enabled: boolean
+  target_role?: string | null
+  target_department_id?: string | null
+  target_property_id?: string | null
+  target_user_ids?: string[]
   is_published: boolean
   created_by: string
   created_at: string
@@ -475,6 +488,7 @@ export interface Announcement {
     name: string
     size?: number
   }[] | null
+  created_by_profile?: Profile
 }
 
 export interface AnnouncementTarget {
@@ -594,7 +608,7 @@ export interface LeaveRequest {
   end_date: string
   type: 'annual' | 'sick' | 'unpaid' | 'maternity' | 'paternity' | 'personal' | 'other'
   reason: string | null
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  status: EntityStatus
   approved_by_id: string | null
   rejected_by_id: string | null
   rejection_reason: string | null
@@ -613,7 +627,7 @@ export interface MaintenanceTicket {
   description: string
   category: 'plumbing' | 'electrical' | 'hvac' | 'appliance' | 'structural' | 'cosmetic' | 'safety' | 'other'
   priority: 'low' | 'medium' | 'high' | 'urgent' | 'critical'
-  status: 'open' | 'in_progress' | 'pending_parts' | 'completed' | 'cancelled'
+  status: EntityStatus
   property_id: string | null
   department_id: string | null
   room_number: string | null
@@ -662,7 +676,7 @@ export interface MaintenanceAttachment {
 // Job Posting System Interfaces
 export type SeniorityLevel = 'junior' | 'mid' | 'senior' | 'manager' | 'director' | 'executive'
 export type EmploymentType = 'full_time' | 'part_time' | 'contract' | 'temporary'
-export type JobPostingStatus = 'draft' | 'open' | 'closed' | 'filled' | 'cancelled'
+export type JobPostingStatus = EntityStatus
 export type JobApplicationStatus = 'received' | 'review' | 'shortlisted' | 'interview' | 'offer' | 'hired' | 'rejected'
 
 export interface JobPosting {
@@ -860,3 +874,62 @@ export interface SOPReadingLog {
   sop_document?: SOPDocument
   user?: Profile
 }
+
+// Onboarding System Interfaces
+export interface OnboardingTemplate {
+  id: string
+  title: string
+  role: AppRole | null
+  job_title: string | null
+  department_id: string | null
+  tasks: OnboardingTaskDefinition[]
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface OnboardingTaskDefinition {
+  title: string
+  description?: string
+  assignee_role: 'self' | 'manager' | 'it' | 'hr'
+  due_day_offset: number
+  link_type?: 'training' | 'document' | 'url'
+  link_id?: string
+}
+
+export interface OnboardingProcess {
+  id: string
+  user_id: string
+  template_id: string | null
+  status: EntityStatus
+  start_date: string
+  progress_percent: number
+  created_at: string
+  updated_at: string
+
+  // Relations
+  user?: Profile
+  template?: OnboardingTemplate
+  tasks?: OnboardingTask[]
+}
+
+export interface OnboardingTask {
+  id: string
+  process_id: string
+  title: string
+  description: string | null
+  status: 'pending' | 'in_progress' | 'completed'
+  assigned_to_id: string | null
+  due_date: string | null
+  is_completed: boolean
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+  order_index?: number
+  link_type?: 'training' | 'document' | 'url'
+  link_id?: string
+
+  // Relations
+  assigned_to?: Profile
+}
+

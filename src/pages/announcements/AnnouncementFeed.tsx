@@ -6,12 +6,13 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
-import { Plus, Pin, Loader2 } from 'lucide-react'
+import { Plus, Pin, Loader2, Trash2 } from 'lucide-react'
 import type { Announcement } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 import { PullToRefresh } from '@/components/mobile'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { AnnouncementEditor } from '@/components/announcements/AnnouncementEditor'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 
 export default function AnnouncementFeed() {
   const { user, profile, primaryRole, roles, properties, departments } = useAuth()
@@ -19,6 +20,7 @@ export default function AnnouncementFeed() {
   const { t } = useTranslation('announcements')
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
+  const [deleteData, setDeleteData] = useState<Announcement | null>(null)
 
   const { data: announcements, isLoading } = useQuery({
     queryKey: ['announcements'],
@@ -95,6 +97,21 @@ export default function AnnouncementFeed() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['announcement-reads', profile?.id] })
     },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] })
+      setDeleteData(null)
+    }
   })
 
   const handleCreate = () => {
@@ -187,13 +204,22 @@ export default function AnnouncementFeed() {
                                 </Button>
                               )}
                               {isAdmin && (
-                                <Button
-                                  size="sm"
-                                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                  onClick={() => handleEdit(announcement)}
-                                >
-                                  {t('actions.edit')}
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                    onClick={() => handleEdit(announcement)}
+                                  >
+                                    {t('actions.edit')}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="bg-white border border-gray-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 rounded-md transition-colors"
+                                    onClick={() => setDeleteData(announcement)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -224,6 +250,15 @@ export default function AnnouncementFeed() {
             />
           </DialogContent>
         </Dialog>
+
+        <DeleteConfirmation
+          open={!!deleteData}
+          onOpenChange={(open) => !open && setDeleteData(null)}
+          onConfirm={() => deleteData && deleteMutation.mutate(deleteData.id)}
+          itemName={deleteData?.title || ''}
+          itemType={t('announcement', 'Announcement')}
+          isLoading={deleteMutation.isPending}
+        />
       </div>
     </PullToRefresh>
   )

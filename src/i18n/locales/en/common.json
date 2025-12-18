@@ -47,6 +47,7 @@
     "admin": "Admin",
     "my_profile": "My Profile",
     "settings": "Settings",
+    "promotion_history": "Promotions & Transfers",
     "logout": "Log Out"
   },
   "dashboard": {
@@ -185,6 +186,7 @@
     "save": "Save",
     "create": "Create",
     "update": "Update",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "error": "Error"
   }
 }

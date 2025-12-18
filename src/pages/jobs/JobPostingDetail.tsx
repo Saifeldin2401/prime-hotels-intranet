@@ -63,6 +63,7 @@ export default function JobPostingDetail() {
           created_by_profile:profiles!job_postings_created_by_fkey(id, full_name)
         `)
                 .eq('id', id)
+                .eq('is_deleted', false)
                 .single()
 
             if (error) throw error
@@ -93,7 +94,7 @@ export default function JobPostingDetail() {
         mutationFn: async () => {
             const { error } = await supabase
                 .from('job_postings')
-                .delete()
+                .update({ is_deleted: true })
                 .eq('id', id)
 
             if (error) throw error

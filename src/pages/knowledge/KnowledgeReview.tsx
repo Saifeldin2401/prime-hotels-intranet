@@ -79,19 +79,19 @@ export default function KnowledgeReview() {
                 .order('updated_at', { ascending: false })
 
             if (statusFilter !== 'all') {
-                query = query.eq('status', statusFilter)
+                // Strict enum matching - DB only accepts uppercase for enum types
+                const filterUpper = statusFilter.toUpperCase()
+                query = query.eq('status', filterUpper)
             } else {
-                query = query.in('status', ['DRAFT', 'PUBLISHED']) // Just show all if 'all'
+                query = query.in('status', ['DRAFT', 'PUBLISHED'])
             }
 
             const { data, error } = await query.limit(50)
             if (error) throw error
 
-            // Transform simple user object to profile object structure if needed, or rely on loose typing
             return data?.map(d => ({
                 ...d,
-                author: d.author // Supabase might return array or object depending on relationship.
-                // Assuming created_by maps to profiles(id) and returns single object via one-to-one
+                author: d.author
             })) as KnowledgeArticle[]
         }
     })
@@ -110,13 +110,11 @@ export default function KnowledgeReview() {
                 .from('documents')
                 .update({
                     status: newStatus,
-                    // reviewed_by/reviewed_at removed as columns don't exist
                 })
                 .eq('id', selectedArticle.id)
 
             if (updateError) throw updateError
 
-            // Removed saving comments to sop_comments as table doesn't exist
             if (reviewComment.trim()) {
                 console.log('Review comment (not saved to DB):', reviewComment)
             }
@@ -148,7 +146,8 @@ export default function KnowledgeReview() {
     }
 
     const getStatusBadge = (status: string) => {
-        switch (status) {
+        const s = status.toUpperCase()
+        switch (s) {
             case 'DRAFT':
                 return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Edit3 className="h-3 w-3 mr-1" />Draft</Badge>
             case 'PUBLISHED':
@@ -159,8 +158,8 @@ export default function KnowledgeReview() {
     }
 
     const stats = {
-        pending: pendingArticles?.filter(a => a.status === 'DRAFT').length || 0,
-        approved: pendingArticles?.filter(a => a.status === 'PUBLISHED').length || 0,
+        pending: pendingArticles?.filter(a => ['DRAFT', 'draft'].includes(a.status)).length || 0,
+        approved: pendingArticles?.filter(a => ['PUBLISHED', 'published', 'APPROVED', 'approved'].includes(a.status)).length || 0,
         rejected: 0 // No rejected status
     }
 

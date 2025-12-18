@@ -57,11 +57,9 @@ export function CorporateAdminDashboard() {
   const stats = corporateStats || {
     totalProperties: 0,
     totalStaff: 0,
-    totalRevenue: 0,
-    avgOccupancy: 0,
-    avgGuestSatisfaction: 0,
-    complianceRate: 0,
-    systemHealth: 100
+    maintenanceEfficiency: 0,
+    openVacancies: 0,
+    complianceRate: 0
   }
 
   const handleReact = (_itemId: string, _reaction: string) => {
@@ -110,55 +108,55 @@ export function CorporateAdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border-t-4 border-t-hotel-gold shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Staff & Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-hotel-navy">${stats.totalRevenue}M</div>
-            <p className="text-xs text-hotel-gold-dark mt-1 font-medium">Monthly revenue</p>
+            <div className="flex justify-between items-end">
+              <div>
+                <div className="text-3xl font-bold text-hotel-navy">{stats.totalStaff}</div>
+                <p className="text-xs text-hotel-gold-dark mt-1 font-medium">Headcount</p>
+              </div>
+              {/* Revenue Placeholder (if needed technically we removed it, but preserving structure/look) 
+                     Actually removing revenue entirely as per request 
+                 */}
+            </div>
           </CardContent>
         </Card>
 
         <Card className="border-t-4 border-t-hotel-navy shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Average Occupancy</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Maintenance Efficiency</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-hotel-navy">{Number(stats.avgOccupancy).toFixed(1)}%</div>
-            <Progress value={stats.avgOccupancy} className="mt-2 h-2 [&>div]:bg-hotel-navy" />
+            <div className="text-3xl font-bold text-hotel-navy">{stats.maintenanceEfficiency}%</div>
+            <Progress value={stats.maintenanceEfficiency} className="mt-2 h-2 [&>div]:bg-hotel-navy" />
             <p className="text-xs text-gray-500 mt-1">
-              {currentProperty?.id === 'all' ? 'Across all properties' : 'Current occupancy'}
+              {currentProperty?.id === 'all' ? 'System-wide resolution rate' : 'Ticket resolution rate'}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-t-4 border-t-hotel-gold shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Guest Satisfaction</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Recruitment</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-hotel-navy">{stats.avgGuestSatisfaction}/5.0</div>
-            <div className="flex space-x-1 mt-2">
-              {[1, 2, 3, 4, 5].map(star => (
-                <Icons.Star
-                  key={star}
-                  className={`h-4 w-4 ${star <= Math.floor(stats.avgGuestSatisfaction) ? 'text-hotel-gold fill-current' : 'text-gray-200'}`}
-                />
-              ))}
-            </div>
+            <div className="text-3xl font-bold text-hotel-navy">{stats.openVacancies}</div>
+            <div className="text-sm text-gray-500 mt-2 font-medium">Open Positions</div>
             <p className="text-xs text-gray-500 mt-1">
-              {currentProperty?.id === 'all' ? 'Corporate average' : 'Property score'}
+              Active job postings
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-t-4 border-t-hotel-navy shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Compliance Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Training Compliance</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-hotel-navy">{stats.complianceRate}%</div>
             <Progress value={stats.complianceRate} className="mt-2 h-2 [&>div]:bg-green-600" />
-            <p className="text-xs text-green-600 mt-1 font-medium">Training & SOPs</p>
+            <p className="text-xs text-green-600 mt-1 font-medium">Completion Rate</p>
           </CardContent>
         </Card>
       </div>

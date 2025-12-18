@@ -85,11 +85,18 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   const [activeTab, setActiveTab] = useState('content')
 
   const { data: departments } = useQuery({
-    queryKey: ['departments'],
+    queryKey: ['departments-with-property'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('departments').select('id,name')
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name, property:properties(name)')
+        .order('name')
       if (error) throw error
-      return data
+      // Format with property name for disambiguation
+      return (data || []).map((d: any) => ({
+        id: d.id,
+        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name
+      }))
     }
   })
 

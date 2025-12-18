@@ -1,6 +1,9 @@
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import { useProperty } from '@/contexts/PropertyContext'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import {
@@ -51,6 +54,7 @@ export const moduleFormSchema = z.object({
     difficulty_level: z.enum(['beginner', 'intermediate', 'advanced']),
     category: z.string().min(1, 'Category is required'),
     status: z.enum(['draft', 'published', 'archived']),
+    department_id: z.string().optional().nullable(),
 })
 
 export type ModuleFormValues = z.infer<typeof moduleFormSchema>
@@ -75,11 +79,27 @@ export function ModuleFormDialog({
     existingDurations = [],
 }: ModuleFormDialogProps) {
     const { t } = useTranslation('training')
+    const { currentProperty } = useProperty()
     const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false)
     const [openDurationCombobox, setOpenDurationCombobox] = useState(false)
-    // We keep track of the search value
     const [searchCategoryValue, setSearchCategoryValue] = useState("")
     const [searchDurationValue, setSearchDurationValue] = useState("")
+
+    // Fetch departments for current property
+    const { data: departments = [] } = useQuery({
+        queryKey: ['departments', currentProperty?.id],
+        queryFn: async () => {
+            if (!currentProperty?.id) return []
+            const { data, error } = await supabase
+                .from('departments')
+                .select('id, name')
+                .eq('property_id', currentProperty.id)
+                .order('name')
+            if (error) throw error
+            return data
+        },
+        enabled: !!currentProperty?.id
+    })
 
     const form = useForm<ModuleFormValues>({
         resolver: zodResolver(moduleFormSchema),
@@ -90,6 +110,7 @@ export function ModuleFormDialog({
             difficulty_level: 'beginner',
             category: '',
             status: 'draft',
+            department_id: null,
         },
     })
 
@@ -105,6 +126,7 @@ export function ModuleFormDialog({
                     difficulty_level: initialData.difficulty_level || 'beginner',
                     category: initialData.category || '',
                     status: initialData.status || 'draft',
+                    department_id: (initialData as any).department_id || null,
                 })
             } else {
                 form.reset({
@@ -114,6 +136,7 @@ export function ModuleFormDialog({
                     difficulty_level: 'beginner',
                     category: '',
                     status: 'draft',
+                    department_id: null,
                 })
             }
         }
@@ -180,75 +203,22 @@ export function ModuleFormDialog({
                             control={form.control}
                             name="category"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
+                                <FormItem>
                                     <FormLabel className="text-hotel-navy font-medium">{t('category')}</FormLabel>
-                                    <Popover open={openCategoryCombobox} onOpenChange={setOpenCategoryCombobox}>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    aria-expanded={openCategoryCombobox}
-                                                    className={cn(
-                                                        "w-full justify-between border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value
-                                                        ? field.value
-                                                        : t('selectCategory', 'Select...')}
-                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[200px] p-0">
-                                            <Command>
-                                                <CommandInput
-                                                    placeholder={t('searchCategory', 'Search...')}
-                                                    onValueChange={setSearchCategoryValue}
-                                                />
-                                                <CommandEmpty>
-                                                    <div className="p-2">
-                                                        <p className="text-sm text-muted-foreground mb-2">{t('noCategoryFound', 'No category found.')}</p>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="w-full justify-start text-hotel-navy border-hotel-navy/20 hover:bg-hotel-navy/5"
-                                                            onClick={() => {
-                                                                field.onChange(searchCategoryValue)
-                                                                setOpenCategoryCombobox(false)
-                                                            }}
-                                                        >
-                                                            <Plus className="mr-2 h-4 w-4" />
-                                                            Create "{searchCategoryValue}"
-                                                        </Button>
-                                                    </div>
-                                                </CommandEmpty>
-                                                <CommandGroup className="max-h-[200px] overflow-auto">
-                                                    {existingCategories.map((category) => (
-                                                        <CommandItem
-                                                            value={category}
-                                                            key={category}
-                                                            onSelect={() => {
-                                                                field.onChange(category)
-                                                                setOpenCategoryCombobox(false)
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    category === field.value
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {category}
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50">
+                                                <SelectValue placeholder={t('selectCategory', 'Select category...')} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {existingCategories.map((category) => (
+                                                <SelectItem key={category} value={category}>
+                                                    {category}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -258,75 +228,22 @@ export function ModuleFormDialog({
                             control={form.control}
                             name="estimated_duration"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
+                                <FormItem>
                                     <FormLabel className="text-hotel-navy font-medium">{t('duration')}</FormLabel>
-                                    <Popover open={openDurationCombobox} onOpenChange={setOpenDurationCombobox}>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    aria-expanded={openDurationCombobox}
-                                                    className={cn(
-                                                        "w-full justify-between border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value
-                                                        ? field.value
-                                                        : t('selectDuration', 'Select...')}
-                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[200px] p-0">
-                                            <Command>
-                                                <CommandInput
-                                                    placeholder={t('searchDuration', 'Search...')}
-                                                    onValueChange={setSearchDurationValue}
-                                                />
-                                                <CommandEmpty>
-                                                    <div className="p-2">
-                                                        <p className="text-sm text-muted-foreground mb-2">{t('noDurationFound', 'No duration found.')}</p>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="w-full justify-start text-hotel-navy border-hotel-navy/20 hover:bg-hotel-navy/5"
-                                                            onClick={() => {
-                                                                field.onChange(searchDurationValue)
-                                                                setOpenDurationCombobox(false)
-                                                            }}
-                                                        >
-                                                            <Plus className="mr-2 h-4 w-4" />
-                                                            Create "{searchDurationValue}"
-                                                        </Button>
-                                                    </div>
-                                                </CommandEmpty>
-                                                <CommandGroup className="max-h-[200px] overflow-auto">
-                                                    {existingDurations.map((duration) => (
-                                                        <CommandItem
-                                                            value={duration}
-                                                            key={duration}
-                                                            onSelect={() => {
-                                                                field.onChange(duration)
-                                                                setOpenDurationCombobox(false)
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    duration === field.value
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {duration}
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50">
+                                                <SelectValue placeholder={t('selectDuration', 'Select duration...')} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {existingDurations.map((duration) => (
+                                                <SelectItem key={duration} value={duration}>
+                                                    {duration}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}

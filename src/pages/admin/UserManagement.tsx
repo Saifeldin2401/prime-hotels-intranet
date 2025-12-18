@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { UserForm } from '@/components/admin/UserForm'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { Plus, Users, Loader2 } from 'lucide-react'
+import { Plus, Users, Loader2, Trash2, Edit } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import type { Profile } from '@/lib/types'
 
 import { useTranslation } from 'react-i18next'
@@ -28,6 +30,32 @@ export default function UserManagement() {
       return data as Profile[]
     },
   })
+
+  // Delete/Deactivate Logic
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null)
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Soft delete by deactivating
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: false })
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      refetch()
+      setDeleteConfirmOpen(false)
+      setUserToDelete(null)
+    }
+  })
+
+  // Since I cannot easily import useMutation if not already imported at top level standardly (it is imported as parts of @tanstack/react-query usually),
+  // I should check imports. Lines 1-2 show: import { useQuery } from '@tanstack/react-query'. I need to add useMutation there.
+  // I will do that in a separate chunk or just update the existing import.
+
 
   const filteredUsers = users?.filter((user) =>
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -118,6 +146,31 @@ export default function UserManagement() {
                     <Badge variant={user.is_active ? 'default' : 'secondary'} className="text-xs">
                       {user.is_active ? t('status.active') : t('status.inactive')}
                     </Badge>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:text-hotel-gold hover:bg-gold-50"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEdit(user)
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setUserToDelete(user)
+                          setDeleteConfirmOpen(true)
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -136,6 +189,28 @@ export default function UserManagement() {
           )}
         </div>
       </div>
+
+      <DeleteConfirmation
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={async () => {
+          if (userToDelete) {
+            const { error } = await supabase
+              .from('profiles')
+              .update({ is_active: false })
+              .eq('id', userToDelete.id)
+
+            if (!error) {
+              refetch()
+              setDeleteConfirmOpen(false)
+              setUserToDelete(null)
+            }
+          }
+        }}
+        itemName={userToDelete?.full_name || userToDelete?.email || ''}
+        itemType={t('user', 'User')}
+        isLoading={false}
+      />
     </div>
   )
 }

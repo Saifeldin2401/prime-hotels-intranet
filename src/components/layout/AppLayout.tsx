@@ -16,9 +16,13 @@ import { Header } from '@/components/layout/Header'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
+import { pageVariants } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { useSessionTimeout } from '@/hooks/useSessionTimeout'
 import { SessionTimeoutWarning } from '@/components/auth/SessionTimeoutWarning'
+import { WizardTrigger } from '@/components/common/WizardTrigger'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -132,7 +136,18 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         <main id="main-content" className="flex-1 bg-background/50 pb-20 lg:pb-0" role="main">
           <div className="container py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8">
-            {children}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={pageVariants}
+                className="w-full"
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>
@@ -149,6 +164,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         onExtend={extendSession}
         onLogout={logout}
       />
+
+      {/* New User Onboarding Wizard Trigger */}
+      <WizardTrigger />
 
     </div>
   )

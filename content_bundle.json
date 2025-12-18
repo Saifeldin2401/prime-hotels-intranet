@@ -1,0 +1,166 @@
+{
+    "metadata": {
+        "jurisdiction": "Saudi Arabia",
+        "version": "2025.1.0",
+        "last_updated": "2025-12-18",
+        "language": [
+            "English",
+            "Modern Standard Arabic"
+        ]
+    },
+    "content": {
+        "sops": [
+            {
+                "id": "SOP-FO-101",
+                "department": "Front Office",
+                "title": "Guest Registration & Identity Verification (KSA)",
+                "title_ar": "تسجيل الضيوف والتحقق من الهوية (المملكة العربية السعودية)",
+                "purpose": "To ensure 100% compliance with MoT and MoI identity regulations.",
+                "procedure": [
+                    {
+                        "step": "ID Collection",
+                        "action": "Request National ID (Saudi), Iqama (Resident), or Passport (Foreigner).",
+                        "action_ar": "طلب الهوية الوطنية (للسعوديين)، أو الإقامة (للمقيمين)، أو جواز السفر (للأجانب)."
+                    },
+                    {
+                        "step": "Digital Check",
+                        "action": "Verify digital IDs via Tawakkalna if physical ID is unavailable (per latest MoI circulars).",
+                        "action_ar": "التحقق من الهويات الرقمية عبر تطبيق توكلنا في حال عدم توفر الهوية الفعلية (حسب أحدث تعاميم وزارة الداخلية)."
+                    }
+                ],
+                "regulation_link": "MoT Classification Standards 2025"
+            },
+            {
+                "id": "SOP-KIT-201",
+                "department": "Kitchen",
+                "title": "SFDA Menu Labeling & Calorie Disclosure",
+                "title_ar": "بطاقات القائمة حسب لوائح هيئة الغذاء والدواء والإفصاح عن السعرات الحرارية",
+                "purpose": "Compliance with SFDA mandate (Effective July 1, 2025) for nutritional transparency.",
+                "procedure": [
+                    {
+                        "step": "Calorie Tagging",
+                        "action": "Display calories and the estimated time to burn them off for each meal.",
+                        "action_ar": "عرض السعرات الحرارية والوقت المقدر لحرقها لكل وجبة."
+                    },
+                    {
+                        "step": "Salt Warning",
+                        "action": "Place a 'saltshaker' icon next to meals containing >5g of salt.",
+                        "action_ar": "وضع أيقونة 'ملاحة الملح' بجوار الوجبات التي تحتوي على أكثر من 5 جرامات من الملح."
+                    }
+                ],
+                "regulation_link": "SFDA Menu Labeling Mandate 2025"
+            },
+            {
+                "id": "SOP-ENG-301",
+                "department": "Engineering",
+                "title": "Saudi Civil Defense Fire Safety Inspection",
+                "title_ar": "تفتيش السلامة من الحرائق حسب الدفاع المدني السعودي",
+                "purpose": "Monthly validation of fire suppression and detection systems per SBC 801.",
+                "procedure": [
+                    {
+                        "step": "Hose Reel Check",
+                        "action": "Unroll and inspect fire hose reels for pressure and integrity monthly.",
+                        "action_ar": "فك وفحص خراطيم الحريق للتأكد من الضغط وسلامتها شهرياً."
+                    },
+                    {
+                        "step": "Central Panel",
+                        "action": "Verify the central alarm panel is monitored 24/7 with zero active faults.",
+                        "action_ar": "التأكد من أن لوحة الإنذار المركزية تحت المراقبة على مدار الساعة طوال أيام الأسبوع مع عدم وجود أي أعطال نشطة."
+                    }
+                ]
+            },
+            {
+                "id": "SOP-HK-501",
+                "department": "Housekeeping",
+                "title": "Public Area Disinfection & Chemical Safety",
+                "title_ar": "تطهير المناطق العامة وسلامة المواد الكيميائية",
+                "purpose": "To ensure public areas meet Balady and MoH hygiene standards using SFDA-approved chemicals.",
+                "procedure": [
+                    {
+                        "step": "Surface Cleaning",
+                        "action": "Use color-coded microfiber cloths for different surfaces to prevent cross-contamination.",
+                        "action_ar": "استخدام أقمشة ميكروفايبر ملونة لمختلف الأسطح لمنع التلوث التبادلي."
+                    },
+                    {
+                        "step": "Chemical Storage",
+                        "action": "Store all concentrated chemicals in locked cabinets with MSDS (Arabic/English) visible.",
+                        "action_ar": "تخزين جميع المواد الكيميائية المركزة في خزائن مغلقة مع إبراز صحائف بيانات سلامة المواد (باللغتين العربية والإنجليزية)."
+                    }
+                ]
+            }
+        ],
+        "knowledge_base": [
+            {
+                "id": "KB-FO-SAUDI",
+                "title": "Handling Prayer Breaks in Front Office",
+                "title_ar": "التعامل مع أوقات الصلاة في المكاتب الأمامية",
+                "department": "Front Office",
+                "content": "During prayer times, ensure at least one Saudi receptionist remains at the desk (per Oct 2025 mandate).",
+                "content_ar": "خلال أوقات الصلاة، تأكد من بقاء موظف استقبال سعودي واحد على الأقل في المكتب (حسب تفويض أكتوبر 2025)."
+            },
+            {
+                "id": "KB-HR-LEAVE",
+                "title": "Annual Leave Policy (Saudi Labor Law)",
+                "title_ar": "سياسة الإجازة السنوية (نظام العمل السعودي)",
+                "department": "HR",
+                "content": "Employees are entitled to 21-30 days annual leave paid in advance.",
+                "content_ar": "يستحق الموظف إجازة سنوية تتراوح بين 21 و30 يوماً وتدفع مقدماً."
+            }
+        ],
+        "quizzes": [
+            {
+                "id": "QUIZ-COMP-2025",
+                "title": "KSA Compliance 2025",
+                "questions": [
+                    {
+                        "question": "Buffer between check-in and check-out per 2025 MoT?",
+                        "options": [
+                            "12h",
+                            "18h",
+                            "20h",
+                            "24h"
+                        ],
+                        "correct": "20h",
+                        "rationale": "MoT mandate for quality assurance."
+                    }
+                ]
+            }
+        ],
+        "training_modules": [
+            {
+                "id": "TRN-SA-CULTURE",
+                "title": "Saudi Hospitality & Culture",
+                "objectives": [
+                    "Understand Hafawah",
+                    "Respect prayer times"
+                ],
+                "exercises": [
+                    "Create a prayer-time shift rotation plan"
+                ]
+            }
+        ],
+        "onboarding": [
+            {
+                "id": "ONB-STAFF-KSA",
+                "role": "General",
+                "title": "KSA Onboarding Framework",
+                "phases": [
+                    {
+                        "name": "Day 1",
+                        "tasks": [
+                            "Identity Verification",
+                            "System Access"
+                        ]
+                    },
+                    {
+                        "name": "Month 1",
+                        "tasks": [
+                            "Baldia Health Card",
+                            "HACCP Training"
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

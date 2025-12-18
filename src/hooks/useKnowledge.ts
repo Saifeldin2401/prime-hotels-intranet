@@ -26,13 +26,14 @@ export function useKnowledgeArticles(filters: KnowledgeSearchFilters, page = 1, 
 }
 
 // Simplified alias for common usage
-export function useArticles(options?: { search?: string; type?: string; limit?: number }) {
+export function useArticles(options?: { search?: string; type?: string; limit?: number; departmentId?: string }) {
     return useQuery({
         queryKey: ['knowledge-articles', options],
         queryFn: async () => {
             const filters: KnowledgeSearchFilters = {
                 query: options?.search,
-                content_type: options?.type as KnowledgeContentType | undefined
+                content_type: options?.type as KnowledgeContentType | undefined,
+                department_id: options?.departmentId
             }
             const result = await KnowledgeService.getArticles(filters, 1, options?.limit || 50)
             return result.articles
@@ -236,6 +237,70 @@ export function useContentTypeCounts() {
         staleTime: 1000 * 60 * 5 // Cache for 5 minutes
     })
 }
+
+// ============================================================================
+// DEPARTMENT-SPECIFIC CONTENT
+// ============================================================================
+
+export function useDepartmentContentCounts() {
+    const { user, profile } = useAuth()
+
+    return useQuery({
+        queryKey: ['knowledge-department-counts', user?.id],
+        queryFn: async () => {
+            if (!user?.id) return {}
+
+            const { supabase } = await import('@/lib/supabase')
+
+            // Get user's departments
+            const { data: userDepts } = await supabase
+                .from('user_departments')
+                .select('department_id, departments(id, name)')
+                .eq('user_id', user.id)
+
+            if (!userDepts || userDepts.length === 0) return {}
+
+            const deptIds = userDepts.map(d => d.department_id)
+
+            // Get counts by department and type
+            const { data: documents } = await supabase
+                .from('documents')
+                .select('department_id, content_type, departments(name)')
+                .in('department_id', deptIds)
+                .eq('status', 'published')
+                .eq('is_deleted', false)
+
+            if (!documents) return {}
+
+            // Group by department
+            const byDepartment = documents.reduce((acc: any, doc: any) => {
+                const deptId = doc.department_id
+                const deptName = doc.departments?.name || 'General'
+
+                if (!acc[deptId]) {
+                    acc[deptId] = {
+                        id: deptId,
+                        name: deptName,
+                        counts: {},
+                        total: 0
+                    }
+                }
+
+                const contentType = doc.content_type || 'document'
+                acc[deptId].counts[contentType] =
+                    (acc[deptId].counts[contentType] || 0) + 1
+                acc[deptId].total++
+
+                return acc
+            }, {})
+
+            return byDepartment
+        },
+        enabled: !!user?.id,
+        staleTime: 1000 * 60 * 5 // Cache for 5 minutes
+    })
+}
+
 
 // ============================================================================
 // RELATED ARTICLES

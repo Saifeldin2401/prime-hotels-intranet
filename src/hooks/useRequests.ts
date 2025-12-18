@@ -258,6 +258,18 @@ export function useRequestAction() {
   })
 }
 
+import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
+
+/**
+ * Smart Requests Inbox
+ * 
+ * ROUTING LOGIC:
+ * - Regional Admin / Regional HR: Full access to ALL requests
+ * - Property Manager / Property HR: See requests for their assigned properties
+ * - Department Head: See requests for their managed departments
+ * - Staff: See only their own requests
+ */
 export function useRequestsInbox(filters?: {
   status?: RequestStatus[]
   department?: string[]
@@ -265,9 +277,20 @@ export function useRequestsInbox(filters?: {
   dateRange?: { start: string; end: string }
   search?: string
 }) {
+  const { user, primaryRole, properties, departments } = useAuth()
+  const { currentProperty } = useProperty()
+
+  // Determine access level
+  const isRegionalAccess = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
+  const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
+  const isDepartmentHead = primaryRole === 'department_head'
+
   return useQuery({
-    queryKey: ['requests-inbox', filters],
+    queryKey: ['requests-inbox', filters, primaryRole, currentProperty?.id, properties?.map(p => p.id), departments?.map(d => d.id)],
+    enabled: !!user?.id,
     queryFn: async () => {
+      if (!user?.id) return []
+
       let query = supabase
         .from('requests')
         .select(
@@ -280,13 +303,26 @@ export function useRequestsInbox(filters?: {
         )
         .order('created_at', { ascending: false })
 
-      // Apply filters
+      // SMART ROUTING based on role and context
+      // NOTE: The 'requests' table uses requester_id and current_assignee_id for routing
+      // It does NOT have property_id or department_id columns
+      if (isRegionalAccess) {
+        // Regional admin/hr sees ALL requests - no additional filter needed
+      } else if (isPropertyLevel || isDepartmentHead) {
+        // Property/Department level sees requests assigned to them OR where they are supervisor
+        query = query.or(`requester_id.eq.${user.id},current_assignee_id.eq.${user.id},supervisor_id.eq.${user.id}`)
+      } else {
+        // Regular staff: only see requests where they are the requester or assignee
+        query = query.or(`requester_id.eq.${user.id},current_assignee_id.eq.${user.id}`)
+      }
+
+      // Apply additional filters
       if (filters?.status && filters.status.length > 0) {
         query = query.in('status', filters.status)
       }
 
       if (filters?.search) {
-        query = query.or(`request_no.ilike.%${filters.search}%,requester.full_name.ilike.%${filters.search}%`)
+        query = query.or(`request_no.ilike.%${filters.search}%`)
       }
 
       if (filters?.employee) {
@@ -306,3 +342,4 @@ export function useRequestsInbox(filters?: {
     },
   })
 }
+

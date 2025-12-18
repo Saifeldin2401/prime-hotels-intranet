@@ -5,7 +5,7 @@ import {
     useRejectDocument
 } from '@/hooks/useDocuments'
 import {
-    useTeamLeaveRequests,
+    usePendingLeaveRequests,
     useApproveLeaveRequest,
     useRejectLeaveRequest
 } from '@/hooks/useLeaveRequests'
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FileText, CheckCircle, Loader2, Calendar, Clock, AlertCircle, XCircle } from 'lucide-react'
+import { FileText, CheckCircle, Loader2, Calendar, Clock, AlertCircle, XCircle, Award } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/ui/use-toast'
@@ -29,7 +29,7 @@ export default function ApprovalsDashboard() {
     const { t, i18n } = useTranslation('approvals')
     const isRTL = i18n.dir() === 'rtl'
 
-    // Unified requests hook
+    // Unified requests hook (with smart routing)
     const { data: pendingRequests = [], isLoading: requestsLoading } = useRequestsInbox({
         status: ['pending_supervisor_approval', 'pending_hr_review']
     })
@@ -39,11 +39,11 @@ export default function ApprovalsDashboard() {
     const approveDocument = useApproveDocument()
     const rejectDocument = useRejectDocument()
 
-    const { data: teamLeaves = [], isLoading: leavesLoading } = useTeamLeaveRequests()
+    // Smart-routed pending leave requests
+    const { data: pendingLeaves = [], isLoading: leavesLoading } = usePendingLeaveRequests()
     const approveLeave = useApproveLeaveRequest()
     const rejectLeave = useRejectLeaveRequest()
 
-    const pendingLeaves = teamLeaves.filter(l => l.status === 'pending')
     const isLoading = requestsLoading || documentsLoading || leavesLoading
 
     const [selectedApproval, setSelectedApproval] = useState<string | null>(null)
@@ -81,6 +81,7 @@ export default function ApprovalsDashboard() {
             leave_request: { label: 'Leave Request', icon: <Calendar className="w-4 h-4" /> },
             document: { label: 'Document', icon: <FileText className="w-4 h-4" /> },
             transfer: { label: 'Transfer', icon: <FileText className="w-4 h-4" /> },
+            promotion: { label: 'Promotion', icon: <Award className="w-4 h-4" /> },
         }
         const config = entityConfig[entityType as keyof typeof entityConfig] || { label: entityType, icon: <FileText className="w-4 h-4" /> }
         return (
@@ -312,9 +313,30 @@ export default function ApprovalsDashboard() {
                                                 <Calendar className="w-3 h-3" />
                                                 {format(new Date(leave.start_date), 'MMM d')} - {format(new Date(leave.end_date), 'MMM d, yyyy')}
                                             </div>
+                                            {/* Show Property and Department */}
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {leave.property?.name && (
+                                                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-700 border-purple-200">
+                                                        🏨 {leave.property.name}
+                                                    </Badge>
+                                                )}
+                                                {leave.department?.name && (
+                                                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-green-50 text-green-700 border-green-200">
+                                                        🏢 {leave.department.name}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
+                                        {/* Show routing info */}
+                                        {leave.department?.name && (
+                                            <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                                                <p className="text-xs font-medium text-amber-800">
+                                                    📋 Requires approval from <span className="font-semibold">{leave.department.name}</span> manager
+                                                </p>
+                                            </div>
+                                        )}
                                         <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[2.5rem]">
                                             {leave.reason ? `"${leave.reason}"` : t('no_reason')}
                                         </p>

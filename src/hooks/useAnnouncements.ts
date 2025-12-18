@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import type { Announcement } from '@/lib/types'
+import { createNotification } from '@/lib/notificationService'
 
 export function useAnnouncements(options?: {
     includePinned?: boolean
@@ -124,6 +125,83 @@ export function useCreateAnnouncement() {
                 .single()
 
             if (error) throw error
+
+            // Send notifications to target audience
+            const audience = announcement.target_audience
+            const announcementTitle = announcement.title || 'New Announcement'
+
+            if (!audience || audience.type === 'all') {
+                // For 'all', we could notify everyone, but that might be too many notifications
+                // Instead, we'll skip bulk notifications for 'all' to avoid spam
+                console.log('Announcement created for all users - skipping bulk notification')
+            } else {
+                const targetUserIds: string[] = []
+                const values = audience.values || []
+
+                switch (audience.type) {
+                    case 'role':
+                        // Get all users with these roles
+                        for (const role of values) {
+                            const { data: roleUsers } = await supabase
+                                .from('user_roles')
+                                .select('user_id')
+                                .eq('role', role)
+                            if (roleUsers) {
+                                targetUserIds.push(...roleUsers.map(u => u.user_id))
+                            }
+                        }
+                        break
+
+                    case 'department':
+                        // Get all users in these departments
+                        for (const deptId of values) {
+                            const { data: deptUsers } = await supabase
+                                .from('user_departments')
+                                .select('user_id')
+                                .eq('department_id', deptId)
+                            if (deptUsers) {
+                                targetUserIds.push(...deptUsers.map(u => u.user_id))
+                            }
+                        }
+                        break
+
+                    case 'property':
+                        // Get all users in these properties
+                        for (const propId of values) {
+                            const { data: propUsers } = await supabase
+                                .from('user_properties')
+                                .select('user_id')
+                                .eq('property_id', propId)
+                            if (propUsers) {
+                                targetUserIds.push(...propUsers.map(u => u.user_id))
+                            }
+                        }
+                        break
+
+                    case 'individual':
+                        // Direct user IDs
+                        targetUserIds.push(...values)
+                        break
+                }
+
+                // Remove duplicates and exclude the creator
+                const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user.id)
+
+                // Send notifications to all target users
+                for (const userId of uniqueUserIds) {
+                    await createNotification({
+                        userId,
+                        type: 'announcement_new',
+                        title: announcementTitle,
+                        message: `A new announcement has been posted: "${announcementTitle}"`,
+                        entityType: 'announcement',
+                        entityId: data.id,
+                        link: '/announcements',
+                        metadata: { creator_id: user.id }
+                    })
+                }
+            }
+
             return data
         },
         onSuccess: () => {
