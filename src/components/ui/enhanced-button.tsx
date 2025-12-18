@@ -16,6 +16,9 @@ interface EnhancedButtonProps {
   type?: 'button' | 'submit' | 'reset'
 }
 
+import { motion } from 'framer-motion'
+import { microInteractionVariants } from '@/lib/motion'
+
 export function EnhancedButton({
   children,
   variant = 'primary',
@@ -29,7 +32,7 @@ export function EnhancedButton({
   onClick,
   type = 'button'
 }: EnhancedButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:bg-muted disabled:text-muted-foreground disabled:pointer-events-none'
+  const baseClasses = 'inline-flex items-center justify-center rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:bg-muted disabled:text-muted-foreground disabled:pointer-events-none'
 
   const variantClasses = {
     primary: 'bg-primary text-primary-foreground hover:bg-hotel-navy hover:shadow-md focus:ring-primary',
@@ -79,7 +82,7 @@ export function EnhancedButton({
   }
 
   return (
-    <button
+    <motion.button
       type={type}
       className={cn(
         baseClasses,
@@ -90,8 +93,12 @@ export function EnhancedButton({
       )}
       onClick={onClick}
       disabled={disabled || loading}
+      variants={disabled || loading ? undefined : microInteractionVariants}
+      initial="idle"
+      whileHover="hover"
+      whileTap="tap"
     >
       {renderContent()}
-    </button>
+    </motion.button>
   )
 }

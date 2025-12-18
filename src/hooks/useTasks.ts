@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useProperty } from '@/contexts/PropertyContext'
 import type { Task, TaskComment, TaskStats } from '@/lib/types'
+import { validateTransition, getTransitionErrorMessage } from '@/lib/statusTransitions'
+import { useAuth } from '@/hooks/useAuth'
+import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 
 // Fetch tasks
 export function useTasks(filters?: {
@@ -117,41 +120,42 @@ export function useTaskStats(userId?: string) {
 // Create task
 export function useCreateTask() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (task: Partial<Task>) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert(task)
-        .select(`
-          *,
-          assigned_to:profiles!assigned_to_id(id, full_name)
-        `)
-        .single()
+      if (!user?.id) throw new Error('User must be authenticated')
+
+      const taskData = {
+        ...task,
+        created_by_id: user.id,
+        status: task.status || 'open',
+        priority: task.priority || 'medium'
+      }
+
+      let notificationPayload = null
+      if (taskData.assigned_to_id && taskData.assigned_to_id !== user.id) {
+        notificationPayload = {
+          type: 'task_assigned',
+          title: 'New Task Assigned',
+          message: `You have been assigned a new task: "${taskData.title || 'Untitled'}"`,
+          link: `/tasks`,
+          data: { taskTitle: taskData.title }
+        }
+      }
+
+      const { data, error } = await supabase.rpc('create_task_atomic', {
+        task_data: taskData,
+        notification_payload: notificationPayload
+      })
 
       if (error) throw error
-      return data
+      return data as Task
     },
-    onSuccess: async (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
-
-      // Send notification to assigned user
-      if (data.assigned_to_id) {
-        try {
-          await supabase.from('notifications').insert({
-            user_id: data.assigned_to_id,
-            type: 'task_assigned',
-            title: 'New Task Assigned',
-            message: `You have been assigned a new task: "${data.title}"`,
-            link: `/tasks`,
-            data: { taskId: data.id, taskTitle: data.title }
-          })
-        } catch (err) {
-          console.error('Failed to send task notification:', err)
-        }
-      }
     },
   })
 }
@@ -159,9 +163,32 @@ export function useCreateTask() {
 // Update task
 export function useUpdateTask() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const { notifyTaskAssigned, notifyTaskCompleted } = useNotificationTriggers()
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Task> & { id: string }) => {
+      if (!user?.id) throw new Error('User must be authenticated')
+
+      // Get current task to check for changes
+      const { data: currentTask } = await supabase
+        .from('tasks')
+        .select('status, assigned_to_id, title, created_by_id')
+        .eq('id', id)
+        .single()
+
+      // Validate status transition if status is being changed
+      if (updates.status && currentTask) {
+        if (currentTask.status !== updates.status) {
+          try {
+            validateTransition('task', currentTask.status, updates.status)
+          } catch (error) {
+            const errorMsg = getTransitionErrorMessage('task', currentTask.status, updates.status)
+            throw new Error(errorMsg)
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from('tasks')
         .update(updates)
@@ -170,6 +197,28 @@ export function useUpdateTask() {
         .single()
 
       if (error) throw error
+
+      // Send notifications for important changes
+      if (currentTask) {
+        // Notify if task was reassigned
+        if (updates.assigned_to_id && updates.assigned_to_id !== currentTask.assigned_to_id && updates.assigned_to_id !== user.id) {
+          await notifyTaskAssigned(
+            updates.assigned_to_id,
+            id,
+            currentTask.title || 'Task'
+          )
+        }
+
+        // Notify creator if task was completed
+        if (updates.status === 'completed' && currentTask.status !== 'completed' && currentTask.created_by_id && currentTask.created_by_id !== user.id) {
+          await notifyTaskCompleted(
+            currentTask.created_by_id,
+            id,
+            currentTask.title || 'Task'
+          )
+        }
+      }
+
       return data
     },
     onSuccess: (_, variables) => {
@@ -177,18 +226,24 @@ export function useUpdateTask() {
       queryClient.invalidateQueries({ queryKey: ['task', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
     },
+    onError: (error: Error) => {
+      console.error('Error updating task:', error.message)
+    }
   })
 }
 
-// Delete task
+// Soft Delete task
 export function useDeleteTask() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (taskId: string) => {
+      if (!user?.id) throw new Error('User must be authenticated')
+
       const { error } = await supabase
         .from('tasks')
-        .delete()
+        .update({ is_deleted: true })
         .eq('id', taskId)
 
       if (error) throw error

@@ -155,14 +155,12 @@ export function useStaffFeed() {
 
             // 4. Fetch my training assignments
             const { data: trainings } = await supabase
-                .from('training_assignments')
-                .select(`
-                    *,
-                    training:training_modules(id, title)
-                `)
-                .eq('assigned_to_user_id', user.id)
+                .from('learning_assignments')
+                .select('*')
+                .eq('target_type', 'user')
+                .eq('target_id', user.id)
                 .order('created_at', { ascending: false })
-                .limit(3)
+                .limit(5)
 
             trainings?.forEach((t: any) => {
                 feedItems.push({

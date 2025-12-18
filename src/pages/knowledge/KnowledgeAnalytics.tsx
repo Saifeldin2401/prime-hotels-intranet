@@ -44,9 +44,9 @@ export default function KnowledgeAnalytics() {
 
         // Content counts
         const totalArticles = articles.length
-        const publishedArticles = articles.filter(a => a.status === 'approved').length
-        const draftArticles = articles.filter(a => a.status === 'draft').length
-        const pendingReview = articles.filter(a => a.status === 'under_review').length
+        const publishedArticles = articles.filter(a => ['approved', 'published', 'APPROVED', 'PUBLISHED'].includes(a.status)).length
+        const draftArticles = articles.filter(a => ['draft', 'DRAFT'].includes(a.status)).length
+        const pendingReview = articles.filter(a => ['under_review', 'pending_review', 'PENDING_REVIEW'].includes(a.status)).length
 
         // View stats
         const totalViews = articles.reduce((sum, a) => sum + (a.view_count || 0), 0)
@@ -73,7 +73,7 @@ export default function KnowledgeAnalytics() {
 
         // Least viewed (potential issues)
         const leastViewed = [...articles]
-            .filter(a => a.status === 'approved')
+            .filter(a => ['approved', 'published', 'APPROVED', 'PUBLISHED'].includes(a.status))
             .sort((a, b) => (a.view_count || 0) - (b.view_count || 0))
             .slice(0, 5)
 

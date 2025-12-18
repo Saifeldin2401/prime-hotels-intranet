@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -11,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { CardLoading } from '@/components/common/LoadingStates'
+import emptyBoxAnimation from '@/assets/lottie/empty-box.json'
 import {
     Briefcase,
     Plus,
@@ -55,6 +57,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
           created_by_profile:profiles!job_postings_created_by_fkey(id, full_name)
         `)
                 .order('created_at', { ascending: false })
+                .eq('is_deleted', false)
 
             if (statusFilter !== 'all') {
                 query = query.eq('status', statusFilter)
@@ -70,7 +73,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
         mutationFn: async (jobId: string) => {
             const { error } = await supabase
                 .from('job_postings')
-                .delete()
+                .update({ is_deleted: true })
                 .eq('id', jobId)
 
             if (error) throw error
@@ -174,6 +177,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
             <div className="space-y-4">
                 {filteredJobs?.length === 0 && jobs?.length === 0 && (
                     <EmptyState
+                        animationData={emptyBoxAnimation}
                         icon={Briefcase}
                         title={t('noJobsFound')}
                         description={t('createFirst')}
@@ -186,6 +190,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                 )}
                 {filteredJobs?.length === 0 && jobs && jobs.length > 0 && (
                     <EmptyState
+                        animationData={emptyBoxAnimation}
                         icon={Search}
                         title={t('noJobsFound')}
                         description={t('tryAdjusting')}
@@ -199,137 +204,138 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                         }}
                     />
                 )}
-                {filteredJobs?.map((job) => (
-                    <EnhancedCard key={job.id} variant="default" className="hover:shadow-lg hover:border-hotel-navy/20 transition-all duration-300">
-                        <div className="p-3 sm:p-4">
-                            <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-                                <div className="p-2.5 sm:p-3 bg-hotel-navy/5 rounded-lg border border-hotel-navy/10 self-start">
-                                    <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-hotel-navy" />
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-start gap-2 mb-2">
-                                        <h3 className="text-base sm:text-lg font-semibold text-hotel-navy">{job.title}</h3>
-                                        <div className="flex flex-wrap gap-1">
-                                            <EnhancedBadge variant={job.status === 'open' ? 'success' : job.status === 'filled' ? 'navy' : 'secondary'} className="text-xs">
-                                                {t(`status.${job.status}`)}
-                                            </EnhancedBadge>
-                                            <EnhancedBadge variant="gold" dot className="text-xs">
-                                                {t(`seniority.${job.seniority_level}`)}
-                                            </EnhancedBadge>
-                                        </div>
+                {filteredJobs?.map((job, index) => (
+                    <motion.div
+                        key={job.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                    >
+                        <EnhancedCard variant="default" className="hover:shadow-lg hover:border-hotel-navy/20 transition-all duration-300">
+                            <div className="p-3 sm:p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                                    <div className="p-2.5 sm:p-3 bg-hotel-navy/5 rounded-lg border border-hotel-navy/10 self-start">
+                                        <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-hotel-navy" />
                                     </div>
 
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-600">
-                                        {job.property && (
-                                            <span className="flex items-center gap-1">
-                                                <Building2 className="h-3.5 w-3.5 text-hotel-gold" />
-                                                {job.property.name}
-                                            </span>
-                                        )}
-                                        {job.department && (
-                                            <span className="flex items-center gap-1">
-                                                <MapPin className="h-3.5 w-3.5 text-hotel-gold" />
-                                                {job.department.name}
-                                            </span>
-                                        )}
-                                        <span className="flex items-center gap-1">
-                                            <Calendar className="h-3.5 w-3.5 text-hotel-gold" />
-                                            {formatRelativeTime(job.created_at)}
-                                        </span>
-                                    </div>
-
-                                    {job.description && (
-                                        <p className="text-xs sm:text-sm text-gray-600 mt-2 line-clamp-2">
-                                            {job.description}
-                                        </p>
-                                    )}
-
-                                    {(job.salary_range_min || job.salary_range_max) && (
-                                        <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-gray-700">
-                                            <DollarSign className="h-3.5 w-3.5" />
-                                            {job.salary_range_min && job.salary_range_max
-                                                ? `$${job.salary_range_min.toLocaleString()} - $${job.salary_range_max.toLocaleString()}`
-                                                : job.salary_range_min
-                                                    ? `${t('from')} $${job.salary_range_min.toLocaleString()}`
-                                                    : `${t('upTo')} $${job.salary_range_max?.toLocaleString()}`
-                                            }
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-start gap-2 mb-2">
+                                            <h3 className="text-base sm:text-lg font-semibold text-hotel-navy">{job.title}</h3>
+                                            <div className="flex flex-wrap gap-1">
+                                                <EnhancedBadge variant={job.status === 'open' ? 'success' : job.status === 'filled' ? 'navy' : 'secondary'} className="text-xs">
+                                                    {t(`status.${job.status}`)}
+                                                </EnhancedBadge>
+                                                <EnhancedBadge variant="gold" dot className="text-xs">
+                                                    {t(`seniority.${job.seniority_level}`)}
+                                                </EnhancedBadge>
+                                            </div>
                                         </div>
-                                    )}
 
-                                    <div className="flex flex-wrap items-center gap-2 mt-3">
-                                        <Link to={`/jobs/${job.id}`}>
-                                            <Button size="sm" variant="outline" className="h-9 text-xs sm:text-sm">
-                                                <Eye className="h-3.5 w-3.5 me-1.5" />
-                                                {t('viewDetails')}
-                                            </Button>
-                                        </Link>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-600">
+                                            {job.property && (
+                                                <span className="flex items-center gap-1">
+                                                    <Building2 className="h-3.5 w-3.5 text-hotel-gold" />
+                                                    {job.property.name}
+                                                </span>
+                                            )}
+                                            {job.department && (
+                                                <span className="flex items-center gap-1">
+                                                    <MapPin className="h-3.5 w-3.5 text-hotel-gold" />
+                                                    {job.department.name}
+                                                </span>
+                                            )}
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="h-3.5 w-3.5 text-hotel-gold" />
+                                                {formatRelativeTime(job.created_at)}
+                                            </span>
+                                        </div>
 
-                                        {canManageJobs && (
-                                            <>
-                                                <Link to={`/jobs/${job.id}/edit`}>
-                                                    <Button size="sm" variant="outline" className="h-9 text-xs sm:text-sm">
-                                                        <Edit className="h-3.5 w-3.5 me-1.5" />
-                                                        {t('edit')}
-                                                    </Button>
-                                                </Link>
+                                        {job.description && (
+                                            <p className="text-xs sm:text-sm text-gray-600 mt-2 line-clamp-2">
+                                                {job.description}
+                                            </p>
+                                        )}
 
-                                                {job.status === 'draft' && (
-                                                    <Button
-                                                        size="sm"
-                                                        className="bg-green-600 hover:bg-green-700 text-white h-9 text-xs sm:text-sm"
-                                                        onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: 'open' })}
-                                                    >
-                                                        {t('publish')}
-                                                    </Button>
-                                                )}
+                                        {(job.salary_range_min || job.salary_range_max) && (
+                                            <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-gray-700">
+                                                <DollarSign className="h-3.5 w-3.5" />
+                                                {job.salary_range_min && job.salary_range_max
+                                                    ? `$${job.salary_range_min.toLocaleString()} - $${job.salary_range_max.toLocaleString()}`
+                                                    : job.salary_range_min
+                                                        ? `${t('from')} $${job.salary_range_min.toLocaleString()}`
+                                                        : `${t('upTo')} $${job.salary_range_max?.toLocaleString()}`
+                                                }
+                                            </div>
+                                        )}
 
-                                                {job.status === 'open' && (
+                                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                                            <Link to={`/jobs/${job.id}`}>
+                                                <Button size="sm" variant="outline" className="h-9 text-xs sm:text-sm">
+                                                    <Eye className="h-3.5 w-3.5 me-1.5" />
+                                                    {t('viewDetails')}
+                                                </Button>
+                                            </Link>
+
+                                            {canManageJobs && (
+                                                <>
+                                                    <Link to={`/jobs/${job.id}/edit`}>
+                                                        <Button size="sm" variant="outline" className="h-9 text-xs sm:text-sm">
+                                                            <Edit className="h-3.5 w-3.5 me-1.5" />
+                                                            {t('edit')}
+                                                        </Button>
+                                                    </Link>
+
+                                                    {job.status === 'draft' && (
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-green-600 hover:bg-green-700 text-white h-9 text-xs sm:text-sm"
+                                                            onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: 'open' })}
+                                                        >
+                                                            {t('publish')}
+                                                        </Button>
+                                                    )}
+
+                                                    {job.status === 'open' && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-9 text-xs sm:text-sm"
+                                                            onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: 'closed' })}
+                                                        >
+                                                            {t('close')}
+                                                        </Button>
+                                                    )}
+
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        className="h-9 text-xs sm:text-sm"
-                                                        onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: 'closed' })}
+                                                        className="text-red-600 hover:text-red-700 h-9"
+                                                        onClick={() => setDeleteJob(job)}
                                                     >
-                                                        {t('close')}
+                                                        <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
-                                                )}
-
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="text-red-600 hover:text-red-700 h-9"
-                                                    onClick={() => setDeleteJob(job)}
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </>
-                                        )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </EnhancedCard>
+                        </EnhancedCard>
+                    </motion.div>
                 ))}
 
                 {filteredJobs?.length === 0 && (
-                    <div className="prime-card">
-                        <div className="prime-card-body text-center py-12">
-                            <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('noJobsFound')}</h3>
-                            <p className="text-gray-600 mb-4">
-                                {searchTerm ? t('tryAdjusting') : t('createFirst')}
-                            </p>
-                            {canManageJobs && !searchTerm && (
-                                <Link to="/jobs/new">
-                                    <Button className="bg-hotel-navy hover:bg-hotel-navy-light">
-                                        <Plus className="h-4 w-4 me-2" />
-                                        {t('create')}
-                                    </Button>
-                                </Link>
-                            )}
-                        </div>
-                    </div>
+                    <EmptyState
+                        animationData={emptyBoxAnimation}
+                        icon={Briefcase}
+                        title={t('noJobsFound')}
+                        description={searchTerm ? t('tryAdjusting') : t('createFirst')}
+                        action={canManageJobs && !searchTerm ? {
+                            label: t('create'),
+                            onClick: () => window.location.href = '/jobs/new',
+                            icon: Plus
+                        } : undefined}
+                    />
                 )}
             </div>
 

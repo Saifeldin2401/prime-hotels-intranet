@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/ui/use-toast'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,13 +12,13 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
   Plus,
   Save,
   Eye,
   Trash2,
-  GripVertical,
   FileText,
   Video,
   Image,
@@ -25,16 +26,22 @@ import {
   Clock,
   Award,
   Upload,
-  ChevronDown,
-  ChevronUp,
   FileQuestion,
   BookOpen,
-  Sparkles
+  Sparkles,
+  Wand2,
+  Layers
 } from 'lucide-react'
 import type { TrainingModule } from '@/lib/types'
 import type { LearningQuiz } from '@/types/learning'
 import { useTranslation } from 'react-i18next'
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
+import { KnowledgeBaseSidebar, SmartModuleWizard } from '@/components/training'
+import { ModuleSkillsEditor } from '@/components/training/ModuleSkillsEditor'
+import { BuilderHeader } from '@/components/training/builder/BuilderHeader'
+import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
+import { BuilderCanvas } from '@/components/training/builder/BuilderCanvas'
+import { BuilderPreview } from '@/components/training/builder/BuilderPreview'
 
 type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference'
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank'
@@ -74,6 +81,7 @@ export default function TrainingBuilder() {
   const { id } = useParams()
   const { profile } = useAuth()
   const { t, i18n } = useTranslation('training')
+  const { toast } = useToast()
   const isRTL = i18n.dir() === 'rtl'
 
   // Fetch available quizzes for the Quiz Block
@@ -111,6 +119,7 @@ export default function TrainingBuilder() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [estimatedDuration, setEstimatedDuration] = useState('')
+  const [validityPeriod, setValidityPeriod] = useState('')
   const [passingScore, setPassingScore] = useState('80')
   const [maxAttempts, setMaxAttempts] = useState('3')
   const [allowRetake, setAllowRetake] = useState(true)
@@ -138,9 +147,56 @@ export default function TrainingBuilder() {
       setTitle(moduleData.title)
       setDescription(moduleData.description || '')
       setEstimatedDuration(moduleData.estimated_duration_minutes?.toString() || '')
+      setValidityPeriod(moduleData.validity_period_days?.toString() || '')
       // Sync other fields if needed
     }
   }, [moduleData])
+
+  // Fetch content blocks for module
+  const { data: contentBlocksData } = useQuery({
+    queryKey: ['training-content-blocks', moduleId],
+    queryFn: async () => {
+      if (!moduleId) return []
+      const { data, error } = await supabase
+        .from('training_content_blocks')
+        .select('*')
+        .eq('training_module_id', moduleId)
+        .order('order', { ascending: true })
+      if (error) throw error
+      return data
+    },
+    enabled: !!moduleId
+  })
+
+  // Populate sections when content blocks are loaded
+  useEffect(() => {
+    if (contentBlocksData && contentBlocksData.length > 0) {
+      // Convert flat content blocks into sections
+      // For now, create a single "Main Content" section with all blocks
+      const blocks: ContentBlockForm[] = contentBlocksData.map((block, index) => ({
+        id: block.id,
+        type: block.type as ContentType,
+        title: block.title || '',
+        content: block.content || '',
+        content_url: block.content_url || '',
+        content_data: block.content_data || {},
+        is_mandatory: block.is_mandatory ?? true,
+        duration: block.duration_seconds,
+        points: block.points,
+        order: block.order || index
+      }))
+
+      setSections([{
+        id: 'main-section',
+        title: 'Main Content',
+        description: 'Training content blocks',
+        items: blocks,
+        order: 0
+      }])
+
+      setContentBlocks(blocks)
+    }
+  }, [contentBlocksData])
 
   // Enhanced state for drag-and-drop
   const [sections, setSections] = useState<TrainingSection[]>([])
@@ -169,6 +225,8 @@ export default function TrainingBuilder() {
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
   const [showQuestionDialog, setShowQuestionDialog] = useState(false)
   const [showAIDialog, setShowAIDialog] = useState(false)
+  const [showKBSidebar, setShowKBSidebar] = useState(false)
+  const [showSmartWizard, setShowSmartWizard] = useState(false)
 
   // Current form states
   const [currentBlock, setCurrentBlock] = useState<ContentBlockForm>({
@@ -322,6 +380,51 @@ export default function TrainingBuilder() {
     })
   }
 
+  const [uploading, setUploading] = useState(false)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'document') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setUploading(true)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
+      const filePath = `training/${type}s/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type // Explicitly set content type
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('documents').getPublicUrl(filePath)
+
+      setCurrentBlock(prev => ({
+        ...prev,
+        content_url: data.publicUrl
+      }))
+
+      toast({
+        title: 'Upload Successful',
+        description: `${type === 'image' ? 'Image' : 'Document'} uploaded successfully.`
+      })
+    } catch (error) {
+      console.error('Upload failed:', error)
+      toast({
+        title: 'Upload Failed',
+        description: 'Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const deleteContent = (sectionId: string, contentId: string) => {
     setSections(sections.map(section => {
       if (section.id === sectionId) {
@@ -347,6 +450,7 @@ export default function TrainingBuilder() {
         title: title.trim(),
         description: description.trim() || null,
         estimated_duration_minutes: totalDuration || null,
+        validity_period_days: validityPeriod ? Number(validityPeriod) : null,
         created_by: profile?.id
       }
 
@@ -457,6 +561,7 @@ export default function TrainingBuilder() {
         title: title.trim(),
         description: description.trim() || null,
         estimated_duration_minutes: estimatedDuration ? Number(estimatedDuration) : null,
+        validity_period_days: validityPeriod ? Number(validityPeriod) : null,
         created_by: profile?.id,
       }
 
@@ -666,491 +771,188 @@ export default function TrainingBuilder() {
     setCurrentQuestion({ ...currentQuestion, options: updated })
   }
 
-  const getContentIcon = (type: ContentType) => {
-    switch (type) {
-      case 'text': return <FileText className="w-4 h-4" />
-      case 'image': return <Image className="w-4 h-4" />
-      case 'video': return <Video className="w-4 h-4" />
-      case 'document_link': return <Link className="w-4 h-4" />
-      case 'quiz': return <FileQuestion className="w-4 h-4" />
-      case 'sop_reference': return <BookOpen className="w-4 h-4" />
-      default: return <FileText className="w-4 h-4" />
-    }
-  }
+
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'ar' : 'en'
     i18n.changeLanguage(newLang)
   }
 
+  const handleReorderSection = (dragIndex: number, hoverIndex: number) => {
+    const newSections = [...sections]
+    const [removed] = newSections.splice(dragIndex, 1)
+    newSections.splice(hoverIndex, 0, removed)
+    const updated = newSections.map((s, i) => ({ ...s, order: i }))
+    setSections(updated)
+  }
+
+  const handleReorderContent = (sectionId: string, dragIndex: number, hoverIndex: number) => {
+    const sectionIndex = sections.findIndex(s => s.id === sectionId)
+    if (sectionIndex === -1) return
+
+    const newSections = [...sections]
+    const section = newSections[sectionIndex]
+    const newItems = [...section.items]
+    const [removed] = newItems.splice(dragIndex, 1)
+    newItems.splice(hoverIndex, 0, removed)
+
+    newSections[sectionIndex] = {
+      ...section,
+      items: newItems.map((item, i) => ({ ...item, order: i }))
+    }
+    setSections(newSections)
+  }
+
   return (
-    <div className={`space-y-6 animate-fade-in ${isRTL ? 'text-right' : 'text-left'}`}>
-      <PageHeader
-        title={t('trainingBuilder')}
-        description={isRTL ? 'إنشاء محتوى تدريب تفاعلي' : 'Create interactive training content'} // fallback logic, technically description can be key too
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors hover-lift"
-              size="sm"
-              onClick={toggleLanguage}
-            >
-              {i18n.language === 'en' ? 'العربية' : 'English'}
-            </Button>
-            <Button
-              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors hover-lift"
-              size="sm"
-              onClick={() => setViewMode(viewMode === 'builder' ? 'preview' : 'builder')}
-            >
-              {viewMode === 'builder' ? <Eye className="w-4 h-4 mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
-              {viewMode === 'builder' ? t('preview') : t('builderMode')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAIDialog(true)}
-              className="border-purple-300 text-purple-700 hover:bg-purple-50"
-            >
-              <Sparkles className="w-4 h-4 mr-1" />
-              {t('aiSuggest', 'AI Suggest')}
-            </Button>
-            <Button onClick={saveTraining} className="bg-primary hover:bg-hotel-navy shadow-sm transition-all duration-200">
-              <Save className="w-4 h-4 mr-1" />
-              {t('save')}
-            </Button>
-            <Button onClick={publishTraining} variant="default" className="bg-primary hover:bg-hotel-navy shadow-sm transition-all duration-200">
-              <Upload className="w-4 h-4 mr-1" />
-              {t('publish')}
-            </Button>
-          </div>
-        }
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <BuilderHeader
+        title={title}
+        isSaving={saveModuleMutation.isPending || saveContentBlocksMutation.isPending}
+        hasUnsavedChanges={false} // TODO: Implement dirty state
+        onSave={handleSave}
+        onPreview={() => setViewMode('preview')}
+        onMagic={() => setShowSmartWizard(true)}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Main Content Area */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Module Info */}
-          <Card className="card-hover">
-            <CardHeader>
-              <CardTitle>{t('title')} & {t('description')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>{t('title')}</Label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={t('title')}
-                  className={isRTL ? 'text-right' : ''}
-                />
-              </div>
-              <div>
-                <Label>{t('description')}</Label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t('description')}
-                  rows={3}
-                  className={isRTL ? 'text-right' : ''}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Knowledge Integration Callout */}
-          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="py-4">
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Sparkles className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-purple-900 mb-1">{t('knowledgeBankIntegration')}</h3>
-                  <p className="text-sm text-purple-700 mb-3">
-                    {t('knowledgeBankDescription')}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                      onClick={() => {
-                        addSection()
-                        setTimeout(() => addContent('quiz'), 100)
-                      }}
-                    >
-                      <FileQuestion className="w-4 h-4 mr-1" />
-                      {t('addQuizBlock')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-                      onClick={() => {
-                        addSection()
-                        setTimeout(() => addContent('sop_reference'), 100)
-                      }}
-                    >
-                      <BookOpen className="w-4 h-4 mr-1" />
-                      {t('addSopReference')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
-                      onClick={() => setShowAIDialog(true)}
-                    >
-                      <Sparkles className="w-4 h-4 mr-1" />
-                      {t('aiGenerateQuestions')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Sections */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main Canvas */}
+        {/* Main Canvas */}
+        <main className="flex-1 overflow-y-auto">
           {viewMode === 'builder' ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">{t('sections')}</h3>
-                <Button onClick={addSection} size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark transition-colors">
-                  <Plus className="w-4 h-4 mr-1" />
-                  {t('addSection')}
-                </Button>
-              </div>
-
-              {sections.length === 0 ? (
-                <Card className="border-dashed border-2 bg-gray-50">
-                  <CardContent className="text-center py-12">
-                    <p className="text-gray-500 mb-4">{t('noContent')}</p>
-                    <Button onClick={addSection} variant="outline" className="border-dashed">
-                      <Plus className="w-4 h-4 mr-1" />
-                      {t('addSection')}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                sections.map((section) => (
-                  <Card key={section.id} className="overflow-hidden card-hover border-l-4 border-l-hotel-navy">
-                    <CardHeader
-                      className="cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors py-3"
-                      onClick={() => setActiveSection(activeSection === section.id ? null : section.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <GripVertical className="w-5 h-5 text-gray-400" />
-                          <h4 className="font-semibold text-gray-800">{section.title}</h4>
-                          <Badge variant="secondary" className="bg-white">{section.items.length} items</Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={(e) => {
-                            e.stopPropagation()
-                            deleteSection(section.id)
-                          }}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          {activeSection === section.id ? (
-                            <ChevronUp className="w-4 h-4 text-gray-500" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-gray-500" />
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-
-                    {activeSection === section.id && (
-                      <CardContent className="pt-4 bg-white">
-                        {/* Content Items */}
-                        <div className="space-y-3 mb-4">
-                          {section.items.length === 0 ? (
-                            <div className="text-center py-8 border border-dashed rounded-lg bg-gray-50">
-                              <p className="text-sm text-gray-500 mb-4">{t('noContent')}</p>
-                              <div className="flex flex-wrap gap-2 justify-center">
-                                {/* Basic content types */}
-                                {(['text', 'video', 'image', 'document_link'] as ContentType[]).map((type) => (
-                                  <Button
-                                    key={type}
-                                    size="sm"
-                                    variant="outline"
-                                    className="bg-white hover:bg-gray-50"
-                                    onClick={() => addContent(type)}
-                                  >
-                                    {getContentIcon(type)}
-                                    <span className="ml-2">
-                                      {type === 'text' ? t('textContent') :
-                                        type === 'video' ? t('videoContent') :
-                                          type === 'image' ? t('imageContent') :
-                                            t('documentContent')}
-                                    </span>
-                                  </Button>
-                                ))}
-                                {/* Knowledge Bank Integration - Highlighted */}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                                  onClick={() => addContent('quiz')}
-                                >
-                                  <FileQuestion className="w-4 h-4" />
-                                  <span className="ml-2">Quiz from Bank</span>
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-                                  onClick={() => addContent('sop_reference')}
-                                >
-                                  <BookOpen className="w-4 h-4" />
-                                  <span className="ml-2">SOP Reference</span>
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            section.items.map((item, itemIndex) => (
-                              <div
-                                key={item.id}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, item)}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, section, itemIndex)}
-                                className="flex items-center gap-4 p-4 border rounded-lg hover:shadow-sm hover:border-hotel-gold/30 transition-all cursor-move bg-white group"
-                              >
-                                <GripVertical className="w-5 h-5 text-gray-300 group-hover:text-gray-500" />
-                                <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
-                                  {getContentIcon(item.type)}
-                                </div>
-                                <div className="flex-1">
-                                  <h5 className="font-medium text-gray-900">{item.title}</h5>
-                                  <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
-                                    {item.duration && (
-                                      <span className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        {item.duration}m
-                                      </span>
-                                    )}
-                                    {item.points && (
-                                      <span className="flex items-center gap-1">
-                                        <Award className="w-3 h-3" />
-                                        {item.points} pts
-                                      </span>
-                                    )}
-                                    <Badge variant={item.is_mandatory ? 'default' : 'secondary'} className="text-[10px] h-5">
-                                      {item.is_mandatory ? t('mandatory') : t('optional')}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button size="sm" variant="ghost" className="hover:bg-gray-100" onClick={() => {
-                                    setSelectedContent(item)
-                                    setContentType(item.type)
-                                    setCurrentBlock({
-                                      ...item,
-                                      title: item.title,
-                                      content: item.content,
-                                      content_url: item.content_url,
-                                      content_data: item.content_data,
-                                      is_mandatory: item.is_mandatory,
-                                      order: item.order
-                                    })
-                                    setShowContentDialog(true)
-                                  }}>
-                                    <Plus className="w-4 h-4 text-gray-600" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" className="hover:bg-red-50" onClick={() => deleteContent(section.id, item.id)}>
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        {/* Add Content Button */}
-                        {section.items.length > 0 && (
-                          <div className="flex justify-center">
-                            <Select value="" onValueChange={(value: ContentType) => addContent(value)}>
-                              <SelectTrigger className="w-[200px] border-dashed hover:border-solid hover:border-hotel-gold transition-colors">
-                                <SelectValue placeholder={t('addContent')} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="text">
-                                  <div className="flex items-center gap-2">
-                                    <FileText className="w-4 h-4" />
-                                    {t('textContent')}
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="video">
-                                  <div className="flex items-center gap-2">
-                                    <Video className="w-4 h-4" />
-                                    {t('videoContent')}
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="image">
-                                  <div className="flex items-center gap-2">
-                                    <Image className="w-4 h-4" />
-                                    {t('imageContent')}
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="document_link">
-                                  <div className="flex items-center gap-2">
-                                    <Link className="w-4 h-4" />
-                                    {t('documentContent')}
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="quiz">
-                                  <div className="flex items-center gap-2">
-                                    <FileQuestion className="w-4 h-4" />
-                                    {t('quizContent', 'Quiz')}
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="sop_reference">
-                                  <div className="flex items-center gap-2">
-                                    <BookOpen className="w-4 h-4" />
-                                    {t('sopReferenceContent', 'SOP Reference')}
-                                  </div>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </CardContent>
-                    )}
-                  </Card>
-                ))
-              )}
-            </div>
+            <BuilderCanvas
+              sections={sections}
+              activeSection={activeSection}
+              onSectionClick={(id) => setActiveSection(id)}
+              onAddSection={addSection}
+              onDeleteSection={deleteSection}
+              onAddContent={(type) => addContent(type)}
+              onEditContent={(sectionId, contentId) => {
+                const contentIndex = contentBlocks.findIndex(c => c.id === contentId)
+                if (contentIndex !== -1) handleEditContentBlock(contentIndex)
+                // Note: Logic needs adaptation for sections
+                // For now finding by ID in flat list or section list
+                const section = sections.find(s => s.id === sectionId)
+                const item = section?.items.find(i => i.id === contentId)
+                if (item) {
+                  setSelectedContent(item)
+                  setCurrentBlock(item)
+                  setShowContentDialog(true)
+                }
+              }}
+              onDeleteContent={deleteContent}
+              onReorderSection={handleReorderSection}
+              onReorderContent={handleReorderContent}
+            />
           ) : (
-            /* Preview Mode */
-            <Card className="animate-fade-in">
-              <CardHeader>
-                <CardTitle>{t('preview')}</CardTitle>
+            <BuilderPreview
+              title={title}
+              description={description}
+              sections={sections}
+            />
+          )}
+        </main>
+
+        {/* Right Sidebar */}
+        <BuilderSidebar className="hidden lg:flex w-[350px] border-l bg-slate-50/50">
+          <div className="p-4 space-y-6">
+            {/* Module Settings */}
+            <Card className="shadow-sm border-slate-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium uppercase tracking-wider text-slate-500">{t('moduleSettings')}</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none dark:prose-invert">
-                  <h1>{title}</h1>
-                  <p>{description}</p>
-
-                  {sections.map((section) => (
-                    <div key={section.id} className="mb-8 p-6 bg-gray-50 rounded-lg">
-                      <h2 className="text-xl font-bold mb-4 text-hotel-navy">{section.title}</h2>
-                      {section.description && <p className="text-gray-600 mb-4">{section.description}</p>}
-
-                      <div className="space-y-6">
-                        {section.items.map((item) => (
-                          <div key={item.id} className="bg-white p-6 rounded-lg shadow-sm border">
-                            <h3 className="text-lg font-semibold mb-3">{item.title}</h3>
-                            {item.content && <div dangerouslySetInnerHTML={{ __html: item.content }} className="mb-4" />}
-
-                            {item.type === 'video' && item.content_url && (
-                              <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                                <iframe
-                                  src={item.content_url}
-                                  className="w-full h-full"
-                                  allowFullScreen
-                                />
-                              </div>
-                            )}
-
-                            {item.type === 'image' && item.content_url && (
-                              <img src={item.content_url} alt={item.title} className="max-w-full rounded-lg shadow-md" />
-                            )}
-
-                            {item.type === 'document_link' && item.content_url && (
-                              <a href={item.content_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
-                                <Link className="w-4 h-4" />
-                                {t('documentContent')}
-                              </a>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">{t('title')}</Label>
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder={t('title')}
+                    className="bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">{t('description')}</Label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder={t('description')}
+                    rows={3}
+                    className="bg-white resize-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">{t('category')}</Label>
+                  <Select>
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="onboarding">Onboarding</SelectItem>
+                      <SelectItem value="compliance">Compliance</SelectItem>
+                      <SelectItem value="skills">Job Skills</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs">{t('duration')} (min)</Label>
+                    <Input
+                      type="number"
+                      value={estimatedDuration}
+                      onChange={(e) => setEstimatedDuration(e.target.value)}
+                      placeholder="e.g. 45"
+                      className="bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">{t('validity')} (days)</Label>
+                    <Input
+                      type="number"
+                      value={validityPeriod}
+                      onChange={(e) => setValidityPeriod(e.target.value)}
+                      placeholder="e.g. 365"
+                      className="bg-white"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
 
-        {/* Sidebar Settings */}
-        <div className="space-y-6">
-          {/* Stats */}
-          <Card className="card-hover">
-            <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-gray-500">{t('statistics')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{t('sections')}</span>
-                <Badge variant="outline">{sections.length}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{t('totalPoints')}</span>
-                <Badge variant="outline">{totalItems}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{t('estimatedTime')}</span>
-                <Badge variant="outline">{totalDuration}m</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{t('totalPoints')}</span>
-                <Badge variant="outline">{totalPoints}</Badge>
-              </div>
-            </CardContent>
-          </Card>
+            {/* AI Tools */}
+            <Card className="shadow-sm border-purple-100 bg-purple-50/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium uppercase tracking-wider text-purple-600 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  {t('aiTools')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100"
+                  onClick={() => setShowAIDialog(true)}
+                >
+                  <FileQuestion className="w-4 h-4 mr-2" />
+                  {t('generateQuiz', 'Generate Quiz')}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100"
+                  onClick={() => setShowSmartWizard(true)}
+                >
+                  <Layers className="w-4 h-4 mr-2" />
+                  {t('smartWizard')}
+                </Button>
+              </CardContent>
+            </Card>
 
-          {/* Settings */}
-          <Card className="card-hover">
-            <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-gray-500">{t('settings')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-xs">{t('passScore')}</Label>
-                <Input
-                  type="number"
-                  value={passingScore}
-                  onChange={(e) => setPassingScore(e.target.value)}
-                  min="0"
-                  max="100"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">{t('maxAttempts')}</Label>
-                <Input
-                  type="number"
-                  value={maxAttempts}
-                  onChange={(e) => setMaxAttempts(e.target.value)}
-                  min="1"
-                  className="mt-1"
-                />
-              </div>
-              <div className="space-y-3 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={allowRetake}
-                    onChange={(e) => setAllowRetake(e.target.checked)}
-                    className="rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold"
-                  />
-                  <span className="text-sm text-gray-700">{t('allowRetake')}</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={certificateOnCompletion}
-                    onChange={(e) => setCertificateOnCompletion(e.target.checked)}
-                    className="rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold"
-                  />
-                  <span className="text-sm text-gray-700">{t('certificateOnCompletion')}</span>
-                </label>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Module Skills */}
+            <ModuleSkillsEditor moduleId={moduleId || ''} />
+          </div>
+        </BuilderSidebar>
       </div>
+
 
       {/* Content Dialog */}
       <Dialog open={showContentDialog} onOpenChange={setShowContentDialog}>
@@ -1253,14 +1055,15 @@ export default function TrainingBuilder() {
 
             <div>
               <Label>{t('content')}</Label>
-              <Textarea
+              <RichTextEditor
                 value={currentBlock.content}
-                onChange={(e) => setCurrentBlock({ ...currentBlock, content: e.target.value })}
+                onChange={(val) => setCurrentBlock({ ...currentBlock, content: val })}
                 placeholder={t('content')}
-                rows={8}
-                className={`font-mono text-sm ${isRTL ? 'text-right' : ''}`}
+                className="mt-2"
+                minHeight={300}
+                direction={isRTL ? 'rtl' : 'ltr'}
               />
-              <p className="text-xs text-gray-500 mt-1">Supports HTML and basic formatting.</p>
+              <p className="text-xs text-gray-500 mt-1">Supports smart headings (Purpose:, SOP:), alerts (IMPORTANT:), and Arabic text.</p>
             </div>
 
             {currentBlock.type === 'video' && (
@@ -1274,14 +1077,70 @@ export default function TrainingBuilder() {
               </div>
             )}
 
+            {/* Image Support */}
+            {currentBlock.type === 'image' && (
+              <div>
+                <Label>{t('imageUrl')}</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={currentBlock.content_url}
+                      onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'image')}
+                        disabled={uploading}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Upload className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">{uploading ? 'Uploading...' : 'Upload Image'}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {currentBlock.type === 'document_link' && (
               <div>
-                <Label>{t('enterUrl')}</Label>
-                <Input
-                  value={currentBlock.content_url}
-                  onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
-                  placeholder="https://example.com/document.pdf"
-                />
+                <Label>{t('documentUrl')}</Label>
+                <div className="space-y-3">
+                  <Input
+                    value={currentBlock.content_url}
+                    onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
+                    placeholder="https://example.com/document.pdf"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.ppt,.pptx"
+                        onChange={(e) => handleFileUpload(e, 'document')}
+                        disabled={uploading}
+                        className="hidden"
+                        id="doc-upload"
+                      />
+                      <label
+                        htmlFor="doc-upload"
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Upload className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">{uploading ? 'Uploading...' : 'Upload Document'}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1334,10 +1193,10 @@ export default function TrainingBuilder() {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* AI Question Generator Dialog */}
-      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+      < Dialog open={showAIDialog} onOpenChange={setShowAIDialog} >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1366,7 +1225,54 @@ export default function TrainingBuilder() {
             />
           </div>
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+
+      {/* Smart Module Wizard */}
+      < SmartModuleWizard
+        open={showSmartWizard}
+        onOpenChange={setShowSmartWizard}
+        onModuleCreated={(newId) => {
+          setModuleId(newId)
+        }}
+      />
+
+      {/* Knowledge Base Floating Sidebar */}
+      {
+        showKBSidebar && (
+          <div className="fixed right-0 top-16 bottom-0 w-80 z-40 shadow-xl border-l bg-white">
+            <KnowledgeBaseSidebar
+              moduleId={moduleId || undefined}
+              moduleTopic={title}
+              onInsertContent={(content) => {
+                // Add content block
+                const newBlock: ContentBlockForm = {
+                  id: `block_${Date.now()}`,
+                  type: content.type === 'ai_generated' ? 'text' : content.type as ContentType,
+                  title: content.title,
+                  content: content.content,
+                  content_url: '',
+                  content_data: content.sourceId ? { source_document_id: content.sourceId } : {},
+                  is_mandatory: true,
+                  order: contentBlocks.length
+                }
+                setContentBlocks([...contentBlocks, newBlock])
+              }}
+              onLinkDocument={(docId) => {
+                // Link document
+                console.log('Link document:', docId)
+              }}
+              onLinkQuiz={(quizId) => {
+                // Link quiz
+                console.log('Link quiz:', quizId)
+              }}
+              onAddQuestions={(questionIds) => {
+                console.log('Add questions:', questionIds)
+              }}
+              className="h-full"
+            />
+          </div>
+        )
+      }
+    </div >
   )
 }

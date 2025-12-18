@@ -316,6 +316,36 @@ export default function RequestDetail() {
                     ) : (
                       <div className="text-sm text-gray-600">Leave request not found.</div>
                     )
+                  ) : request.entity_type === 'promotion' ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500">New Role</div>
+                          <div className="font-medium capitalize">{(request.metadata as any)?.new_role?.replace('_', ' ')}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500">Effective Date</div>
+                          <div className="font-medium">
+                            {(request.metadata as any)?.effective_date ? format(new Date((request.metadata as any).effective_date), 'MMM dd, yyyy') : '—'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : request.entity_type === 'transfer' ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500">Target Property</div>
+                          <div className="font-medium">{(request.metadata as any)?.target_property}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500">Effective Date</div>
+                          <div className="font-medium">
+                            {(request.metadata as any)?.effective_date ? format(new Date((request.metadata as any).effective_date), 'MMM dd, yyyy') : '—'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="text-sm text-gray-600">No renderer for this request type yet.</div>
                   )}

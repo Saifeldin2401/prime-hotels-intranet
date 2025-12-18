@@ -44,7 +44,8 @@ import {
     useRecentArticles,
     useRequiredReading,
     useCategories,
-    useContentTypeCounts
+    useContentTypeCounts,
+    useDepartmentContentCounts
 } from '@/hooks/useKnowledge'
 import { CONTENT_TYPE_CONFIG, type KnowledgeContentType } from '@/types/knowledge'
 
@@ -71,6 +72,7 @@ export default function KnowledgeHome() {
     const { data: required, isLoading: requiredLoading } = useRequiredReading()
     const { data: categories } = useCategories()
     const { data: typeCounts } = useContentTypeCounts()
+    const { data: deptCounts } = useDepartmentContentCounts()
 
     const canManage = ['regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(primaryRole || '')
 
@@ -84,45 +86,60 @@ export default function KnowledgeHome() {
     const pendingRequired = required?.filter(r => !r.is_acknowledged) || []
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-hotel-navy/5 to-transparent">
+        <div className="min-h-screen bg-gray-50/50">
             {/* Hero Section */}
-            <div className="bg-hotel-navy text-white py-12 px-4">
-                <div className="container mx-auto max-w-4xl text-center">
-                    <h1 className="text-3xl md:text-4xl font-bold mb-4 font-serif">
+            <div className="bg-hotel-navy relative overflow-hidden text-white py-16 md:py-20 px-4">
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none">
+                    <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-hotel-gold blur-3xl" />
+                    <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-blue-500 blur-3xl" />
+                </div>
+
+                <div className="container mx-auto max-w-4xl text-center relative z-10">
+                    <h1 className="text-4xl md:text-5xl font-bold mb-6 font-serif tracking-tight text-white drop-shadow-sm">
                         Knowledge Base
                     </h1>
-                    <p className="text-hotel-gold-light mb-8 text-lg">
-                        Your centralized hub for SOPs, policies, guides, and operational knowledge
+                    <p className="text-white/90 mb-3 text-xl font-medium">
+                        Centralized Hub for SOPs, Policies, and Operational Guides
+                    </p>
+                    <p className="text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
+                        Access all the critical resources you need to deliver excellence.
+                        From daily housekeeping checklists to complex emergency protocols and department-specific standards.
                     </p>
 
                     {/* Search Bar */}
-                    <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <Input
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search articles, SOPs, policies..."
-                            className="pl-12 pr-4 py-6 text-lg rounded-xl bg-white text-gray-900 border-0 shadow-lg"
-                        />
-                        <Button
-                            type="submit"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy"
-                        >
-                            Search
-                        </Button>
+                    <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto mb-8">
+                        <div className="relative group">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-hotel-gold to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                            <div className="relative bg-white rounded-xl shadow-2xl flex items-center p-2">
+                                <Search className="ml-4 h-6 w-6 text-gray-400" />
+                                <Input
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search for SOPs, guides, documents..."
+                                    className="border-0 shadow-none focus-visible:ring-0 text-lg py-6 text-gray-900 placeholder:text-gray-400 bg-transparent flex-1"
+                                />
+                                <Button
+                                    type="submit"
+                                    className="bg-hotel-navy hover:bg-hotel-navy/90 text-white rounded-lg px-8 py-6 text-base font-medium transition-all duration-300 shadow-md hover:shadow-lg"
+                                >
+                                    Search
+                                </Button>
+                            </div>
+                        </div>
                     </form>
 
                     {/* Quick Filters */}
-                    <div className="flex flex-wrap justify-center gap-2 mt-6">
+                    <div className="flex flex-wrap justify-center gap-3">
                         {CONTENT_TYPE_CONFIG.slice(0, 6).map(config => {
                             const Icon = CONTENT_TYPE_ICONS[config.type]
                             return (
                                 <Link
                                     key={config.type}
                                     to={`/knowledge/browse?type=${config.type}`}
-                                    className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center gap-2 text-sm"
+                                    className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 backdrop-blur-sm border border-white/10 transition-all duration-300 flex items-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                                 >
-                                    <Icon className="h-4 w-4" />
+                                    <Icon className="h-4 w-4 text-hotel-gold" />
                                     {config.label}
                                 </Link>
                             )
@@ -224,44 +241,55 @@ export default function KnowledgeHome() {
                     )}
                 </section>
 
-                {/* Browse by Type */}
+                {/* Browse by Department */}
                 <section>
                     <div className="flex items-center gap-2 mb-4">
-                        <Filter className="h-5 w-5 text-gray-600" />
-                        <h2 className="text-xl font-bold">Browse by Type</h2>
+                        <BookOpen className="h-5 w-5 text-gray-600" />
+                        <h2 className="text-xl font-bold">Browse by Department</h2>
+                        <Badge variant="outline" className="text-xs">Personalized for you</Badge>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {CONTENT_TYPE_CONFIG.map(config => {
-                            const Icon = CONTENT_TYPE_ICONS[config.type]
-                            const count = typeCounts?.[config.type] || 0
-                            return (
+                    {Object.keys(deptCounts || {}).length === 0 ? (
+                        <Card className="p-8 text-center">
+                            <p className="text-gray-500">No department-specific content available yet.</p>
+                            <p className="text-sm text-gray-400 mt-2">Content will appear here once you're assigned to a department.</p>
+                        </Card>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Object.entries(deptCounts || {}).map(([deptId, dept]: [string, any]) => (
                                 <Link
-                                    key={config.type}
-                                    to={`/knowledge/browse?type=${config.type}`}
-                                    className="p-4 rounded-xl border bg-white hover:shadow-md transition-all group"
+                                    key={deptId}
+                                    to={`/knowledge/browse?department=${deptId}`}
+                                    className="p-6 rounded-xl border bg-white hover:shadow-lg transition-all group"
                                 >
                                     <div className="flex items-start justify-between mb-3">
-                                        <div className={cn(
-                                            "w-12 h-12 rounded-lg flex items-center justify-center",
-                                            `bg-${config.color}-100`
-                                        )}>
-                                            <Icon className={cn("h-6 w-6", `text-${config.color}-600`)} />
+                                        <div className="w-12 h-12 rounded-lg bg-hotel-navy/10 flex items-center justify-center">
+                                            <BookOpen className="h-6 w-6 text-hotel-navy" />
                                         </div>
-                                        {count > 0 && (
-                                            <Badge variant="secondary" className="text-xs">
-                                                {count}
-                                            </Badge>
-                                        )}
+                                        <Badge variant="secondary" className="text-xs">
+                                            {dept.total} {dept.total === 1 ? 'article' : 'articles'}
+                                        </Badge>
                                     </div>
-                                    <h3 className="font-semibold group-hover:text-hotel-gold transition-colors">
-                                        {config.label}
+
+                                    <h3 className="font-semibold text-lg mb-2 group-hover:text-hotel-gold transition-colors">
+                                        {dept.name}
                                     </h3>
-                                    <p className="text-sm text-gray-500">{config.description}</p>
+
+                                    {/* Top 3 content types in this department */}
+                                    <div className="flex flex-wrap gap-1">
+                                        {Object.entries(dept.counts)
+                                            .sort(([, a]: [string, any], [, b]: [string, any]) => b - a)
+                                            .slice(0, 3)
+                                            .map(([type, count]: [string, any]) => (
+                                                <Badge key={type} variant="outline" className="text-xs capitalize">
+                                                    {type}: {count}
+                                                </Badge>
+                                            ))}
+                                    </div>
                                 </Link>
-                            )
-                        })}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 {/* Recently Updated */}

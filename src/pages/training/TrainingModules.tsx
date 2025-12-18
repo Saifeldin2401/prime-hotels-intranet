@@ -166,27 +166,36 @@ export default function TrainingModules() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email')
-        .eq('status', 'active')
-        .order('first_name')
+        .select('id, full_name, email')
+        .order('full_name')
 
       if (error) throw error
-      return data || []
+      // Map to expected format for AssignmentDialog
+      return (data || []).map(u => ({
+        id: u.id,
+        first_name: u.full_name?.split(' ')[0] || '',
+        last_name: u.full_name?.split(' ').slice(1).join(' ') || '',
+        email: u.email
+      }))
     },
     enabled: showAssignDialog
   })
 
-  // Fetch departments for assignment
+  // Fetch departments for assignment - include property name for disambiguation
   const { data: availableDepartments } = useQuery({
     queryKey: ['departments-for-assignment'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
-        .select('id, name')
+        .select('id, name, property:properties(id, name)')
         .order('name')
 
       if (error) throw error
-      return data || []
+      // Format department name with property for disambiguation
+      return (data || []).map((d: any) => ({
+        id: d.id,
+        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name
+      }))
     },
     enabled: showAssignDialog
   })
@@ -528,25 +537,25 @@ export default function TrainingModules() {
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
-                    className="w-full border-gray-200 hover:bg-hotel-gold hover:text-white hover:border-hotel-gold transition-colors"
+                    className="w-full border-gray-200 hover:bg-hotel-gold hover:text-white hover:border-hotel-gold transition-colors group"
                     size="sm"
                     onClick={() => handleEdit(module)}
                   >
-                    <Edit className="h-4 w-4 mr-2" />
+                    <Edit className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                     {t('edit', 'Info')}
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full border-gray-200 hover:bg-hotel-navy hover:text-white hover:border-hotel-navy transition-colors"
+                    className="w-full border-gray-200 hover:bg-hotel-navy hover:text-white hover:border-hotel-navy transition-colors group"
                     size="sm"
                     onClick={() => navigate(`/training/builder/${module.id}`)}
                   >
-                    <FileText className="h-4 w-4 mr-2" />
+                    <FileText className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" />
                     {t('content', 'Content')}
                   </Button>
                   <Button
                     className={cn(
-                      "w-full transition-colors",
+                      "w-full transition-colors group",
                       module.status === 'published'
                         ? "bg-hotel-navy text-white hover:bg-hotel-navy-light"
                         : "bg-gray-100 text-gray-500 hover:bg-gray-200"
@@ -560,17 +569,17 @@ export default function TrainingModules() {
                       handleAssign(module.id);
                     }}
                   >
-                    <Users className="h-4 w-4 mr-2" />
+                    <Users className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:scale-110" />
                     {t('assign', 'Assign')}
                   </Button>
                   <Button
                     variant="ghost"
-                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200"
+                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 group"
                     size="sm"
                     onClick={() => handleDelete(module)}
                     disabled={deleteModuleMutation.isPending}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:rotate-12" />
                     {t('delete', 'Delete')}
                   </Button>
                 </div>
@@ -616,16 +625,18 @@ export default function TrainingModules() {
         existingDurations={durations || []}
       />
 
-      {/* Assignment Dialog */}
-      <AssignmentDialog
-        open={showAssignDialog}
-        onOpenChange={setShowAssignDialog}
-        users={availableUsers || []}
-        departments={availableDepartments || []}
-        properties={availableProperties || []}
-        onAssign={handleAssignSubmit}
-        isAssigning={assignMutation.isPending}
-      />
+      {/* Assignment Dialog - Conditionally rendered to prevent infinite loop */}
+      {showAssignDialog && (
+        <AssignmentDialog
+          open={true}
+          onOpenChange={(open) => !open && setShowAssignDialog(false)}
+          users={availableUsers || []}
+          departments={availableDepartments || []}
+          properties={availableProperties || []}
+          onAssign={handleAssignSubmit}
+          isAssigning={assignMutation.isPending}
+        />
+      )}
 
       {/* Delete Confirmation */}
       <DeleteConfirmation

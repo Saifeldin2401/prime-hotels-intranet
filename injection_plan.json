@@ -1,0 +1,61 @@
+{
+    "database_mapping": {
+        "sops": {
+            "table": "sop_documents",
+            "field_map": {
+                "id": "id",
+                "title": "title",
+                "title_ar": "title_ar",
+                "procedure": "content (serialized as JSON/Text)",
+                "department": "department_id (via lookup)"
+            }
+        },
+        "knowledge_base": {
+            "table": "knowledge_articles",
+            "field_map": {
+                "title": "title",
+                "content": "content",
+                "title_ar": "title_ar",
+                "content_ar": "content_ar"
+            }
+        },
+        "quizzes": {
+            "table": "knowledge_questions",
+            "field_map": {
+                "text": "question_text",
+                "text_ar": "question_text_ar",
+                "options": "options (jsonb)",
+                "correct_index": "correct_answer",
+                "rationale": "explanation"
+            }
+        }
+    },
+    "api_endpoints": [
+        {
+            "name": "Batch Import Content",
+            "method": "POST",
+            "path": "/functions/v1/import-content",
+            "auth_required": true,
+            "payload": "application/json"
+        }
+    ],
+    "indexing_strategy": [
+        "CREATE INDEX idx_sop_dept ON sop_documents (department_id);",
+        "CREATE INDEX idx_kb_search_ar ON knowledge_articles USING gin (to_tsvector('arabic', title_ar || ' ' || content_ar));",
+        "CREATE INDEX idx_kb_search_en ON knowledge_articles USING gin (to_tsvector('english', title || ' ' || content));"
+    ],
+    "prioritized_backlog": [
+        {
+            "task": "Develop Arabic Search Parser",
+            "points": 5,
+            "priority": "High",
+            "description": "Implement specialized stemming and normalization for Modern Standard Arabic (MSA) search."
+        },
+        {
+            "task": "Nitaqat Qiwa Integration",
+            "points": 13,
+            "priority": "Medium",
+            "description": "Direct API connection to Qiwa to fetch property-level compliance scores (Requires Govt API Key)."
+        }
+    ]
+}

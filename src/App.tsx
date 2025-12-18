@@ -10,7 +10,10 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { AnimatePresence } from 'framer-motion'
+import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { RoleBasedRedirect } from '@/components/auth/RoleBasedRedirect'
+
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { useTranslation } from 'react-i18next'
 import Login from '@/pages/Login'
@@ -23,6 +26,7 @@ import { AreaManagerDashboard } from '@/pages/dashboard/AreaManagerDashboard'
 import { CorporateAdminDashboard } from '@/pages/dashboard/CorporateAdminDashboard'
 import DepartmentDetails from '@/pages/dashboard/DepartmentDetails'
 import UserManagement from '@/pages/admin/UserManagement'
+import JobTitles from '@/pages/admin/JobTitles'
 import PropertyManagement from '@/pages/admin/PropertyManagement'
 import PropertyDetails from '@/pages/dashboard/PropertyDetails'
 import DocumentLibrary from '@/pages/documents/DocumentLibrary'
@@ -31,18 +35,25 @@ import TrainingModules from '@/pages/training/TrainingModules'
 import MyCertificates from '@/pages/training/MyCertificates'
 import TrainingBuilder from '@/pages/training/TrainingBuilder'
 import TrainingAssignments from '@/pages/training/TrainingAssignments'
+import TrainingAssignmentRules from '@/pages/training/TrainingAssignmentRules'
 import TrainingCertificates from '@/pages/training/TrainingCertificates'
 import TrainingPaths from '@/pages/training/TrainingPaths'
 import AnnouncementFeed from '@/pages/announcements/AnnouncementFeed'
+import OnboardingDashboard from '@/pages/onboarding/OnboardingDashboard'
+import OnboardingTracker from '@/pages/onboarding/OnboardingTracker'
+import OnboardingTemplates from '@/pages/onboarding/OnboardingTemplates'
+import TemplateEditor from '@/pages/onboarding/TemplateEditor'
 
 import SubmitTicket from '@/pages/maintenance/SubmitTicket'
 import MaintenanceDashboard from '@/pages/maintenance/MaintenanceDashboard'
 import MaintenanceTicketDetail from '@/pages/maintenance/MaintenanceTicketDetail'
+import PreventiveMaintenance from '@/pages/maintenance/PreventiveMaintenance'
 import ReportsDashboard from '@/pages/reports/ReportsDashboard'
 import EmployeeReferrals from '@/pages/hr/EmployeeReferrals'
 import MyLeaveRequests from '@/pages/hr/MyLeaveRequests'
 import AuditLogs from '@/pages/admin/AuditLogs'
 import EscalationRules from '@/pages/admin/EscalationRules'
+import WorkflowDashboard from '@/pages/admin/workflows/WorkflowDashboard'
 import { PIIAuditViewer } from '@/pages/admin/PIIIAuditViewer'
 import AnalyticsDashboard from '@/pages/dashboard/AnalyticsDashboard'
 import MyApprovals from '@/pages/approvals/MyApprovals'
@@ -88,6 +99,8 @@ import TrainingAnalytics from '@/pages/training/TrainingAnalytics'
 import PublicHome from '@/pages/public/PublicHome'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
 import ResetPassword from '@/pages/auth/ResetPassword'
+import ChangePassword from '@/pages/auth/ChangePassword'
+import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -136,6 +149,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/hr/promotions/history"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+            <AppLayout>
+              <PromotionTransferHistory />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/login"
         element={user ? <Navigate to="/home" replace /> : <Login />}
       />
@@ -147,13 +170,27 @@ function AppRoutes() {
         path="/reset-password"
         element={<ResetPassword />}
       />
+      <Route
+        path="/change-password"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <div className="flex items-center justify-center min-h-[80vh]">
+                <ChangePassword />
+              </div>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route
         path="/profile"
         element={
           <ProtectedRoute>
             <AppLayout>
-              <MyProfile />
+              <MotionWrapper>
+                <MyProfile />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -163,7 +200,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <Settings />
+              <MotionWrapper>
+                <Settings />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -173,7 +212,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <ApprovalsDashboard />
+              <MotionWrapper>
+                <ApprovalsDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -183,7 +224,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <EmployeeDirectory />
+              <MotionWrapper>
+                <EmployeeDirectory />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -203,7 +246,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
             <AppLayout>
-              <AnalyticsDashboard />
+              <MotionWrapper>
+                <AnalyticsDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -213,7 +258,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['staff']}>
             <AppLayout>
-              <StaffDashboard />
+              <MotionWrapper>
+                <StaffDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -224,7 +271,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['property_manager']}>
             <AppLayout>
-              <PropertyManagerDashboard />
+              <MotionWrapper>
+                <PropertyManagerDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -234,7 +283,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['property_hr']}>
             <AppLayout>
-              <PropertyHRDashboard />
+              <MotionWrapper>
+                <PropertyHRDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -244,7 +295,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['department_head']}>
             <AppLayout>
-              <DepartmentHeadDashboard />
+              <MotionWrapper>
+                <DepartmentHeadDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -254,7 +307,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['regional_hr']}>
             <AppLayout>
-              <AreaManagerDashboard />
+              <MotionWrapper>
+                <AreaManagerDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -264,7 +319,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['regional_admin']}>
             <AppLayout>
-              <CorporateAdminDashboard />
+              <MotionWrapper>
+                <CorporateAdminDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -285,6 +342,16 @@ function AppRoutes() {
           <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
             <AppLayout>
               <UserManagement />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/job-titles"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
+            <AppLayout>
+              <JobTitles />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -330,6 +397,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/workflows"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'property_manager']}>
+            <AppLayout>
+              <WorkflowDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/pii-audit"
         element={
           <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
@@ -344,7 +421,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <DocumentLibrary />
+              <MotionWrapper>
+                <DocumentLibrary />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -364,7 +443,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <MyApprovals />
+              <MotionWrapper>
+                <MyApprovals />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -375,7 +456,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
             <AppLayout>
-              <TrainingModules />
+              <MotionWrapper>
+                <TrainingModules />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -598,8 +681,7 @@ function AppRoutes() {
         }
       />
       {/* Legacy SOP Routes - Redirected */}
-      <Route path="/sop/quiz/builder" element={<Navigate to="/learning/quizzes/new" replace />} />
-      <Route path="/sop/quiz/:id" element={<Navigate to="/learning/quizzes/:id/take" replace />} />
+
       <Route
         path="/learning/quizzes/:id/take"
         element={
@@ -722,6 +804,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/training/assignments/rules"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'department_head']}>
+            <AppLayout>
+              <TrainingAssignmentRules />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/training/paths"
         element={
           <ProtectedRoute>
@@ -742,23 +834,90 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/announcements"
+        path="/onboarding"
         element={
           <ProtectedRoute>
             <AppLayout>
-              <AnnouncementFeed />
+              <MotionWrapper>
+                <OnboardingDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
       />
-      <Route path="/sop" element={<Navigate to="/knowledge" replace />} />
-      <Route path="/sop/:id" element={<Navigate to="/knowledge/:id" replace />} />
+
+      <Route
+        path="/hr/onboarding"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+            <AppLayout>
+              <MotionWrapper>
+                <OnboardingTracker />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/onboarding/templates"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <MotionWrapper>
+                <OnboardingTemplates />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/onboarding/templates/new"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <MotionWrapper>
+                <TemplateEditor />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/onboarding/templates/:id"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <MotionWrapper>
+                <TemplateEditor />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/announcements"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MotionWrapper>
+                <AnnouncementFeed />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/maintenance"
         element={
           <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
             <AppLayout>
-              <MaintenanceDashboard />
+              <MotionWrapper>
+                <MaintenanceDashboard />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }
@@ -988,6 +1147,7 @@ function App() {
               <PropertyProvider>
                 <NotificationProvider>
                   <AppRoutes />
+                  <SessionTimeoutWarning />
                 </NotificationProvider>
               </PropertyProvider>
             </AuthProvider>

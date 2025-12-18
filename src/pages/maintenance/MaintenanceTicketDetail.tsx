@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import {
     useMaintenanceTicket,
-    useUpdateMaintenanceTicket,
+    useAssignMaintenanceTicket,
     useCompleteMaintenanceTicket,
     useAddMaintenanceComment
 } from '@/hooks/useMaintenanceTickets'
@@ -37,19 +37,19 @@ const statusColors: Record<string, string> = {
 export default function MaintenanceTicketDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { roles } = useAuth()
+    const { user, roles } = useAuth()
     const { t, i18n } = useTranslation('maintenance')
     const isRTL = i18n.dir() === 'rtl'
 
     const { data: ticket, isLoading } = useMaintenanceTicket(id!)
-    const updateMutation = useUpdateMaintenanceTicket()
+    const assignMutation = useAssignMaintenanceTicket()
     const completeMutation = useCompleteMaintenanceTicket()
     const addCommentMutation = useAddMaintenanceComment()
 
     const [newComment, setNewComment] = useState('')
 
     const userRole = roles[0]?.role
-    const canManageTickets = ['regional_admin', 'regional_hr', 'property_manager', 'department_head'].includes(userRole || '')
+    const canManageTickets = ['regional_admin', 'regional_hr', 'property_manager', 'department_head', 'staff'].includes(userRole || '')
 
     if (isLoading) {
         return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin" /></div>
@@ -68,9 +68,14 @@ export default function MaintenanceTicketDetail() {
         )
     }
 
-    const handleStatusUpdate = (newStatus: string) => {
-        // @ts-ignore
-        updateMutation.mutate({ ticketId: ticket.id, updates: { status: newStatus } })
+    const handleAcceptTicket = () => {
+        if (!user?.id) return
+        assignMutation.mutate({
+            ticketId: ticket.id,
+            assignedToId: user.id,
+            ticketTitle: ticket.title,
+            priority: ticket.priority
+        })
     }
 
     const handleComplete = () => {
@@ -89,8 +94,8 @@ export default function MaintenanceTicketDetail() {
 
     return (
         <div className="container mx-auto py-6 space-y-6">
-            <Button variant="ghost" onClick={() => navigate('/maintenance')} className="mb-2">
-                <ArrowLeft className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} /> {t('back_to_dashboard')}
+            <Button variant="ghost" onClick={() => navigate('/maintenance')} className="mb-2 group">
+                <ArrowLeft className={cn("w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1", isRTL ? "ml-2" : "mr-2")} /> {t('back_to_dashboard')}
             </Button>
 
             <div className="flex flex-col md:flex-row gap-6">
@@ -101,22 +106,22 @@ export default function MaintenanceTicketDetail() {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <Badge className={priorityColors[ticket.priority]}>{ticket.priority}</Badge>
-                                        <Badge variant="outline" className={statusColors[ticket.status]}>{ticket.status.replace('_', ' ')}</Badge>
+                                        <Badge className={priorityColors[ticket.priority]}>{t(ticket.priority)}</Badge>
+                                        <Badge variant="outline" className={statusColors[ticket.status]}>{t(ticket.status)}</Badge>
                                     </div>
                                     <CardTitle className="text-2xl">{ticket.title}</CardTitle>
                                     <p className="text-sm text-muted-foreground mt-1">#{ticket.id.slice(0, 8)}</p>
                                 </div>
                                 {canManageTickets && (
                                     <div className="flex gap-2">
-                                        {ticket.status === 'open' && (
-                                            <Button onClick={() => handleStatusUpdate('in_progress')} size="sm">
-                                                {t('accept_ticket')}
+                                        {(ticket.status === 'open' || !ticket.assigned_to_id) && (
+                                            <Button onClick={handleAcceptTicket} size="sm" disabled={assignMutation.isPending}>
+                                                {assignMutation.isPending ? t('processing') : t('accept_ticket')}
                                             </Button>
                                         )}
                                         {ticket.status === 'in_progress' && (
-                                            <Button onClick={handleComplete} size="sm" className="bg-green-600 hover:bg-green-700">
-                                                {t('mark_complete')}
+                                            <Button onClick={handleComplete} size="sm" className="bg-green-600 hover:bg-green-700" disabled={completeMutation.isPending}>
+                                                {completeMutation.isPending ? t('processing') : t('mark_complete')}
                                             </Button>
                                         )}
                                     </div>
@@ -125,7 +130,7 @@ export default function MaintenanceTicketDetail() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="bg-muted/30 p-4 rounded-lg">
-                                <h3 className="font-semibold mb-2">{t('submit_ticket.description')}</h3>
+                                <h3 className="font-semibold mb-2">{t('description')}</h3>
                                 <p className="text-sm whitespace-pre-wrap">{ticket.description}</p>
                             </div>
 
@@ -162,9 +167,9 @@ export default function MaintenanceTicketDetail() {
                                     {ticket.attachments.map(att => (
                                         <div key={att.id} className="flex items-center justify-between p-2 border rounded hover:bg-muted/50">
                                             <span className="text-sm">{att.file_name}</span>
-                                            <Button variant="ghost" size="sm" asChild>
+                                            <Button variant="ghost" size="sm" asChild className="group">
                                                 <a href={att.file_path} target="_blank" rel="noopener noreferrer">
-                                                    <Download className="w-4 h-4" />
+                                                    <Download className="w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5" />
                                                 </a>
                                             </Button>
                                         </div>
@@ -209,8 +214,8 @@ export default function MaintenanceTicketDetail() {
                                     onChange={(e) => setNewComment(e.target.value)}
                                     className="min-h-[80px]"
                                 />
-                                <Button className="self-end" onClick={handleAddComment} disabled={addCommentMutation.isPending || !newComment.trim()}>
-                                    <Send className="w-4 h-4" />
+                                <Button className="self-end group" onClick={handleAddComment} disabled={addCommentMutation.isPending || !newComment.trim()}>
+                                    <Send className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
                                 </Button>
                             </div>
                         </CardContent>

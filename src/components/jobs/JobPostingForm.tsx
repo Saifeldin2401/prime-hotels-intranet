@@ -12,6 +12,21 @@ import { useToast } from '@/components/ui/use-toast'
 import type { JobPosting, SeniorityLevel, EmploymentType } from '@/lib/types'
 import { getRoutingDescription } from '@/lib/cvRouting'
 import { useTranslation } from 'react-i18next'
+import { Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface JobPostingFormProps {
     job?: JobPosting
@@ -24,6 +39,21 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
     const navigate = useNavigate()
     const { toast } = useToast()
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [openJobTitle, setOpenJobTitle] = useState(false)
+
+    // Fetch Job Titles from DB
+    const { data: jobTitlesList } = useQuery({
+        queryKey: ['job_titles'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('job_titles')
+                .select('*')
+                .order('title', { ascending: true })
+
+            if (error) throw error
+            return data as { id: string; title: string; default_role: string; category: string }[]
+        }
+    })
 
     const [formData, setFormData] = useState({
         title: job?.title || '',
@@ -149,15 +179,56 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
                     <h3 className="text-lg font-semibold">{t('sections.basic_info')}</h3>
                 </div>
                 <div className="prime-card-body space-y-4">
-                    <div>
+                    <div className="flex flex-col gap-2">
                         <Label htmlFor="title">{t('form.position_title')} *</Label>
-                        <Input
-                            id="title"
-                            value={formData.title}
-                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                            placeholder={t('form.position_placeholder')}
-                            required
-                        />
+                        <Popover open={openJobTitle} onOpenChange={setOpenJobTitle}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openJobTitle}
+                                    className={cn(
+                                        "w-full justify-between",
+                                        !formData.title && "text-muted-foreground"
+                                    )}
+                                >
+                                    {formData.title
+                                        ? jobTitlesList?.find((t) => t.title === formData.title)?.title || formData.title
+                                        : t('form.position_placeholder') || "Select job title"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0" align="start">
+                                <Command>
+                                    <CommandInput placeholder="Search job title..." />
+                                    <CommandList>
+                                        <CommandEmpty>No job title found.</CommandEmpty>
+                                        <CommandGroup>
+                                            {jobTitlesList?.map((item) => (
+                                                <CommandItem
+                                                    value={item.title}
+                                                    key={item.id}
+                                                    onSelect={() => {
+                                                        setFormData({ ...formData, title: item.title })
+                                                        setOpenJobTitle(false)
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            item.title === formData.title
+                                                                ? "opacity-100"
+                                                                : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

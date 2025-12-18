@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { EnhancedButton } from './enhanced-button'
-import { 
-  FileText, 
-  Inbox, 
-  Search, 
+import {
+  FileText,
+  Inbox,
+  Search,
   Calendar,
   Users,
   AlertCircle,
@@ -24,11 +25,11 @@ interface EmptyStateProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
-export function EmptyState({ 
-  icon, 
-  title, 
-  description, 
-  action, 
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
   className,
   size = 'md'
 }: EmptyStateProps) {

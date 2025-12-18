@@ -22,6 +22,7 @@ export const learningService = {
                 questions:learning_quiz_questions(count)
             `)
             .order('created_at', { ascending: false })
+            .eq('is_deleted', false)
 
         if (status) {
             query = query.eq('status', status)
@@ -106,7 +107,7 @@ export const learningService = {
     async deleteQuiz(id: string) {
         const { error } = await supabase
             .from('learning_quizzes')
-            .delete()
+            .update({ is_deleted: true })
             .eq('id', id)
 
         if (error) throw error
@@ -176,6 +177,7 @@ export const learningService = {
             .from('learning_assignments')
             .select('*')
             .order('created_at', { ascending: false })
+            .eq('is_deleted', false)
 
         if (targetId) query = query.eq('target_id', targetId)
         if (targetType) query = query.eq('target_type', targetType)
@@ -259,12 +261,13 @@ export const learningService = {
         }
 
         if (moduleIds.length > 0) {
-            // Only fetch published modules - users shouldn't see draft content
+            // Fetch active modules - training_modules uses is_active not status
             const { data: modules } = await supabase
                 .from('training_modules')
-                .select('id, title, description, estimated_duration_minutes, status')
+                .select('id, title, description, estimated_duration_minutes, status, is_active')
                 .in('id', moduleIds)
-                .eq('status', 'published')
+                .eq('is_active', true)
+                .eq('is_deleted', false)
 
             const moduleMap = new Map(modules?.map(m => [m.id, m]))
 

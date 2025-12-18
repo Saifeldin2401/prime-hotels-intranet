@@ -31,9 +31,10 @@ export function useUserTasks() {
             if (!user?.id) return []
 
             const { data, error } = await supabase
-                .from('tasks')
-                .select('*')
-                .eq('assigned_to', user.id)
+                .from('learning_assignments')
+                .select('id, status, due_date')
+                .eq('target_type', 'user')
+                .eq('target_id', user.id)
                 .neq('status', 'completed')
                 .order('due_date', { ascending: true })
                 .limit(10)
@@ -66,15 +67,13 @@ export function useUserSchedule() {
                 .lte('start_time', futureDate.toISOString())
                 .order('start_time', { ascending: true })
 
-            // Fetch training assignments
-            const { data: training } = await supabase
-                .from('training_assignments')
-                .select(`
-          *,
-          training_module:training_modules(title)
-        `)
-                .eq('assigned_to_user_id', user.id)
-                .eq('status', 'assigned')
+            // Fetch learning assignments
+            const { data: assignments } = await supabase
+                .from('learning_assignments')
+                .select('*')
+                .eq('target_type', 'user')
+                .eq('target_id', user.id)
+                .in('status', ['assigned', 'in_progress'])
                 .gte('due_date', now.toISOString())
                 .lte('due_date', futureDate.toISOString())
                 .order('due_date', { ascending: true })
@@ -97,14 +96,29 @@ export function useUserSchedule() {
             }
 
             // Add training
-            if (training) {
-                training.forEach((t: any) => {
+            if (assignments && assignments.length > 0) {
+                // Fetch module titles
+                const moduleIds = assignments
+                    .filter(a => a.content_type === 'module')
+                    .map(a => a.content_id)
+
+                let modules: { id: string, title: string }[] = []
+                if (moduleIds.length > 0) {
+                    const { data: moduleData } = await supabase
+                        .from('training_modules')
+                        .select('id, title')
+                        .in('id', moduleIds)
+                    if (moduleData) modules = moduleData
+                }
+
+                assignments.forEach((a: any) => {
+                    const moduleTitle = modules.find(m => m.id === a.content_id)?.title
                     scheduleItems.push({
-                        id: t.id,
+                        id: a.id,
                         type: 'training',
-                        title: t.training_module?.title || 'Training Session',
-                        start_time: t.due_date,
-                        end_time: t.due_date,
+                        title: moduleTitle || 'Training Session',
+                        start_time: a.due_date,
+                        end_time: a.due_date, // Assignments are due dates, not durations in schedule
                         location: null,
                         description: null
                     })

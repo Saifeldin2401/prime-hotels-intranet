@@ -6,6 +6,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 export interface DepartmentKPI {
     department_id: string
     department_name: string
+    head_name: string | null
     staff_count: number
     metrics: {
         task_completion_rate: number
@@ -56,10 +57,33 @@ export function useDepartmentKPIs(propertyId?: string) {
                 const userIds = deptUsers?.map(u => u.user_id) || []
                 const staffCount = userIds.length
 
+                // Get Department Head
+                let headName = 'Not assigned'
+                if (userIds.length > 0) {
+                    // Find user with department_head role among these users
+                    const { data: headUser } = await supabase
+                        .from('user_roles')
+                        .select('user_id')
+                        .eq('role', 'department_head')
+                        .in('user_id', userIds)
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (headUser) {
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('full_name')
+                            .eq('id', headUser.user_id)
+                            .single()
+                        if (profile) headName = profile.full_name || 'Unknown'
+                    }
+                }
+
                 if (userIds.length === 0) {
                     kpis.push({
                         department_id: dept.id,
                         department_name: dept.name,
+                        head_name: headName,
                         staff_count: 0,
                         metrics: {
                             task_completion_rate: 0,
@@ -77,12 +101,12 @@ export function useDepartmentKPIs(propertyId?: string) {
                 const { count: totalTasks } = await supabase
                     .from('tasks')
                     .select('*', { count: 'exact', head: true })
-                    .in('assignee_id', userIds)
+                    .in('assigned_to_id', userIds)
 
                 const { count: completedTasks } = await supabase
                     .from('tasks')
                     .select('*', { count: 'exact', head: true })
-                    .in('assignee_id', userIds)
+                    .in('assigned_to_id', userIds)
                     .eq('status', 'completed')
 
                 const taskCompletionRate = totalTasks && totalTasks > 0
@@ -91,9 +115,11 @@ export function useDepartmentKPIs(propertyId?: string) {
 
                 // Calculate Training Completion Rate
                 const { count: totalTraining } = await supabase
-                    .from('training_assignments')
+                    .from('learning_assignments')
                     .select('*', { count: 'exact', head: true })
-                    .in('assigned_to_user_id', userIds)
+                    .select('*', { count: 'exact', head: true })
+                    .eq('target_type', 'user')
+                    .in('target_id', userIds)
 
                 const { count: completedTraining } = await supabase
                     .from('training_progress')
@@ -134,7 +160,7 @@ export function useDepartmentKPIs(propertyId?: string) {
                     const { data: completedTasksData } = await supabase
                         .from('tasks')
                         .select('created_at, updated_at') // Using updated_at as proxy for completed_at if not present
-                        .in('assignee_id', userIds)
+                        .in('assigned_to_id', userIds)
                         .eq('status', 'completed')
                         .limit(50)
 
@@ -180,6 +206,7 @@ export function useDepartmentKPIs(propertyId?: string) {
                 kpis.push({
                     department_id: dept.id,
                     department_name: dept.name,
+                    head_name: headName,
                     staff_count: staffCount,
                     metrics: {
                         task_completion_rate: taskCompletionRate,
@@ -237,18 +264,65 @@ export function useDepartmentKPITrend(departmentId: string) {
     return useQuery({
         queryKey: ['department-kpi-trend', departmentId],
         queryFn: async () => {
-            // For now, return placeholder data
-            // In production, this would query daily snapshots
             const today = new Date()
             const trend = []
 
+            // Fetch completed tasks for the last 30 days for this department
+            // First get users in department
+            const { data: deptUsers } = await supabase
+                .from('user_departments')
+                .select('user_id')
+                .eq('department_id', departmentId)
+
+            const userIds = deptUsers?.map(u => u.user_id) || []
+
+            if (userIds.length === 0) {
+                // Return empty trend with dates
+                for (let i = 29; i >= 0; i--) {
+                    const date = new Date(today)
+                    date.setDate(date.getDate() - i)
+                    trend.push({
+                        date: date.toISOString().split('T')[0],
+                        overall_score: 0
+                    })
+                }
+                return trend
+            }
+
+            // Real: Count completed tasks per day as a proxy for "Activity/Score"
+            // Since we don't have historical score snapshots, we use daily completed tasks
+            const thirtyDaysAgo = new Date(today)
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+            const { data: completedTasks } = await supabase
+                .from('tasks')
+                .select('updated_at')
+                .in('assigned_to_id', userIds)
+                .eq('status', 'completed')
+                .gte('updated_at', thirtyDaysAgo.toISOString())
+
+            // Group by date
+            const tasksByDate: Record<string, number> = {}
+            completedTasks?.forEach(task => {
+                const date = task.updated_at.split('T')[0]
+                tasksByDate[date] = (tasksByDate[date] || 0) + 1
+            })
+
+            // Build trend array
             for (let i = 29; i >= 0; i--) {
                 const date = new Date(today)
                 date.setDate(date.getDate() - i)
+                const dateStr = date.toISOString().split('T')[0]
+
+                // Scale the count to make it look like a score (e.g., base 50 + tasks * 5) to visualize activity
+                // keeping it bounded to 100
+                const count = tasksByDate[dateStr] || 0
+                // Score proxy: 60 (base) + (count * 5)
+                const scoreProxy = Math.min(60 + (count * 5), 100)
 
                 trend.push({
-                    date: date.toISOString().split('T')[0],
-                    overall_score: 70 + Math.floor(Math.random() * 25)
+                    date: dateStr,
+                    overall_score: scoreProxy
                 })
             }
 

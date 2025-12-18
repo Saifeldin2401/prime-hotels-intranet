@@ -2,11 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
+import { useProperty } from '@/contexts/PropertyContext'
+
 export function useMaintenanceStats() {
   const { user, roles, properties } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useQuery({
-    queryKey: ['maintenance-stats', user?.id, properties],
+    queryKey: ['maintenance-stats', user?.id, properties, currentProperty?.id],
     queryFn: async () => {
       if (!user?.id) return null
 
@@ -15,8 +18,11 @@ export function useMaintenanceStats() {
 
       let baseQuery = supabase.from('maintenance_tickets').select('*')
 
-      // Filter based on user role
-      if (!canManageAll && properties.length > 0) {
+      // Filter by current property if selected (and not 'all')
+      if (currentProperty && currentProperty.id !== 'all') {
+        baseQuery = baseQuery.eq('property_id', currentProperty.id)
+      } else if (!canManageAll && properties.length > 0) {
+        // Fallback to all assigned properties if "All" is selected or no specific property
         baseQuery = baseQuery.in('property_id', properties.map(p => p.id))
       }
 
@@ -32,14 +38,14 @@ export function useMaintenanceStats() {
         pendingParts: tickets?.filter(t => t.status === 'pending_parts').length || 0,
         completed: tickets?.filter(t => t.status === 'completed').length || 0,
         cancelled: tickets?.filter(t => t.status === 'cancelled').length || 0,
-        
+
         // Priority breakdown
         critical: tickets?.filter(t => t.priority === 'critical').length || 0,
         urgent: tickets?.filter(t => t.priority === 'urgent').length || 0,
         high: tickets?.filter(t => t.priority === 'high').length || 0,
         medium: tickets?.filter(t => t.priority === 'medium').length || 0,
         low: tickets?.filter(t => t.priority === 'low').length || 0,
-        
+
         // Category breakdown
         plumbing: tickets?.filter(t => t.category === 'plumbing').length || 0,
         electrical: tickets?.filter(t => t.category === 'electrical').length || 0,
@@ -49,11 +55,11 @@ export function useMaintenanceStats() {
         cosmetic: tickets?.filter(t => t.category === 'cosmetic').length || 0,
         safety: tickets?.filter(t => t.category === 'safety').length || 0,
         other: tickets?.filter(t => t.category === 'other').length || 0,
-        
+
         // Personal stats
         myTickets: tickets?.filter(t => t.reported_by_id === user.id).length || 0,
         assignedToMe: tickets?.filter(t => t.assigned_to_id === user.id).length || 0,
-        
+
         // Performance metrics
         avgResolutionTime: 0, // Will calculate below
         overdueCount: 0, // Tickets older than 7 days and not completed
@@ -74,9 +80,9 @@ export function useMaintenanceStats() {
       // Calculate overdue tickets (older than 7 days and not completed)
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      stats.overdueCount = tickets?.filter(t => 
-        t.status !== 'completed' && 
-        t.status !== 'cancelled' && 
+      stats.overdueCount = tickets?.filter(t =>
+        t.status !== 'completed' &&
+        t.status !== 'cancelled' &&
         new Date(t.created_at) < sevenDaysAgo
       ).length || 0
 
@@ -93,9 +99,10 @@ export function useMaintenanceStats() {
 
 export function useMaintenanceTrends(days = 30) {
   const { user, roles, properties } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useQuery({
-    queryKey: ['maintenance-trends', days, user?.id, properties],
+    queryKey: ['maintenance-trends', days, user?.id, properties, currentProperty?.id],
     queryFn: async () => {
       if (!user?.id) return null
 
@@ -110,8 +117,10 @@ export function useMaintenanceTrends(days = 30) {
         .select('*')
         .gte('created_at', startDate.toISOString())
 
-      // Filter based on user role
-      if (!canManageAll && properties.length > 0) {
+      // Filter by current property
+      if (currentProperty && currentProperty.id !== 'all') {
+        baseQuery = baseQuery.eq('property_id', currentProperty.id)
+      } else if (!canManageAll && properties.length > 0) {
         baseQuery = baseQuery.in('property_id', properties.map(p => p.id))
       }
 

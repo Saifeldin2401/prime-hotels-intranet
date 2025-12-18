@@ -12,6 +12,8 @@
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { sidebarItemVariants } from '@/lib/motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -79,12 +81,15 @@ export function SidebarNavigation({
 
   const renderNavItem = (item: NavigationItem) => {
     const Icon = item.icon
+    // Extract nav identifier for tour targeting (e.g., /admin/users -> users)
+    const navId = item.path.split('/').filter(Boolean).pop() || item.path
 
     return (
       <Link
         key={item.path}
         to={item.resolvedPath}
         onClick={handleNavClick}
+        data-nav={navId}
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",
           item.isActive
@@ -104,21 +109,29 @@ export function SidebarNavigation({
           item.isActive ? "text-hotel-navy" : "text-white/60 group-hover:text-hotel-gold transition-colors"
         )} />
 
-        {!collapsed && (
-          <>
-            <span className="flex-1 tracking-wide truncate">
-              {t(item.title, { defaultValue: item.title.split('.').pop() })}
-            </span>
-            {item.badgeCount && item.badgeCount > 0 && (
-              <Badge className={cn(
-                "ms-auto text-[10px] h-5 px-1.5 font-bold min-w-[20px] justify-center",
-                item.isActive ? "bg-hotel-navy/20 text-hotel-navy" : "bg-hotel-gold text-hotel-navy"
-              )}>
-                {item.badgeCount > 99 ? '99+' : item.badgeCount}
-              </Badge>
-            )}
-          </>
-        )}
+        <AnimatePresence>
+          {!collapsed && (
+            <motion.div
+              variants={sidebarItemVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="flex-1 flex items-center min-w-0 overflow-hidden"
+            >
+              <span className="flex-1 tracking-wide truncate">
+                {t(item.title, { defaultValue: item.title.split('.').pop() })}
+              </span>
+              {item.badgeCount && item.badgeCount > 0 && (
+                <Badge className={cn(
+                  "ms-auto text-[10px] h-5 px-1.5 font-bold min-w-[20px] justify-center",
+                  item.isActive ? "bg-hotel-navy/20 text-hotel-navy" : "bg-hotel-gold text-hotel-navy"
+                )}>
+                  {item.badgeCount > 99 ? '99+' : item.badgeCount}
+                </Badge>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Link>
     )
   }
@@ -140,30 +153,46 @@ export function SidebarNavigation({
               collapsed && "justify-center px-0"
             )}
           >
-            {!collapsed && (
-              <>
-                <span className="flex-1 text-left">
-                  {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
-                </span>
-                {hasActiveBadge && (
-                  <div className="w-2 h-2 rounded-full bg-hotel-gold animate-pulse" />
-                )}
-                <ChevronDown
-                  className={cn(
-                    "h-3.5 w-3.5 transition-transform duration-200",
-                    isExpanded && "rotate-180"
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.div
+                  variants={sidebarItemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="flex-1 flex items-center gap-3 min-w-0 overflow-hidden"
+                >
+                  <span className="flex-1 text-left truncate">
+                    {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+                  </span>
+                  {hasActiveBadge && (
+                    <div className="w-2 h-2 rounded-full bg-hotel-gold animate-pulse flex-shrink-0" />
                   )}
-                />
-              </>
-            )}
+                  <ChevronDown
+                    className={cn(
+                      "h-3.5 w-3.5 transition-transform duration-200 flex-shrink-0",
+                      isExpanded && "rotate-180"
+                    )}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
             {collapsed && <GroupIcon className="h-4 w-4" />}
           </button>
         ) : (
-          !collapsed && (
-            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
-            </div>
-          )
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.div
+                variants={sidebarItemVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 whitespace-nowrap overflow-hidden"
+              >
+                {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
 
         {/* Group Items */}
@@ -203,7 +232,7 @@ export function SidebarNavigation({
             "flex h-16 items-center justify-between px-6 border-b border-hotel-navy-dark bg-hotel-navy",
             collapsed && "justify-center px-0"
           )}>
-            <div className="flex items-center gap-3">
+            <div id="sidebar-logo" className="flex items-center gap-3">
               <img
                 src="/prime-logo-light.png"
                 alt="Prime Hotels"
@@ -263,7 +292,7 @@ export function SidebarNavigation({
           )}
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-2 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
+          <nav id="sidebar-nav" className="flex-1 px-3 py-2 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
             {groupedNavigation.map(renderGroup)}
           </nav>
 
@@ -297,7 +326,7 @@ export function SidebarNavigation({
             </Button>
           </div>
         </div>
-      </div>
+      </div >
     </>
   )
 }

@@ -1,0 +1,447 @@
+
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import {
+    Briefcase,
+    Search,
+    Plus,
+    MoreVertical,
+    Pencil,
+    Trash2,
+    AlertTriangle,
+    Loader2
+} from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
+import { ROLES } from '@/lib/constants'
+import { Badge } from '@/components/ui/badge'
+
+interface JobTitle {
+    id: string
+    title: string
+    category: string
+    default_role: string | null
+    created_at: string
+}
+
+export default function JobTitles() {
+    const [search, setSearch] = useState('')
+    const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [editingTitle, setEditingTitle] = useState<JobTitle | null>(null)
+
+    // Form State
+    const [formData, setFormData] = useState({
+        title: '',
+        category: '',
+        default_role: ''
+    })
+
+    const { toast } = useToast()
+    const queryClient = useQueryClient()
+
+    // Fetch Job Titles
+    const { data: jobTitles, isLoading } = useQuery({
+        queryKey: ['job-titles'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('job_titles')
+                .select('*')
+                .order('title', { ascending: true })
+
+            if (error) throw error
+            return data as JobTitle[]
+        }
+    })
+
+    // Create Mutation
+    const createMutation = useMutation({
+        mutationFn: async (newTitle: Omit<JobTitle, 'id' | 'created_at'>) => {
+            const { data, error } = await supabase
+                .from('job_titles')
+                .insert([newTitle])
+                .select()
+                .single()
+
+            if (error) throw error
+            return data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['job-titles'] })
+            toast({
+                title: "Success",
+                description: "Job title created successfully",
+            })
+            setIsDialogOpen(false)
+            resetForm()
+        },
+        onError: (error) => {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive"
+            })
+        }
+    })
+
+    // Update Mutation
+    const updateMutation = useMutation({
+        mutationFn: async (title: JobTitle) => {
+            const { data, error } = await supabase
+                .from('job_titles')
+                .update({
+                    title: title.title,
+                    category: title.category,
+                    default_role: title.default_role
+                })
+                .eq('id', title.id)
+                .select()
+                .single()
+
+            if (error) throw error
+            return data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['job-titles'] })
+            toast({
+                title: "Success",
+                description: "Job title updated successfully",
+            })
+            setIsDialogOpen(false)
+            resetForm()
+        },
+        onError: (error) => {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive"
+            })
+        }
+    })
+
+    // Delete Mutation
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('job_titles')
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['job-titles'] })
+            toast({
+                title: "Success",
+                description: "Job title deleted successfully",
+            })
+        },
+        onError: (error: any) => {
+            // Check for foreign key violation
+            if (error.code === '23503') {
+                toast({
+                    title: "Cannot Delete",
+                    description: "This job title is currently in use by users or templates. Please reassign them first.",
+                    variant: "destructive"
+                })
+            } else {
+                toast({
+                    title: "Error",
+                    description: error.message,
+                    variant: "destructive"
+                })
+            }
+        }
+    })
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+
+        if (!formData.title || !formData.category) {
+            toast({
+                title: "Validation Error",
+                description: "Title and Department are required",
+                variant: "destructive"
+            })
+            return
+        }
+
+        if (editingTitle) {
+            updateMutation.mutate({
+                ...editingTitle,
+                title: formData.title,
+                category: formData.category,
+                default_role: formData.default_role || null
+            })
+        } else {
+            createMutation.mutate({
+                title: formData.title,
+                category: formData.category,
+                default_role: formData.default_role || null
+            })
+        }
+    }
+
+    const handleEdit = (title: JobTitle) => {
+        setEditingTitle(title)
+        setFormData({
+            title: title.title,
+            category: title.category,
+            default_role: title.default_role || ''
+        })
+        setIsDialogOpen(true)
+    }
+
+    const resetForm = () => {
+        setEditingTitle(null)
+        setFormData({
+            title: '',
+            category: '',
+            default_role: ''
+        })
+    }
+
+    const filteredTitles = jobTitles?.filter(jt =>
+        jt.title.toLowerCase().includes(search.toLowerCase()) ||
+        jt.category.toLowerCase().includes(search.toLowerCase())
+    )
+
+    const uniqueCategories = Array.from(new Set(jobTitles?.map(j => j.category) || []))
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold font-serif text-hotel-navy">Job Titles</h1>
+                    <p className="text-muted-foreground flex items-center gap-2">
+                        <Briefcase className="h-4 w-4" />
+                        Manage the master list of job titles and their default system roles
+                    </p>
+                </div>
+
+                <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                    setIsDialogOpen(open)
+                    if (!open) resetForm()
+                }}>
+                    <DialogTrigger asChild>
+                        <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Job Title
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{editingTitle ? 'Edit Job Title' : 'Add New Job Title'}</DialogTitle>
+                            <DialogDescription>
+                                Define the standard job title and its associated department and role.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="title">Job Title <span className="text-red-500">*</span></Label>
+                                <Input
+                                    id="title"
+                                    placeholder="e.g. Front Desk Agent"
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="category">Department / Category <span className="text-red-500">*</span></Label>
+                                <div className="relative">
+                                    <Input
+                                        id="category"
+                                        list="categories"
+                                        placeholder="e.g. Front Office"
+                                        value={formData.category}
+                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                    />
+                                    <datalist id="categories">
+                                        {uniqueCategories.map(cat => (
+                                            <option key={cat} value={cat} />
+                                        ))}
+                                    </datalist>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="role">Default System Role (Optional)</Label>
+                                <Select
+                                    value={formData.default_role}
+                                    onValueChange={(val) => setFormData({ ...formData, default_role: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a role..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(ROLES).map(([key, role]) => (
+                                            <SelectItem key={key} value={key}>
+                                                {role.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    New users with this job title can be automatically assigned this permission level.
+                                </p>
+                            </div>
+
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                                    {(createMutation.isPending || updateMutation.isPending) && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    )}
+                                    {editingTitle ? 'Save Changes' : 'Create Job Title'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            <div className="flex items-center gap-4 bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                        placeholder="Search titles or departments..."
+                        className="pl-9"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-gray-50/50">
+                            <TableHead>Title</TableHead>
+                            <TableHead>Department</TableHead>
+                            <TableHead>Default Role</TableHead>
+                            <TableHead className="w-[100px] text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                    <div className="flex items-center justify-center text-muted-foreground">
+                                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                        Loading job titles...
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredTitles?.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                    <div className="flex flex-col items-center justify-center text-muted-foreground py-8">
+                                        <Briefcase className="h-10 w-10 text-gray-300 mb-3" />
+                                        <p>No job titles found</p>
+                                        <p className="text-sm mt-1">Try adjusting your search or add a new title.</p>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredTitles?.map((job) => (
+                                <TableRow key={job.id} className="group hover:bg-gray-50/50 transition-colors">
+                                    <TableCell className="font-medium text-hotel-navy">
+                                        {job.title}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="secondary" className="bg-gray-100 text-gray-600 hover:bg-gray-200">
+                                            {job.category}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        {job.default_role ? (
+                                            <Badge variant="outline" className="border-hotel-gold text-hotel-navy">
+                                                {(ROLES[job.default_role as keyof typeof ROLES] as any)?.label || job.default_role}
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-muted-foreground text-sm">-</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => handleEdit(job)}>
+                                                    <Pencil className="h-4 w-4 mr-2" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className="text-red-600 focus:text-red-600"
+                                                    onClick={() => {
+                                                        if (confirm('Are you sure you want to delete this job title? This action cannot be undone if it is actively used.')) {
+                                                            deleteMutation.mutate(job.id)
+                                                        }
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                    <p className="font-semibold mb-1">About Job Title Management</p>
+                    <p>
+                        Changes made here will be reflected across the entire system immediately.
+                        Deleting a job title is restricted if it is currently assigned to active user profiles or onboarding templates.
+                    </p>
+                </div>
+            </div>
+        </div>
+    )
+}

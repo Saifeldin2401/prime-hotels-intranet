@@ -22,12 +22,10 @@ export type KnowledgeContentType =
     | 'document'
 
 export type KnowledgeVisibility =
-    | 'global'
+    | 'all_properties'
     | 'property'
     | 'department'
     | 'role'
-    | 'property_department'
-    | 'custom'
 
 export type KnowledgeStatus =
     | 'draft'
@@ -64,6 +62,7 @@ export interface KnowledgeArticle {
     images?: { id: string; url: string; caption: string; order: number }[]  // For visual content
     linked_quiz_id?: string               // Linked assessment
     linked_training_id?: string           // Linked training module
+    file_url?: string                     // Attached file
 
     // Metadata
     featured: boolean

@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next'
 
 export default function PromotionWorkflow() {
     const { user } = useAuth()
-    const { t } = useTranslation('hr')
+    const { t } = useTranslation(['hr', 'common'])
     const navigate = useNavigate()
     const { toast } = useToast()
     const queryClient = useQueryClient()
@@ -90,19 +90,15 @@ export default function PromotionWorkflow() {
 
     const promoteMutation = useMutation({
         mutationFn: async () => {
-            const { error } = await supabase
-                .from('employee_promotions')
-                .insert([{
-                    employee_id: formData.employee_id,
-                    from_role: currentRole,
-                    to_role: formData.to_role,
-                    from_title: selectedEmployee?.full_name || '',
-                    to_title: formData.to_title,
-                    to_department_id: formData.to_department_id || null,
-                    effective_date: formData.effective_date,
-                    approved_by: user?.id,
-                    notes: formData.notes || null
-                }])
+            const { error } = await supabase.rpc("promote_employee", {
+                p_employee_id: formData.employee_id,
+                p_new_role: formData.to_role,
+                p_new_job_title: formData.to_title,
+                p_new_department_id: formData.to_department_id || null,
+                p_effective_date: formData.effective_date,
+                p_notes: formData.notes || null,
+                p_promoter_id: user?.id,
+            });
 
             if (error) throw error
         },
@@ -115,6 +111,7 @@ export default function PromotionWorkflow() {
             navigate('/hr/promotions/history')
         },
         onError: (error: any) => {
+            console.error('Promotion error:', error)
             toast({
                 title: t('common:error', { defaultValue: 'Error' }),
                 description: error.message || t('common:error_occurred', { defaultValue: 'Failed to create promotion' }),

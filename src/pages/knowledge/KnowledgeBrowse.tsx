@@ -4,7 +4,7 @@
  * Browse Knowledge Base by content type with visual grid.
  */
 
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
     FileText,
@@ -111,8 +111,15 @@ const CONTENT_TYPES: {
 
 export default function KnowledgeBrowse() {
     const { t } = useTranslation(['knowledge', 'common'])
+    const [searchParams] = useSearchParams()
+    const departmentId = searchParams.get('department')
+    const typeFilter = searchParams.get('type')
 
-    const { data: articles, isLoading } = useArticles({ limit: 100 })
+    const { data: articles, isLoading } = useArticles({
+        limit: 100,
+        departmentId: departmentId || undefined,
+        type: typeFilter || undefined
+    })
 
     // Count articles by type
     const typeCounts = articles?.reduce((acc, article) => {
@@ -133,6 +140,43 @@ export default function KnowledgeBrowse() {
             <div>
                 <h1 className="text-2xl font-bold text-gray-900">{t('browse.title', 'Browse Knowledge Base')}</h1>
                 <p className="text-gray-600 mt-1">{t('browse.subtitle', 'Explore content by type')}</p>
+
+                {/* Active Filters */}
+                {(departmentId || typeFilter) && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                        {departmentId && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                                <BookOpen className="h-3 w-3" />
+                                Department Filter Active
+                                <Link
+                                    to="/knowledge/browse"
+                                    className="ml-1 hover:text-red-600"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        window.location.href = '/knowledge/browse'
+                                    }}
+                                >
+                                    ×
+                                </Link>
+                            </Badge>
+                        )}
+                        {typeFilter && (
+                            <Badge variant="secondary" className="flex items-center gap-1 capitalize">
+                                {typeFilter} Content
+                                <Link
+                                    to="/knowledge/browse"
+                                    className="ml-1 hover:text-red-600"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        window.location.href = '/knowledge/browse'
+                                    }}
+                                >
+                                    ×
+                                </Link>
+                            </Badge>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Content Type Grid */}

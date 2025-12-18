@@ -71,7 +71,7 @@ export default function AnalyticsDashboard() {
       const results = await Promise.allSettled([
         supabase.from('profiles').select('created_at, is_active').gte('created_at', isoDate),
         supabase.from('documents').select('created_at, status').gte('created_at', isoDate),
-        supabase.from('training_assignments').select('created_at, status, due_date').gte('created_at', isoDate),
+        supabase.from('learning_assignments').select('created_at, status, due_date').gte('created_at', isoDate),
         supabase.from('maintenance_tickets').select('created_at, status, priority').gte('created_at', isoDate),
         // Employee referrals table might not exist yet, so we skip it to prevent errors
         // supabase.from('employee_referrals').select('created_at, status, bonus_amount').gte('created_at', isoDate),

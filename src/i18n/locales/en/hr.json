@@ -25,6 +25,7 @@
         "total_requests": "{{count}} total requests",
         "form": {
             "title": "Submit Leave Request",
+            "description": "Fill out the form below to request leave.",
             "start_date": "Start Date",
             "end_date": "End Date",
             "pick_date": "Pick a date",

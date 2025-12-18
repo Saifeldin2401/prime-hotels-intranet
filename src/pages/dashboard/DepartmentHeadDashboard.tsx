@@ -15,6 +15,8 @@ import { KnowledgeComplianceWidget } from '@/components/knowledge/KnowledgeCompl
 import { useAuth } from '@/hooks/useAuth'
 import { useDepartmentHeadStats } from '@/hooks/useDashboardStats'
 
+import { DepartmentTeamList } from '@/components/dashboard/DepartmentTeamList'
+
 export function DepartmentHeadDashboard() {
   const { currentProperty } = useProperty()
   const { user, profile, primaryRole } = useAuth()
@@ -61,7 +63,9 @@ export function DepartmentHeadDashboard() {
     totalStaff: 0,
     presentToday: 0,
     trainingCompliance: 0,
-    pendingApprovals: 0
+    pendingApprovals: 0,
+    performanceScore: 0,
+    departmentIds: []
   }
 
   const handleReact = (_itemId: string, _reaction: string) => {
@@ -144,8 +148,9 @@ export function DepartmentHeadDashboard() {
             <CardTitle className="text-sm font-medium text-gray-600">Team Performance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">N/A</div>
-            <p className="text-xs text-gray-600 mt-1">Performance data unavailable</p>
+            <div className="text-2xl font-bold text-purple-600">{teamStats.performanceScore}%</div>
+            <Progress value={teamStats.performanceScore} className="mt-2" />
+            <p className="text-xs text-gray-600 mt-1">Task completion rate</p>
           </CardContent>
         </Card>
       </div>
@@ -179,14 +184,11 @@ export function DepartmentHeadDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.Users className="h-5 w-5" />
-                <span>Team Overview</span>
+                <span>Department Staff</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center py-8 text-gray-500">
-                <Icons.Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>Team overview module coming soon.</p>
-              </div>
+              <DepartmentTeamList departmentIds={teamStats.departmentIds} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -225,7 +227,7 @@ export function DepartmentHeadDashboard() {
             <CardContent className="space-y-4">
               <div className="text-center py-8 text-gray-500">
                 <Icons.BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>Department reports module coming soon.</p>
+                <p>No department reports generated.</p>
               </div>
             </CardContent>
           </Card>

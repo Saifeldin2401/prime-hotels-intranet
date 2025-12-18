@@ -26,6 +26,8 @@ import { useUserTasks, useUserSchedule } from '@/hooks/useUserData'
 import { useProperty } from '@/contexts/PropertyContext'
 import { KnowledgeWidget } from '@/components/dashboard/KnowledgeWidget'
 import { DailyQuizWidget } from '@/components/questions'
+import { PromoteEmployeeDialog } from '@/components/hr/PromoteEmployeeDialog'
+import { TransferEmployeeDialog } from '@/components/hr/TransferEmployeeDialog'
 
 export function StaffDashboard() {
   const { user, profile, primaryRole } = useAuth()
@@ -270,6 +272,45 @@ export function StaffDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Promotion Action - Only for HR/Managers */}
+        {['regional_admin', 'property_manager', 'property_hr', 'regional_hr'].includes(currentUser?.role || '') && (
+          <PromoteEmployeeDialog onSuccess={() => {
+            // Ideally refresh data here
+            window.location.reload();
+          }}>
+            <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer">
+              <div className="prime-card-body p-6">
+                <div className="text-center">
+                  <div className="h-14 w-14 rounded-full bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center mx-auto mb-3 transition-colors">
+                    <Activity className="h-7 w-7 text-purple-600" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">Promote Employee</h3>
+                  <p className="text-xs text-gray-500">Manage promotions</p>
+                </div>
+              </div>
+            </div>
+          </PromoteEmployeeDialog>
+        )}
+
+        {/* Transfer Action - Only for HR/Managers */}
+        {['regional_admin', 'property_manager', 'property_hr', 'regional_hr'].includes(currentUser?.role || '') && (
+          <TransferEmployeeDialog onSuccess={() => {
+            window.location.reload();
+          }}>
+            <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer">
+              <div className="prime-card-body p-6">
+                <div className="text-center">
+                  <div className="h-14 w-14 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mx-auto mb-3 transition-colors">
+                    <Target className="h-7 w-7 text-blue-600" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">Transfer Employee</h3>
+                  <p className="text-xs text-gray-500">Cross-property moves</p>
+                </div>
+              </div>
+            </div>
+          </TransferEmployeeDialog>
+        )}
       </div>
 
       {/* Knowledge & Quiz Widgets */}

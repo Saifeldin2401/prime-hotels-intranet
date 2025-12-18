@@ -41,6 +41,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { formatRelativeTime } from '@/lib/utils'
 import type { Document, DocumentApproval, LeaveRequest, MaintenanceTicket } from '@/lib/types'
+import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 
 export default function MyApprovals() {
   const { user, primaryRole, departments, properties } = useAuth()
@@ -49,6 +50,7 @@ export default function MyApprovals() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId] = useState<string>('')
   const queryClient = useQueryClient()
+  const { notifyRequestApproved, notifyRequestRejected, notifyMaintenanceAssigned } = useNotificationTriggers()
 
   // Fetch pending document approvals for the current user
   const { data: pendingApprovals, isLoading } = useQuery({
@@ -254,6 +256,13 @@ export default function MyApprovals() {
     mutationFn: async (documentId: string) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to approve documents')
 
+      // Get document details
+      const { data: document } = await supabase
+        .from('documents')
+        .select('created_by, title')
+        .eq('id', documentId)
+        .single()
+
       // Update the approval record
       const { error: approvalError } = await supabase
         .from('document_approvals')
@@ -284,6 +293,16 @@ export default function MyApprovals() {
           .eq('id', documentId)
 
         if (docError) throw docError
+
+        // Notify document creator that their document was approved
+        if (document?.created_by) {
+          await notifyRequestApproved(
+            document.created_by,
+            'document',
+            documentId,
+            document.title || 'Document'
+          )
+        }
       }
     },
     onSuccess: () => {
@@ -300,6 +319,13 @@ export default function MyApprovals() {
   const rejectMutation = useMutation({
     mutationFn: async ({ documentId, reason }: { documentId: string; reason: string }) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to reject documents')
+
+      // Get document details
+      const { data: document } = await supabase
+        .from('documents')
+        .select('created_by, title')
+        .eq('id', documentId)
+        .single()
 
       // Update the approval record
       const { error: approvalError } = await supabase
@@ -323,6 +349,17 @@ export default function MyApprovals() {
         .eq('id', documentId)
 
       if (docError) throw docError
+
+      // Notify document creator that their document was rejected
+      if (document?.created_by) {
+        await notifyRequestRejected(
+          document.created_by,
+          'document',
+          documentId,
+          document.title || 'Document',
+          reason
+        )
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document-approvals-pending'] })
@@ -340,6 +377,13 @@ export default function MyApprovals() {
     mutationFn: async (leaveRequestId: string) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to approve leave requests')
 
+      // First, get the leave request details to notify the requester
+      const { data: leaveRequest } = await supabase
+        .from('leave_requests')
+        .select('requester_id, start_date, end_date, type')
+        .eq('id', leaveRequestId)
+        .single()
+
       const { error } = await supabase
         .from('leave_requests')
         .update({
@@ -351,6 +395,16 @@ export default function MyApprovals() {
         .eq('status', 'pending')
 
       if (error) throw error
+
+      // Send notification to the requester
+      if (leaveRequest) {
+        await notifyRequestApproved(
+          leaveRequest.requester_id,
+          'leave_request',
+          leaveRequestId,
+          `Leave Request (${leaveRequest.type})`
+        )
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-leave-requests'] })
@@ -366,6 +420,13 @@ export default function MyApprovals() {
     mutationFn: async ({ leaveRequestId, reason }: { leaveRequestId: string; reason: string }) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to reject leave requests')
 
+      // Get leave request details
+      const { data: leaveRequest } = await supabase
+        .from('leave_requests')
+        .select('requester_id, start_date, end_date, type')
+        .eq('id', leaveRequestId)
+        .single()
+
       const { error } = await supabase
         .from('leave_requests')
         .update({
@@ -378,6 +439,17 @@ export default function MyApprovals() {
         .eq('status', 'pending')
 
       if (error) throw error
+
+      // Send notification to requester
+      if (leaveRequest) {
+        await notifyRequestRejected(
+          leaveRequest.requester_id,
+          'leave_request',
+          leaveRequestId,
+          `Leave Request (${leaveRequest.type})`,
+          reason
+        )
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-leave-requests'] })
@@ -394,6 +466,13 @@ export default function MyApprovals() {
     mutationFn: async ({ ticketId, assignedToId }: { ticketId: string; assignedToId: string }) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to assign maintenance tickets')
 
+      // Get ticket details
+      const { data: ticket } = await supabase
+        .from('maintenance_tickets')
+        .select('title, category, priority')
+        .eq('id', ticketId)
+        .single()
+
       const { error } = await supabase
         .from('maintenance_tickets')
         .update({
@@ -405,6 +484,16 @@ export default function MyApprovals() {
         .eq('status', 'open')
 
       if (error) throw error
+
+      // Send notification to assigned staff
+      if (ticket) {
+        await notifyMaintenanceAssigned(
+          assignedToId,
+          ticketId,
+          ticket.title,
+          ticket.priority
+        )
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-maintenance-tickets'] })

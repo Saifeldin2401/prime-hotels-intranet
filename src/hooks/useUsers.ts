@@ -7,6 +7,7 @@ export function useProfiles(filters?: {
     search?: string
     property_id?: string
     department_id?: string
+    department_ids?: string[]
 }) {
     // const { primaryRole, properties } = useAuth() // unused for now
 
@@ -39,6 +40,10 @@ export function useProfiles(filters?: {
 
             if (filters?.department_id) {
                 query = query.not('user_departments', 'is', null).eq('user_departments.department_id', filters.department_id)
+            }
+
+            if (filters?.department_ids && filters.department_ids.length > 0) {
+                query = query.not('user_departments', 'is', null).in('user_departments.department_id', filters.department_ids)
             }
 
             // In a real app, strict RLS would handle this, but for now we might filter here

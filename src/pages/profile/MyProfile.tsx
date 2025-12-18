@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -6,10 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, Save, Upload, User as UserIcon, Key, CheckCircle } from 'lucide-react'
+import { Loader2, Save, Upload, User as UserIcon, Key } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import EmployeeDocuments from './EmployeeDocuments'
+import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
 import { getReportingLineDisplay } from '@/lib/displayHelpers'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -17,11 +19,10 @@ export default function MyProfile() {
     const { user, profile: authProfile, refreshSession } = useAuth()
     const { t, i18n } = useTranslation('profile')
     const { toast } = useToast()
+    const navigate = useNavigate()
     const isRTL = i18n.dir() === 'rtl'
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
-    const [sendingReset, setSendingReset] = useState(false)
-    const [resetSent, setResetSent] = useState(false)
 
     // Form state
     const [fullName, setFullName] = useState('')
@@ -72,78 +73,72 @@ export default function MyProfile() {
         }
     }
 
-    const handlePasswordReset = async () => {
-        if (!user?.email) return
 
-        try {
-            setSendingReset(true)
-
-            const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-                redirectTo: `${window.location.origin}/reset-password`
-            })
-
-            if (error) throw error
-
-            setResetSent(true)
-            toast({
-                title: 'Password Reset Email Sent',
-                description: `We've sent a password reset link to ${user.email}. Please check your inbox.`
-            })
-        } catch (error: any) {
-            console.error('Error sending password reset:', error)
-            toast({
-                title: 'Error',
-                description: error.message || 'Failed to send password reset email. Please try again.',
-                variant: 'destructive'
-            })
-        } finally {
-            setSendingReset(false)
-        }
-    }
 
     const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         try {
             setUploading(true)
+            console.log('Starting avatar upload...')
 
             if (!event.target.files || event.target.files.length === 0) {
                 throw new Error('You must select an image to upload.')
             }
 
-            const file = event.target.files[0]
-            const fileExt = file.name.split('.').pop()
-            const filePath = `${user?.id}-${Math.random()}.${fileExt}`
+            if (!user?.id) {
+                throw new Error('User not authenticated')
+            }
 
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file)
+            const file = event.target.files[0]
+            console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type)
+
+            const fileExt = file.name.split('.').pop()
+            const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`
+            console.log('Upload path:', filePath)
+
+            const { error: uploadError, data: uploadData } = await supabase.storage
+                .from('documents')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                })
 
             if (uploadError) {
+                console.error('Upload error:', uploadError)
                 throw uploadError
             }
 
-            const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+            console.log('Upload successful:', uploadData)
 
-            // Update profile with new avatar URL
-            if (user) {
-                const { error: updateError } = await supabase
-                    .from('profiles')
-                    .update({ avatar_url: data.publicUrl })
-                    .eq('id', user.id)
+            // Get public URL for the uploaded avatar
+            const { data: urlData } = supabase.storage
+                .from('documents')
+                .getPublicUrl(filePath)
 
-                if (updateError) throw updateError
+            console.log('Public URL:', urlData.publicUrl)
 
-                setAvatarUrl(data.publicUrl)
-                await refreshSession()
-                toast({
-                    title: 'Avatar Updated',
-                    description: 'Your avatar has been updated successfully.'
-                })
+            // Update profile with the public URL
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ avatar_url: urlData.publicUrl })
+                .eq('id', user.id)
+
+            if (updateError) {
+                console.error('Profile update error:', updateError)
+                throw updateError
             }
-        } catch (error) {
+
+            console.log('Profile updated successfully')
+            setAvatarUrl(urlData.publicUrl)
+            await refreshSession()
+            toast({
+                title: 'Avatar Updated',
+                description: 'Your avatar has been updated successfully.'
+            })
+        } catch (error: any) {
             console.error('Error uploading avatar:', error)
             toast({
                 title: 'Error',
-                description: 'Failed to upload avatar. Please try again.',
+                description: error.message || 'Failed to upload avatar. Please try again.',
                 variant: 'destructive'
             })
         } finally {
@@ -156,8 +151,9 @@ export default function MyProfile() {
             <h1 className="text-3xl font-bold mb-8">{t('my_profile')}</h1>
 
             <Tabs defaultValue="personal" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+                <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
                     <TabsTrigger value="personal">{t('personal_info')}</TabsTrigger>
+                    <TabsTrigger value="skills">Skills</TabsTrigger>
                     <TabsTrigger value="documents">{t('documents')}</TabsTrigger>
                 </TabsList>
 
@@ -286,36 +282,30 @@ export default function MyProfile() {
                                         <Label>{t('password')}</Label>
                                         <p className="text-sm text-gray-600">{t('password_desc')}</p>
                                     </div>
-                                    {resetSent ? (
-                                        <div className="flex items-center gap-2 text-green-600 text-sm">
-                                            <CheckCircle className="w-4 h-4" />
-                                            Email sent!
-                                        </div>
-                                    ) : (
-                                        <Button
-                                            className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                            onClick={handlePasswordReset}
-                                            disabled={sendingReset}
-                                        >
-                                            {sendingReset ? (
-                                                <Loader2 className="w-4 h-4 animate-spin me-2" />
-                                            ) : (
-                                                <Key className="w-4 h-4 me-2" />
-                                            )}
-                                            {t('change_password')}
-                                        </Button>
-                                    )}
+                                    <Button
+                                        className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                        onClick={() => navigate('/change-password')}
+                                    >
+                                        <Key className="w-4 h-4 me-2" />
+                                        {t('change_password')}
+                                    </Button>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
+
+
+                <TabsContent value="skills">
+                    <UserSkillsDisplay />
+                </TabsContent>
+
                 <TabsContent value="documents">
                     <EmployeeDocuments />
                 </TabsContent>
             </Tabs>
-        </div>
+        </div >
     )
 }
 

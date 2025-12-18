@@ -1,17 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
 import type { MaintenanceTicket, MaintenanceComment, MaintenanceAttachment } from '@/lib/types'
+import { crudToasts } from '@/lib/toastHelpers'
 
 export function useMyMaintenanceTickets() {
   const { user } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useQuery({
-    queryKey: ['maintenance-tickets', 'my', user?.id],
+    queryKey: ['maintenance-tickets', 'my', user?.id, currentProperty?.id],
     queryFn: async () => {
       if (!user?.id) return []
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('maintenance_tickets')
         .select(`
           *,
@@ -23,6 +26,13 @@ export function useMyMaintenanceTickets() {
         .eq('reported_by_id', user.id)
         .order('created_at', { ascending: false })
 
+      // Filter by current property if selected (and not 'all')
+      if (currentProperty && currentProperty.id !== 'all') {
+        query = query.eq('property_id', currentProperty.id)
+      }
+
+      const { data, error } = await query
+
       if (error) throw error
       return data as MaintenanceTicket[]
     },
@@ -32,9 +42,10 @@ export function useMyMaintenanceTickets() {
 
 export function useAssignedMaintenanceTickets() {
   const { user, roles, properties } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useQuery({
-    queryKey: ['maintenance-tickets', 'assigned', user?.id, properties],
+    queryKey: ['maintenance-tickets', 'assigned', user?.id, properties, currentProperty?.id],
     queryFn: async () => {
       if (!user?.id) return []
 
@@ -49,6 +60,11 @@ export function useAssignedMaintenanceTickets() {
         `)
         .order('created_at', { ascending: false })
 
+      // Filter by current property if selected (and not 'all')
+      if (currentProperty && currentProperty.id !== 'all') {
+        query = query.eq('property_id', currentProperty.id)
+      }
+
       // Filter based on user role and access
       const userRole = roles[0]?.role || 'staff'
 
@@ -57,13 +73,14 @@ export function useAssignedMaintenanceTickets() {
         if (properties && properties.length > 0) {
           const propertyIds = properties.map(p => p.id).join(',')
           // Use proper OR syntax ensuring valid SQL generation
+          // Note: The property_id filter above acts as an AND, so we are refining the scope further
           query = query.or(`assigned_to_id.eq.${user.id},property_id.in.(${propertyIds})`)
         } else {
           // If no properties, only see assigned to self
           query = query.eq('assigned_to_id', user.id)
         }
       } else if (userRole === 'regional_admin' || userRole === 'regional_hr') {
-        // Regional staff can see all tickets
+        // Regional staff can see all tickets (filtered by property above if selected)
         // No additional filter needed
       } else {
         // Regular staff can only see their own reported tickets (though this hook is typically for assigned, we fallback to reported)
@@ -155,6 +172,10 @@ export function useCreateMaintenanceTicket() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+      crudToasts.create.success('maintenance ticket')
+    },
+    onError: () => {
+      crudToasts.create.error('create maintenance ticket')
     }
   })
 }
@@ -196,45 +217,46 @@ export function useAssignMaintenanceTicket() {
   return useMutation({
     mutationFn: async ({
       ticketId,
-      assignedToId
+      assignedToId,
+      ticketTitle,
+      priority
     }: {
       ticketId: string
       assignedToId: string | null
+      ticketTitle?: string
+      priority?: string
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
-      const { data, error } = await supabase
-        .from('maintenance_tickets')
-        .update({
-          assigned_to_id: assignedToId,
-          status: assignedToId ? 'in_progress' : 'open'
-        })
-        .eq('id', ticketId)
-        .select()
-        .single()
+      let notificationPayload = null
+      if (assignedToId && ticketTitle) {
+        notificationPayload = {
+          type: 'maintenance_assigned',
+          title: 'Maintenance Ticket Assigned',
+          message: `You have been assigned a ${priority || 'ticket'}: "${ticketTitle}"`,
+          link: `/maintenance/${ticketId}`,
+          data: { ticketId, priority }
+        }
+      }
+
+      const { data, error } = await supabase.rpc('assign_maintenance_ticket', {
+        p_ticket_id: ticketId,
+        p_assigner_id: user.id,
+        p_assigned_to_id: assignedToId,
+        p_notification_payload: notificationPayload
+      })
 
       if (error) throw error
       return data as MaintenanceTicket
     },
-    onSuccess: async (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
-
-      // Send notification to assigned user
-      if (data.assigned_to_id && data.assigned_to_id !== user?.id) {
-        try {
-          await supabase.from('notifications').insert({
-            user_id: data.assigned_to_id,
-            type: 'maintenance_assigned',
-            title: 'Maintenance Ticket Assigned',
-            message: `You have been assigned a ${data.priority} priority maintenance ticket: "${data.title}"`,
-            link: `/maintenance/${data.id}`,
-            data: { ticketId: data.id, priority: data.priority }
-          })
-        } catch (err) {
-          console.error('Notification failed:', err)
-        }
-      }
+      crudToasts.update.success('ticket assignment')
+    },
+    onError: (error) => {
+      console.error('Assign Ticket Error:', error)
+      crudToasts.update.error('ticket assignment')
     }
   })
 }
@@ -248,52 +270,43 @@ export function useCompleteMaintenanceTicket() {
       ticketId,
       laborHours,
       materialCost,
-      notes
+      notes,
+      ticketTitle
     }: {
       ticketId: string
       laborHours?: number
       materialCost?: number
       notes?: string
+      ticketTitle?: string
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
-      const { data, error } = await supabase
-        .from('maintenance_tickets')
-        .update({
-          status: 'completed',
-          labor_hours: laborHours || null,
-          material_cost: materialCost || null,
-          notes: notes || null
-        })
-        .eq('id', ticketId)
-        .select(`
-          *,
-          reported_by:profiles!reported_by_id(id, full_name),
-          property:properties(id, name)
-        `)
-        .single()
+      const notificationPayload = {
+        type: 'maintenance_completed',
+        title: 'Maintenance Ticket Completed',
+        message: `Your maintenance request "${ticketTitle || 'Ticket'}" has been completed.`,
+        link: `/maintenance/${ticketId}`,
+        data: { ticketId }
+      }
+
+      const { data, error } = await supabase.rpc('complete_maintenance_ticket', {
+        ticket_id: ticketId,
+        completer_id: user.id,
+        labor_hours: laborHours,
+        material_cost: materialCost,
+        notes: notes,
+        notification_payload: notificationPayload
+      })
 
       if (error) throw error
       return data as MaintenanceTicket
     },
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
-
-      // Send notification to reporter when ticket is completed
-      if (data.reported_by_id && data.reported_by_id !== user?.id) {
-        try {
-          await supabase.from('notifications').insert({
-            user_id: data.reported_by_id,
-            type: 'maintenance_completed',
-            title: 'Maintenance Ticket Completed',
-            message: `Your maintenance request "${data.title}" has been completed.`,
-            link: `/maintenance/${data.id}`,
-            data: { ticketId: data.id, priority: data.priority }
-          })
-        } catch (err) {
-          console.error('Failed to send completion notification:', err)
-        }
-      }
+      crudToasts.update.success('Ticket completed')
+    },
+    onError: () => {
+      crudToasts.update.error('complete ticket')
     }
   })
 }

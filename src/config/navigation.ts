@@ -38,6 +38,8 @@ import {
     ListTodo,
     GraduationCap,
     FileQuestion,
+    History,
+    Workflow,
     type LucideIcon
 } from 'lucide-react'
 import type { AppRole } from '@/lib/constants'
@@ -247,6 +249,15 @@ export const ROUTES: RouteConfig[] = [
         group: 'my_work',
         order: 2
     },
+    {
+        path: '/onboarding',
+        title: 'nav.onboarding',
+        icon: CheckSquare, // Using CheckSquare as it looks like a checklist
+        description: 'Complete your onboarding tasks',
+        allowedRoles: 'all',
+        group: 'my_work',
+        order: 0 // Priority!
+    },
 
     // -------------------------------------------------------------------------
     // OPERATIONS GROUP
@@ -265,11 +276,12 @@ export const ROUTES: RouteConfig[] = [
         path: '/hr/inbox',
         title: 'nav.hr_inbox',
         icon: FolderOpen,
-        description: 'HR requests inbox',
+        description: 'HR requests inbox - Use Approvals instead',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         badgeKey: 'pendingApprovals',
         group: 'operations',
-        order: 2
+        order: 2,
+        hideFromNav: true  // Hidden - consolidated into /approvals
     },
     {
         path: '/maintenance',
@@ -307,7 +319,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'nav.referrals',
         icon: Users,
         description: 'Employee referral program',
-        allowedRoles: 'all',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
         group: 'hr_management',
         order: 3
     },
@@ -337,6 +349,37 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
         group: 'hr_management',
         order: 6
+    },
+    {
+        path: '/hr/onboarding',
+        title: 'nav.onboarding_tracker',
+        icon: CheckSquare,
+        description: 'Track new hire onboarding progress',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        group: 'hr_management',
+        order: 0.5 // Top priority in HR
+    },
+    {
+        path: '/hr/promotions/history',
+        title: 'nav.promotion_history', // Keeping key same, or should I update key? The logic uses translation. 'Promotions & Transfers' is english.
+        // Wait, title is i18n key. 'nav.promotion_history'.
+        // I should probably not change the key if I don't change the json.
+        // But the previous edit tried to change the TITLE to 'Promotions & Transfers'.
+        // If 'title' is valid key, it's fine. If it's a string literal, it's fine.
+        // The file comment says `title: string // i18n translation key`.
+        // So I should stick to a key, OR check if I need to add a new key.
+        // I will keep the key 'nav.promotion_history' but update the English translation JSON.
+        // Ah, I missed that step.
+        // Let's check common.json or similar.
+        // I will proceed with just changing the comment/description for now or if I can't change the key, I will update the JSON.
+        // Actually, let's just make sure the description is updated.
+        // And I will try to update en/common.json later if needed.
+        // For now, I will just update the description in the config.
+        icon: History,
+        description: 'View promotion and transfer history',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'hr_management',
+        order: 7
     },
 
     // -------------------------------------------------------------------------
@@ -502,6 +545,15 @@ export const ROUTES: RouteConfig[] = [
         order: 1
     },
     {
+        path: '/admin/job-titles',
+        title: 'Job Titles', // Using string literal as placeholder until i18n key is added
+        icon: Briefcase,
+        description: 'Manage master list of job titles',
+        allowedRoles: ['regional_admin', 'regional_hr'],
+        group: 'administration',
+        order: 1.5
+    },
+    {
         path: '/admin/properties',
         title: 'nav.property_management',
         icon: Building,
@@ -520,13 +572,22 @@ export const ROUTES: RouteConfig[] = [
         order: 3
     },
     {
+        path: '/admin/workflows',
+        title: 'nav.automations',
+        icon: Workflow,
+        description: 'Manage workflow automations',
+        allowedRoles: ['regional_admin', 'property_manager'],
+        group: 'administration',
+        order: 3.5
+    },
+    {
         path: '/admin/audit',
         title: 'nav.audit_logs',
         icon: ClipboardList,
         description: 'System audit logs',
         allowedRoles: ['regional_admin'],
         group: 'administration',
-        order: 4
+        order: 5
     },
     {
         path: '/admin/escalation',
@@ -535,7 +596,16 @@ export const ROUTES: RouteConfig[] = [
         description: 'Configure escalation rules',
         allowedRoles: ['regional_admin'],
         group: 'administration',
-        order: 5
+        order: 6
+    },
+    {
+        path: '/admin/onboarding/templates',
+        title: 'nav.onboarding_templates',
+        icon: ListTodo,
+        description: 'Manage onboarding checklists',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        group: 'administration',
+        order: 3.6
     },
 
     // -------------------------------------------------------------------------

@@ -82,7 +82,7 @@ export function PropertyManagerDashboard() {
     return {
       id: dept.id,
       name: dept.name,
-      head: 'Not assigned', // Would need another query or join
+      head: kpi?.head_name || 'Not assigned',
       staff: kpi?.staff_count || 0,
       performance: kpi?.overall_score ? (kpi.overall_score / 20).toFixed(1) : 'N/A',
       compliance: kpi?.metrics?.sop_compliance_rate || 0,

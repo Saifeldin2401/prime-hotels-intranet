@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTask, useUpdateTask, useAddTaskComment } from '@/hooks/useTasks'
 import { Button } from '@/components/ui/button'
@@ -8,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Calendar, User, Send, Loader2 } from 'lucide-react'
+import { ArrowLeft, Calendar, User, Send, Loader2, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 
 const priorityColors = {
   low: 'bg-green-100 text-green-800',
@@ -24,6 +27,7 @@ export default function TaskDetail() {
   const { user, profile } = useAuth()
   const { t } = useTranslation('tasks')
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { data: task, isLoading } = useTask(taskId!)
   const updateTask = useUpdateTask()
@@ -31,6 +35,23 @@ export default function TaskDetail() {
 
   const [comment, setComment] = useState('')
   const [issubmittingComment, setIsSubmittingComment] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!taskId) return
+      const { error } = await supabase
+        .from('tasks')
+        .update({ is_deleted: true }) // Using soft delete for safety
+        .eq('id', taskId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      navigate('/tasks')
+    }
+  })
 
   if (isLoading) {
     return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
@@ -106,8 +127,26 @@ export default function TaskDetail() {
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button
+            variant="outline"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {t('delete', 'Delete')}
+          </Button>
         </div>
       </div>
+
+      <DeleteConfirmation
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={() => deleteMutation.mutate()}
+        itemName={task.title}
+        itemType={t('task', 'Task')}
+        isLoading={deleteMutation.isPending}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Main Content */}
