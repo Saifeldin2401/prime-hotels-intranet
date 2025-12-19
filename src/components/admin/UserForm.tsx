@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
+import { ToastAction } from '@/components/ui/toast'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -45,6 +46,88 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [isActive, setIsActive] = useState(true)
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
+  const [reportingTo, setReportingTo] = useState<string | null>(null)
+  const [openReportingTo, setOpenReportingTo] = useState(false)
+
+  // ... (rest of invalidation)
+
+  const createUserMutation = useMutation({
+    mutationFn: async () => {
+      // ... (mutation logic same as before)
+      if (!email || !fullName || !role) {
+        throw new Error('Please fill in all required fields')
+      }
+
+      // Prepare payload for atomic creation
+      const payload = {
+        email,
+        fullName,
+        phone: phone || undefined,
+        jobTitle: jobTitle || undefined,
+        role,
+        propertyIds: selectedProperties,
+        departmentIds: selectedDepartments,
+        reportingTo: reportingTo || undefined
+      }
+
+      console.log('Creating user with payload:', payload)
+
+      const { data, error: fnError } = await supabase.functions.invoke('create-user', {
+        body: payload,
+      })
+
+      if (fnError) {
+        throw new Error(fnError.message || JSON.stringify(fnError))
+      }
+
+      if (data?.error) {
+        throw new Error(data.error)
+      }
+
+      const response = (data || {}) as { userId?: string, tempPassword?: string, message?: string }
+      if (!response.userId) throw new Error('User ID not returned from create-user function')
+
+      return response
+    },
+    onSuccess: (response) => {
+      console.log('User creation success, response:', response)
+
+      const tempPwd = response?.tempPassword || "TempPassword123!"
+
+      // Copy password to clipboard automatically
+      navigator.clipboard.writeText(tempPwd).catch(() => console.warn('Clipboard failed'))
+
+      // Show credentials in a persistent toast - NO auto-download needed
+      toast({
+        title: "✅ User Created Successfully",
+        description: (
+          <div className="mt-2 space-y-2">
+            <p><strong>Email:</strong> {email}</p>
+            <p><strong>Password:</strong> <code className="bg-gray-100 px-2 py-0.5 rounded">{tempPwd}</code></p>
+            <p className="text-xs text-gray-500">Password copied to clipboard. User must change on first login.</p>
+          </div>
+        ),
+        duration: 30000, // 30 seconds to give time to note it down
+      })
+
+      // Also log to console for backup
+      console.log('==== NEW USER CREDENTIALS ====')
+      console.log(`Email: ${email}`)
+      console.log(`Password: ${tempPwd}`)
+      console.log('==============================')
+
+      onClose()
+    },
+    onError: (error) => {
+      console.error('User creation error:', error)
+      toast({
+        title: "Failed to create user",
+        description: error.message,
+        variant: "destructive"
+      })
+    }
+  })
+
 
   const { data: properties } = useQuery({
     queryKey: ['properties'],
@@ -84,6 +167,63 @@ export function UserForm({ user, onClose }: UserFormProps) {
   })
   const [openJobTitle, setOpenJobTitle] = useState(false)
 
+  // Fetch potential managers based on selected departments/properties
+  const { data: potentialManagers } = useQuery({
+    queryKey: ['potential-managers', selectedDepartments, selectedProperties],
+    queryFn: async () => {
+      if (selectedDepartments.length === 0 && selectedProperties.length === 0) return []
+
+      // Fetch profiles with manager-level roles in the selected departments/properties
+      let query = supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          job_title,
+          user_roles(role),
+          user_departments(department_id),
+          user_properties(property_id)
+        `)
+        .eq('is_active', true)
+
+      const { data, error } = await query
+      if (error) throw error
+
+      // Filter to only include people with management roles
+      const managerRoles = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']
+
+      return (data || [])
+        .filter((p: any) => {
+          const roles = p.user_roles?.map((r: any) => r.role) || []
+          const hasManagerRole = roles.some((r: string) => managerRoles.includes(r))
+          if (!hasManagerRole) return false
+
+          // Check if they're in the same department or property
+          const deptIds = p.user_departments?.map((d: any) => d.department_id) || []
+          const propIds = p.user_properties?.map((p: any) => p.property_id) || []
+
+          const sameDept = selectedDepartments.some(d => deptIds.includes(d))
+          const sameProp = selectedProperties.some(p => propIds.includes(p))
+
+          return sameDept || sameProp
+        })
+        .map((p: any) => ({
+          id: p.id,
+          full_name: p.full_name,
+          job_title: p.job_title,
+          roles: p.user_roles?.map((r: any) => r.role) || [],
+          isDeptHead: (p.user_roles?.map((r: any) => r.role) || []).includes('department_head')
+        }))
+        // Sort: department heads first, then by name
+        .sort((a: any, b: any) => {
+          if (a.isDeptHead && !b.isDeptHead) return -1
+          if (!a.isDeptHead && b.isDeptHead) return 1
+          return a.full_name.localeCompare(b.full_name)
+        })
+    },
+    enabled: selectedDepartments.length > 0 || selectedProperties.length > 0
+  })
+
   useEffect(() => {
     if (user) {
       setEmail(user.email)
@@ -91,6 +231,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       setPhone(user.phone || '')
       setJobTitle(user.job_title || '')
       setIsActive(user.is_active !== false) // Default to true if undefined
+      setReportingTo(user.reporting_to || null)
       // Load user's roles, properties, departments
       loadUserData()
     }
@@ -128,7 +269,36 @@ export function UserForm({ user, onClose }: UserFormProps) {
     if (departmentsData) {
       setSelectedDepartments(departmentsData.map((d) => d.department_id))
     }
+
+    // Load reporting_to
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('reporting_to')
+      .eq('id', user.id)
+      .single()
+
+    if (profileData) {
+      setReportingTo(profileData.reporting_to)
+    }
   }
+
+  // Auto-suggest manager when department changes (for new users)
+  useEffect(() => {
+    // Only auto-suggest for new users and if no manager already selected
+    if (user || reportingTo) return
+
+    // When potentialManagers loads and has data, suggest the first dept head
+    if (potentialManagers && potentialManagers.length > 0) {
+      const deptHead = potentialManagers.find((m: any) => m.isDeptHead)
+      if (deptHead) {
+        setReportingTo(deptHead.id)
+        toast({
+          title: "Manager Suggested",
+          description: `${deptHead.full_name} (${deptHead.job_title || 'Manager'}) has been suggested as the reporting manager.`,
+        })
+      }
+    }
+  }, [potentialManagers, user, reportingTo])
 
   // Handle job title selection from DB
   const handleJobTitleSelect = (selectedTitle: string) => {
@@ -183,99 +353,21 @@ export function UserForm({ user, onClose }: UserFormProps) {
     }
   }
 
-  const createUserMutation = useMutation({
-    mutationFn: async () => {
-      if (!email || !fullName || !role) {
-        throw new Error('Please fill in all required fields')
-      }
 
-      // Prepare payload for atomic creation
-      const payload = {
-        email,
-        fullName,
-        phone: phone || undefined,
-        jobTitle: jobTitle || undefined,
-        role,
-        propertyIds: selectedProperties,
-        departmentIds: selectedDepartments
-      }
-
-      console.log('Creating user with payload:', payload)
-
-      const { data, error: fnError } = await supabase.functions.invoke('create-user', {
-        body: payload,
-      })
-
-      if (fnError) {
-        // If function returns valid JSON error caught by wrapper
-        throw new Error(fnError.message || JSON.stringify(fnError))
-      }
-
-      // Check for error in response body if wrapper didn't catch 500
-      if (data?.error) {
-        throw new Error(data.error)
-      }
-
-      const response = (data || {}) as { userId?: string, tempPassword?: string, message?: string }
-      if (!response.userId) throw new Error('User ID not returned from create-user function')
-
-      console.log('Create user response:', response)
-      return response
-    },
-    onSuccess: (response) => {
-      console.log('User creation success, response:', response)
-
-      if (response?.tempPassword) {
-        // Automatically copy password to clipboard
-        navigator.clipboard.writeText(response.tempPassword).then(() => {
-          toast({
-            title: "✅ User Created - Password Copied!",
-            description: `Password "${response.tempPassword}" copied to clipboard. User must change it on first login.`,
-            duration: 10000,
-          })
-        }).catch(() => {
-          // If clipboard fails, just show the password
-          toast({
-            title: "✅ User Created Successfully",
-            description: `Temporary Password: ${response.tempPassword} (User must change on first login)`,
-            duration: 30000,
-          })
-        })
-
-        // Also log to console for backup
-        console.log('==== NEW USER TEMPORARY PASSWORD ====')
-        console.log(`Password: ${response.tempPassword}`)
-        console.log('=====================================')
-      } else {
-        toast({
-          title: "User Created",
-          description: "User created successfully",
-        })
-      }
-
-      onClose()
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to create user",
-        description: error.message,
-        variant: "destructive"
-      })
-    }
-  })
 
   const updateUserMutation = useMutation({
     mutationFn: async () => {
       if (!user) return
 
-      // Update profile with job title and active status
+      // Update profile with job title, active status, and reporting_to
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           full_name: fullName,
           phone: phone || null,
           job_title: jobTitle || null,
-          is_active: isActive
+          is_active: isActive,
+          reporting_to: reportingTo || null
         })
         .eq('id', user.id)
 
@@ -539,6 +631,112 @@ export function UserForm({ user, onClose }: UserFormProps) {
                   <p className="text-sm text-muted-foreground text-center py-4">No departments found for selected properties.</p>
                 )}
               </div>
+            </div>
+
+            {/* Reports To (Manager) */}
+            <div className="space-y-2">
+              <Label htmlFor="reportingTo">Reports To (Manager)</Label>
+              <Popover open={openReportingTo} onOpenChange={setOpenReportingTo}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openReportingTo}
+                    className="w-full justify-between font-normal text-left"
+                  >
+                    {reportingTo
+                      ? potentialManagers?.find((m: any) => m.id === reportingTo)?.full_name || 'Selected manager'
+                      : "Select a manager..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search managers..." />
+                    <CommandList>
+                      <CommandEmpty>
+                        {selectedDepartments.length === 0 && selectedProperties.length === 0
+                          ? "Select a department first to see available managers"
+                          : "No managers found in selected departments/properties"
+                        }
+                      </CommandEmpty>
+                      <CommandGroup heading="Available Managers">
+                        <CommandItem
+                          value="no-manager"
+                          onSelect={() => {
+                            setReportingTo(null)
+                            setOpenReportingTo(false)
+                          }}
+                          className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
+                        >
+                          <div
+                            className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                            onPointerDown={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setReportingTo(null)
+                              setOpenReportingTo(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !reportingTo ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="text-gray-500">No manager (top-level)</span>
+                          </div>
+                        </CommandItem>
+                        {potentialManagers?.map((manager: any) => (
+                          <CommandItem
+                            key={manager.id}
+                            value={manager.full_name}
+                            onSelect={() => {
+                              setReportingTo(manager.id)
+                              setOpenReportingTo(false)
+                            }}
+                            className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
+                          >
+                            <div
+                              className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                              onPointerDown={(e) => e.preventDefault()}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setReportingTo(manager.id)
+                                setOpenReportingTo(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  reportingTo === manager.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span>{manager.full_name}</span>
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {manager.job_title || manager.roles?.join(', ')}
+                              </span>
+                              {manager.isDeptHead && (
+                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                  Dept Head
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-gray-600">
+                {selectedDepartments.length === 0 && selectedProperties.length === 0
+                  ? "Select a department to see suggested managers"
+                  : reportingTo
+                    ? "Manager automatically suggested based on department"
+                    : "Leave empty for top-level employees (executives)"}
+              </p>
             </div>
 
             <div className="flex justify-end gap-2">

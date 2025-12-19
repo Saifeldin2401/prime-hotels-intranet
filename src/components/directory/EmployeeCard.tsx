@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Mail, Phone, MapPin, Building, Briefcase } from 'lucide-react'
+import { Mail, Phone, MapPin, Building, Briefcase, Users } from 'lucide-react'
 import { LazyLoadImage } from 'react-lazy-load-image-component'
 import 'react-lazy-load-image-component/src/effects/blur.css'
 
@@ -49,6 +49,15 @@ export function EmployeeCard({ profile, isRTL }: EmployeeCardProps) {
                 </div>
 
                 <div className="space-y-2.5 text-sm text-gray-600">
+                    {/* Manager / Reports To */}
+                    {profile.manager_name && (
+                        <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-gray-400 shrink-0" />
+                            <span className="truncate text-xs">
+                                Reports to: <span className="font-medium">{profile.manager_name}</span>
+                            </span>
+                        </div>
+                    )}
                     {profile.departments?.[0] && (
                         <div className="flex items-center gap-2">
                             <Building className="h-4 w-4 text-gray-400 shrink-0" />

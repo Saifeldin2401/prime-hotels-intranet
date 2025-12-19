@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, Save, Upload, User as UserIcon, Key } from 'lucide-react'
+import { Loader2, Save, Upload, User as UserIcon, Key, Clock, Star, Target, Wallet } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import EmployeeDocuments from './EmployeeDocuments'
@@ -251,6 +251,48 @@ export default function MyProfile() {
                                                 <div className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-sm capitalize">
                                                     {authProfile?.is_active ? t('active') : t('inactive')}
                                                 </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-2 pt-4 border-t">
+                                            <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">HR Quick Links</Label>
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => navigate('/hr/attendance')}
+                                                    className="bg-hotel-navy/5 text-hotel-navy border-hotel-navy/10"
+                                                >
+                                                    <Clock className="w-3.5 h-3.5 me-2" />
+                                                    Attendance
+                                                </Button>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => navigate('/hr/performance')}
+                                                    className="bg-hotel-navy/5 text-hotel-navy border-hotel-navy/10"
+                                                >
+                                                    <Star className="w-3.5 h-3.5 me-2" />
+                                                    Performance
+                                                </Button>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => navigate('/hr/goals')}
+                                                    className="bg-hotel-navy/5 text-hotel-navy border-hotel-navy/10"
+                                                >
+                                                    <Target className="w-3.5 h-3.5 me-2" />
+                                                    Career Goals
+                                                </Button>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => navigate('/hr/payslips')}
+                                                    className="bg-hotel-navy/5 text-hotel-navy border-hotel-navy/10"
+                                                >
+                                                    <Wallet className="w-3.5 h-3.5 me-2" />
+                                                    Payroll
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>

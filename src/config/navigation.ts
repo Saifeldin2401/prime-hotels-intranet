@@ -40,6 +40,8 @@ import {
     FileQuestion,
     History,
     Workflow,
+    Target,
+    Wallet,
     type LucideIcon
 } from 'lucide-react'
 import type { AppRole } from '@/lib/constants'
@@ -57,6 +59,7 @@ export type NavigationGroup =
     | 'question_bank'
     | 'operations'
     | 'hr_management'
+    | 'my_hr'
     | 'communication'
     | 'administration'
     | 'settings'
@@ -155,7 +158,15 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.hr_management',
         icon: Users,
         order: 5,
-        visibleTo: 'all', // Make group visible to all (items are still restricted)
+        visibleTo: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        collapsible: true
+    },
+    {
+        id: 'my_hr',
+        title: 'groups.my_hr',
+        icon: Users,
+        order: 5.5,
+        visibleTo: 'all',
         collapsible: true
     },
     {
@@ -226,6 +237,15 @@ export const ROUTES: RouteConfig[] = [
             regional_admin: '/dashboard/corporate-admin'
         }
     },
+    {
+        path: '/dashboard/my-team',
+        title: 'my_team',
+        icon: Users,
+        description: 'View and manage your direct reports',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        group: 'home',
+        order: 2
+    },
 
     // -------------------------------------------------------------------------
     // MY WORK GROUP
@@ -236,8 +256,45 @@ export const ROUTES: RouteConfig[] = [
         icon: Calendar,
         description: 'Submit and track leave requests',
         allowedRoles: 'all',
-        group: 'my_work',
+        group: 'my_hr',
+        order: 5
+    },
+    {
+        path: '/hr/attendance',
+        title: 'attendance',
+        icon: History,
+        description: 'Your attendance records and clock-in/out',
+        allowedRoles: 'all',
+        group: 'my_hr',
         order: 1
+    },
+    {
+        path: '/hr/performance',
+        title: 'performance',
+        icon: Award,
+        description: 'Your performance evaluations and ratings',
+        allowedRoles: 'all',
+        group: 'my_hr',
+        order: 2
+    },
+    {
+        path: '/hr/goals',
+        title: 'goals',
+        icon: Target,
+        description: 'Your career goals and milestones',
+        allowedRoles: 'all',
+        badgeKey: 'activeGoals',
+        group: 'my_hr',
+        order: 3
+    },
+    {
+        path: '/hr/payslips',
+        title: 'payslips',
+        icon: Wallet,
+        description: 'Your payroll documents',
+        allowedRoles: 'all',
+        group: 'my_hr',
+        order: 4
     },
     {
         path: '/tasks',
@@ -552,6 +609,15 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['regional_admin', 'regional_hr'],
         group: 'administration',
         order: 1.5
+    },
+    {
+        path: '/admin/organization',
+        title: 'org_structure',
+        icon: Target,
+        description: 'Manage organizational hierarchy and reporting lines',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'administration',
+        order: 1.7
     },
     {
         path: '/admin/properties',

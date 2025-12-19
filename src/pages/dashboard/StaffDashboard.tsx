@@ -29,6 +29,11 @@ import { KnowledgeWidget } from '@/components/dashboard/KnowledgeWidget'
 import { DailyQuizWidget } from '@/components/questions'
 import { PromoteEmployeeDialog } from '@/components/hr/PromoteEmployeeDialog'
 import { TransferEmployeeDialog } from '@/components/hr/TransferEmployeeDialog'
+import { useAttendance, useCheckIn, useCheckOut } from '@/hooks/useAttendance'
+import { toast } from 'sonner'
+import { format } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
+import { LogIn, LogOut, BookOpen } from 'lucide-react'
 
 export function StaffDashboard() {
   const { user, profile, primaryRole } = useAuth()
@@ -38,6 +43,28 @@ export function StaffDashboard() {
   const { data: tasks, isLoading: tasksLoading } = useUserTasks()
   const { data: schedule, isLoading: scheduleLoading } = useUserSchedule()
   const { t, i18n } = useTranslation(['dashboard', 'common'])
+
+  // Attendance Logic
+  const { data: attendance } = useAttendance()
+  const checkInMutation = useCheckIn()
+  const checkOutMutation = useCheckOut()
+  const todayAttendance = attendance?.find(
+    (a) => a.date === new Date().toISOString().split('T')[0]
+  )
+
+  const handleClockToggle = async () => {
+    try {
+      if (todayAttendance?.check_in && !todayAttendance.check_out) {
+        await checkOutMutation.mutateAsync({ id: todayAttendance.id })
+        toast.success(t('common:messages.success_clock_out', 'Successfully clocked out'))
+      } else {
+        await checkInMutation.mutateAsync({})
+        toast.success(t('common:messages.success_clock_in', 'Successfully clocked in'))
+      }
+    } catch (error) {
+      toast.error(t('common:messages.error_action_failed', 'Action failed'))
+    }
+  }
   const isRTL = i18n.dir() === 'rtl'
 
   // Animation variants
@@ -153,9 +180,9 @@ export function StaffDashboard() {
         <div className="prime-card-body">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600">{t('staff.subtitle')}</p>
+              <p className="text-gray-600 dark:text-gray-400">{t('staff.subtitle')}</p>
               {profile?.job_title && (
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {profile.job_title}
                 </p>
               )}
@@ -166,7 +193,7 @@ export function StaffDashboard() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <button className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+              <button className="bg-white dark:bg-hotel-navy border border-gray-300 dark:border-hotel-navy-light text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-hotel-navy-light transition-colors flex items-center gap-2">
                 <Bell className="h-4 w-4" />
                 {t('staff.notifications')}
               </button>
@@ -181,14 +208,17 @@ export function StaffDashboard() {
           <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{t('staff.stats.todays_tasks')}</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.todaysTasks || 0}</p>
-                <p className={`text-xs mt-1 ${(stats?.tasksChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('staff.stats.todays_tasks')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.todaysTasks || 0}</p>
+                <p className={cn(
+                  "text-xs mt-1 font-medium",
+                  (stats?.tasksChange || 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                )}>
                   {(stats?.tasksChange || 0) >= 0 ? '+' : ''}{stats?.tasksChange || 0} {t('staff.stats.from_yesterday')}
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Target className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </div>
@@ -198,12 +228,12 @@ export function StaffDashboard() {
           <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{t('staff.stats.training_progress')}</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.trainingProgress || 0}%</p>
-                <Progress value={stats?.trainingProgress || 0} className="mt-2" />
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('staff.stats.training_progress')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.trainingProgress || 0}%</p>
+                <Progress value={stats?.trainingProgress || 0} className="mt-2 h-1.5" />
               </div>
-              <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                <Award className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Award className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
             </div>
           </div>
@@ -213,14 +243,14 @@ export function StaffDashboard() {
           <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{t('staff.stats.upcoming_events')}</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.upcomingEvents || 0}</p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('staff.stats.upcoming_events')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.upcomingEvents || 0}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {stats?.nextEvent ? t('staff.stats.next_event', { event: stats.nextEvent }) : t('staff.stats.no_upcoming_events')}
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-purple-600" />
+              <div className="h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </div>
@@ -230,14 +260,14 @@ export function StaffDashboard() {
           <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{t('staff.stats.performance_score')}</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.performanceScore || 0}%</p>
-                <p className="text-xs text-orange-600 mt-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('staff.stats.performance_score')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.performanceScore || 0}%</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                   {(stats?.performanceScore || 0) >= 80 ? t('staff.stats.above_average') : (stats?.performanceScore || 0) >= 60 ? t('staff.stats.average') : t('staff.stats.below_average')}
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center">
-                <Activity className="h-6 w-6 text-orange-600" />
+              <div className="h-12 w-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                <Activity className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
           </div>
@@ -248,16 +278,48 @@ export function StaffDashboard() {
       <motion.div variants={item} className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
         <motion.div
           whileHover={{ y: -4, transition: { duration: 0.2 } }}
-          className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer"
-          onClick={() => window.location.href = '/tasks'}
+          className={cn(
+            "prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden",
+            todayAttendance?.check_in && !todayAttendance?.check_out
+              ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+              : ""
+          )}
+          onClick={handleClockToggle}
         >
           <div className="prime-card-body p-6">
             <div className="text-center">
-              <div className="h-14 w-14 rounded-full bg-hotel-gold/10 group-hover:bg-hotel-gold/20 flex items-center justify-center mx-auto mb-3 transition-colors">
-                <Clock className="h-7 w-7 text-hotel-gold" />
+              <div className={cn(
+                "h-14 w-14 rounded-full flex items-center justify-center mx-auto mb-3 transition-all duration-300 shadow-md",
+                todayAttendance?.check_in && !todayAttendance?.check_out
+                  ? "bg-red-600 text-white"
+                  : "bg-hotel-gold text-white"
+              )}>
+                {todayAttendance?.check_in && !todayAttendance?.check_out ? (
+                  <LogOut className="h-7 w-7" />
+                ) : (
+                  <LogIn className="h-7 w-7" />
+                )}
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.clock_in_out')}</h3>
-              <p className="text-xs text-gray-500">{t('staff.quick_actions.track_work_hours')}</p>
+              <p className={cn(
+                "text-base font-bold mb-0.5 leading-tight",
+                todayAttendance?.check_in && !todayAttendance?.check_out
+                  ? "text-red-700 dark:text-red-400"
+                  : "text-gray-900 dark:text-white"
+              )}>
+                {todayAttendance?.check_in && !todayAttendance?.check_out
+                  ? t('staff.quick_actions.clock_out', 'Clock Out')
+                  : t('staff.quick_actions.clock_in', 'Clock In')}
+              </p>
+              <p className={cn(
+                "text-[10px] font-medium leading-none",
+                todayAttendance?.check_in && !todayAttendance?.check_out
+                  ? "text-red-600/80 dark:text-red-400/80"
+                  : "text-gray-500 dark:text-gray-400"
+              )}>
+                {todayAttendance?.check_in && !todayAttendance?.check_out
+                  ? `${t('staff.quick_actions.on_duty_since', 'On duty since')} ${format(new Date(todayAttendance.check_in), 'p')}`
+                  : t('staff.quick_actions.start_shift', 'Start your shift')}
+              </p>
             </div>
           </div>
         </motion.div>
@@ -265,15 +327,20 @@ export function StaffDashboard() {
         <motion.div
           whileHover={{ y: -4, transition: { duration: 0.2 } }}
           className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer"
-          onClick={() => window.location.href = '/documents'}
+          onClick={() => window.location.href = '/knowledge'}
         >
           <div className="prime-card-body p-6">
-            <div className="text-center">
-              <div className="h-14 w-14 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mx-auto mb-3 transition-colors">
-                <FileText className="h-7 w-7 text-blue-600" />
+            <div className="text-center relative">
+              {stats?.requiredReading > 0 && (
+                <Badge className="absolute -top-2 -right-2 bg-red-500 text-white border-0 px-2 min-w-[20px] justify-center">
+                  {stats.requiredReading}
+                </Badge>
+              )}
+              <div className="h-14 w-14 rounded-full bg-blue-50 dark:bg-blue-900/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center mx-auto mb-3 transition-colors">
+                <BookOpen className="h-7 w-7 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.policies_forms')}</h3>
-              <p className="text-xs text-gray-500">{t('staff.quick_actions.access_policies')}</p>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{t('staff.quick_actions.required_reading', 'Required Reading')}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('staff.quick_actions.pending_sops', 'Pending policy reviews')}</p>
             </div>
           </div>
         </motion.div>
@@ -285,11 +352,11 @@ export function StaffDashboard() {
         >
           <div className="prime-card-body p-6">
             <div className="text-center">
-              <div className="h-14 w-14 rounded-full bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center mx-auto mb-3 transition-colors">
-                <Calendar className="h-7 w-7 text-purple-600" />
+              <div className="h-14 w-14 rounded-full bg-purple-50 dark:bg-purple-900/20 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 flex items-center justify-center mx-auto mb-3 transition-colors">
+                <Calendar className="h-7 w-7 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.my_requests')}</h3>
-              <p className="text-xs text-gray-500">{t('staff.quick_actions.submit_requests')}</p>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{t('staff.quick_actions.my_requests')}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('staff.quick_actions.submit_requests')}</p>
             </div>
           </div>
         </motion.div>
@@ -349,14 +416,10 @@ export function StaffDashboard() {
           </TransferEmployeeDialog>
         )}
       </motion.div>
-
-      {/* Knowledge & Quiz Widgets */}
       <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <KnowledgeWidget />
         <DailyQuizWidget />
       </motion.div>
-
-      {/* Main Content Tabs */}
       <motion.div variants={item}>
         <Tabs defaultValue="feed" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 h-auto">
@@ -451,7 +514,7 @@ export function StaffDashboard() {
                         "flex items-center justify-between p-3 rounded-r-lg",
                         colors.bg,
                         isRTL ? "border-r-4 rounded-r-none rounded-l-lg" : "border-l-4 rounded-l-none rounded-r-lg",
-                        isRTL ? `border-r-${colors.border.split('-')[1]}-500` : colors.border // Adjusting border logic is tricky with full class strings, simpler to just rely on border-s/e logic if possible or conditional classes
+                        isRTL ? `border-r-${colors.border.split('-')[1]}-500` : colors.border
                       )}
                         style={{
                           borderLeftWidth: isRTL ? '0' : '4px',
