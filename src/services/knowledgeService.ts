@@ -42,6 +42,9 @@ export async function getArticles(
           view_count
         `, { count: 'exact' })
 
+        // Filter out deleted items
+        query = query.eq('is_deleted', false)
+
         // Apply filters
         if (filters.query) {
             query = query.or(`title.ilike.%${filters.query}%,description.ilike.%${filters.query}%`)
@@ -94,6 +97,7 @@ export async function getArticleById(id: string): Promise<KnowledgeArticle | nul
             .from('documents')
             .select('*, sop:sop_documents(linked_training_id, linked_quiz_id)')
             .eq('id', id)
+            .eq('is_deleted', false)
             .single()
 
         if (error) {
@@ -116,7 +120,8 @@ export async function getFeaturedArticles(limit = 5): Promise<KnowledgeArticle[]
         const { data, error } = await supabase
             .from('documents')
             .select(`id, title, description, status, content_type, updated_at, view_count`)
-            .eq('status', 'PUBLISHED') // Assuming uppercase or standard
+            .eq('status', 'PUBLISHED')
+            .eq('is_deleted', false)
             .order('updated_at', { ascending: false })
             .limit(limit)
 
@@ -137,6 +142,7 @@ export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]>
             .from('documents')
             .select(`id, title, description, status, content_type, updated_at, view_count`)
             .eq('status', 'PUBLISHED')
+            .eq('is_deleted', false)
             .order('updated_at', { ascending: false })
             .limit(limit)
 

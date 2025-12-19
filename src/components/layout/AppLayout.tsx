@@ -13,6 +13,7 @@ import {
   Settings
 } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
+import { GlobalSearch } from '@/components/search/GlobalSearch'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
@@ -37,6 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -125,7 +127,8 @@ export function AppLayout({ children }: AppLayoutProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="text-gray-600 hover:bg-gray-100 touch-target"
+              onClick={() => setShowMobileSearch(!showMobileSearch)}
+              className={cn("text-gray-600 hover:bg-gray-100 touch-target transition-colors", showMobileSearch && "bg-gray-100 text-hotel-navy")}
               aria-label="Search"
             >
               <Search className="h-5 w-5" />
@@ -133,6 +136,25 @@ export function AppLayout({ children }: AppLayoutProps) {
             <NotificationBell />
           </div>
         </header>
+
+        {/* Mobile Search Overlay */}
+        <AnimatePresence>
+          {showMobileSearch && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="lg:hidden bg-white border-b border-gray-200"
+            >
+              <div className="p-4">
+                <GlobalSearch
+                  className="block w-full max-w-none mx-0"
+                  onClose={() => setShowMobileSearch(false)}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <main id="main-content" className="flex-1 bg-background/50 pb-20 lg:pb-0" role="main">
           <div className="container py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8">

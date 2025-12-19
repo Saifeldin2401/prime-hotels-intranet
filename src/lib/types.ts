@@ -289,6 +289,7 @@ export interface Document {
   id: string
   title: string
   description: string | null
+  content?: string | null
   file_url: string
   visibility: DocumentVisibility
   property_id: string | null

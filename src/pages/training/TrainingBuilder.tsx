@@ -809,7 +809,7 @@ export default function TrainingBuilder() {
       <BuilderHeader
         title={title}
         isSaving={saveModuleMutation.isPending || saveContentBlocksMutation.isPending}
-        hasUnsavedChanges={false} // TODO: Implement dirty state
+        hasUnsavedChanges={saveModuleMutation.isPending || saveContentBlocksMutation.isPending} // Simplified mechanism for now
         onSave={handleSave}
         onPreview={() => setViewMode('preview')}
         onMagic={() => setShowSmartWizard(true)}

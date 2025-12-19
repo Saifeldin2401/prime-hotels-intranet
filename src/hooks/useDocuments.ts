@@ -203,8 +203,8 @@ export function useDocumentStats() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('documents')
-        .select('status')
-        .order('created_at', { ascending: false })
+        .select('status, file_size')
+        .eq('is_deleted', false)
 
       if (error) throw error
 
@@ -215,6 +215,7 @@ export function useDocumentStats() {
         approved: data?.filter(d => d.status === 'APPROVED').length || 0,
         published: data?.filter(d => d.status === 'PUBLISHED').length || 0,
         rejected: data?.filter(d => d.status === 'REJECTED').length || 0,
+        totalBytes: data?.reduce((acc, doc) => acc + (doc.file_size || 0), 0) || 0
       }
 
       return stats
@@ -371,5 +372,58 @@ export function useRejectDocument() {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
     },
+  })
+}
+
+export function useFavorites() {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: ['document-favorites', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('document_favorites')
+        .select('document_id')
+        .eq('user_id', user!.id)
+
+      if (error) throw error
+      return new Set(data?.map(f => f.document_id) || [])
+    }
+  })
+}
+
+export function useToggleFavorite() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async ({ documentId, isFavorite }: { documentId: string, isFavorite: boolean }) => {
+      if (!user) throw new Error('User must be authenticated')
+
+      if (isFavorite) {
+        // Remove favorite
+        const { error } = await supabase
+          .from('document_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('document_id', documentId)
+
+        if (error) throw error
+      } else {
+        // Add favorite
+        const { error } = await supabase
+          .from('document_favorites')
+          .insert({
+            user_id: user.id,
+            document_id: documentId
+          })
+
+        if (error) throw error
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-favorites'] })
+    }
   })
 }

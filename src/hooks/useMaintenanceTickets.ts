@@ -206,6 +206,10 @@ export function useUpdateMaintenanceTicket() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+      crudToasts.update.success('Ticket')
+    },
+    onError: () => {
+      crudToasts.update.error('ticket')
     }
   })
 }
@@ -346,6 +350,10 @@ export function useAddMaintenanceComment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+      crudToasts.create.success('Comment')
+    },
+    onError: () => {
+      crudToasts.create.error('comment')
     }
   })
 }
@@ -402,6 +410,10 @@ export function useUploadMaintenanceAttachment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+      crudToasts.create.success('Attachment')
+    },
+    onError: () => {
+      crudToasts.create.error('attachment')
     }
   })
 }

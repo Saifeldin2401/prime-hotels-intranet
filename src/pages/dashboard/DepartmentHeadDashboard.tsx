@@ -16,8 +16,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useDepartmentHeadStats } from '@/hooks/useDashboardStats'
 
 import { DepartmentTeamList } from '@/components/dashboard/DepartmentTeamList'
+import { useTranslation } from 'react-i18next'
 
 export function DepartmentHeadDashboard() {
+  const { t } = useTranslation('dashboard')
   const { currentProperty } = useProperty()
   const { user, profile, primaryRole } = useAuth()
   const navigate = useNavigate()
@@ -98,13 +100,13 @@ export function DepartmentHeadDashboard() {
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Department Dashboard</h1>
-          <p className="text-gray-600 text-sm sm:text-base">Manage your team and department operations</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{t('cards.department_dashboard_title')}</h1>
+          <p className="text-gray-600 text-sm sm:text-base">{t('cards.department_dashboard_subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <OverdueBadge type="tasks" />
           <Badge className="text-xs sm:text-sm bg-green-100 text-green-800">
-            {teamStats.totalStaff} Team Members
+            {t('cards.team_members_badge', { count: teamStats.totalStaff })}
           </Badge>
         </div>
       </div>
@@ -113,44 +115,44 @@ export function DepartmentHeadDashboard() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
         <Card className="role-department-head cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/department/team')}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Team Present Today</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.team_present_today')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{teamStats.presentToday}/{teamStats.totalStaff}</div>
             <Progress value={teamStats.totalStaff > 0 ? (teamStats.presentToday / teamStats.totalStaff) * 100 : 0} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Pending attendance integration</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.pending_attendance_integration')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-department-head cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/training')}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Training Compliance</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.training_compliance')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{teamStats.trainingCompliance}%</div>
             <Progress value={teamStats.trainingCompliance} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Completion rate</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.completion_rate')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-department-head cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/approvals')}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending Approvals</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.approvals')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{teamStats.pendingApprovals}</div>
-            <p className="text-xs text-gray-600 mt-1">Urgent actions needed</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.pending_approvals_subtitle')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-department-head">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Team Performance</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.team_performance')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{teamStats.performanceScore}%</div>
             <Progress value={teamStats.performanceScore} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Task completion rate</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.task_completion_rate')}</p>
           </CardContent>
         </Card>
       </div>
@@ -159,10 +161,10 @@ export function DepartmentHeadDashboard() {
       <Tabs defaultValue="feed" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-4 h-auto">
-            <TabsTrigger value="feed" className="text-xs sm:text-sm whitespace-nowrap">Feed</TabsTrigger>
-            <TabsTrigger value="team" className="text-xs sm:text-sm whitespace-nowrap">Team</TabsTrigger>
-            <TabsTrigger value="approvals" className="text-xs sm:text-sm whitespace-nowrap">Approvals</TabsTrigger>
-            <TabsTrigger value="reports" className="text-xs sm:text-sm whitespace-nowrap">Reports</TabsTrigger>
+            <TabsTrigger value="feed" className="text-xs sm:text-sm whitespace-nowrap">{t('tabs.feed')}</TabsTrigger>
+            <TabsTrigger value="team" className="text-xs sm:text-sm whitespace-nowrap">{t('cards.team')}</TabsTrigger>
+            <TabsTrigger value="approvals" className="text-xs sm:text-sm whitespace-nowrap">{t('cards.approvals')}</TabsTrigger>
+            <TabsTrigger value="reports" className="text-xs sm:text-sm whitespace-nowrap">{t('tabs.reports')}</TabsTrigger>
           </TabsList>
         </div>
 
@@ -184,7 +186,7 @@ export function DepartmentHeadDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.Users className="h-5 w-5" />
-                <span>Department Staff</span>
+                <span>{t('cards.department_staff')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -198,18 +200,18 @@ export function DepartmentHeadDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.CheckCircle className="h-5 w-5" />
-                <span>Pending Approvals</span>
+                <span>{t('cards.approvals')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {teamStats.pendingApprovals > 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <p>You have {teamStats.pendingApprovals} pending approvals. <Button variant="link" onClick={() => navigate('/approvals')}>View All</Button></p>
+                  <p>{t('cards.pending_approvals_message', { count: teamStats.pendingApprovals })} <Button variant="link" onClick={() => navigate('/approvals')}>{t('actions.view_all')}</Button></p>
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Icons.CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>No pending approvals.</p>
+                  <p>{t('cards.no_pending_approvals')}</p>
                 </div>
               )}
             </CardContent>
@@ -221,13 +223,13 @@ export function DepartmentHeadDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.BarChart3 className="h-5 w-5" />
-                <span>Department Reports</span>
+                <span>{t('cards.department_reports_title')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center py-8 text-gray-500">
                 <Icons.BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>No department reports generated.</p>
+                <p>{t('cards.no_department_reports')}</p>
               </div>
             </CardContent>
           </Card>

@@ -200,7 +200,7 @@ export default function MaintenanceDashboard() {
         <div className="flex gap-2">
           <Button onClick={() => navigate('/maintenance/preventive')} variant="outline" className="shadow-sm rounded-md transition-colors border-hotel-gold text-hotel-gold hover:bg-hotel-gold/10">
             <Calendar className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-            Schedules
+            {t('schedules')}
           </Button>
           <Button onClick={() => navigate('/maintenance/submit')} className="bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm rounded-md transition-colors">
             <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
@@ -309,7 +309,7 @@ export default function MaintenanceDashboard() {
 
           <TabsContent value="my-tickets" className="space-y-4 animate-slide-up">
             {filteredTickets(myTickets || []).length === 0 ? (
-              <div className="bg-card border border-border dashed border-2 p-12 rounded-lg text-center">
+              <div className="bg-card border-2 dashed border-border p-12 rounded-lg text-center">
                 <div className="w-48 h-48 mx-auto mb-6 opacity-90 transition-opacity duration-300">
                   <img
                     src={emptyStateImage}
@@ -368,6 +368,6 @@ export default function MaintenanceDashboard() {
           )}
         </Tabs>
       </div>
-    </div>
+    </div >
   )
 }

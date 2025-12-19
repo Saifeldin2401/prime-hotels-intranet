@@ -14,14 +14,7 @@ export function PublicNavbar() {
     const { t } = useTranslation('nav')
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-    const navItems: NavItem[] = [
-        { label: t('home'), href: '/' },
-        { label: t('announcements'), href: '/public/news' },
-        { label: t('employee_resources'), href: '/public/resources' },
-        { label: t('schedules'), href: '/public/schedules' },
-        { label: t('directory'), href: '/public/directory' },
-        { label: t('help'), href: '/public/help' },
-    ]
+    const navItems: NavItem[] = []
     return (
         <header className="bg-hotel-navy text-white shadow-lg sticky top-0 z-50">
             <div className="max-w-7xl mx-auto">
@@ -34,7 +27,7 @@ export function PublicNavbar() {
                             className="h-14 w-auto"
                         />
                     </Link>
-                    
+
                     {/* Desktop Navigation */}
                     <div className="hidden lg:flex items-center gap-8">
                         <nav className="flex items-center gap-6">

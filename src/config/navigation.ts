@@ -112,7 +112,7 @@ export interface NavigationGroupConfig {
 export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     {
         id: 'home',
-        title: 'nav.groups.home',
+        title: 'groups.home',
         icon: Home,
         order: 0,
         visibleTo: 'all',
@@ -120,7 +120,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'my_work',
-        title: 'nav.groups.my_work',
+        title: 'groups.my_work',
         icon: User,
         order: 1,
         visibleTo: 'all',
@@ -128,7 +128,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'knowledge_base',
-        title: 'nav.groups.knowledge_base',
+        title: 'groups.knowledge_base',
         icon: BookOpen,
         order: 2,
         visibleTo: 'all',
@@ -136,7 +136,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'learning',
-        title: 'nav.groups.learning',
+        title: 'groups.learning',
         icon: GraduationCap,
         order: 3,
         visibleTo: 'all',
@@ -144,7 +144,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'operations',
-        title: 'nav.groups.operations',
+        title: 'groups.operations',
         icon: CheckSquare,
         order: 4,
         visibleTo: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
@@ -152,7 +152,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'hr_management',
-        title: 'nav.groups.hr_management',
+        title: 'groups.hr_management',
         icon: Users,
         order: 5,
         visibleTo: 'all', // Make group visible to all (items are still restricted)
@@ -160,7 +160,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'learning_management',
-        title: 'nav.groups.learning_management',
+        title: 'groups.learning_management',
         icon: GraduationCap,
         order: 6,
         visibleTo: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
@@ -168,7 +168,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'question_bank',
-        title: 'nav.groups.question_bank',
+        title: 'groups.question_bank',
         icon: FileQuestion,
         order: 7,
         visibleTo: ['regional_admin', 'regional_hr', 'property_hr', 'department_head'],
@@ -176,7 +176,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'communication',
-        title: 'nav.groups.communication',
+        title: 'groups.communication',
         icon: MessageSquare,
         order: 8,
         visibleTo: 'all',
@@ -184,7 +184,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'administration',
-        title: 'nav.groups.admin',
+        title: 'groups.admin',
         icon: Shield,
         order: 9,
         visibleTo: ['regional_admin', 'regional_hr'],
@@ -192,7 +192,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     },
     {
         id: 'settings',
-        title: 'nav.groups.settings',
+        title: 'groups.settings',
         icon: Settings,
         order: 10,
         visibleTo: 'all',
@@ -210,7 +210,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/dashboard',
-        title: 'nav.dashboard',
+        title: 'dashboard',
         icon: BarChart3,
         description: 'Your personalized dashboard',
         allowedRoles: 'all',
@@ -232,7 +232,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/hr/leave',
-        title: 'nav.my_requests',
+        title: 'my_requests',
         icon: Calendar,
         description: 'Submit and track leave requests',
         allowedRoles: 'all',
@@ -241,7 +241,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/tasks',
-        title: 'nav.my_tasks',
+        title: 'my_tasks',
         icon: CheckSquare,
         description: 'Your assigned tasks',
         allowedRoles: 'all',
@@ -251,7 +251,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/onboarding',
-        title: 'nav.onboarding',
+        title: 'onboarding',
         icon: CheckSquare, // Using CheckSquare as it looks like a checklist
         description: 'Complete your onboarding tasks',
         allowedRoles: 'all',
@@ -264,7 +264,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/approvals',
-        title: 'nav.approvals',
+        title: 'approvals',
         icon: CheckSquare,
         description: 'Pending items requiring your approval',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
@@ -274,7 +274,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/hr/inbox',
-        title: 'nav.hr_inbox',
+        title: 'hr_inbox',
         icon: FolderOpen,
         description: 'HR requests inbox - Use Approvals instead',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
@@ -285,7 +285,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/maintenance',
-        title: 'nav.maintenance',
+        title: 'maintenance',
         icon: Wrench,
         description: 'Submit and track maintenance tickets',
         allowedRoles: 'all',
@@ -298,7 +298,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/directory',
-        title: 'nav.directory',
+        title: 'directory',
         icon: Users,
         description: 'Employee directory',
         allowedRoles: 'all',
@@ -307,7 +307,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/jobs',
-        title: 'nav.jobs',
+        title: 'jobs',
         icon: Briefcase,
         description: 'Job postings and applications',
         allowedRoles: 'all',
@@ -316,7 +316,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/hr/referrals',
-        title: 'nav.referrals',
+        title: 'referrals',
         icon: Users,
         description: 'Employee referral program',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
@@ -325,7 +325,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/hr/promotions/new',
-        title: 'nav.promotions',
+        title: 'promotions',
         icon: ArrowUp,
         description: 'Initiate employee promotions',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
@@ -334,7 +334,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/hr/transfers/new',
-        title: 'nav.transfers',
+        title: 'transfers',
         icon: ArrowRightLeft,
         description: 'Initiate employee transfers',
         allowedRoles: ['regional_admin', 'regional_hr'],
@@ -343,7 +343,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/hr/operations',
-        title: 'nav.hr_operations',
+        title: 'hr_operations',
         icon: Building,
         description: 'HR operations center',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
@@ -352,7 +352,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/hr/onboarding',
-        title: 'nav.onboarding_tracker',
+        title: 'onboarding_tracker',
         icon: CheckSquare,
         description: 'Track new hire onboarding progress',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
@@ -361,7 +361,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/hr/promotions/history',
-        title: 'nav.promotion_history', // Keeping key same, or should I update key? The logic uses translation. 'Promotions & Transfers' is english.
+        title: 'promotion_history', // Keeping key same, or should I update key? The logic uses translation. 'Promotions & Transfers' is english.
         // Wait, title is i18n key. 'nav.promotion_history'.
         // I should probably not change the key if I don't change the json.
         // But the previous edit tried to change the TITLE to 'Promotions & Transfers'.
@@ -387,7 +387,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/knowledge',
-        title: 'nav.knowledge_base',
+        title: 'knowledge_base',
         icon: BookOpen,
         description: 'Centralized knowledge hub - SOPs, policies, guides',
         allowedRoles: 'all',
@@ -397,7 +397,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/knowledge/review',
-        title: 'nav.knowledge_review',
+        title: 'knowledge_review',
         icon: CheckSquare,
         description: 'Review pending content',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
@@ -407,7 +407,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/knowledge/analytics',
-        title: 'nav.knowledge_analytics',
+        title: 'knowledge_analytics',
         icon: BarChart3,
         description: 'Content usage and insights',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
@@ -420,7 +420,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/learning/my',
-        title: 'nav.my_training',
+        title: 'my_training',
         icon: GraduationCap,
         description: 'Your assigned training modules',
         allowedRoles: 'all',
@@ -430,7 +430,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/training/paths',
-        title: 'nav.training_paths',
+        title: 'training_paths',
         icon: BookOpen,
         description: 'Learning paths and curricula',
         allowedRoles: 'all',
@@ -439,7 +439,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/training/certificates',
-        title: 'nav.my_certificates',
+        title: 'my_certificates',
         icon: Award,
         description: 'Your earned certificates',
         allowedRoles: 'all',
@@ -452,7 +452,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/training/modules',
-        title: 'nav.training_modules',
+        title: 'training_modules',
         icon: BookOpen,
         description: 'Manage training modules',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
@@ -461,7 +461,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/training/builder',
-        title: 'nav.training_builder',
+        title: 'training_builder',
         icon: ListTodo,
         description: 'Create training content',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
@@ -470,7 +470,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/training/assignments',
-        title: 'nav.training_assignments',
+        title: 'training_assignments',
         icon: Users,
         description: 'Assign training to users',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
@@ -483,7 +483,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/questions',
-        title: 'nav.questions',
+        title: 'questions',
         icon: FileQuestion,
         description: 'Manage knowledge questions',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
@@ -492,7 +492,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/learning/quizzes',
-        title: 'nav.quizzes',
+        title: 'quizzes',
         icon: CheckSquare,
         description: 'Manage quizzes',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr', 'department_head'],
@@ -505,7 +505,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/messaging',
-        title: 'nav.messaging',
+        title: 'messaging',
         icon: MessageSquare,
         description: 'Direct messages and team chat',
         allowedRoles: 'all',
@@ -515,7 +515,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/announcements',
-        title: 'nav.announcements',
+        title: 'announcements',
         icon: Megaphone,
         description: 'Company announcements',
         allowedRoles: 'all',
@@ -524,7 +524,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/documents',
-        title: 'nav.documents',
+        title: 'documents',
         icon: FileText,
         description: 'Policies and documents',
         allowedRoles: 'all',
@@ -537,7 +537,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/admin/users',
-        title: 'nav.user_management',
+        title: 'user_management',
         icon: Users,
         description: 'Manage system users',
         allowedRoles: ['regional_admin', 'regional_hr'],
@@ -546,7 +546,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/admin/job-titles',
-        title: 'Job Titles', // Using string literal as placeholder until i18n key is added
+        title: 'job_titles', // Using string literal as placeholder until i18n key is added
         icon: Briefcase,
         description: 'Manage master list of job titles',
         allowedRoles: ['regional_admin', 'regional_hr'],
@@ -555,7 +555,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/admin/properties',
-        title: 'nav.property_management',
+        title: 'property_management',
         icon: Building,
         description: 'Manage hotel properties',
         allowedRoles: ['regional_admin'],
@@ -564,7 +564,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/reports',
-        title: 'nav.reports',
+        title: 'reports',
         icon: BarChart3,
         description: 'Analytics and reports',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
@@ -573,7 +573,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/admin/workflows',
-        title: 'nav.automations',
+        title: 'automations',
         icon: Workflow,
         description: 'Manage workflow automations',
         allowedRoles: ['regional_admin', 'property_manager'],
@@ -581,8 +581,17 @@ export const ROUTES: RouteConfig[] = [
         order: 3.5
     },
     {
+        path: '/admin/notifications',
+        title: 'Notification Batches',
+        icon: Bell,
+        description: 'Monitor bulk notification jobs',
+        allowedRoles: ['regional_admin', 'regional_hr'],
+        group: 'administration',
+        order: 3.8
+    },
+    {
         path: '/admin/audit',
-        title: 'nav.audit_logs',
+        title: 'audit_logs',
         icon: ClipboardList,
         description: 'System audit logs',
         allowedRoles: ['regional_admin'],
@@ -591,7 +600,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/admin/escalation',
-        title: 'nav.escalation_rules',
+        title: 'escalation_rules',
         icon: Bell,
         description: 'Configure escalation rules',
         allowedRoles: ['regional_admin'],
@@ -600,7 +609,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/admin/onboarding/templates',
-        title: 'nav.onboarding_templates',
+        title: 'onboarding_templates',
         icon: ListTodo,
         description: 'Manage onboarding checklists',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
@@ -613,7 +622,7 @@ export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
     {
         path: '/profile',
-        title: 'nav.my_profile',
+        title: 'my_profile',
         icon: User,
         description: 'Your profile settings',
         allowedRoles: 'all',
@@ -622,7 +631,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/settings',
-        title: 'nav.settings',
+        title: 'settings',
         icon: Settings,
         description: 'App preferences',
         allowedRoles: 'all',
@@ -631,7 +640,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/search',
-        title: 'nav.search',
+        title: 'search',
         icon: Search,
         description: 'Global search',
         allowedRoles: 'all',

@@ -1,6 +1,7 @@
 {
     "referrals": {
         "title": "Employee Referrals",
+        "new_referral": "New Referral",
         "description": "Manage employee referral program and track referral bonuses",
         "stats": {
             "total": "Total Referrals",

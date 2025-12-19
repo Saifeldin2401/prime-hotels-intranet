@@ -1,4 +1,4 @@
-﻿{
+{
     "certificates": "Certificates",
     "certificateDescription": "View and manage your training certificates and achievements",
     "myCertificates": "My Certificates",
@@ -194,5 +194,6 @@
     "aiAssistant": "AI Assistant",
     "courseStructure": "Course Structure",
     "startCreating": "Start Creating",
+    "validity": "Validity",
     "items": "items"
 }

@@ -11,6 +11,7 @@ import type {
 } from '@/lib/types'
 import { learningService } from '@/services/learningService'
 import type { QuestionStatus } from '@/types/questions'
+import { crudToasts, showSuccessToast, showErrorToast } from '@/lib/toastHelpers'
 
 
 // Training Modules
@@ -122,7 +123,9 @@ export function useCreateTrainingModule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+      crudToasts.create.success('Training module')
     },
+    onError: () => crudToasts.create.error('training module')
   })
 }
 
@@ -144,7 +147,9 @@ export function useUpdateTrainingModule() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
       queryClient.invalidateQueries({ queryKey: ['training-module', data.id] })
+      crudToasts.update.success('Training module')
     },
+    onError: () => crudToasts.update.error('training module')
   })
 }
 
@@ -166,7 +171,9 @@ export function useCreateContentBlock() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['training-module', data.training_module_id] })
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+      crudToasts.create.success('Content block')
     },
+    onError: () => crudToasts.create.error('content block')
   })
 }
 
@@ -215,7 +222,9 @@ export function useDeleteContentBlock() {
       if (moduleId) {
         queryClient.invalidateQueries({ queryKey: ['training-module', moduleId] })
       }
+      crudToasts.delete.success('Content block')
     },
+    onError: () => crudToasts.delete.error('content block')
   })
 }
 
@@ -236,7 +245,9 @@ export function useCreateQuiz() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['training-module', data.training_module_id] })
+      crudToasts.create.success('Quiz')
     },
+    onError: () => crudToasts.create.error('quiz')
   })
 }
 
@@ -354,7 +365,9 @@ export function useCreateTrainingAssignment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-assignments'] })
       queryClient.invalidateQueries({ queryKey: ['my-training'] })
+      crudToasts.create.success('Assignment')
     },
+    onError: () => crudToasts.create.error('assignment')
   })
 }
 
@@ -461,6 +474,7 @@ export function useStartTraining() {
       queryClient.invalidateQueries({ queryKey: ['training-progress'] })
       queryClient.invalidateQueries({ queryKey: ['my-training'] })
     },
+    onError: () => showErrorToast('Failed to start training')
   })
 }
 
@@ -531,7 +545,9 @@ export function useCompleteTraining() {
       queryClient.invalidateQueries({ queryKey: ['my-training'] })
       queryClient.invalidateQueries({ queryKey: ['training-module', data.training_id] })
       queryClient.invalidateQueries({ queryKey: ['certificates'] })
+      showSuccessToast('Training Completed!', 'Great job on finishing this module.')
     },
+    onError: () => showErrorToast('Failed to complete training')
   })
 }
 
@@ -599,7 +615,13 @@ export function useCreateQuizAttempt() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['quiz-attempts'] })
       queryClient.invalidateQueries({ queryKey: ['training-module', data.module_id] })
+      if (data.passed) {
+        showSuccessToast('Quiz Passed!', `You scored ${data.score}/${data.max_score}`)
+      } else {
+        showErrorToast('Quiz Failed', `You scored ${data.score}/${data.max_score}. Please try again.`)
+      }
     },
+    onError: () => showErrorToast('Failed to submit quiz')
   })
 }
 

@@ -122,7 +122,7 @@ export default function KnowledgeAnalytics() {
     }
 
     if (!analytics) {
-        return <div>No data available</div>
+        return <div>{t('common.no_data', 'No data available')}</div>
     }
 
     return (
@@ -130,10 +130,10 @@ export default function KnowledgeAnalytics() {
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                    {t('analytics.title', 'Knowledge Base Analytics')}
+                    {t('analytics.title')}
                 </h1>
                 <p className="text-gray-600 mt-1">
-                    {t('analytics.subtitle', 'Content performance and engagement metrics')}
+                    {t('analytics.subtitle')}
                 </p>
             </div>
 
@@ -143,7 +143,7 @@ export default function KnowledgeAnalytics() {
                     <CardContent className="pt-6">
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Total Articles</p>
+                                <p className="text-sm font-medium text-gray-500">{t('analytics.total_articles')}</p>
                                 <p className="text-3xl font-bold text-gray-900">{analytics.totalArticles}</p>
                             </div>
                             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -152,10 +152,10 @@ export default function KnowledgeAnalytics() {
                         </div>
                         <div className="mt-3 flex items-center gap-2 text-xs">
                             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                {analytics.publishedArticles} published
+                                {analytics.publishedArticles} {t('status.published')}
                             </Badge>
                             <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                                {analytics.draftArticles} drafts
+                                {analytics.draftArticles} {t('status.draft')}
                             </Badge>
                         </div>
                     </CardContent>
@@ -165,7 +165,7 @@ export default function KnowledgeAnalytics() {
                     <CardContent className="pt-6">
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Total Views</p>
+                                <p className="text-sm font-medium text-gray-500">{t('analytics.total_views')}</p>
                                 <p className="text-3xl font-bold text-gray-900">{analytics.totalViews.toLocaleString()}</p>
                             </div>
                             <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
@@ -173,7 +173,7 @@ export default function KnowledgeAnalytics() {
                             </div>
                         </div>
                         <p className="mt-3 text-xs text-gray-500">
-                            Avg {analytics.avgViews} views per article
+                            {t('analytics.avg_views', { count: analytics.avgViews })}
                         </p>
                     </CardContent>
                 </Card>
@@ -182,7 +182,7 @@ export default function KnowledgeAnalytics() {
                     <CardContent className="pt-6">
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Recently Updated</p>
+                                <p className="text-sm font-medium text-gray-500">{t('analytics.recently_updated')}</p>
                                 <p className="text-3xl font-bold text-gray-900">{analytics.recentlyUpdated}</p>
                             </div>
                             <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
@@ -190,7 +190,7 @@ export default function KnowledgeAnalytics() {
                             </div>
                         </div>
                         <p className="mt-3 text-xs text-gray-500">
-                            In the last 30 days
+                            {t('analytics.last_30_days')}
                         </p>
                     </CardContent>
                 </Card>
@@ -199,7 +199,7 @@ export default function KnowledgeAnalytics() {
                     <CardContent className="pt-6">
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Needs Review</p>
+                                <p className="text-sm font-medium text-gray-500">{t('analytics.needs_review')}</p>
                                 <p className="text-3xl font-bold text-orange-600">{analytics.staleContent}</p>
                             </div>
                             <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
@@ -207,7 +207,7 @@ export default function KnowledgeAnalytics() {
                             </div>
                         </div>
                         <p className="mt-3 text-xs text-gray-500">
-                            Not updated in 90+ days
+                            {t('analytics.not_updated_90_days')}
                         </p>
                     </CardContent>
                 </Card>
@@ -216,7 +216,7 @@ export default function KnowledgeAnalytics() {
             {/* Content by Type */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">Content by Type</CardTitle>
+                    <CardTitle className="text-base">{t('analytics.content_by_type')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
@@ -224,10 +224,11 @@ export default function KnowledgeAnalytics() {
                             .sort((a, b) => b[1] - a[1])
                             .map(([type, count]) => {
                                 const percentage = (count / analytics.totalArticles) * 100
+                                const typeLabel = t(`content_types.${type}`, type)
                                 return (
                                     <div key={type} className="flex items-center gap-4">
                                         <div className="w-24 text-sm font-medium text-gray-600 capitalize">
-                                            {type}
+                                            {typeLabel}
                                         </div>
                                         <div className="flex-1">
                                             <Progress value={percentage} className="h-2" />
@@ -249,15 +250,15 @@ export default function KnowledgeAnalytics() {
                         <div>
                             <CardTitle className="text-base flex items-center gap-2">
                                 <TrendingUp className="h-5 w-5 text-green-600" />
-                                Top Viewed Articles
+                                {t('analytics.top_viewed')}
                             </CardTitle>
-                            <CardDescription>Most popular content</CardDescription>
+                            <CardDescription>{t('analytics.top_viewed_desc')}</CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
                             {analytics.topViewed.length === 0 ? (
-                                <p className="text-gray-500 text-center py-4">No view data yet</p>
+                                <p className="text-gray-500 text-center py-4">{t('analytics.no_view_data')}</p>
                             ) : (
                                 analytics.topViewed.map((article, index) => (
                                     <Link
@@ -270,7 +271,7 @@ export default function KnowledgeAnalytics() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-gray-900 truncate">{article.title}</p>
-                                            <p className="text-xs text-gray-500">{article.category?.name || 'General'}</p>
+                                            <p className="text-xs text-gray-500">{article.category?.name || t('general_category')}</p>
                                         </div>
                                         <Badge variant="secondary">
                                             <Eye className="h-3 w-3 mr-1" />
@@ -289,9 +290,9 @@ export default function KnowledgeAnalytics() {
                         <div>
                             <CardTitle className="text-base flex items-center gap-2">
                                 <Clock className="h-5 w-5 text-orange-600" />
-                                Stale Content
+                                {t('analytics.stale_content')}
                             </CardTitle>
-                            <CardDescription>Articles needing review</CardDescription>
+                            <CardDescription>{t('analytics.stale_content_desc')}</CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -299,7 +300,7 @@ export default function KnowledgeAnalytics() {
                             {analytics.staleArticles.length === 0 ? (
                                 <div className="text-center py-4">
                                     <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto mb-2" />
-                                    <p className="text-gray-500">All content is up to date!</p>
+                                    <p className="text-gray-500">{t('analytics.all_up_to_date')}</p>
                                 </div>
                             ) : (
                                 analytics.staleArticles.map(article => {
@@ -318,7 +319,7 @@ export default function KnowledgeAnalytics() {
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium text-gray-900 truncate">{article.title}</p>
                                                 <p className="text-xs text-orange-600">
-                                                    {daysSinceUpdate} days since last update
+                                                    {t('analytics.days_since_update', { count: daysSinceUpdate })}
                                                 </p>
                                             </div>
                                             <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -337,13 +338,13 @@ export default function KnowledgeAnalytics() {
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                            {analytics.pendingReview} Articles Pending Review
+                            {t('analytics.pending_review_count', { count: analytics.pendingReview })}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Link to="/knowledge/review">
                             <Badge className="bg-yellow-600 hover:bg-yellow-700">
-                                Review Now <ChevronRight className="h-3 w-3 ml-1" />
+                                {t('analytics.review_now')} <ChevronRight className="h-3 w-3 ml-1" />
                             </Badge>
                         </Link>
                     </CardContent>

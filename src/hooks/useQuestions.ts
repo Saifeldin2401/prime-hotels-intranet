@@ -17,6 +17,7 @@ import type {
     GeneratedQuestion
 } from '@/types/questions'
 import { toast } from 'sonner'
+import { crudToasts } from '@/lib/toastHelpers'
 
 // ============================================================================
 // QUESTIONS QUERIES
@@ -75,11 +76,11 @@ export function useCreateQuestion() {
             QuestionService.createQuestion(formData, user!.id, aiGenerated),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['questions'] })
-            toast.success('Question created successfully')
+            crudToasts.create.success('Question')
         },
         onError: (error) => {
-            toast.error('Failed to create question')
             console.error('Create question error:', error)
+            crudToasts.create.error('question')
         }
     })
 }
@@ -94,11 +95,11 @@ export function useUpdateQuestion() {
         onSuccess: (_, { id }) => {
             queryClient.invalidateQueries({ queryKey: ['questions'] })
             queryClient.invalidateQueries({ queryKey: ['question', id] })
-            toast.success('Question updated successfully')
+            crudToasts.update.success('Question')
         },
         onError: (error) => {
-            toast.error('Failed to update question')
             console.error('Update question error:', error)
+            crudToasts.update.error('question')
         }
     })
 }
@@ -110,10 +111,10 @@ export function useDeleteQuestion() {
         mutationFn: (id: string) => QuestionService.deleteQuestion(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['questions'] })
-            toast.success('Question deleted')
+            crudToasts.delete.success('Question')
         },
         onError: () => {
-            toast.error('Failed to delete question')
+            crudToasts.delete.error('question')
         }
     })
 }
@@ -130,10 +131,10 @@ export function useSubmitForReview() {
         onSuccess: (_, id) => {
             queryClient.invalidateQueries({ queryKey: ['questions'] })
             queryClient.invalidateQueries({ queryKey: ['question', id] })
-            toast.success('Question submitted for review')
+            crudToasts.submit.success('Question')
         },
         onError: () => {
-            toast.error('Failed to submit for review')
+            crudToasts.submit.error('question')
         }
     })
 }
@@ -149,10 +150,10 @@ export function useApproveQuestion() {
             queryClient.invalidateQueries({ queryKey: ['questions'] })
             queryClient.invalidateQueries({ queryKey: ['question', id] })
             queryClient.invalidateQueries({ queryKey: ['questions-pending-review'] })
-            toast.success('Question approved and published')
+            crudToasts.approve.success('Question')
         },
         onError: () => {
-            toast.error('Failed to approve question')
+            crudToasts.approve.error('question')
         }
     })
 }
@@ -168,10 +169,10 @@ export function useRejectQuestion() {
             queryClient.invalidateQueries({ queryKey: ['questions'] })
             queryClient.invalidateQueries({ queryKey: ['question', id] })
             queryClient.invalidateQueries({ queryKey: ['questions-pending-review'] })
-            toast.success('Question returned to draft with feedback')
+            crudToasts.reject.success('Question')
         },
         onError: () => {
-            toast.error('Failed to reject question')
+            crudToasts.reject.error('question')
         }
     })
 }
@@ -183,10 +184,10 @@ export function useArchiveQuestion() {
         mutationFn: (id: string) => QuestionService.archiveQuestion(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['questions'] })
-            toast.success('Question archived')
+            crudToasts.update.success('Question archived')
         },
         onError: () => {
-            toast.error('Failed to archive question')
+            crudToasts.update.error('archive question')
         }
     })
 }
@@ -212,10 +213,10 @@ export function useLinkQuestion() {
         }) => QuestionService.linkQuestionToContext(questionId, usageType, entityId, options),
         onSuccess: (_, { usageType, entityId }) => {
             queryClient.invalidateQueries({ queryKey: ['questions-context', usageType, entityId] })
-            toast.success('Question linked successfully')
+            crudToasts.create.success('Question link')
         },
         onError: () => {
-            toast.error('Failed to link question')
+            crudToasts.create.error('link question')
         }
     })
 }
@@ -235,10 +236,10 @@ export function useUnlinkQuestion() {
         }) => QuestionService.unlinkQuestionFromContext(questionId, usageType, entityId),
         onSuccess: (_, { usageType, entityId }) => {
             queryClient.invalidateQueries({ queryKey: ['questions-context', usageType, entityId] })
-            toast.success('Question unlinked')
+            crudToasts.delete.success('Question link')
         },
         onError: () => {
-            toast.error('Failed to unlink question')
+            crudToasts.delete.error('unlink question')
         }
     })
 }

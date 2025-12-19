@@ -20,8 +20,10 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 export function PropertyHRDashboard() {
+  const { t } = useTranslation('dashboard')
   const { currentProperty } = useProperty()
   const { user, profile, primaryRole } = useAuth()
   const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
@@ -120,12 +122,12 @@ export function PropertyHRDashboard() {
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">HR Dashboard</h1>
-          <p className="text-gray-600 text-sm sm:text-base">Manage human resources and staff operations</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{t('cards.hr_dashboard_title')}</h1>
+          <p className="text-gray-600 text-sm sm:text-base">{t('cards.hr_dashboard_subtitle')}</p>
         </div>
         <div className="flex items-center">
           <Badge className="text-xs sm:text-sm bg-blue-100 text-blue-800">
-            {hrStats.totalStaff} Total Staff
+            {t('cards.active_staff_badge', { count: hrStats.totalStaff })}
           </Badge>
         </div>
       </div>
@@ -134,43 +136,43 @@ export function PropertyHRDashboard() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
         <Card className="role-property-hr">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Staff Attendance</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.staff_attendance')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{hrStats.presentToday}/{hrStats.totalStaff}</div>
             <Progress value={hrStats.totalStaff > 0 ? (hrStats.presentToday / hrStats.totalStaff) * 100 : 0} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Daily attendance</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.daily_attendance')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-property-hr">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Leave Requests</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.leave_requests')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{hrStats.pendingLeaveRequests}</div>
-            <p className="text-xs text-gray-600 mt-1">Pending approval</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.pending_approval')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-property-hr">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Training Compliance</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.training_compliance')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{hrStats.trainingCompliance}%</div>
             <Progress value={hrStats.trainingCompliance} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Completion rate</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.completion_rate')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-property-hr">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Open Positions</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.open_positions')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{hrStats.openPositions}</div>
-            <p className="text-xs text-gray-600 mt-1">{hrStats.newHiresThisMonth} hired this month</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.hired_this_month', { count: hrStats.newHiresThisMonth })}</p>
           </CardContent>
         </Card>
       </div>
@@ -179,11 +181,11 @@ export function PropertyHRDashboard() {
       <Tabs defaultValue="feed" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5 h-auto">
-            <TabsTrigger value="feed" className="text-xs sm:text-sm whitespace-nowrap">Feed</TabsTrigger>
-            <TabsTrigger value="leave" className="text-xs sm:text-sm whitespace-nowrap">Leave</TabsTrigger>
-            <TabsTrigger value="staff" className="text-xs sm:text-sm whitespace-nowrap">Staff</TabsTrigger>
-            <TabsTrigger value="recruitment" className="text-xs sm:text-sm whitespace-nowrap">Recruit</TabsTrigger>
-            <TabsTrigger value="compliance" className="text-xs sm:text-sm whitespace-nowrap">Compliance</TabsTrigger>
+            <TabsTrigger value="feed" className="text-xs sm:text-sm whitespace-nowrap">{t('tabs.feed')}</TabsTrigger>
+            <TabsTrigger value="leave" className="text-xs sm:text-sm whitespace-nowrap">{t('cards.leave', 'Leave')}</TabsTrigger>
+            <TabsTrigger value="staff" className="text-xs sm:text-sm whitespace-nowrap">{t('cards.staff', 'Staff')}</TabsTrigger>
+            <TabsTrigger value="recruitment" className="text-xs sm:text-sm whitespace-nowrap">{t('cards.recruitment')}</TabsTrigger>
+            <TabsTrigger value="compliance" className="text-xs sm:text-sm whitespace-nowrap">{t('tabs.compliance')}</TabsTrigger>
           </TabsList>
         </div>
 
@@ -202,21 +204,21 @@ export function PropertyHRDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.Calendar className="h-5 w-5" />
-                <span>Leave Management</span>
+                <span>{t('cards.leave_management')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {leaveLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Loading leave requests...</p>
+                  <p className="mt-2 text-gray-600">{t('cards.loading_leave_requests')}</p>
                 </div>
               ) : !leaveRequests || leaveRequests.length === 0 ? (
                 <div className="text-center py-8">
                   <Icons.Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No leave requests</h3>
+                  <h3 className="text-lg font-semibold mb-2">{t('cards.no_leave_requests')}</h3>
                   <p className="text-gray-600">
-                    No leave requests from your team at this time.
+                    {t('cards.no_leave_requests_desc')}
                   </p>
                 </div>
               ) : (
@@ -242,9 +244,9 @@ export function PropertyHRDashboard() {
                           {request.type.replace('_', ' ')} • {format(new Date(request.start_date), 'MMM dd')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
                         </div>
                         {request.reason && (
-                          <div className="truncate">Reason: {request.reason}</div>
+                          <div className="truncate">{t('cards.reason_label', { reason: request.reason })}</div>
                         )}
-                        <div>Department: {request.department?.name || 'Not assigned'}</div>
+                        <div>{t('cards.department_label', { name: request.department?.name || 'Not assigned' })}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

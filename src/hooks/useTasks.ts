@@ -5,6 +5,7 @@ import type { Task, TaskComment, TaskStats } from '@/lib/types'
 import { validateTransition, getTransitionErrorMessage } from '@/lib/statusTransitions'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
+import { crudToasts } from '@/lib/toastHelpers'
 
 // Fetch tasks
 export function useTasks(filters?: {
@@ -156,7 +157,9 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
+      crudToasts.create.success('Task')
     },
+    onError: () => crudToasts.create.error('task')
   })
 }
 
@@ -225,9 +228,11 @@ export function useUpdateTask() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['task', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
+      crudToasts.update.success('Task')
     },
     onError: (error: Error) => {
       console.error('Error updating task:', error.message)
+      crudToasts.update.error('task')
     }
   })
 }
@@ -251,7 +256,9 @@ export function useDeleteTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
+      crudToasts.delete.success('Task')
     },
+    onError: () => crudToasts.delete.error('task')
   })
 }
 
@@ -272,6 +279,8 @@ export function useAddTaskComment() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['task', variables.task_id] })
+      crudToasts.create.success('Comment')
     },
+    onError: () => crudToasts.create.error('comment')
   })
 }

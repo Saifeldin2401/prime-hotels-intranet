@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      console.log('Loading user data for:', userId)
+
 
       // Add a timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) => {
@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (rolesData.length > 0) {
             setRoles(rolesData)
           }
-          console.log('Roles loaded successfully:', rolesData.length)
+
         }
       } else {
         console.error('Roles loading failed or timed out:', rolesResult.reason)
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           const props = directProps?.map((up: any) => up.properties).filter(Boolean) || []
           setProperties(props)
-          console.log('Properties loaded successfully:', props.length)
+
         }
       } else {
         console.error('Properties loading failed or timed out:', propertiesResult.reason)
@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           const depts = directDepts?.map((ud: any) => ud.departments).filter(Boolean) || []
           setDepartments(depts)
-          console.log('Departments loaded successfully:', depts.length)
+
         }
       } else {
         console.error('Departments loading failed or timed out:', departmentsResult.reason)
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true
     let loadingState = true
 
-    console.log('AuthContext: Starting session check...')
+
 
     // Safety timeout - ensure loading never stays true forever (reduced to 2 seconds)
     const timeoutId = setTimeout(() => {
@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Set loading to false immediately, load data in background
         loadingState = false
         setLoading(false)
-        console.log('Session found - Loading set to false for user:', session.user.id)
+
         clearTimeout(timeoutId)
         // Load user data asynchronously without blocking
         loadUserData(session.user.id).catch((err) => {

@@ -16,31 +16,33 @@ import { cn } from '@/lib/utils'
 import { ar, enUS } from 'date-fns/locale'
 import { useAuth } from '@/hooks/useAuth'
 
-const notificationTypeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  approval_required: { label: 'Approval Required', color: 'bg-yellow-100 text-yellow-800', icon: <AlertCircle className="w-4 h-4" /> },
-  request_approved: { label: 'Request Approved', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
-  request_rejected: { label: 'Request Rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4" /> },
-  request_submitted: { label: 'Request Submitted', color: 'bg-blue-100 text-blue-800', icon: <FileText className="w-4 h-4" /> },
-  comment_added: { label: 'Comment Added', color: 'bg-purple-100 text-purple-800', icon: <MessageSquare className="w-4 h-4" /> },
-  request_returned: { label: 'Request Returned', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4" /> },
-  request_closed: { label: 'Request Closed', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4" /> },
-  training_assigned: { label: 'Training Assigned', color: 'bg-indigo-100 text-indigo-800', icon: <FileText className="w-4 h-4" /> },
-  training_deadline: { label: 'Training Deadline', color: 'bg-red-100 text-red-800', icon: <AlertCircle className="w-4 h-4" /> },
-  document_published: { label: 'Document Published', color: 'bg-blue-100 text-blue-800', icon: <FileText className="w-4 h-4" /> },
-  document_acknowledgment_required: { label: 'Document Acknowledgment', color: 'bg-orange-100 text-orange-800', icon: <FileText className="w-4 h-4" /> },
-  announcement_new: { label: 'New Announcement', color: 'bg-purple-100 text-purple-800', icon: <Bell className="w-4 h-4" /> },
-  escalation_alert: { label: 'Escalation Alert', color: 'bg-red-100 text-red-800', icon: <AlertCircle className="w-4 h-4" /> },
-  referral_status_update: { label: 'Referral Update', color: 'bg-blue-100 text-blue-800', icon: <Mail className="w-4 h-4" /> },
-  maintenance_assigned: { label: 'Maintenance Assigned', color: 'bg-yellow-100 text-yellow-800', icon: <AlertCircle className="w-4 h-4" /> },
-  maintenance_resolved: { label: 'Maintenance Resolved', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
-}
+
 
 export default function HROperationsCenter() {
   const { user } = useAuth()
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
-  const { t, i18n } = useTranslation('notifications')
+  const { t, i18n } = useTranslation('hr')
   const isRTL = i18n.dir() === 'rtl'
   const locale = i18n.language === 'ar' ? ar : enUS
+
+  const notificationTypeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    approval_required: { label: t('operations_center.types.approval_required', 'Approval Required'), color: 'bg-yellow-100 text-yellow-800', icon: <AlertCircle className="w-4 h-4" /> },
+    request_approved: { label: t('operations_center.types.request_approved', 'Request Approved'), color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
+    request_rejected: { label: t('operations_center.types.request_rejected', 'Request Rejected'), color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4" /> },
+    request_submitted: { label: t('operations_center.types.request_submitted', 'Request Submitted'), color: 'bg-blue-100 text-blue-800', icon: <FileText className="w-4 h-4" /> },
+    comment_added: { label: t('operations_center.types.comment_added', 'Comment Added'), color: 'bg-purple-100 text-purple-800', icon: <MessageSquare className="w-4 h-4" /> },
+    request_returned: { label: t('operations_center.types.request_returned', 'Request Returned'), color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4" /> },
+    request_closed: { label: t('operations_center.types.request_closed', 'Request Closed'), color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4" /> },
+    training_assigned: { label: t('operations_center.types.training_assigned', 'Training Assigned'), color: 'bg-indigo-100 text-indigo-800', icon: <FileText className="w-4 h-4" /> },
+    training_deadline: { label: t('operations_center.types.training_deadline', 'Training Deadline'), color: 'bg-red-100 text-red-800', icon: <AlertCircle className="w-4 h-4" /> },
+    document_published: { label: t('operations_center.types.document_published', 'Document Published'), color: 'bg-blue-100 text-blue-800', icon: <FileText className="w-4 h-4" /> },
+    document_acknowledgment_required: { label: t('operations_center.types.document_acknowledgment_required', 'Document Acknowledgment'), color: 'bg-orange-100 text-orange-800', icon: <FileText className="w-4 h-4" /> },
+    announcement_new: { label: t('operations_center.types.announcement_new', 'New Announcement'), color: 'bg-purple-100 text-purple-800', icon: <Bell className="w-4 h-4" /> },
+    escalation_alert: { label: t('operations_center.types.escalation_alert', 'Escalation Alert'), color: 'bg-red-100 text-red-800', icon: <AlertCircle className="w-4 h-4" /> },
+    referral_status_update: { label: t('operations_center.types.referral_status_update', 'Referral Update'), color: 'bg-blue-100 text-blue-800', icon: <Mail className="w-4 h-4" /> },
+    maintenance_assigned: { label: t('operations_center.types.maintenance_assigned', 'Maintenance Assigned'), color: 'bg-yellow-100 text-yellow-800', icon: <AlertCircle className="w-4 h-4" /> },
+    maintenance_resolved: { label: t('operations_center.types.maintenance_resolved', 'Maintenance Resolved'), color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
+  }
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('')
@@ -55,8 +57,8 @@ export default function HROperationsCenter() {
   const filteredNotifications = notifications
     .filter(notification => {
       // Search filter
-      if (searchTerm && !notification.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
-          !notification.message.toLowerCase().includes(searchTerm.toLowerCase())) {
+      if (searchTerm && !notification.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !notification.message.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false
       }
 
@@ -75,7 +77,7 @@ export default function HROperationsCenter() {
         const startDate = new Date(dateRange.start)
         const endDate = new Date(dateRange.end)
         endDate.setHours(23, 59, 59, 999) // End of day
-        
+
         if (notificationDate < startDate || notificationDate > endDate) {
           return false
         }
@@ -86,7 +88,7 @@ export default function HROperationsCenter() {
     .sort((a, b) => {
       const aValue = a[sortBy]
       const bValue = b[sortBy]
-      
+
       if (sortOrder === 'asc') {
         return aValue > bValue ? 1 : -1
       } else {
@@ -145,8 +147,8 @@ export default function HROperationsCenter() {
       <div className="container mx-auto py-6">
         <div className="text-center py-12 border rounded-lg bg-red-50">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-red-800">Access Denied</h3>
-          <p className="text-red-600">You must be logged in to access this page</p>
+          <h3 className="text-lg font-medium text-red-800">{t('operations_center.access_denied', 'Access Denied')}</h3>
+          <p className="text-red-600">{t('operations_center.access_denied_desc', 'You must be logged in to access this page')}</p>
         </div>
       </div>
     )
@@ -157,8 +159,8 @@ export default function HROperationsCenter() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">HR Operations Center</h1>
-          <p className="text-gray-600">Monitor notifications and system activity</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('operations_center.title')}</h1>
+          <p className="text-gray-600">{t('operations_center.description')}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -167,7 +169,7 @@ export default function HROperationsCenter() {
             disabled={unreadCount === 0 || markAllAsRead.isPending}
           >
             {markAllAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-            Mark All Read
+            {t('operations_center.mark_all_read')}
           </Button>
         </div>
       </div>
@@ -176,7 +178,7 @@ export default function HROperationsCenter() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Notifications</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('operations_center.total_notifications')}</CardTitle>
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -185,7 +187,7 @@ export default function HROperationsCenter() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unread</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('operations_center.unread')}</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -194,7 +196,7 @@ export default function HROperationsCenter() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approval Required</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('operations_center.approval_required')}</CardTitle>
             <Settings className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -203,7 +205,7 @@ export default function HROperationsCenter() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Escalations</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('operations_center.escalations')}</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -219,7 +221,7 @@ export default function HROperationsCenter() {
             <div className="flex items-center space-x-2">
               <Search className="w-4 h-4 text-gray-500" />
               <Input
-                placeholder="Search notifications..."
+                placeholder={t('operations_center.search_notifications', 'Search notifications...')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-64"
@@ -231,8 +233,8 @@ export default function HROperationsCenter() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="created_at">Created</SelectItem>
-                  <SelectItem value="read_at">Read</SelectItem>
+                  <SelectItem value="created_at">{t('operations_center.sort.created', 'Created')}</SelectItem>
+                  <SelectItem value="read_at">{t('operations_center.sort.read', 'Read')}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
@@ -240,8 +242,8 @@ export default function HROperationsCenter() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="desc">Newest</SelectItem>
-                  <SelectItem value="asc">Oldest</SelectItem>
+                  <SelectItem value="desc">{t('operations_center.sort.newest', 'Newest')}</SelectItem>
+                  <SelectItem value="asc">{t('operations_center.sort.oldest', 'Oldest')}</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -250,7 +252,7 @@ export default function HROperationsCenter() {
                 className="flex items-center gap-2"
               >
                 <Filter className="w-4 h-4" />
-                Filters
+                {t('operations_center.filters')}
                 {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
                   <Badge variant="secondary" className="ml-1">
                     {selectedTypes.length + (readStatus !== 'all' ? 1 : 0) + (dateRange ? 1 : 0)}
@@ -259,7 +261,7 @@ export default function HROperationsCenter() {
               </Button>
               {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
                 <Button variant="ghost" onClick={clearFilters}>
-                  Clear all
+                  {t('operations_center.filters_clear', 'Clear all')}
                 </Button>
               )}
             </div>
@@ -270,7 +272,7 @@ export default function HROperationsCenter() {
           <CardContent className="space-y-4">
             {/* Type Filters */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">Notification Type</Label>
+              <Label className="text-sm font-medium mb-2 block">{t('operations_center.filter_type', 'Notification Type')}</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {Object.entries(notificationTypeConfig).map(([type, config]) => (
                   <div key={type} className="flex items-center space-x-2">
@@ -289,7 +291,7 @@ export default function HROperationsCenter() {
 
             {/* Read Status */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">Read Status</Label>
+              <Label className="text-sm font-medium mb-2 block">{t('operations_center.filter_status', 'Read Status')}</Label>
               <div className="flex gap-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -297,7 +299,7 @@ export default function HROperationsCenter() {
                     checked={readStatus === 'all'}
                     onCheckedChange={() => setReadStatus('all')}
                   />
-                  <Label htmlFor="read-all" className="text-sm cursor-pointer">All</Label>
+                  <Label htmlFor="read-all" className="text-sm cursor-pointer">{t('operations_center.status.all', 'All')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -305,7 +307,7 @@ export default function HROperationsCenter() {
                     checked={readStatus === 'unread'}
                     onCheckedChange={() => setReadStatus('unread')}
                   />
-                  <Label htmlFor="read-unread" className="text-sm cursor-pointer">Unread</Label>
+                  <Label htmlFor="read-unread" className="text-sm cursor-pointer">{t('operations_center.status.unread', 'Unread')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -313,7 +315,7 @@ export default function HROperationsCenter() {
                     checked={readStatus === 'read'}
                     onCheckedChange={() => setReadStatus('read')}
                   />
-                  <Label htmlFor="read-read" className="text-sm cursor-pointer">Read</Label>
+                  <Label htmlFor="read-read" className="text-sm cursor-pointer">{t('operations_center.status.read', 'Read')}</Label>
                 </div>
               </div>
             </div>
@@ -321,12 +323,12 @@ export default function HROperationsCenter() {
             {/* Date Range */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium mb-2 block">Start Date</Label>
+                <Label className="text-sm font-medium mb-2 block">{t('operations_center.filter_start_date', 'Start Date')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.start ? format(new Date(dateRange.start), 'PPP', { locale }) : 'Pick a date'}
+                      {dateRange?.start ? format(new Date(dateRange.start), 'PPP', { locale }) : t('operations_center.pick_date', 'Pick a date')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -335,17 +337,18 @@ export default function HROperationsCenter() {
                       selected={dateRange?.start ? new Date(dateRange.start) : undefined}
                       onSelect={(date) => handleDateRangeSelect(date, 'start')}
                       initialFocus
+                      locale={locale}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
               <div>
-                <Label className="text-sm font-medium mb-2 block">End Date</Label>
+                <Label className="text-sm font-medium mb-2 block">{t('operations_center.filter_end_date', 'End Date')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.end ? format(new Date(dateRange.end), 'PPP', { locale }) : 'Pick a date'}
+                      {dateRange?.end ? format(new Date(dateRange.end), 'PPP', { locale }) : t('operations_center.pick_date', 'Pick a date')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -354,6 +357,7 @@ export default function HROperationsCenter() {
                       selected={dateRange?.end ? new Date(dateRange.end) : undefined}
                       onSelect={(date) => handleDateRangeSelect(date, 'end')}
                       initialFocus
+                      locale={locale}
                     />
                   </PopoverContent>
                 </Popover>
@@ -366,15 +370,15 @@ export default function HROperationsCenter() {
       {/* Results */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">
-          {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? 's' : ''} found
+          {t('operations_center.notifications_found', { count: filteredNotifications.length })}
         </h2>
       </div>
 
       {filteredNotifications.length === 0 ? (
         <div className="text-center py-12 border rounded-lg bg-muted/20">
           <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium">No notifications found</h3>
-          <p className="text-gray-600">Try adjusting your filters or search terms</p>
+          <h3 className="text-lg font-medium">{t('operations_center.no_notifications')}</h3>
+          <p className="text-gray-600">{t('operations_center.no_notifications_desc', 'Try adjusting your filters or search terms')}</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -387,24 +391,24 @@ export default function HROperationsCenter() {
                       {getTypeBadge(notification.type)}
                       {!notification.is_read && (
                         <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
-                          Unread
+                          {t('operations_center.unread')}
                         </Badge>
                       )}
                     </div>
-                    
+
                     <h3 className="text-lg font-medium mb-1">{notification.title}</h3>
                     <p className="text-gray-600 mb-2">{notification.message}</p>
-                    
+
                     <div className="text-sm text-gray-500">
-                      Created: {format(new Date(notification.created_at), 'MMM d, yyyy h:mm a')}
+                      {t('operations_center.created_at', 'Created')}: {format(new Date(notification.created_at), 'PPP p', { locale })}
                       {notification.read_at && (
                         <span className="ml-4">
-                          Read: {format(new Date(notification.read_at), 'MMM d, yyyy h:mm a')}
+                          {t('operations_center.read_at', 'Read')}: {format(new Date(notification.read_at), 'PPP p', { locale })}
                         </span>
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     {!notification.is_read && (
                       <Button
@@ -414,7 +418,7 @@ export default function HROperationsCenter() {
                         disabled={markAsRead.isPending}
                       >
                         {markAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                        Mark Read
+                        {t('operations_center.mark_read')}
                       </Button>
                     )}
                   </div>

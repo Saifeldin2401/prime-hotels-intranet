@@ -8,8 +8,10 @@ import { Progress } from '@/components/ui/progress'
 import { Loader2, Calendar, CheckCircle2, Circle, PlayCircle, FileText, ExternalLink, ArrowRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 export default function OnboardingDashboard() {
+    const { t } = useTranslation('onboarding')
     const navigate = useNavigate()
     const { data: onboarding, isLoading } = useMyOnboarding()
     const { mutate: updateTask } = useUpdateOnboardingTask()
@@ -29,9 +31,9 @@ export default function OnboardingDashboard() {
                     <CheckCircle2 className="h-12 w-12 text-muted-foreground" />
                 </div>
                 <div className="max-w-md space-y-2">
-                    <h2 className="text-2xl font-bold tracking-tight">You're all set!</h2>
+                    <h2 className="text-2xl font-bold tracking-tight">{t('dashboard.all_set')}</h2>
                     <p className="text-muted-foreground">
-                        There are no active onboarding checklists assigned to you at the moment.
+                        {t('dashboard.no_active')}
                     </p>
                 </div>
             </div>
@@ -59,22 +61,22 @@ export default function OnboardingDashboard() {
     return (
         <div className="space-y-8 p-8">
             <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">Welcome Aboard! 🚀</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
                 <p className="text-muted-foreground">
-                    Let's get you settled in. Follow the checklist below to complete your onboarding for
+                    {t('dashboard.subtitle')}
                     <span className="font-semibold text-foreground"> {onboarding.template?.title}</span>.
                 </p>
             </div>
 
             <Card className="border-primary/20 bg-primary/5">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium">Your Progress</CardTitle>
+                    <CardTitle className="text-lg font-medium">{t('dashboard.progress')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">
-                                {completedTasks} of {totalTasks} tasks completed
+                                {completedTasks} {t('dashboard.of')} {totalTasks} {t('dashboard.tasks_completed')}
                             </span>
                             <span className="font-medium text-primary">{Math.round(progress)}%</span>
                         </div>
@@ -84,7 +86,7 @@ export default function OnboardingDashboard() {
             </Card>
 
             <div className="space-y-4">
-                <h2 className="text-xl font-semibold tracking-tight">Your Checklist</h2>
+                <h2 className="text-xl font-semibold tracking-tight">{t('dashboard.checklist')}</h2>
                 <div className="grid gap-4">
                     {onboarding.tasks?.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).map((task) => (
                         <Card key={task.id} className={cn("transition-all duration-200", task.is_completed ? "bg-muted/50 opacity-70" : "bg-card hover:shadow-md")}>
@@ -101,7 +103,7 @@ export default function OnboardingDashboard() {
                                         </span>
                                         {task.assigned_to_id !== onboarding.user_id && (
                                             <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
-                                                Assigned to Manager
+                                                {t('dashboard.assigned_manager')}
                                             </span>
                                         )}
                                     </div>
@@ -124,9 +126,9 @@ export default function OnboardingDashboard() {
                                                 {task.link_type === 'document' && <FileText className="h-4 w-4" />}
                                                 {task.link_type === 'url' && <ExternalLink className="h-4 w-4" />}
 
-                                                {task.link_type === 'training' && "Start Training"}
-                                                {task.link_type === 'document' && "View Document"}
-                                                {task.link_type === 'url' && "Open Link"}
+                                                {task.link_type === 'training' && t('actions.start_training')}
+                                                {task.link_type === 'document' && t('actions.view_document')}
+                                                {task.link_type === 'url' && t('actions.open_link')}
 
                                                 <ArrowRight className="h-3 w-3 ml-1 opacity-50" />
                                             </Button>

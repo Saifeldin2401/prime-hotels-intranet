@@ -13,8 +13,10 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { KnowledgeComplianceWidget } from '@/components/knowledge/KnowledgeComplianceWidget'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useDepartmentStaff } from '@/hooks/useDepartmentStaff'
+import { useTranslation } from 'react-i18next'
 
 export default function DepartmentDetails() {
+    const { t } = useTranslation('dashboard')
     const { id } = useParams()
     const navigate = useNavigate()
     const { currentProperty } = useProperty()
@@ -36,8 +38,8 @@ export default function DepartmentDetails() {
     if (!department) {
         return (
             <div className="flex flex-col items-center justify-center h-96">
-                <h2 className="text-xl font-semibold mb-2">Department Not Found</h2>
-                <Button onClick={() => navigate(-1)}>Go Back</Button>
+                <h2 className="text-xl font-semibold mb-2">{t('cards.department_not_found')}</h2>
+                <Button onClick={() => navigate(-1)}>{t('cards.go_back_btn')}</Button>
             </div>
         )
     }
@@ -60,15 +62,15 @@ export default function DepartmentDetails() {
                     </Button>
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">{department.name}</h1>
-                        <p className="text-gray-600">Department Overview</p>
+                        <p className="text-gray-600">{t('cards.department_overview_subtitle')}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <Badge className="bg-blue-100 text-blue-800">
-                        {stats.staff} Staff Members
+                        {t('cards.department_staff_badge', { count: stats.staff })}
                     </Badge>
                     <Badge variant={stats.score >= 80 ? "navy" : "destructive"}>
-                        Overall Score: {stats.score}/100
+                        {t('cards.overall_score_label', { score: stats.score })}
                     </Badge>
                 </div>
             </div>
@@ -77,7 +79,7 @@ export default function DepartmentDetails() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">Knowledge Compliance</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-600">{t('cards.knowledge_compliance_card')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-blue-600">{stats.compliance}%</div>
@@ -87,7 +89,7 @@ export default function DepartmentDetails() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">Attendance Rate</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-600">{t('cards.attendance_rate_card')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600">{stats.attendance}%</div>
@@ -97,7 +99,7 @@ export default function DepartmentDetails() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">Training Completion</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-600">{t('cards.training_completion_card')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-purple-600">{stats.training}%</div>
@@ -109,8 +111,8 @@ export default function DepartmentDetails() {
             {/* Tabs */}
             <Tabs defaultValue="training" className="space-y-6">
                 <TabsList>
-                    <TabsTrigger value="training">Training & Knowledge</TabsTrigger>
-                    <TabsTrigger value="staff">Staff</TabsTrigger>
+                    <TabsTrigger value="training">{t('cards.training_knowledge_tab')}</TabsTrigger>
+                    <TabsTrigger value="staff">{t('cards.staff')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="training" className="space-y-6">
@@ -120,10 +122,10 @@ export default function DepartmentDetails() {
                 <TabsContent value="staff">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle>Staff Members</CardTitle>
+                            <CardTitle>{t('cards.staff_members_title')}</CardTitle>
                             <div className="w-1/3">
                                 <Input
-                                    placeholder="Search staff..."
+                                    placeholder={t('cards.search_staff_placeholder')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="h-8"
@@ -132,11 +134,11 @@ export default function DepartmentDetails() {
                         </CardHeader>
                         <CardContent>
                             {loadingStaff ? (
-                                <div className="text-center py-8 text-gray-500">Loading staff...</div>
+                                <div className="text-center py-8 text-gray-500">{t('cards.loading_staff')}</div>
                             ) : filteredStaff.length === 0 ? (
                                 <div className="text-center py-8 text-gray-500">
                                     <Icons.Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                                    <p>No staff members found in this department.</p>
+                                    <p>{t('cards.no_staff_in_dept')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -154,10 +156,10 @@ export default function DepartmentDetails() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <Badge variant={member.status === 'on_shift' ? 'default' : 'secondary'}>
-                                                    {member.status === 'on_shift' ? 'On Shift' : 'Off Duty'}
+                                                    {member.status === 'on_shift' ? t('cards.on_shift_status') : t('cards.off_duty_status')}
                                                 </Badge>
                                                 <Button variant="ghost" size="sm" onClick={() => navigate(`/profile/${member.id}`)}>
-                                                    View Profile
+                                                    {t('cards.view_profile_btn')}
                                                 </Button>
                                             </div>
                                         </div>

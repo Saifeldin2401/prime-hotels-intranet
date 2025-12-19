@@ -225,6 +225,7 @@ export function useGenerateTrainingCertificate() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['certificates'] })
+            showSuccessToast('🎓 Certificate generated!')
         }
     })
 }

@@ -97,7 +97,6 @@ export default function PromotionTransferHistory() {
                 .from('promotions')
                 .select(`
                   *,
-                  requests!inner(id),
                   employee:profiles!promotions_employee_id_fkey(full_name),
                   promoter:profiles!promotions_promoted_by_fkey(full_name),
                   new_department:departments!promotions_new_department_id_fkey(name)
@@ -108,7 +107,7 @@ export default function PromotionTransferHistory() {
             return (data || []).map(p => ({
                 ...p,
                 type: 'promotion',
-                request_id: p.requests?.[0]?.id // Assuming 1-to-1 mapping via entity_id/type logic, but via FK it's tricky.
+                request_id: p.request_id
                 // Wait, 'requests' doesn't usually have a FK to 'promotions'. 'requests' has entity_id.
                 // So I can't simple select `requests!inner(id)` unless I set up that relationship in Supabase or manual join.
                 // Supabase postgrest logical relationships depend on FKs.
@@ -356,7 +355,7 @@ export default function PromotionTransferHistory() {
                                                     </Badge>
                                                     <Badge className={
                                                         record.status === 'completed' || record.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                            record.status === 'pending' || record.status === 'pending_hr_review' ? 'bg-yellow-100 text-yellow-800' :
+                                                            record.status === 'pending' || (record.status as string) === 'pending_hr_review' ? 'bg-yellow-100 text-yellow-800' :
                                                                 record.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                                                     'bg-gray-100 text-gray-800'
                                                     }>

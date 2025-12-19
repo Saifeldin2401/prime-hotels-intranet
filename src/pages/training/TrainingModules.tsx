@@ -194,7 +194,9 @@ export default function TrainingModules() {
       // Format department name with property for disambiguation
       return (data || []).map((d: any) => ({
         id: d.id,
-        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name
+        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name,
+        propertyName: d.property?.name,
+        rawName: d.name
       }))
     },
     enabled: showAssignDialog
@@ -330,6 +332,61 @@ export default function TrainingModules() {
         .insert(assignments)
 
       if (error) throw error
+
+      // Send bulk notifications
+      const module = modules?.find(m => m.id === assigningModuleId)
+      const notificationData = {
+        title: 'New Training Assigned',
+        message: `You have been assigned: ${module?.title || 'Training Module'}`,
+        moduleId: assigningModuleId,
+        deadline
+      }
+
+      let userIdsToNotify: string[] = []
+
+      if (targetType === 'all') {
+        const { data: allUsers } = await supabase.from('profiles').select('id').eq('is_active', true)
+        userIdsToNotify = allUsers?.map(u => u.id) || []
+      } else if (targetType === 'users') {
+        userIdsToNotify = targetIds
+      } else if (targetType === 'departments') {
+        const { data: deptUsers } = await supabase.from('user_departments').select('user_id').in('department_id', targetIds)
+        userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
+      } else if (targetType === 'properties') {
+        const { data: propUsers } = await supabase.from('user_properties').select('user_id').in('property_id', targetIds)
+        userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
+      }
+
+      // Use bulk notification for large groups
+      if (userIdsToNotify.length >= 10) {
+        const { data: session } = await supabase.auth.getSession()
+        if (session?.session?.access_token) {
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.session.access_token}`
+            },
+            body: JSON.stringify({
+              action: 'create_batch',
+              userIds: userIdsToNotify,
+              notificationType: 'training_assigned',
+              notificationData
+            })
+          })
+        }
+      } else if (userIdsToNotify.length > 0) {
+        // Direct insert for small groups
+        const notifications = userIdsToNotify.map(userId => ({
+          user_id: userId,
+          title: notificationData.title,
+          message: notificationData.message,
+          type: 'training_assigned',
+          data: notificationData,
+          data: notificationData
+        }))
+        await supabase.from('notifications').insert(notifications)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })

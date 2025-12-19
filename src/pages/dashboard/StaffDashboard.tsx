@@ -285,8 +285,8 @@ export function StaffDashboard() {
                   <div className="h-14 w-14 rounded-full bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center mx-auto mb-3 transition-colors">
                     <Activity className="h-7 w-7 text-purple-600" />
                   </div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-1">Promote Employee</h3>
-                  <p className="text-xs text-gray-500">Manage promotions</p>
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.promote_employee')}</h3>
+                  <p className="text-xs text-gray-500">{t('staff.quick_actions.manage_promotions')}</p>
                 </div>
               </div>
             </div>
@@ -304,8 +304,8 @@ export function StaffDashboard() {
                   <div className="h-14 w-14 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mx-auto mb-3 transition-colors">
                     <Target className="h-7 w-7 text-blue-600" />
                   </div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-1">Transfer Employee</h3>
-                  <p className="text-xs text-gray-500">Cross-property moves</p>
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">{t('staff.quick_actions.transfer_employee')}</h3>
+                  <p className="text-xs text-gray-500">{t('staff.quick_actions.cross_property_moves')}</p>
                 </div>
               </div>
             </div>
@@ -376,7 +376,7 @@ export function StaffDashboard() {
                         </div>
                       </div>
                       <EnhancedBadge variant={colors.badge} size="sm">
-                        {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                        {t(`common:priority.${task.priority}`, task.priority)}
                       </EnhancedBadge>
                     </div>
                   )
@@ -426,7 +426,7 @@ export function StaffDashboard() {
                         <p className="text-sm text-gray-500">{dateString}, {timeString}</p>
                       </div>
                       <EnhancedBadge variant={colors.badge} size="sm">
-                        {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                        {t(`common:schedule_types.${item.type}`, item.type)}
                       </EnhancedBadge>
                     </div>
                   )

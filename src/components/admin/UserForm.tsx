@@ -72,11 +72,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('job_titles')
-        .select('*')
+        .select(`
+            *,
+            department:departments(id, property_id)
+        `)
         .order('title', { ascending: true })
 
       if (error) throw error
-      return data as { id: string; title: string; default_role: AppRole; category: string }[]
+      return data as { id: string; title: string; default_role: AppRole; category: string; department?: { id: string; property_id: string } }[]
     },
   })
   const [openJobTitle, setOpenJobTitle] = useState(false)
@@ -134,11 +137,49 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
     // Find the corresponding job title object to get the role
     const titleObj = jobTitlesList?.find(t => t.title === selectedTitle)
+
     if (titleObj) {
+      // Auto-select Role
       setRole(titleObj.default_role)
-    } else {
-      // Fallback to heuristic if somehow manually entered (though Combobox handles this differently)
-      // or just keep existing logic if we allow custom
+
+      let targetDeptId: string | undefined = titleObj.department?.id
+      let targetPropertyId: string | undefined = titleObj.department?.property_id
+
+      // Fallback: If no direct link, try to match by Category Name
+      if (!targetDeptId && titleObj.category && departments) {
+        // Try to find a department with matching name
+        // 1. Prefer department in already selected properties
+        let match = departments.find(d =>
+          d.name === titleObj.category && selectedProperties.includes(d.property_id)
+        )
+        // 2. If not found, just pick the first one matching the name
+        if (!match) {
+          match = departments.find(d => d.name === titleObj.category)
+        }
+
+        if (match) {
+          targetDeptId = match.id
+          targetPropertyId = match.property_id
+        }
+      }
+
+      // Auto-select Department & Property
+      if (targetDeptId && targetPropertyId) {
+        // Add property if not already selected
+        if (!selectedProperties.includes(targetPropertyId)) {
+          setSelectedProperties(prev => [...prev, targetPropertyId!])
+        }
+
+        // Add department if not already selected
+        if (!selectedDepartments.includes(targetDeptId)) {
+          setSelectedDepartments(prev => [...prev, targetDeptId!])
+        }
+
+        toast({
+          title: "Auto-Assigned",
+          description: "Department and Role updated based on Job Title.",
+        })
+      }
     }
   }
 

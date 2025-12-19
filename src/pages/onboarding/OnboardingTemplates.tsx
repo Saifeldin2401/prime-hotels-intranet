@@ -18,8 +18,10 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useTranslation } from 'react-i18next'
 
 export default function OnboardingTemplates() {
+    const { t } = useTranslation('onboarding')
     const navigate = useNavigate()
     const { data: templates, isLoading } = useOnboardingTemplates()
     const { mutate: deleteTemplate } = useDeleteOnboardingTemplate()
@@ -44,12 +46,12 @@ export default function OnboardingTemplates() {
         <div className="space-y-6 p-8">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Onboarding Templates</h2>
-                    <p className="text-muted-foreground">Manage onboarding checklists for different roles and departments.</p>
+                    <h2 className="text-3xl font-bold tracking-tight">{t('templates.title')}</h2>
+                    <p className="text-muted-foreground">{t('templates.subtitle')}</p>
                 </div>
                 <Button onClick={() => navigate('/admin/onboarding/templates/new')}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Create Template
+                    {t('actions.create_template')}
                 </Button>
             </div>
 
@@ -61,13 +63,13 @@ export default function OnboardingTemplates() {
                                 <div className="space-y-1">
                                     <CardTitle className="leading-snug">{template.title}</CardTitle>
                                     <CardDescription>
-                                        {template.tasks.length} tasks defined
+                                        {template.tasks.length} {t('templates.tasks_defined')}
                                     </CardDescription>
                                 </div>
                                 {template.is_active ? (
-                                    <Badge variant="default" className="bg-green-600 hover:bg-green-700">Active</Badge>
+                                    <Badge variant="default" className="bg-green-600 hover:bg-green-700">{t('status.active')}</Badge>
                                 ) : (
-                                    <Badge variant="secondary">Draft</Badge>
+                                    <Badge variant="secondary">{t('status.draft')}</Badge>
                                 )}
                             </div>
                         </CardHeader>
@@ -75,17 +77,17 @@ export default function OnboardingTemplates() {
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Users className="h-4 w-4" />
-                                    <span>Target: {template.job_title ? `Job: ${template.job_title}` : template.role ? `Role: ${template.role}` : template.department_id ? 'Specific Department' : 'General'}</span>
+                                    <span>{t('templates.target')}: {template.job_title ? `${t('templates.job')}: ${template.job_title}` : template.role ? `${t('templates.role')}: ${template.role}` : template.department_id ? t('templates.specific_dept') : t('templates.general')}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <FileText className="h-4 w-4" />
-                                    <span>Created {format(new Date(template.created_at), 'MMM d, yyyy')}</span>
+                                    <span>{t('templates.created')} {format(new Date(template.created_at), 'MMM d, yyyy')}</span>
                                 </div>
                             </div>
                         </CardContent>
                         <div className="flex items-center justify-end gap-2 p-4 pt-0">
                             <Button variant="outline" size="sm" onClick={() => navigate(`/admin/onboarding/templates/${template.id}`)}>
-                                <Edit className="mr-2 h-4 w-4" /> Edit
+                                <Edit className="mr-2 h-4 w-4" /> {t('actions.edit')}
                             </Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -95,16 +97,16 @@ export default function OnboardingTemplates() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Template?</AlertDialogTitle>
+                                        <AlertDialogTitle>{t('dialogs.delete_title')}</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the
-                                            "{template.title}" template.
+                                            {t('dialogs.delete_desc')}
+                                            "{template.title}" {t('common.template')}
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogCancel>{t('actions.cancel')}</AlertDialogCancel>
                                         <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDelete(template.id)}>
-                                            Delete
+                                            {t('actions.delete')}
                                         </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>

@@ -1,14 +1,16 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { QuizComponent } from './components/QuizComponent'
+import { useTranslation } from 'react-i18next'
 
 export default function QuizPlayer() {
     const { id } = useParams()
     const [searchParams] = useSearchParams()
     const assignmentId = searchParams.get('assignment')
     const navigate = useNavigate()
+    const { t } = useTranslation('training')
 
-    if (!id) return <div>Invalid Quiz ID</div>
+    if (!id) return <div>{t('quizzes.player.invalid_id')}</div>
 
     return (
         <div className="container mx-auto py-8">
@@ -17,7 +19,7 @@ export default function QuizPlayer() {
                 onClick={() => navigate('/learning/my')}
                 className="mb-6"
             >
-                &larr; Back to My Learning
+                &larr; {t('quizzes.player.back_to_learning')}
             </Button>
 
             <QuizComponent

@@ -54,14 +54,7 @@ export function WizardTrigger() {
 
         const shouldShow = shouldShowWizard(userId)
 
-        console.log('🔍 WizardTrigger check:', {
-            shouldShow,
-            started: wizardStarted.current,
-            userId,
-            primaryRole,
-            path: location.pathname,
-            pendingFlag: localStorage.getItem('prime_wizard_pending')
-        })
+
 
         if (shouldShow) {
             wizardStarted.current = true
@@ -71,12 +64,12 @@ export function WizardTrigger() {
                 // Double-check we're not on an excluded page before starting
                 const stillExcluded = EXCLUDED_PATHS.some(p => window.location.pathname.startsWith(p))
                 if (stillExcluded) {
-                    console.log('⚠️ Wizard cancelled - still on excluded page:', window.location.pathname)
+
                     wizardStarted.current = false // Reset so it can try again
                     return
                 }
 
-                console.log('🎯 Starting new user wizard for user:', userId)
+
                 startTour()
                 markWizardCompleted(userId)
             }, 1000)

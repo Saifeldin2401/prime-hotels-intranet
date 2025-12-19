@@ -74,13 +74,14 @@ export function Sidebar() {
   const [isTrainingMenuOpen, setIsTrainingMenuOpen] = useState(false)
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
 
-  { name: 'Users', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
-  { name: 'Properties', href: '/admin/properties', icon: Building, roles: ['regional_admin'] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  { name: 'Automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
-  { name: 'Escalation', href: '/admin/escalation', icon: Bell, roles: ['regional_admin'] },
-  { name: 'Audit Logs', href: '/admin/audit', icon: ClipboardList, roles: ['regional_admin'] },
-  { name: 'PII Access', href: '/admin/pii-audit', icon: ShieldAlert, roles: ['regional_admin', 'regional_hr'] },
+  const adminMenu = [
+    { name: 'Users', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
+    { name: 'Properties', href: '/admin/properties', icon: Building, roles: ['regional_admin'] },
+    { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
+    { name: 'Automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
+    { name: 'Escalation', href: '/admin/escalation', icon: Bell, roles: ['regional_admin'] },
+    { name: 'Audit Logs', href: '/admin/audit', icon: ClipboardList, roles: ['regional_admin'] },
+    { name: 'PII Access', href: '/admin/pii-audit', icon: ShieldAlert, roles: ['regional_admin', 'regional_hr'] },
   ]
 
   console.log('Current User Roles:', primaryRole)
@@ -116,12 +117,12 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col w-64 bg-card border-e h-screen">
-      <div className="flex flex-col gap-4 p-6 border-b bg-hotel-navy">
-        <div className="flex items-center justify-center">
+      <div className="flex flex-col gap-4 p-4 border-b bg-hotel-navy overflow-hidden">
+        <div className="flex items-center justify-center w-full">
           <img
             src="/prime-logo-light.png"
             alt="Prime Hotels"
-            className="h-10 w-auto"
+            className="w-full h-auto object-contain transition-transform hover:scale-110 scale-125"
           />
         </div>
 

@@ -209,19 +209,69 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
                                                     value={item.title}
                                                     key={item.id}
                                                     onSelect={() => {
-                                                        setFormData({ ...formData, title: item.title })
-                                                        setOpenJobTitle(false)
+                                                        const handleSelect = () => {
+                                                            let newDeptId = formData.department_id
+
+                                                            if (formData.property_id && departments) {
+                                                                const match = departments.find(d => d.name === item.category)
+                                                                if (match) {
+                                                                    newDeptId = match.id
+                                                                    toast({
+                                                                        title: t('messages.department_auto_selected') || "Department Auto-Selected",
+                                                                        description: match.name
+                                                                    })
+                                                                }
+                                                            }
+
+                                                            setFormData({
+                                                                ...formData,
+                                                                title: item.title,
+                                                                department_id: newDeptId
+                                                            })
+                                                            setOpenJobTitle(false)
+                                                        }
+                                                        handleSelect()
                                                     }}
+                                                    className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                 >
-                                                    <Check
-                                                        className={cn(
-                                                            "mr-2 h-4 w-4",
-                                                            item.title === formData.title
-                                                                ? "opacity-100"
-                                                                : "opacity-0"
-                                                        )}
-                                                    />
-                                                    {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                                                    <div
+                                                        className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                        onPointerDown={(e) => {
+                                                            e.preventDefault()
+                                                        }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            let newDeptId = formData.department_id
+
+                                                            if (formData.property_id && departments) {
+                                                                const match = departments.find(d => d.name === item.category)
+                                                                if (match) {
+                                                                    newDeptId = match.id
+                                                                    toast({
+                                                                        title: t('messages.department_auto_selected') || "Department Auto-Selected",
+                                                                        description: match.name
+                                                                    })
+                                                                }
+                                                            }
+
+                                                            setFormData({
+                                                                ...formData,
+                                                                title: item.title,
+                                                                department_id: newDeptId
+                                                            })
+                                                            setOpenJobTitle(false)
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                item.title === formData.title
+                                                                    ? "opacity-100"
+                                                                    : "opacity-0"
+                                                            )}
+                                                        />
+                                                        {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                                                    </div>
                                                 </CommandItem>
                                             ))}
                                         </CommandGroup>

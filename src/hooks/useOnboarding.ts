@@ -15,12 +15,11 @@ export function useMyOnboarding() {
                 .from('onboarding_process')
                 .select(`
           *,
-          template:onboarding_templates(title),
-          tasks:onboarding_tasks(*)
+          template:onboarding_templates(title)
         `)
                 .eq('user_id', user.id)
-                .eq('status', 'active')
-                .single()
+                .neq('status', 'completed')
+                .maybeSingle()
 
             if (error) {
                 if (error.code === 'PGRST116') return null // No onboarding found

@@ -43,7 +43,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
             if (error) throw error
 
-            console.log('🔔 Fetched notifications count:', (data || []).length)
+
 
             return (data || []).map((n: any) => ({
                 ...n,
@@ -58,7 +58,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     useEffect(() => {
         if (!user) return
 
-        console.log('🔌 Subscribing to realtime for user', user.id)
+
 
         const channel = supabase
             .channel('global-notifications')
@@ -71,7 +71,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     filter: `user_id=eq.${user.id}`,
                 },
                 (payload) => {
-                    console.log('🔔 Realtime payload received:', payload)
+
                     if (!payload.new) return
 
                     // 1. Invalidate Query to fetch new data
@@ -96,12 +96,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     }
                 }
             )
-            .subscribe((status) => {
-                console.log('🔌 Realtime subscription status:', status)
-            })
+            .subscribe()
+
 
         return () => {
-            console.log('🔌 NotificationProvider: Unsubscribing...')
+
             supabase.removeChannel(channel)
         }
     }, [user, queryClient, toast])

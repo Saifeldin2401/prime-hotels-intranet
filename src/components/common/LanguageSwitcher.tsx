@@ -10,13 +10,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
   { code: 'ar', name: 'العربية', flag: '🇸🇦' }
 ]
 
-export function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  className?: string
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  showLabel?: boolean
+}
+
+export function LanguageSwitcher({ className, variant = "outline", showLabel = true }: LanguageSwitcherProps) {
   const { i18n } = useTranslation()
   const currentLang = i18n.language
 
@@ -30,11 +37,15 @@ export function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Globe className="h-4 w-4 mr-2" />
-          <span className="mr-2">{currentLanguage.flag}</span>
-          {currentLanguage.name}
-          <ChevronDown className="h-4 w-4 ml-2" />
+        <Button variant={variant} size="sm" className={className}>
+          <Globe className={cn("h-4 w-4", showLabel && "mr-2")} />
+          {showLabel && (
+            <>
+              <span className="mr-2">{currentLanguage.flag}</span>
+              {currentLanguage.name}
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

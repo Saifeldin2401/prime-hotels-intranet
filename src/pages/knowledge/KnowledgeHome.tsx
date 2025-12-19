@@ -97,14 +97,13 @@ export default function KnowledgeHome() {
 
                 <div className="container mx-auto max-w-4xl text-center relative z-10">
                     <h1 className="text-4xl md:text-5xl font-bold mb-6 font-serif tracking-tight text-white drop-shadow-sm">
-                        Knowledge Base
+                        {t('title')}
                     </h1>
                     <p className="text-white/90 mb-3 text-xl font-medium">
-                        Centralized Hub for SOPs, Policies, and Operational Guides
+                        {t('subtitle')}
                     </p>
                     <p className="text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-                        Access all the critical resources you need to deliver excellence.
-                        From daily housekeeping checklists to complex emergency protocols and department-specific standards.
+                        {t('hero_description')}
                     </p>
 
                     {/* Search Bar */}
@@ -116,14 +115,14 @@ export default function KnowledgeHome() {
                                 <Input
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search for SOPs, guides, documents..."
+                                    placeholder={t('search_placeholder')}
                                     className="border-0 shadow-none focus-visible:ring-0 text-lg py-6 text-gray-900 placeholder:text-gray-400 bg-transparent flex-1"
                                 />
                                 <Button
                                     type="submit"
                                     className="bg-hotel-navy hover:bg-hotel-navy/90 text-white rounded-lg px-8 py-6 text-base font-medium transition-all duration-300 shadow-md hover:shadow-lg"
                                 >
-                                    Search
+                                    {t('search_button')}
                                 </Button>
                             </div>
                         </div>
@@ -140,7 +139,7 @@ export default function KnowledgeHome() {
                                     className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 backdrop-blur-sm border border-white/10 transition-all duration-300 flex items-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                                 >
                                     <Icon className="h-4 w-4 text-hotel-gold" />
-                                    {config.label}
+                                    {t(`content_types.${config.type}`, config.label)}
                                 </Link>
                             )
                         })}
@@ -156,10 +155,10 @@ export default function KnowledgeHome() {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-orange-700">
                                     <AlertCircle className="h-5 w-5" />
-                                    <CardTitle className="text-lg">Required Reading</CardTitle>
+                                    <CardTitle className="text-lg">{t('required_reading')}</CardTitle>
                                 </div>
                                 <Badge variant="secondary" className="bg-orange-200 text-orange-800">
-                                    {pendingRequired.length} pending
+                                    {t('pending_count', { count: pendingRequired.length })}
                                 </Badge>
                             </div>
                         </CardHeader>
@@ -179,7 +178,7 @@ export default function KnowledgeHome() {
                                         to="/knowledge/required"
                                         className="px-3 py-1.5 text-orange-700 text-sm hover:underline"
                                     >
-                                        +{pendingRequired.length - 3} more
+                                        {t('more_count', { count: pendingRequired.length - 3 })}
                                     </Link>
                                 )}
                             </div>
@@ -192,10 +191,10 @@ export default function KnowledgeHome() {
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                             <Star className="h-5 w-5 text-hotel-gold" />
-                            <h2 className="text-xl font-bold">Featured</h2>
+                            <h2 className="text-xl font-bold">{t('featured')}</h2>
                         </div>
                         <Link to="/knowledge/browse?featured=true" className="text-sm text-hotel-gold hover:underline flex items-center gap-1">
-                            View all <ArrowRight className="h-4 w-4" />
+                            {t('view_all')} <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
 
@@ -222,7 +221,7 @@ export default function KnowledgeHome() {
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <Icon className="h-4 w-4 text-hotel-gold" />
                                                     <span className="text-xs uppercase text-gray-500 font-medium">
-                                                        {article.content_type}
+                                                        {t(`content_types.${article.content_type}`, article.content_type)}
                                                     </span>
                                                     {article.department?.name && (
                                                         <Badge variant="outline" className="text-xs">
@@ -245,14 +244,14 @@ export default function KnowledgeHome() {
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <BookOpen className="h-5 w-5 text-gray-600" />
-                        <h2 className="text-xl font-bold">Browse by Department</h2>
-                        <Badge variant="outline" className="text-xs">Personalized for you</Badge>
+                        <h2 className="text-xl font-bold">{t('browse_by_dept')}</h2>
+                        <Badge variant="outline" className="text-xs">{t('personalized')}</Badge>
                     </div>
 
                     {Object.keys(deptCounts || {}).length === 0 ? (
                         <Card className="p-8 text-center">
-                            <p className="text-gray-500">No department-specific content available yet.</p>
-                            <p className="text-sm text-gray-400 mt-2">Content will appear here once you're assigned to a department.</p>
+                            <p className="text-gray-500">{t('no_dept_content')}</p>
+                            <p className="text-sm text-gray-400 mt-2">{t('no_dept_content_desc')}</p>
                         </Card>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -267,7 +266,7 @@ export default function KnowledgeHome() {
                                             <BookOpen className="h-6 w-6 text-hotel-navy" />
                                         </div>
                                         <Badge variant="secondary" className="text-xs">
-                                            {dept.total} {dept.total === 1 ? 'article' : 'articles'}
+                                            {t(dept.total === 1 ? 'article_count' : 'article_count_plural', { count: dept.total })}
                                         </Badge>
                                     </div>
 
@@ -282,7 +281,7 @@ export default function KnowledgeHome() {
                                             .slice(0, 3)
                                             .map(([type, count]: [string, any]) => (
                                                 <Badge key={type} variant="outline" className="text-xs capitalize">
-                                                    {type}: {count}
+                                                    {t(`content_types.${type}`, type)}: {count}
                                                 </Badge>
                                             ))}
                                     </div>
@@ -297,10 +296,10 @@ export default function KnowledgeHome() {
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5 text-gray-600" />
-                            <h2 className="text-xl font-bold">Recently Updated</h2>
+                            <h2 className="text-xl font-bold">{t('recent')}</h2>
                         </div>
                         <Link to="/knowledge/browse?sort=updated" className="text-sm text-hotel-gold hover:underline flex items-center gap-1">
-                            View all <ArrowRight className="h-4 w-4" />
+                            {t('view_all')} <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
 
@@ -342,24 +341,24 @@ export default function KnowledgeHome() {
                     <section className="border-t pt-8">
                         <div className="flex items-center gap-2 mb-4">
                             <TrendingUp className="h-5 w-5 text-gray-600" />
-                            <h2 className="text-xl font-bold">Manage Knowledge Base</h2>
+                            <h2 className="text-xl font-bold">{t('manage')}</h2>
                         </div>
 
                         <div className="flex flex-wrap gap-4">
                             <Link to="/knowledge/create">
                                 <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy">
                                     <Plus className="h-4 w-4 mr-2" />
-                                    Create Article
+                                    {t('create_article')}
                                 </Button>
                             </Link>
                             <Link to="/knowledge/review">
                                 <Button variant="outline">
-                                    Review Pending
+                                    {t('review_pending')}
                                 </Button>
                             </Link>
                             <Link to="/knowledge/analytics">
                                 <Button variant="outline">
-                                    View Analytics
+                                    {t('analytics_action')}
                                 </Button>
                             </Link>
                         </div>

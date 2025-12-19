@@ -1,6 +1,5 @@
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import {
     Briefcase,
     Search,
@@ -49,11 +48,13 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { ROLES } from '@/lib/constants'
 import { Badge } from '@/components/ui/badge'
+import { useDepartments } from '@/hooks/useDepartments'
 
 interface JobTitle {
     id: string
     title: string
-    category: string
+    category: string // Legacy category string, populated from department name if linked
+    department_id: string | null
     default_role: string | null
     created_at: string
 }
@@ -66,12 +67,13 @@ export default function JobTitles() {
     // Form State
     const [formData, setFormData] = useState({
         title: '',
-        category: '',
+        department_id: '',
         default_role: ''
     })
 
     const { toast } = useToast()
     const queryClient = useQueryClient()
+    const { departments } = useDepartments()
 
     // Fetch Job Titles
     const { data: jobTitles, isLoading } = useQuery({
@@ -79,17 +81,24 @@ export default function JobTitles() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('job_titles')
-                .select('*')
+                .select(`
+                    *,
+                    department:departments(id, name)
+                `)
                 .order('title', { ascending: true })
 
             if (error) throw error
-            return data as JobTitle[]
+            // Map the response to include department name in category if available for backward compat
+            return data.map((item: any) => ({
+                ...item,
+                category: item.department?.name || item.category
+            })) as JobTitle[]
         }
     })
 
     // Create Mutation
     const createMutation = useMutation({
-        mutationFn: async (newTitle: Omit<JobTitle, 'id' | 'created_at'>) => {
+        mutationFn: async (newTitle: { title: string, department_id: string | null, category: string, default_role: string | null }) => {
             const { data, error } = await supabase
                 .from('job_titles')
                 .insert([newTitle])
@@ -119,12 +128,13 @@ export default function JobTitles() {
 
     // Update Mutation
     const updateMutation = useMutation({
-        mutationFn: async (title: JobTitle) => {
+        mutationFn: async (title: { id: string, title: string, department_id: string | null, category: string, default_role: string | null }) => {
             const { data, error } = await supabase
                 .from('job_titles')
                 .update({
                     title: title.title,
-                    category: title.category,
+                    department_id: title.department_id,
+                    category: title.category, // Keep syncing category for now
                     default_role: title.default_role
                 })
                 .eq('id', title.id)
@@ -190,7 +200,7 @@ export default function JobTitles() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!formData.title || !formData.category) {
+        if (!formData.title || !formData.department_id) {
             toast({
                 title: "Validation Error",
                 description: "Title and Department are required",
@@ -199,17 +209,21 @@ export default function JobTitles() {
             return
         }
 
+        const deptName = departments?.find(d => d.id === formData.department_id)?.name || ''
+
         if (editingTitle) {
             updateMutation.mutate({
-                ...editingTitle,
+                id: editingTitle.id,
                 title: formData.title,
-                category: formData.category,
+                department_id: formData.department_id,
+                category: deptName,
                 default_role: formData.default_role || null
             })
         } else {
             createMutation.mutate({
                 title: formData.title,
-                category: formData.category,
+                department_id: formData.department_id,
+                category: deptName,
                 default_role: formData.default_role || null
             })
         }
@@ -219,7 +233,7 @@ export default function JobTitles() {
         setEditingTitle(title)
         setFormData({
             title: title.title,
-            category: title.category,
+            department_id: title.department_id || '',
             default_role: title.default_role || ''
         })
         setIsDialogOpen(true)
@@ -229,7 +243,7 @@ export default function JobTitles() {
         setEditingTitle(null)
         setFormData({
             title: '',
-            category: '',
+            department_id: '',
             default_role: ''
         })
     }
@@ -238,8 +252,6 @@ export default function JobTitles() {
         jt.title.toLowerCase().includes(search.toLowerCase()) ||
         jt.category.toLowerCase().includes(search.toLowerCase())
     )
-
-    const uniqueCategories = Array.from(new Set(jobTitles?.map(j => j.category) || []))
 
     return (
         <div className="space-y-6">
@@ -282,21 +294,22 @@ export default function JobTitles() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="category">Department / Category <span className="text-red-500">*</span></Label>
-                                <div className="relative">
-                                    <Input
-                                        id="category"
-                                        list="categories"
-                                        placeholder="e.g. Front Office"
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    />
-                                    <datalist id="categories">
-                                        {uniqueCategories.map(cat => (
-                                            <option key={cat} value={cat} />
+                                <Label htmlFor="department">Department <span className="text-red-500">*</span></Label>
+                                <Select
+                                    value={formData.department_id}
+                                    onValueChange={(val) => setFormData({ ...formData, department_id: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a department..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {departments?.map((dept) => (
+                                            <SelectItem key={dept.id} value={dept.id}>
+                                                {dept.name}
+                                            </SelectItem>
                                         ))}
-                                    </datalist>
-                                </div>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="space-y-2">

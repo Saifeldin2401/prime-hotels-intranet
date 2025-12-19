@@ -28,7 +28,8 @@
     "upload": "رفع",
     "filter": "تصفية",
     "clear_filters": "مسح التصفيات",
-    "apply": "تطبيق"
+    "apply": "تطبيق",
+    "confirm_delete": "هل أنت متأكد؟ لا يمكن التراجع عن هذا."
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -47,6 +48,7 @@
     "admin": "الإدارة",
     "my_profile": "ملفي الشخصي",
     "settings": "الإعدادات",
+    "promotion_history": "سجل الترقيات",
     "logout": "تسجيل الخروج"
   },
   "dashboard": {
@@ -185,6 +187,19 @@
     "save": "حفظ",
     "create": "إنشاء",
     "update": "تحديث",
-    "refresh": "تحديث"
+    "refresh": "تحديث",
+    "error": "خطأ"
+  },
+  "priority": {
+    "critical": "حرج",
+    "urgent": "عاجل",
+    "high": "مرتفع",
+    "medium": "متوسط",
+    "low": "منخفض"
+  },
+  "schedule_types": {
+    "shift": "وردية",
+    "meeting": "اجتماع",
+    "training": "تدريب"
   }
 }

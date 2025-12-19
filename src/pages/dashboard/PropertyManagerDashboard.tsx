@@ -19,8 +19,10 @@ import { useDepartments } from '@/hooks/useDepartments'
 import { useAssignedMaintenanceTickets } from '@/hooks/useMaintenanceTickets'
 import { useDepartmentKPIs } from '@/hooks/useDepartmentKPIs'
 import { Users, Building2, CheckSquare } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export function PropertyManagerDashboard() {
+  const { t } = useTranslation('dashboard')
   const { currentProperty } = useProperty()
   const { user, profile, primaryRole } = useAuth()
   const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
@@ -117,13 +119,13 @@ export function PropertyManagerDashboard() {
       {/* Welcome Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{currentProperty?.name || 'Property'} Dashboard</h1>
-          <p className="text-gray-600">Oversee property operations and performance</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('cards.property_dashboard_title', { name: currentProperty?.name || 'Property' })}</h1>
+          <p className="text-gray-600">{t('cards.property_dashboard_subtitle')}</p>
         </div>
         <div className="flex items-center space-x-4">
           <OverdueBadge type="total" />
           <Badge className="text-sm bg-blue-100 text-blue-800">
-            {stats.totalStaff} Active Staff
+            {t('cards.active_staff_badge', { count: stats.totalStaff })}
           </Badge>
         </div>
       </div>
@@ -133,50 +135,50 @@ export function PropertyManagerDashboard() {
         <Card className="role-property-manager cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/directory')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
-              Total Staff
+              {t('cards.total_staff')}
               <Users className="h-4 w-4 text-gray-500" />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{stats.totalStaff}</div>
-            <p className="text-xs text-gray-600 mt-1">Active team members</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.active_team_members')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-property-manager cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/settings')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
-              Departments
+              {t('tabs.departments')}
               <Building2 className="h-4 w-4 text-gray-500" />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{stats.activeDepartments}</div>
-            <p className="text-xs text-gray-600 mt-1">Operational departments</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.operational_departments')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-property-manager cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/tasks')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
-              Pending Tasks
+              {t('cards.pending_tasks')}
               <CheckSquare className="h-4 w-4 text-gray-500" />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{stats.pendingTasks}</div>
-            <p className="text-xs text-gray-600 mt-1">Tasks requiring attention</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.tasks_requiring_attention')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-property-manager cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/training')}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Staff Compliance</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.staff_compliance')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{stats.staffCompliance}%</div>
             <Progress value={stats.staffCompliance} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Training & SOP compliance</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.training_sop_compliance')}</p>
           </CardContent>
         </Card>
       </div>
@@ -184,11 +186,11 @@ export function PropertyManagerDashboard() {
       {/* Main Content Tabs */}
       <Tabs defaultValue="feed" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="feed">Feed</TabsTrigger>
-          <TabsTrigger value="departments">Departments</TabsTrigger>
-          <TabsTrigger value="operations">Operations</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="audits">Audits</TabsTrigger>
+          <TabsTrigger value="feed">{t('tabs.feed')}</TabsTrigger>
+          <TabsTrigger value="departments">{t('tabs.departments')}</TabsTrigger>
+          <TabsTrigger value="operations">{t('tabs.operations')}</TabsTrigger>
+          <TabsTrigger value="reports">{t('tabs.reports')}</TabsTrigger>
+          <TabsTrigger value="audits">{t('tabs.audits')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="feed" className="space-y-6">
@@ -216,32 +218,32 @@ export function PropertyManagerDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.Building className="h-5 w-5" />
-                <span>Department Details</span>
+                <span>{t('cards.department_details')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {departmentDetails.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No departments found</p>
+                <p className="text-sm text-gray-500 text-center py-4">{t('cards.no_departments_found')}</p>
               ) : departmentDetails.map((dept, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/departments/${dept.id}`)}>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-medium">{dept.name}</p>
                       <Badge className="bg-blue-100 text-blue-800 text-xs">
-                        {dept.staff} staff
+                        {t('cards.active_staff_badge', { count: dept.staff })}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">Head: {dept.head}</p>
+                    <p className="text-sm text-gray-600 mb-2">{t('cards.head_label', { name: dept.head })}</p>
                     <div className="flex items-center space-x-4 text-xs">
-                      <span>Performance: {dept.performance}/5.0</span>
-                      <span>Compliance: {dept.compliance}%</span>
+                      <span>{t('cards.performance_label', { score: dept.performance })}</span>
+                      <span>{t('cards.compliance_label', { score: dept.compliance })}</span>
                     </div>
                   </div>
                   <button className="ml-4 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700" onClick={(e) => {
                     e.stopPropagation()
                     navigate(`/departments/${dept.id}`)
                   }}>
-                    View Details
+                    {t('cards.view_details')}
                   </button>
                 </div>
               ))}

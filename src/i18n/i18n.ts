@@ -1,4 +1,5 @@
 import i18n from 'i18next';
+// Force reload
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
@@ -43,6 +44,8 @@ import enPublic from './locales/en/public.json';
 import arPublic from './locales/ar/public.json';
 import enKnowledge from './locales/en/knowledge.json';
 import arKnowledge from './locales/ar/knowledge.json';
+import enOnboarding from './locales/en/onboarding.json';
+import arOnboarding from './locales/ar/onboarding.json';
 
 // Define the resources
 const resources = {
@@ -67,6 +70,7 @@ const resources = {
     approvals: enApprovals,
     public: enPublic,
     knowledge: enKnowledge,
+    onboarding: enOnboarding,
   },
   ar: {
     common: arCommon,
@@ -89,6 +93,7 @@ const resources = {
     approvals: arApprovals,
     public: arPublic,
     knowledge: arKnowledge,
+    onboarding: arOnboarding,
   },
 };
 
@@ -102,7 +107,7 @@ i18n
   // for all options read: https://www.i18next.com/overview/configuration-options
   .init({
     resources,
-    debug: process.env.NODE_ENV === 'development',
+    debug: false,
     fallbackLng: 'en',
     supportedLngs: ['en', 'ar'],
 

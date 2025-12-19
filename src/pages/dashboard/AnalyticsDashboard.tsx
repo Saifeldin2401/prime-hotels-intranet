@@ -162,7 +162,7 @@ export default function AnalyticsDashboard() {
 
   const exportAnalytics = () => {
     const csv = [
-      ['Metric', 'Value', 'Period'],
+      [t('cards.export_headers.metric'), t('cards.export_headers.value'), t('cards.export_headers.period')],
       ...Object.entries(analytics || {}).flatMap(([category, metrics]) =>
         Object.entries(metrics).map(([metric, value]) => [`${category}.${metric} `, value.toString(), timeRange])
       )

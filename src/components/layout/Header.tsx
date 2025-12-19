@@ -5,6 +5,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Button } from '@/components/ui/button'
+import { GlobalSearch } from '@/components/search/GlobalSearch'
 import {
   Select,
   SelectContent,
@@ -15,7 +16,6 @@ import {
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import {
-  Search,
   Menu,
   User,
   ChevronDown,
@@ -43,7 +43,6 @@ export function Header({
   const { user, profile } = useAuth()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const { t } = useTranslation(['nav', 'common'])
-  const [searchQuery, setSearchQuery] = useState('')
 
   return (
     <header className="sticky top-0 z-40 w-full transition-all duration-300">
@@ -60,32 +59,10 @@ export function Header({
             >
               <Menu className="h-5 w-5" />
             </Button>
-
-            {/* Logo Area */}
-            <div className="flex items-center group">
-              <img
-                src="/prime-logo-light.png"
-                alt="Prime Hotels"
-                className="h-12 w-auto opacity-90 transition-opacity hover:opacity-100"
-              />
-            </div>
           </div>
 
           {/* Center Search - Premium Style */}
-          <div className="hidden md:block flex-1 max-w-xl mx-6">
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 ps-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400 group-focus-within:text-hotel-gold transition-colors" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search resources, SOPs, or staff..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-hotel-navy-light border border-hotel-navy-dark rounded-full py-2 ps-10 pe-4 text-sm text-white placeholder-gray-400 focus:bg-hotel-navy-light focus:border-hotel-gold focus:ring-1 focus:ring-hotel-gold focus:outline-none transition-all duration-300"
-              />
-            </div>
-          </div>
+          <GlobalSearch />
 
           <div className="flex items-center gap-3">
             {/* Property Switcher for Multi-Property Users */}

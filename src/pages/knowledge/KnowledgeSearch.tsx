@@ -63,13 +63,6 @@ const CONTENT_TYPE_CONFIG: Record<KnowledgeContentType, { icon: any; label: stri
     document: { icon: FileText, label: 'Document', color: 'bg-gray-100 text-gray-700 border-gray-200' },
 }
 
-const SORT_OPTIONS = [
-    { value: 'relevance', label: 'Relevance' },
-    { value: 'updated', label: 'Recently Updated' },
-    { value: 'views', label: 'Most Viewed' },
-    { value: 'title', label: 'Title A-Z' },
-]
-
 export default function KnowledgeSearch() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const isRTL = i18n.dir() === 'rtl'
@@ -80,6 +73,13 @@ export default function KnowledgeSearch() {
     const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
     const [sortBy, setSortBy] = useState('relevance')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+
+    const SORT_OPTIONS = [
+        { value: 'relevance', label: t('search_page.sort.relevance') },
+        { value: 'updated', label: t('search_page.sort.updated') },
+        { value: 'views', label: t('search_page.sort.views') },
+        { value: 'title', label: t('search_page.sort.az') },
+    ]
 
     const { data: articles, isLoading } = useArticles({
         search: searchQuery || undefined,
@@ -149,8 +149,8 @@ export default function KnowledgeSearch() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">{t('search.title', 'Search Knowledge Base')}</h1>
-                <p className="text-gray-600 mt-1">{t('search.subtitle', 'Find SOPs, policies, guides, and more')}</p>
+                <h1 className="text-2xl font-bold text-gray-900">{t('search_page.title')}</h1>
+                <p className="text-gray-600 mt-1">{t('search_page.subtitle')}</p>
             </div>
 
             {/* Search Bar */}
@@ -162,7 +162,7 @@ export default function KnowledgeSearch() {
                     )} />
                     <Input
                         type="text"
-                        placeholder={t('search.placeholder', 'Search articles, SOPs, policies...')}
+                        placeholder={t('search_page.placeholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className={cn("h-12 text-base", isRTL ? "pr-10" : "pl-10")}
@@ -235,7 +235,7 @@ export default function KnowledgeSearch() {
                             )}
                         >
                             <Icon className="h-4 w-4 mr-1" />
-                            {config.label}
+                            {t(`content_types.${type}`, config.label)}
                         </Button>
                     )
                 })}
@@ -245,10 +245,10 @@ export default function KnowledgeSearch() {
                 {/* Category Filter */}
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                     <SelectTrigger className="w-[160px]">
-                        <SelectValue placeholder="All Categories" />
+                        <SelectValue placeholder={t('search_page.filters.all_categories')} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="all">{t('search_page.filters.all_categories')}</SelectItem>
                         {categories?.map(cat => (
                             <SelectItem key={cat.id} value={cat.id}>
                                 {cat.name}
@@ -260,10 +260,10 @@ export default function KnowledgeSearch() {
                 {/* Department Filter */}
                 <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
                     <SelectTrigger className="w-[160px]">
-                        <SelectValue placeholder="All Departments" />
+                        <SelectValue placeholder={t('search_page.filters.all_departments')} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">All Departments</SelectItem>
+                        <SelectItem value="all">{t('search_page.filters.all_departments')}</SelectItem>
                         {departments?.map(dept => (
                             <SelectItem key={dept.id} value={dept.id}>
                                 {dept.name}
@@ -276,7 +276,7 @@ export default function KnowledgeSearch() {
                 {hasActiveFilters && (
                     <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
                         <X className="h-4 w-4 mr-1" />
-                        Clear all
+                        {t('search_page.filters.clear_all')}
                     </Button>
                 )}
             </div>
@@ -287,7 +287,7 @@ export default function KnowledgeSearch() {
                     {isLoading ? (
                         <Skeleton className="h-4 w-32" />
                     ) : (
-                        t('search.results_count', '{{count}} articles found', { count: filteredArticles.length })
+                        t('search_page.results_count', { count: filteredArticles.length })
                     )}
                 </span>
             </div>
@@ -315,13 +315,13 @@ export default function KnowledgeSearch() {
                     <CardContent className="py-12 text-center">
                         <Search className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            {t('search.no_results', 'No articles found')}
+                            {t('search_page.no_results')}
                         </h3>
                         <p className="text-gray-500 mb-4">
-                            {t('search.no_results_hint', 'Try adjusting your search or filters')}
+                            {t('search_page.no_results_hint')}
                         </p>
                         <Button variant="outline" onClick={clearFilters}>
-                            Clear filters
+                            {t('search_page.filters.clear_filters')}
                         </Button>
                     </CardContent>
                 </Card>
@@ -332,6 +332,7 @@ export default function KnowledgeSearch() {
                     {filteredArticles.map(article => {
                         const typeConfig = CONTENT_TYPE_CONFIG[article.content_type as KnowledgeContentType] || CONTENT_TYPE_CONFIG.sop
                         const Icon = typeConfig.icon
+                        const typeLabel = t(`content_types.${article.content_type}`, typeConfig.label)
 
                         return (
                             <Link key={article.id} to={`/knowledge/${article.id}`}>
@@ -368,7 +369,7 @@ export default function KnowledgeSearch() {
                                             {/* Meta */}
                                             <div className="flex items-center gap-3 mt-3 text-xs text-gray-400">
                                                 <Badge variant="outline" className={cn("text-xs", typeConfig.color)}>
-                                                    {typeConfig.label}
+                                                    {typeLabel}
                                                 </Badge>
                                                 {article.category?.name && (
                                                     <span>{article.category.name}</span>

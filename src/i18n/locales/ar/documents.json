@@ -38,5 +38,60 @@
         "role_specific": "خاص بالدور",
         "acknowledged": "تم الإقرار",
         "acknowledge": "إقرار"
+    },
+    "status": {
+        "DRAFT": "مسودة",
+        "PENDING_REVIEW": "قيد المراجعة",
+        "APPROVED": "معتمد",
+        "PUBLISHED": "منشور",
+        "REJECTED": "مرفوض"
+    },
+    "visibility": {
+        "all_properties": "كل المنشآت",
+        "property": "منشأة محددة",
+        "department": "قسم محدد",
+        "role": "دور محدد"
+    },
+    "role": {
+        "regional_admin": "مدير إقليمي",
+        "regional_hr": "موارد بشرية إقليمية",
+        "property_manager": "مدير المنشأة",
+        "property_hr": "موارد بشرية للمنشأة",
+        "department_head": "رئيس قسم",
+        "staff": "موظف"
+    },
+    "detail": {
+        "back_to_library": "العودة للمكتبة",
+        "error_loading": "خطأ في تحميل المستند",
+        "not_found": "لم يتم العثور على المستند أو ليس لديك صلاحية لعرضه.",
+        "no_description": "لا يوجد وصف.",
+        "preview": "معاينة",
+        "version_history": "سجل الإصدارات",
+        "version_history_with_count": "سجل الإصدارات ({{count}})",
+        "version_history_desc": "الإصدارات السابقة من هذا المستند.",
+        "no_versions": "لا توجد إصدارات سابقة.",
+        "version": "إصدار",
+        "details": "التفاصيل",
+        "pending_approval": "قيد الموافقة",
+        "pending_review_msg": "هذا المستند قيد المراجعة حالياً.",
+        "fields": {
+            "department": "القسم",
+            "property": "المنشأة",
+            "created_by": "تم الإنشاء بواسطة",
+            "last_updated": "آخر تحديث",
+            "status": "الحالة",
+            "visibility": "الظهور",
+            "role_access": "صلاحية الدور"
+        }
+    },
+    "actions": {
+        "download": "تحميل",
+        "preview": "معاينة"
+    },
+    "common": {
+        "all_departments": "كل الأقسام",
+        "all_properties": "كل المنشآت",
+        "unknown": "غير معروف",
+        "all_roles": "كل الأدوار"
     }
 }

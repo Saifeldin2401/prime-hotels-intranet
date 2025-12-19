@@ -38,5 +38,60 @@
         "role_specific": "Role-specific",
         "acknowledged": "Acknowledged",
         "acknowledge": "Acknowledge"
+    },
+    "status": {
+        "DRAFT": "Draft",
+        "PENDING_REVIEW": "Pending Review",
+        "APPROVED": "Approved",
+        "PUBLISHED": "Published",
+        "REJECTED": "Rejected"
+    },
+    "visibility": {
+        "all_properties": "All Properties",
+        "property": "Specific Property",
+        "department": "Specific Department",
+        "role": "Specific Role"
+    },
+    "role": {
+        "regional_admin": "Regional Admin",
+        "regional_hr": "Regional HR",
+        "property_manager": "Property Manager",
+        "property_hr": "Property HR",
+        "department_head": "Department Head",
+        "staff": "Staff"
+    },
+    "detail": {
+        "back_to_library": "Back to Library",
+        "error_loading": "Error loading document",
+        "not_found": "The document could not be found or you don't have permission to view it.",
+        "no_description": "No description provided.",
+        "preview": "Preview",
+        "version_history": "Version History",
+        "version_history_with_count": "Version History ({{count}})",
+        "version_history_desc": "Previous versions of this document.",
+        "no_versions": "No previous versions found.",
+        "version": "Version",
+        "details": "Details",
+        "pending_approval": "Pending Approval",
+        "pending_review_msg": "This document is currently under review.",
+        "fields": {
+            "department": "Department",
+            "property": "Property",
+            "created_by": "Created By",
+            "last_updated": "Last Updated",
+            "status": "Status",
+            "visibility": "Visibility",
+            "role_access": "Role Access"
+        }
+    },
+    "actions": {
+        "download": "Download",
+        "preview": "Preview"
+    },
+    "common": {
+        "all_departments": "All Departments",
+        "all_properties": "All Properties",
+        "unknown": "Unknown",
+        "all_roles": "All Roles"
     }
 }

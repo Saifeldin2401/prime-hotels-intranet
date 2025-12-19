@@ -102,5 +102,126 @@
         "enter_justification": "أدخل مبرر الموافقة...",
         "delete_log": "حذف سجل الوصول",
         "delete_confirm": "هل أنت متأكد من حذف هذا السجل؟ لا يمكن التراجع عن هذا الإجراء."
+    },
+    "notification_batches": {
+        "title": "دفعات الإشعارات",
+        "description": "مراقبة وإدارة وظائف الإشعارات المجمعة",
+        "refresh_button": "تحديث",
+        "batch_jobs": "وظائف الدفعات",
+        "job_type": "نوع الوظيفة",
+        "status": "الحالة",
+        "progress": "التقدم",
+        "created_by": "تم الإنشاء بواسطة",
+        "created": "تم الإنشاء",
+        "actions": "إجراءات",
+        "types": {
+            "training_assigned": "تم تعيين تدريب جديد",
+            "policy_update": "تحديث سياسة",
+            "announcement": "إعلان"
+        },
+        "statuses": {
+            "completed": "مكتمل",
+            "processing": "جاري المعالجة",
+            "failed": "فشل",
+            "pending": "قيد الانتظار"
+        }
+    },
+    "workflows": {
+        "title": "سير العمل المؤتمت",
+        "description": "إدارة ومراقبة أتمتة النظام والمهام المجدولة ومحفزات الأحداث.",
+        "definitions": "التعاريف",
+        "execution_logs": "سجلات التنفيذ",
+        "stats": {
+            "total_runs": "إجمالي التشغيل (7 أيام)",
+            "runs_desc": "عمليات التنفيذ في آخر 7 أيام",
+            "success_rate": "معدل النجاح",
+            "completed_desc": "اكتملت بنجاح",
+            "failures": "الإخفاقات",
+            "failed_desc": "عمليات تنفيذ فاشلة في آخر 7 أيام",
+            "avg_duration": "متوسط المدة",
+            "avg_desc": "متوسط وقت التنفيذ"
+        },
+        "table": {
+            "workflow_name": "اسم سير العمل",
+            "type": "النوع",
+            "trigger": "المحفز",
+            "last_updated": "آخر تحديث",
+            "status": "الحالة",
+            "actions": "الإجراءات"
+        },
+        "actions": {
+            "run_now": "تشغيل الآن",
+            "active": "نشط",
+            "inactive": "غير نشط"
+        },
+        "names": {
+            "approval_escalation": "تصعيد الموافقات",
+            "leave_balance_alerts": "تنبيهات رصيد الإجازات",
+            "overdue_task_notifications": "إشعارات المهام المتأخرة",
+            "training_deadline_reminders": "تذكيرات الموعد النهائي للتدريب"
+        },
+        "descriptions": {
+            "approval_escalation": "تصعيد الموافقات المعلقة لأكثر من 48 ساعة",
+            "leave_balance_alerts": "تنبيهات شهرية لرصيد الإجازات وانتهاء الصلاحية",
+            "overdue_task_notifications": "إعلام المستخدمين بالمهام المتأخرة",
+            "training_deadline_reminders": "إرسال تذكيرات للمواعيد النهائية القادمة للتدريب"
+        }
+    },
+    "reports": {
+        "title": "التقارير والتحليلات",
+        "description": "نظرة عامة على نشاط النظام والمهام والصيانة والتواصل.",
+        "export_overview": "تصدير نظرة عامة",
+        "cards": {
+            "total_tasks": "إجمالي المهام",
+            "completed": "مكتمل",
+            "open_maintenance": "صيانة مفتوحة",
+            "critical_issues": "التي تحتاج اهتمام",
+            "published_docs": "المستندات المنشورة",
+            "pending_review": "قيد المراجعة",
+            "messages": "الرسائل",
+            "unread": "غير مقروءة"
+        },
+        "tabs": {
+            "maintenance": "الصيانة",
+            "tasks": "المهام",
+            "documents": "المستندات",
+            "communications": "التواصل"
+        },
+        "charts": {
+            "maintenance_requests": "طلبات الصيانة (آخر 7 أيام)",
+            "priority_breakdown": "توزيع الأولويات",
+            "priority_desc": "توزيع التذاكر حسب الأولوية"
+        },
+        "priorities": {
+            "critical": "حرج",
+            "urgent": "عاجل",
+            "normal": "عادي",
+            "low": "منخفض"
+        },
+        "avg_resolution_time": "متوسط وقت الحل"
+    },
+    "properties": {
+        "title": "إدارة الممتلكات",
+        "description": "إدارة مواقع الفنادق والمنشآت",
+        "add_property": "إضافة منشأة",
+        "list_title": "المنشآت",
+        "departments": "الأقسام",
+        "status": "الحالة",
+        "active": "نشط",
+        "inactive": "غير نشط"
+    },
+    "job_titles": {
+        "title": "المسميات الوظيفية",
+        "description": "إدارة القائمة الرئيسية للمسميات الوظيفية وأدوار النظام الافتراضية",
+        "add_title": "إضافة مسمى وظيفي",
+        "search_placeholder": "بحث في المسميات أو الأقسام...",
+        "table": {
+            "title": "المسمى",
+            "department": "القسم",
+            "default_role": "الدور الافتراضي",
+            "actions": "إجراءات"
+        },
+        "about_title": "حول إدارة المسميات الوظيفية",
+        "about_desc": "التغييرات التي يتم إجراؤها هنا ستنعكس على النظام بأكمله على الفور. يتم تقييد حذف المسمى الوظيفي إذا كان معينًا حاليًا لملفات تعريف المستخدمين النشطة أو قوالب الإعداد."
     }
 }

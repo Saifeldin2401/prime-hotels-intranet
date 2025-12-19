@@ -222,21 +222,21 @@ export function SidebarNavigation({
       <div className={cn(
         "fixed inset-y-0 z-[110] bg-hotel-navy text-white transform transition-all duration-300 ease-in-out shadow-2xl",
         "start-0 border-e border-hotel-navy-dark",
-        isMobile ? "lg:hidden w-[85vw] max-w-[320px]" : "hidden lg:block lg:translate-x-0 w-[280px]",
-        isOpen ? "translate-x-0" : (document.dir === 'rtl' ? "translate-x-full" : "-translate-x-full"),
+        isMobile ? "lg:hidden w-[85vw] max-w-[320px]" : "hidden lg:block w-[280px]",
+        isMobile && (isOpen ? "translate-x-0" : "ltr:-translate-x-full rtl:translate-x-full"),
         collapsed && !isMobile && "lg:w-20"
       )}>
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className={cn(
-            "flex h-16 items-center justify-between px-6 border-b border-hotel-navy-dark bg-hotel-navy",
-            collapsed && "justify-center px-0"
+            "flex h-20 items-center justify-center relative px-6 border-b border-hotel-navy-dark bg-hotel-navy",
+            collapsed && "px-0 h-16"
           )}>
-            <div id="sidebar-logo" className="flex items-center gap-3">
+            <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute left-1/2 transform -translate-x-1/2")}>
               <img
                 src="/prime-logo-light.png"
                 alt="Prime Hotels"
-                className="h-8 w-auto"
+                className={cn("w-auto transition-all duration-300", collapsed ? "h-8" : "h-14")}
               />
               {!collapsed && (
                 <div className="animate-fade-in sr-only">
@@ -251,7 +251,7 @@ export function SidebarNavigation({
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors"
+                className="absolute right-4 text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -261,7 +261,8 @@ export function SidebarNavigation({
                 variant="ghost"
                 size="icon"
                 onClick={onToggleCollapse}
-                className="ms-auto text-gray-400 hover:bg-hotel-navy-light hover:text-white h-8 w-8 transition-colors"
+                className="absolute right-2 text-gray-400 hover:bg-hotel-navy-light hover:text-white h-8 w-8 transition-colors"
+                aria-label="Collapse sidebar"
               >
                 <ChevronDown className="h-4 w-4 ltr:rotate-90 rtl:-rotate-90" />
               </Button>
@@ -303,12 +304,17 @@ export function SidebarNavigation({
           )}>
             <div className={cn(
               "flex items-center gap-2",
-              collapsed && "flex-col gap-3"
+              collapsed ? "flex-col-reverse gap-3" : "justify-between w-full"
             )}>
+              <LanguageSwitcher
+                variant="ghost"
+                showLabel={!collapsed}
+                className={cn(
+                  "text-white/80 hover:text-white hover:bg-white/10 border-none h-9",
+                  collapsed ? "w-9 justify-center px-0" : "justify-start px-2"
+                )}
+              />
               <ThemeToggle />
-              <div className="text-white/80 hover:text-white">
-                <LanguageSwitcher />
-              </div>
             </div>
 
             <Button

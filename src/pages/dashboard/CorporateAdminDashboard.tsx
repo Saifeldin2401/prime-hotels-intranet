@@ -13,7 +13,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useCorporateStats } from '@/hooks/useDashboardStats'
 
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+
 export function CorporateAdminDashboard() {
+  const { t } = useTranslation('dashboard')
   const navigate = useNavigate()
   const { currentProperty, availableProperties } = useProperty()
   const { user, profile, primaryRole } = useAuth()
@@ -91,15 +94,15 @@ export function CorporateAdminDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">
             {currentProperty?.id === 'all' ? 'Corporate Dashboard' : `${currentProperty?.name} Dashboard`}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground mt-1">
             {currentProperty?.id === 'all'
-              ? 'Enterprise-wide oversight and analytics'
-              : `Property overview for ${currentProperty?.name}`}
+              ? t('property_overview', { name: 'Prime Hotel - Main' })
+              : t('property_overview', { name: currentProperty?.name })}
           </p>
         </div>
         <div className="flex items-center space-x-4">
           <Badge variant="gold" className="text-sm px-3 py-1">
-            {stats.totalProperties} {stats.totalProperties === 1 ? 'Property' : 'Properties'}
+            {stats.totalProperties} {stats.totalProperties === 1 ? t('widgets.property') : t('widgets.properties')}
           </Badge>
         </div>
       </div>
@@ -108,13 +111,13 @@ export function CorporateAdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border-t-4 border-t-hotel-gold shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Staff & Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">{t('cards.total_staff_revenue')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-end">
               <div>
                 <div className="text-3xl font-bold text-hotel-navy">{stats.totalStaff}</div>
-                <p className="text-xs text-hotel-gold-dark mt-1 font-medium">Headcount</p>
+                <p className="text-xs text-hotel-gold-dark mt-1 font-medium">{t('cards.headcount')}</p>
               </div>
               {/* Revenue Placeholder (if needed technically we removed it, but preserving structure/look) 
                      Actually removing revenue entirely as per request 
@@ -125,38 +128,38 @@ export function CorporateAdminDashboard() {
 
         <Card className="border-t-4 border-t-hotel-navy shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Maintenance Efficiency</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">{t('cards.maintenance_efficiency')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-hotel-navy">{stats.maintenanceEfficiency}%</div>
             <Progress value={stats.maintenanceEfficiency} className="mt-2 h-2 [&>div]:bg-hotel-navy" />
             <p className="text-xs text-gray-500 mt-1">
-              {currentProperty?.id === 'all' ? 'System-wide resolution rate' : 'Ticket resolution rate'}
+              {currentProperty?.id === 'all' ? t('cards.system_resolution_rate') : t('cards.ticket_resolution_rate')}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-t-4 border-t-hotel-gold shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Recruitment</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">{t('cards.recruitment')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-hotel-navy">{stats.openVacancies}</div>
-            <div className="text-sm text-gray-500 mt-2 font-medium">Open Positions</div>
+            <div className="text-sm text-gray-500 mt-2 font-medium">{t('cards.open_positions')}</div>
             <p className="text-xs text-gray-500 mt-1">
-              Active job postings
+              {t('cards.active_job_postings')}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-t-4 border-t-hotel-navy shadow-md hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Training Compliance</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">{t('cards.training_compliance')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-hotel-navy">{stats.complianceRate}%</div>
             <Progress value={stats.complianceRate} className="mt-2 h-2 [&>div]:bg-green-600" />
-            <p className="text-xs text-green-600 mt-1 font-medium">Completion Rate</p>
+            <p className="text-xs text-green-600 mt-1 font-medium">{t('cards.completion_rate')}</p>
           </CardContent>
         </Card>
       </div>
@@ -164,12 +167,12 @@ export function CorporateAdminDashboard() {
       {/* Main Content Tabs */}
       <Tabs defaultValue="feed" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="feed">Feed</TabsTrigger>
-          <TabsTrigger value="properties">Properties</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
-          <TabsTrigger value="system">System</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="feed">{t('tabs.feed')}</TabsTrigger>
+          <TabsTrigger value="properties">{t('tabs.properties')}</TabsTrigger>
+          <TabsTrigger value="analytics">{t('tabs.analytics')}</TabsTrigger>
+          <TabsTrigger value="compliance">{t('tabs.compliance')}</TabsTrigger>
+          <TabsTrigger value="system">{t('tabs.system')}</TabsTrigger>
+          <TabsTrigger value="reports">{t('tabs.reports')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="feed" className="space-y-6">

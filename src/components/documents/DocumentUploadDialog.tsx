@@ -75,6 +75,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         requires_acknowledgment: requiresAcknowledgment,
         created_by: profile.id,
         current_version: 1,
+        file_size: file.size,
       }
 
       if (visibility === 'property') {

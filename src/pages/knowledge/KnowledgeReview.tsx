@@ -48,13 +48,15 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
+import { ar, enUS } from 'date-fns/locale'
 import type { KnowledgeArticle } from '@/types/knowledge'
 
 export default function KnowledgeReview() {
-    const { t } = useTranslation(['knowledge', 'common'])
+    const { t, i18n } = useTranslation(['knowledge', 'common'])
     const navigate = useNavigate()
     const { user } = useAuth()
     const queryClient = useQueryClient()
+    const locale = i18n.language === 'ar' ? ar : enUS
 
     const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null)
     const [reviewComment, setReviewComment] = useState('')
@@ -121,9 +123,9 @@ export default function KnowledgeReview() {
         },
         onSuccess: () => {
             const msgs = {
-                approve: 'Article approved and published!',
-                reject: 'Article rejected (kept as Draft)',
-                changes: 'Changes requested (kept as Draft)'
+                approve: t('review_queue.messages.approved'),
+                reject: t('review_queue.messages.rejected'),
+                changes: t('review_queue.messages.changes_requested')
             }
             toast.success(msgs[reviewAction || 'changes'])
 
@@ -136,7 +138,7 @@ export default function KnowledgeReview() {
             setReviewAction(null)
         },
         onError: (error: any) => {
-            toast.error(`Review failed: ${error.message}`)
+            toast.error(`${t('review_queue.messages.failed')} ${error.message}`)
         }
     })
 
@@ -149,9 +151,9 @@ export default function KnowledgeReview() {
         const s = status.toUpperCase()
         switch (s) {
             case 'DRAFT':
-                return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Edit3 className="h-3 w-3 mr-1" />Draft</Badge>
+                return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Edit3 className="h-3 w-3 mr-1" />{t('review_queue.stats.drafts')}</Badge>
             case 'PUBLISHED':
-                return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />Published</Badge>
+                return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />{t('review_queue.stats.published')}</Badge>
             default:
                 return <Badge variant="outline">{status}</Badge>
         }
@@ -172,9 +174,9 @@ export default function KnowledgeReview() {
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Review Queue</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">{t('review_queue.title')}</h1>
                         <p className="text-gray-600 text-sm mt-1">
-                            Review and publish knowledge articles
+                            {t('review_queue.description')}
                         </p>
                     </div>
                 </div>
@@ -189,7 +191,7 @@ export default function KnowledgeReview() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-yellow-700">{stats.pending}</p>
-                            <p className="text-sm text-yellow-600">Drafts</p>
+                            <p className="text-sm text-yellow-600">{t('review_queue.stats.drafts')}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -200,7 +202,7 @@ export default function KnowledgeReview() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-green-700">{stats.approved}</p>
-                            <p className="text-sm text-green-600">Published</p>
+                            <p className="text-sm text-green-600">{t('review_queue.stats.published')}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -211,12 +213,12 @@ export default function KnowledgeReview() {
                 <Filter className="h-4 w-4 text-gray-500" />
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Filter by status" />
+                        <SelectValue placeholder={t('review_queue.filters.status_placeholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="DRAFT">Drafts</SelectItem>
-                        <SelectItem value="PUBLISHED">Published</SelectItem>
-                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="DRAFT">{t('review_queue.filters.drafts')}</SelectItem>
+                        <SelectItem value="PUBLISHED">{t('review_queue.filters.published')}</SelectItem>
+                        <SelectItem value="all">{t('review_queue.filters.all')}</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -230,8 +232,8 @@ export default function KnowledgeReview() {
                 <Card>
                     <CardContent className="py-12 text-center">
                         <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                        <p className="text-lg font-medium text-gray-900">No articles found</p>
-                        <p className="text-gray-500">Try adjusting the filter</p>
+                        <p className="text-lg font-medium text-gray-900">{t('review_queue.empty_state.title')}</p>
+                        <p className="text-gray-500">{t('review_queue.empty_state.description')}</p>
                     </CardContent>
                 </Card>
             ) : (
@@ -255,16 +257,16 @@ export default function KnowledgeReview() {
                                             {getStatusBadge(article.status)}
                                         </div>
                                         <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                                            {article.description || 'No description provided'}
+                                            {article.description || t('review_queue.messages.no_desc')}
                                         </p>
                                         <div className="flex items-center gap-4 text-xs text-gray-500">
                                             <span className="flex items-center gap-1">
                                                 <User className="h-3 w-3" />
-                                                {(article as any).author?.full_name || 'Unknown'}
+                                                {(article as any).author?.full_name || t('review_queue.messages.unknown_author')}
                                             </span>
                                             <span className="flex items-center gap-1">
                                                 <Calendar className="h-3 w-3" />
-                                                {formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
+                                                {formatDistanceToNow(new Date(article.updated_at), { addSuffix: true, locale })}
                                             </span>
                                         </div>
                                     </div>
@@ -278,7 +280,7 @@ export default function KnowledgeReview() {
                                             }}
                                         >
                                             <Eye className="h-4 w-4 mr-1" />
-                                            Preview
+                                            {t('review_queue.dialog.view')}
                                         </Button>
                                     </div>
                                 </div>
@@ -292,9 +294,9 @@ export default function KnowledgeReview() {
             <Dialog open={!!selectedArticle} onOpenChange={() => setSelectedArticle(null)}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Review Article</DialogTitle>
+                        <DialogTitle>{t('review_queue.dialog.title')}</DialogTitle>
                         <DialogDescription>
-                            Review "{selectedArticle?.title}" and take action
+                            {t('review_queue.dialog.description', { title: selectedArticle?.title })}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -312,17 +314,17 @@ export default function KnowledgeReview() {
                                 onClick={() => selectedArticle && navigate(`/knowledge/${selectedArticle.id}`)}
                             >
                                 <Eye className="h-4 w-4 mr-1" />
-                                View Full Article
+                                {t('review_queue.dialog.view_full')}
                             </Button>
                         </div>
 
                         {/* Review Comment */}
                         <div>
                             <label className="text-sm font-medium mb-2 block">
-                                Review Comment (Internal Note - Not Saved)
+                                {t('review_queue.dialog.comment_label')}
                             </label>
                             <Textarea
-                                placeholder="Add feedback..."
+                                placeholder={t('review_queue.dialog.comment_placeholder')}
                                 value={reviewComment}
                                 onChange={(e) => setReviewComment(e.target.value)}
                                 rows={3}
@@ -331,7 +333,7 @@ export default function KnowledgeReview() {
                     </div>
 
                     <DialogFooter className="flex gap-2 sm:gap-0">
-                        {selectedArticle?.status !== 'PUBLISHED' && (
+                        {selectedArticle?.status as string !== 'PUBLISHED' && (
                             <Button
                                 onClick={() => handleReview('approve')}
                                 disabled={reviewMutation.isPending}
@@ -342,10 +344,10 @@ export default function KnowledgeReview() {
                                 ) : (
                                     <ThumbsUp className="h-4 w-4 mr-2" />
                                 )}
-                                Publish
+                                {t('review_queue.dialog.publish')}
                             </Button>
                         )}
-                        {selectedArticle?.status === 'PUBLISHED' && (
+                        {selectedArticle?.status as string === 'PUBLISHED' && (
                             <Button
                                 onClick={() => handleReview('reject')}
                                 variant="destructive"
@@ -357,7 +359,7 @@ export default function KnowledgeReview() {
                                 ) : (
                                     <ThumbsDown className="h-4 w-4 mr-2" />
                                 )}
-                                Unpublish (Draft)
+                                {t('review_queue.dialog.unpublish')}
                             </Button>
                         )}
                     </DialogFooter>

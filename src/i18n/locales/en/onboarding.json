@@ -1,0 +1,88 @@
+{
+    "dashboard": {
+        "title": "Welcome Aboard! 🚀",
+        "subtitle": "Let's get you settled in. Follow the checklist below to complete your onboarding for",
+        "progress": "Your Progress",
+        "checklist": "Your Checklist",
+        "tasks_completed": "tasks completed",
+        "of": "of",
+        "assigned_manager": "Assigned to Manager",
+        "all_set": "You're all set!",
+        "no_active": "There are no active onboarding checklists assigned to you at the moment."
+    },
+    "editor": {
+        "create_title": "Create Onboarding Template",
+        "edit_title": "Edit Onboarding Template",
+        "subtitle": "Define tasks for new hires.",
+        "details_title": "Template Details",
+        "details_desc": "Who is this onboarding checklist for?",
+        "template_title": "Template Title",
+        "target_audience": "Target Audience",
+        "target_general": "General (All Roles)",
+        "target_role": "System Role",
+        "target_job": "Specific Job Title",
+        "select_role": "Select Role",
+        "select_job": "Select Job Title",
+        "tasks_title": "Tasks",
+        "task_title": "Task Title",
+        "description": "Description",
+        "assign_to": "Assign To",
+        "assign_self": "The New Hire (Self)",
+        "assign_manager": "Manager",
+        "assign_it": "IT Support",
+        "assign_hr": "HR",
+        "due_after": "Due After (Days)",
+        "link_resource": "Link Resource (Optional)",
+        "link_none": "No Link",
+        "link_training": "Training Module",
+        "link_document": "Document",
+        "link_url": "External URL",
+        "select_module": "Select Module",
+        "select_document": "Select Document",
+        "enter_url": "Enter URL"
+    },
+    "templates": {
+        "title": "Onboarding Templates",
+        "subtitle": "Manage onboarding checklists for different roles and departments.",
+        "tasks_defined": "tasks defined",
+        "target": "Target",
+        "job": "Job",
+        "role": "Role",
+        "specific_dept": "Specific Department",
+        "general": "General",
+        "created": "Created"
+    },
+    "tracker": {
+        "title": "Onboarding Tracker",
+        "subtitle": "Monitor progress of new hires across the organization.",
+        "active_processes": "Active Onboarding Processes",
+        "search_placeholder": "Search employee...",
+        "col_employee": "Employee",
+        "col_template": "Template",
+        "col_started": "Started",
+        "col_status": "Status",
+        "col_progress": "Progress",
+        "no_data": "No active onboarding processes found."
+    },
+    "actions": {
+        "start_training": "Start Training",
+        "view_document": "View Document",
+        "open_link": "Open Link",
+        "create_template": "Create Template",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "back": "Back",
+        "add_task": "Add Task",
+        "save_template": "Save Template",
+        "update_template": "Update Template"
+    },
+    "dialogs": {
+        "delete_title": "Delete Template?",
+        "delete_desc": "This action cannot be undone. This will permanently delete the template."
+    },
+    "status": {
+        "active": "Active",
+        "draft": "Draft"
+    }
+}

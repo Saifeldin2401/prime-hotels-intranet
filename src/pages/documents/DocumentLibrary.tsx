@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useDocuments, useDocumentStats, useUpdateDocument } from '@/hooks/useDocuments'
+import { useDocuments, useDocumentStats, useUpdateDocument, useFavorites, useToggleFavorite } from '@/hooks/useDocuments'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
@@ -23,7 +24,9 @@ import {
   Grid,
   List,
   Star,
-  FileCheck
+  FileCheck,
+  Heart,
+  Eye
 } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -35,6 +38,7 @@ import { useTranslation } from 'react-i18next'
 export default function DocumentLibrary() {
   const { user } = useAuth()
   const { t } = useTranslation('documents')
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
@@ -45,6 +49,8 @@ export default function DocumentLibrary() {
   const [selectedDocument, setSelectedDocument] = useState<{ id: string; title: string; file_url: string } | null>(null)
 
   const updateDocument = useUpdateDocument()
+  const { data: favorites = new Set() } = useFavorites()
+  const toggleFavorite = useToggleFavorite()
 
   // Real document data from Supabase
   const { data: documents = [], isLoading } = useDocuments({
@@ -52,12 +58,14 @@ export default function DocumentLibrary() {
     status: selectedStatus !== 'all' ? selectedStatus : undefined,
   })
 
-  const handlePublish = (documentId: string) => {
+  const handlePublish = (documentId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
     if (!documentId) return
     updateDocument.mutate({ id: documentId, status: 'PUBLISHED' })
   }
 
-  const handleViewDocument = (doc: any) => {
+  const handleViewDocument = (doc: any, e: React.MouseEvent) => {
+    e.stopPropagation()
     setSelectedDocument({
       id: doc.id,
       title: doc.title,
@@ -66,27 +74,21 @@ export default function DocumentLibrary() {
     setViewerOpen(true)
   }
 
-  const handleDownload = async (document: any) => {
-    window.open(document.file_url, '_blank')
-  }
-
   const { data: stats } = useDocumentStats()
-
-
 
   // Folder categories based on document types
   const folders = [
-    { id: 'all', name: t('folders.all'), count: documents.length, icon: FileText, color: 'from-gray-400 to-gray-600', bgColor: 'bg-gray-50 dark:bg-gray-950' },
+    { id: 'all', name: t('folders.all'), count: stats?.total || 0, icon: FileText, color: 'from-gray-400 to-gray-600', bgColor: 'bg-gray-50 dark:bg-gray-950' },
     { id: 'draft', name: t('folders.drafts'), count: stats?.draft || 0, icon: FileText, color: 'from-blue-400 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
     { id: 'pending', name: t('folders.pending'), count: stats?.pending || 0, icon: Star, color: 'from-orange-400 to-orange-600', bgColor: 'bg-orange-50 dark:bg-orange-950' },
+    { id: 'approved', name: 'Approved', count: stats?.approved || 0, icon: FileCheck, color: 'from-purple-400 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' },
     { id: 'published', name: t('folders.published'), count: stats?.published || 0, icon: FileCheck, color: 'from-green-400 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
   ]
 
-  // Storage stats - calculated from actual document count
-  // Storage estimation: average document ~500KB, converted to GB
-  const estimatedStorageGB = ((stats?.total || 0) * 0.5) / 1024; // 500KB per doc average
+  // Storage stats - calculated from actual document count & size
+  const storageUsedGB = (stats?.totalBytes || 0) / (1024 * 1024 * 1024);
   const storageStats = {
-    used: Math.round(estimatedStorageGB * 100) / 100 || 0, // Rounded to 2 decimal places
+    used: Math.max(0.01, Math.round(storageUsedGB * 100) / 100), // Show at least 0.01 if there are files but small
     total: 10, // GB quota
     documents: stats?.total || 0,
     shared: stats?.published || 0 // Published documents are shared
@@ -135,6 +137,116 @@ export default function DocumentLibrary() {
 
   const handleFolderClick = (folderId: string) => {
     setSelectedStatus(folderId === 'all' ? 'all' : folderId)
+  }
+
+  const renderDocumentList = (docs: Document[]) => {
+    if (isLoading) return <TableSkeleton rows={5} columns={4} showHeaders={false} />
+
+    if (docs.length === 0) {
+      return (
+        <EmptyState
+          icon={FileText}
+          title={t('empty.title')}
+          description={t('empty.description')}
+          action={{
+            label: t('upload_document'),
+            onClick: () => setUploadDialogOpen(true),
+            icon: Plus
+          }}
+        />
+      )
+    }
+
+    return (
+      <div className="space-y-2 sm:space-y-3">
+        {docs.map((doc, index) => {
+          const isFavorite = favorites.has(doc.id)
+          return (
+            <div
+              key={doc.id}
+              onClick={() => navigate('/documents/' + doc.id)}
+              className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50/50 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md animate-slide-up border border-transparent hover:border-hotel-navy/10 gap-3 group cursor-pointer"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10 flex-shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-hotel-navy" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/documents/${doc.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-semibold text-hotel-navy text-sm sm:text-base truncate hover:underline focus:outline-none"
+                    >
+                      {doc.title}
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleFavorite.mutate({ documentId: doc.id, isFavorite })
+                      }}
+                      className={cn(
+                        "opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100",
+                        isFavorite && "opacity-100"
+                      )}
+                    >
+                      <Heart className={cn("w-4 h-4 transition-colors", isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-red-500")} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <EnhancedBadge variant="outline" className="text-xs">
+                      {doc.visibility === 'all_properties' && t('document.all_properties')}
+                      {doc.visibility === 'property' && t('document.property_specific')}
+                      {doc.visibility === 'department' && t('document.department_specific')}
+                      {doc.visibility === 'role' && t('document.role_specific')}
+                    </EnhancedBadge>
+                    <span className="text-xs text-gray-500">
+                      {formatRelativeTime(doc.created_at)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge status={doc.status} />
+                {user?.id === doc.created_by && doc.status !== 'PUBLISHED' && (
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={updateDocument.isPending}
+                    onClick={(e) => handlePublish(doc.id, e)}
+                  >
+                    Publish
+                  </Button>
+                )}
+                {doc.requires_acknowledgment && (
+                  acknowledgedDocumentIds.has(doc.id) ? (
+                    <EnhancedBadge variant="success" className="text-xs">
+                      {t('document.acknowledged')}
+                    </EnhancedBadge>
+                  ) : (
+                    <Button
+                      className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-8 text-xs"
+                      size="sm"
+                      disabled={acknowledgeMutation.isPending}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        acknowledgeMutation.mutate(doc.id)
+                      }}
+                    >
+                      {t('document.acknowledge')}
+                    </Button>
+                  )
+                )}
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate('/documents/' + doc.id); }} className="text-gray-500 hover:text-hotel-navy h-8 w-8 p-0">
+                  <Eye className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
   }
 
   return (
@@ -215,43 +327,6 @@ export default function DocumentLibrary() {
         />
       </div>
 
-      {/* Enhanced Folders Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-        {folders.map((folder, index) => {
-          const Icon = folder.icon
-          return (
-            <EnhancedCard
-              key={folder.id}
-              className="card-hover transition-all duration-300 cursor-pointer animate-slide-up hover:-translate-y-1"
-              style={{ animationDelay: `${index * 100}ms` }}
-              onClick={() => handleFolderClick(folder.id)}
-            >
-              <div className="p-3 sm:p-6 text-center">
-                <div className={cn(
-                  "w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-4 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm bg-gray-50 group-hover:bg-white transition-colors",
-                  folder.id === 'all' ? 'bg-hotel-navy/5' : folder.id === 'draft' ? 'bg-blue-50' : folder.id === 'pending' ? 'bg-hotel-gold/10' : 'bg-green-50'
-                )}>
-                  <div className={cn(
-                    "w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center",
-                  )}>
-                    <Icon className={cn("w-4 h-4 sm:w-6 sm:h-6",
-                      folder.id === 'all' ? "text-hotel-navy" :
-                        folder.id === 'draft' ? "text-blue-600" :
-                          folder.id === 'pending' ? "text-hotel-gold-dark" :
-                            "text-green-600"
-                    )} />
-                  </div>
-                </div>
-                <h3 className="font-semibold text-hotel-navy text-sm sm:text-base mb-1 sm:mb-2">{folder.name}</h3>
-                <EnhancedBadge variant="secondary" className="text-xs">
-                  {folder.count} {t('unit_files')}
-                </EnhancedBadge>
-              </div>
-            </EnhancedCard>
-          )
-        })}
-      </div>
-
       {/* Enhanced Document Tabs */}
       <Tabs defaultValue="documents" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
@@ -267,85 +342,84 @@ export default function DocumentLibrary() {
         <TabsContent value="documents" className="space-y-4 animate-fade-in">
           <EnhancedCard className="border-0 shadow-lg" padding="none">
             <div className="p-6">
-              {isLoading ? (
-                <TableSkeleton rows={5} columns={4} showHeaders={false} />
-              ) : filteredDocuments?.length === 0 ? (
-                <EmptyState
-                  icon={FileText}
-                  title={t('empty.title')}
-                  description={t('empty.description')}
-                  action={{
-                    label: t('upload_document'),
-                    onClick: () => setUploadDialogOpen(true),
-                    icon: Plus
-                  }}
-                />
-              ) : (
-                <div className="space-y-2 sm:space-y-3">
-                  {filteredDocuments?.map((doc, index) => (
-                    <div
-                      key={doc.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50/50 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md animate-slide-up border border-transparent hover:border-hotel-navy/10 gap-3"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10 flex-shrink-0">
-                          <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-hotel-navy" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-semibold text-hotel-navy text-sm sm:text-base truncate">{doc.title}</h4>
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
-                            <EnhancedBadge variant="outline" className="text-xs">
-                              {doc.visibility === 'all_properties' && t('document.all_properties')}
-                              {doc.visibility === 'property' && t('document.property_specific')}
-                              {doc.visibility === 'department' && t('document.department_specific')}
-                              {doc.visibility === 'role' && t('document.role_specific')}
-                            </EnhancedBadge>
-                            <span className="text-xs text-gray-500">
-                              {formatRelativeTime(doc.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <StatusBadge status={doc.status} />
-                        {user?.id === doc.created_by && doc.status !== 'PUBLISHED' && (
-                          <Button
-                            size="sm"
-                            className="h-8 text-xs"
-                            disabled={updateDocument.isPending}
-                            onClick={() => handlePublish(doc.id)}
-                          >
-                            Publish
-                          </Button>
-                        )}
-                        {doc.requires_acknowledgment && (
-                          acknowledgedDocumentIds.has(doc.id) ? (
-                            <EnhancedBadge variant="success" className="text-xs">
-                              {t('document.acknowledged')}
-                            </EnhancedBadge>
-                          ) : (
-                            <Button
-                              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-8 text-xs"
-                              size="sm"
-                              disabled={acknowledgeMutation.isPending}
-                              onClick={() => acknowledgeMutation.mutate(doc.id)}
-                            >
-                              {t('document.acknowledge')}
-                            </Button>
-                          )
-                        )}
-                        <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)} className="text-gray-500 hover:text-hotel-navy h-8 w-8 p-0">
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {renderDocumentList(filteredDocuments)}
             </div>
           </EnhancedCard>
         </TabsContent>
+
+        <TabsContent value="folders" className="space-y-8 animate-fade-in">
+          {/* Enhanced Folders Grid - Moved inside tab */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+            {folders.map((folder, index) => {
+              const Icon = folder.icon
+              return (
+                <EnhancedCard
+                  key={folder.id}
+                  className="card-hover transition-all duration-300 cursor-pointer animate-slide-up hover:-translate-y-1"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                  onClick={() => handleFolderClick(folder.id)}
+                >
+                  <div className="p-3 sm:p-6 text-center">
+                    <div className={cn(
+                      "w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-4 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm bg-gray-50 group-hover:bg-white transition-colors",
+                      folder.id === 'all' ? 'bg-hotel-navy/5' : folder.id === 'draft' ? 'bg-blue-50' : folder.id === 'pending' ? 'bg-hotel-gold/10' : 'bg-green-50'
+                    )}>
+                      <div className={cn(
+                        "w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center",
+                      )}>
+                        <Icon className={cn("w-4 h-4 sm:w-6 sm:h-6",
+                          folder.id === 'all' ? "text-hotel-navy" :
+                            folder.id === 'draft' ? "text-blue-600" :
+                              folder.id === 'pending' ? "text-hotel-gold-dark" :
+                                "text-green-600"
+                        )} />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-hotel-navy text-sm sm:text-base mb-1 sm:mb-2">{folder.name}</h3>
+                    <EnhancedBadge variant="secondary" className="text-xs">
+                      {folder.count} {t('unit_files')}
+                    </EnhancedBadge>
+                  </div>
+                </EnhancedCard>
+              )
+            })}
+          </div>
+          {/* Also show filtered list below folders */}
+          <EnhancedCard className="border-0 shadow-lg" padding="none">
+            <div className="p-6">
+              {renderDocumentList(filteredDocuments)}
+            </div>
+          </EnhancedCard>
+        </TabsContent>
+
+        <TabsContent value="shared" className="space-y-4 animate-fade-in">
+          <EnhancedCard className="border-0 shadow-lg" padding="none">
+            <div className="p-6">
+              {renderDocumentList(documents.filter(d =>
+                // Assuming 'shared' means broadly accessible documentation, not private role-specific drafts
+                d.status === 'PUBLISHED' && d.visibility !== 'role'
+              ))}
+            </div>
+          </EnhancedCard>
+        </TabsContent>
+
+        <TabsContent value="recent" className="space-y-4 animate-fade-in">
+          <EnhancedCard className="border-0 shadow-lg" padding="none">
+            <div className="p-6">
+              {/* Already sorted by created_at desc in useDocuments, just take top 20 */}
+              {renderDocumentList(documents.slice(0, 20))}
+            </div>
+          </EnhancedCard>
+        </TabsContent>
+
+        <TabsContent value="favorites" className="space-y-4 animate-fade-in">
+          <EnhancedCard className="border-0 shadow-lg" padding="none">
+            <div className="p-6">
+              {renderDocumentList(documents.filter(d => favorites.has(d.id)))}
+            </div>
+          </EnhancedCard>
+        </TabsContent>
+
       </Tabs>
 
       <DocumentUploadDialog
@@ -361,6 +435,3 @@ export default function DocumentLibrary() {
     </div>
   )
 }
-
-
-

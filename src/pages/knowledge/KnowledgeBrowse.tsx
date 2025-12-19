@@ -30,80 +30,60 @@ import type { KnowledgeContentType } from '@/types/knowledge'
 const CONTENT_TYPES: {
     type: KnowledgeContentType
     icon: any
-    title: string
-    description: string
     color: string
     gradient: string
 }[] = [
         {
             type: 'sop',
             icon: ClipboardList,
-            title: 'Standard Operating Procedures',
-            description: 'Step-by-step operational guides',
             color: 'text-blue-600',
             gradient: 'from-blue-500 to-blue-600'
         },
         {
             type: 'policy',
             icon: FileText,
-            title: 'Policies',
-            description: 'Rules and guidelines',
             color: 'text-purple-600',
             gradient: 'from-purple-500 to-purple-600'
         },
         {
             type: 'guide',
             icon: BookOpen,
-            title: 'Guides',
-            description: 'How-to articles and tutorials',
             color: 'text-green-600',
             gradient: 'from-green-500 to-green-600'
         },
         {
             type: 'checklist',
             icon: CheckSquare,
-            title: 'Checklists',
-            description: 'Interactive task checklists',
             color: 'text-orange-600',
             gradient: 'from-orange-500 to-orange-600'
         },
         {
             type: 'reference',
             icon: Link2,
-            title: 'Quick Reference',
-            description: 'Fast lookup cards',
             color: 'text-gray-600',
             gradient: 'from-gray-500 to-gray-600'
         },
         {
             type: 'faq',
             icon: HelpCircle,
-            title: 'FAQs',
-            description: 'Frequently asked questions',
             color: 'text-yellow-600',
             gradient: 'from-yellow-500 to-yellow-600'
         },
         {
             type: 'video',
             icon: Video,
-            title: 'Video Tutorials',
-            description: 'Visual learning content',
             color: 'text-red-600',
             gradient: 'from-red-500 to-red-600'
         },
         {
             type: 'visual',
             icon: Image,
-            title: 'Diagrams & Infographics',
-            description: 'Visual guides and charts',
             color: 'text-pink-600',
             gradient: 'from-pink-500 to-pink-600'
         },
         {
             type: 'document',
             icon: FileText,
-            title: 'Documents',
-            description: 'General documents',
             color: 'text-gray-600',
             gradient: 'from-gray-500 to-gray-600'
         },
@@ -138,8 +118,8 @@ export default function KnowledgeBrowse() {
         <div className="space-y-8">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">{t('browse.title', 'Browse Knowledge Base')}</h1>
-                <p className="text-gray-600 mt-1">{t('browse.subtitle', 'Explore content by type')}</p>
+                <h1 className="text-2xl font-bold text-gray-900">{t('browse.title')}</h1>
+                <p className="text-gray-600 mt-1">{t('browse.subtitle')}</p>
 
                 {/* Active Filters */}
                 {(departmentId || typeFilter) && (
@@ -147,7 +127,7 @@ export default function KnowledgeBrowse() {
                         {departmentId && (
                             <Badge variant="secondary" className="flex items-center gap-1">
                                 <BookOpen className="h-3 w-3" />
-                                Department Filter Active
+                                {t('search_page.filters.all_departments')} {/* Placeholder for Active Dept Name if available, or just generic */}
                                 <Link
                                     to="/knowledge/browse"
                                     className="ml-1 hover:text-red-600"
@@ -162,7 +142,7 @@ export default function KnowledgeBrowse() {
                         )}
                         {typeFilter && (
                             <Badge variant="secondary" className="flex items-center gap-1 capitalize">
-                                {typeFilter} Content
+                                {t(`content_types.${typeFilter}` as any)}
                                 <Link
                                     to="/knowledge/browse"
                                     className="ml-1 hover:text-red-600"
@@ -181,8 +161,10 @@ export default function KnowledgeBrowse() {
 
             {/* Content Type Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {CONTENT_TYPES.map(({ type, icon: Icon, title, description, color, gradient }) => {
+                {CONTENT_TYPES.map(({ type, icon: Icon, color, gradient }) => {
                     const count = typeCounts[type] || 0
+                    const typeLabel = t(`content_types.${type}`, type)
+                    const typeDesc = t(`content_type_desc.${type}`, '') // Assumes description keys exist or fallback
 
                     return (
                         <Link key={type} to={`/knowledge/search?type=${type}`}>
@@ -200,15 +182,16 @@ export default function KnowledgeBrowse() {
                                     <div className="p-4">
                                         <div className="flex items-center justify-between mb-2">
                                             <h3 className="font-semibold text-gray-900 group-hover:text-hotel-gold transition-colors line-clamp-1">
-                                                {title}
+                                                {typeLabel}
                                             </h3>
                                             <Badge variant="secondary" className="text-xs">
                                                 {isLoading ? <Skeleton className="h-3 w-4" /> : count}
                                             </Badge>
                                         </div>
-                                        <p className="text-xs text-gray-500 line-clamp-2">
-                                            {description}
-                                        </p>
+                                        {/* Optional: Add descriptions to knowledge.json if needed, currently reusing logic or omitting */}
+                                        {/* <p className="text-xs text-gray-500 line-clamp-2">
+                                            {typeDesc}
+                                        </p> */}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -222,10 +205,10 @@ export default function KnowledgeBrowse() {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                         <TrendingUp className="h-5 w-5 text-hotel-gold" />
-                        {t('browse.most_popular', 'Most Popular')}
+                        {t('browse.most_popular')}
                     </CardTitle>
                     <Link to="/knowledge/search?sort=views" className="text-sm text-hotel-gold hover:underline flex items-center">
-                        View all <ChevronRight className="h-4 w-4" />
+                        {t('view_all')} <ChevronRight className="h-4 w-4" />
                     </Link>
                 </CardHeader>
                 <CardContent>
@@ -242,7 +225,7 @@ export default function KnowledgeBrowse() {
                             ))}
                         </div>
                     ) : popularArticles.length === 0 ? (
-                        <p className="text-gray-500 text-center py-8">No popular articles yet</p>
+                        <p className="text-gray-500 text-center py-8">{t('search_page.no_results')}</p>
                     ) : (
                         <div className="space-y-3">
                             {popularArticles.map((article, index) => {
@@ -267,9 +250,9 @@ export default function KnowledgeBrowse() {
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-medium text-gray-900 truncate">{article.title}</h4>
                                             <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <span>{article.view_count} views</span>
+                                                <span>{t('viewer.views_count', { count: article.view_count })}</span>
                                                 <span>•</span>
-                                                <span>{article.category?.name || 'General'}</span>
+                                                <span>{article.category?.name || t('general_category')}</span>
                                             </div>
                                         </div>
                                         <ChevronRight className="h-5 w-5 text-gray-400" />
@@ -286,10 +269,10 @@ export default function KnowledgeBrowse() {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                         <Clock className="h-5 w-5 text-hotel-gold" />
-                        {t('browse.recently_updated', 'Recently Updated')}
+                        {t('browse.recently_updated')}
                     </CardTitle>
                     <Link to="/knowledge/search?sort=updated" className="text-sm text-hotel-gold hover:underline flex items-center">
-                        View all <ChevronRight className="h-4 w-4" />
+                        {t('view_all')} <ChevronRight className="h-4 w-4" />
                     </Link>
                 </CardHeader>
                 <CardContent>
@@ -326,7 +309,7 @@ export default function KnowledgeBrowse() {
                                                         {article.featured && <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />}
                                                     </div>
                                                     <p className="text-xs text-gray-500 mt-1">
-                                                        Updated {new Date(article.updated_at).toLocaleDateString()}
+                                                        {t('viewer.updated_at', { date: new Date(article.updated_at).toLocaleDateString() })}
                                                     </p>
                                                 </div>
                                             </CardContent>

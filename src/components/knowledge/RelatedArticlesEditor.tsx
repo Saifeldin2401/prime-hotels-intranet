@@ -183,11 +183,20 @@ export function RelatedArticlesEditor({
                                             <CommandItem
                                                 key={article.id}
                                                 onSelect={() => addRelation.mutate(article.id)}
-                                                className="cursor-pointer"
+                                                className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                             >
-                                                <FileText className="h-4 w-4 mr-2 text-gray-400" />
-                                                <div className="flex-1">
-                                                    <p className="text-sm">{article.title}</p>
+                                                <div
+                                                    className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                    onPointerDown={(e) => e.preventDefault()}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        addRelation.mutate(article.id)
+                                                    }}
+                                                >
+                                                    <FileText className="h-4 w-4 mr-2 text-gray-400" />
+                                                    <div className="flex-1">
+                                                        <p className="text-sm">{article.title}</p>
+                                                    </div>
                                                 </div>
                                             </CommandItem>
                                         ))}

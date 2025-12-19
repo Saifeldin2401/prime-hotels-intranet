@@ -1,4 +1,59 @@
 {
+    "operations_center": {
+        "title": "مركز عمليات الموارد البشرية",
+        "description": "مراقبة الإشعارات ونشاط النظام",
+        "total_notifications": "إجمالي الإشعارات",
+        "unread": "غير مقروء",
+        "approval_required": "مطلوب موافقة",
+        "escalations": "تصعيدات",
+        "mark_all_read": "تحديد الكل كمقروء",
+        "search_notifications": "بحث في الإشعارات...",
+        "newest": "الأحدث",
+        "filters": "تصفية",
+        "notifications_found": "{{count}} إشعارات موجودة",
+        "no_notifications": "لا توجد إشعارات",
+        "no_notifications_desc": "حاول تعديل المرشحات أو مصطلحات البحث",
+        "mark_read": "تعيين كمقروء",
+        "created_at": "تم الإنشاء",
+        "read_at": "قرئت في",
+        "access_denied": "تم رفض الوصول",
+        "access_denied_desc": "يجب عليك تسجيل الدخول للوصول إلى هذه الصفحة",
+        "filter_type": "نوع الإشعار",
+        "filter_status": "حالة القراءة",
+        "filter_start_date": "تاريخ البدء",
+        "filter_end_date": "تاريخ الانتهاء",
+        "pick_date": "اختر تاريخاً",
+        "filters_clear": "مسح الكل",
+        "types": {
+            "approval_required": "مطلوب موافقة",
+            "request_approved": "تمت الموافقة على الطلب",
+            "request_rejected": "تم رفض الطلب",
+            "request_submitted": "تم تقديم الطلب",
+            "comment_added": "تمت إضافة تعليق",
+            "request_returned": "تم إرجاع الطلب",
+            "request_closed": "تم إغلاق الطلب",
+            "training_assigned": "تم تعيين تدريب",
+            "training_deadline": "الموعد النهائي للتدريب",
+            "document_published": "تم نشر مستند",
+            "document_acknowledgment_required": "إقرار بالمستند مطلوب",
+            "announcement_new": "إعلان جديد",
+            "escalation_alert": "تنبيه تصعيد",
+            "referral_status_update": "تحديث حالة الإحالة",
+            "maintenance_assigned": "تم تعيين صيانة",
+            "maintenance_resolved": "تم حل الصيانة"
+        },
+        "sort": {
+            "created": "تاريخ الإنشاء",
+            "read": "تاريخ القراءة",
+            "newest": "الأحدث",
+            "oldest": "الأقدم"
+        },
+        "status": {
+            "all": "الكل",
+            "read": "مقروءة",
+            "unread": "غير مقروءة"
+        }
+    },
     "referrals": {
         "title": "إحالات الموظفين",
         "description": "إدارة برنامج إحالة الموظفين وتتبع مكافآت الإحالة",
@@ -25,6 +80,7 @@
         "total_requests": "{{count}} طلبات إجمالية",
         "form": {
             "title": "تقديم طلب إجازة",
+            "description": "أكمل النموذج أدناه لطلب إجازة جديدة.",
             "start_date": "تاريخ البدء",
             "end_date": "تاريخ الانتهاء",
             "pick_date": "اختر تاريخاً",
@@ -76,21 +132,21 @@
     },
     "history": {
         "title": "سجل الترقيات والنقل",
-        "description": "عرض جميع ترقيات ونقل الموظفين",
+        "description": "عرض جميع ترقيات وتنقلات الموظفين",
         "promotions": "الترقيات",
-        "transfers": "النقل",
+        "transfers": "التنقلات",
         "role": "الدور",
-        "title_label": "المسمى الوظيفي",
+        "title_label": "المسمى",
         "department": "القسم",
-        "effective": "تاريخ التفعيل",
+        "effective": "اعتباراً من",
         "approved_by": "تمت الموافقة بواسطة",
         "property": "المنشأة",
         "new_department": "القسم الجديد",
         "reason": "السبب",
         "no_promotions": "لم يتم العثور على ترقيات",
-        "no_transfers": "لم يتم العثور على عمليات نقل",
-        "create_first_promo": "أنشئ أول ترقية للبدء",
-        "create_first_transfer": "أنشئ أول عملية نقل للبدء"
+        "no_transfers": "لم يتم العثور على تنقلات",
+        "create_first_promo": "أنشئ ترقيتك الأولى للبدء",
+        "create_first_transfer": "أنشئ نقلك الأول للبدء"
     },
     "promotion": {
         "title": "ترقية موظف",
@@ -102,15 +158,15 @@
         "new_role": "الدور الجديد",
         "select_role": "اختر الدور الجديد",
         "new_title": "المسمى الوظيفي الجديد",
-        "new_title_placeholder": "مثال: مدير استقبال أول",
+        "new_title_placeholder": "مثال: مدير مكتب استقبال أول",
         "new_dept": "القسم الجديد (اختياري)",
-        "effective_date": "تاريخ التفعيل",
+        "effective_date": "تاريخ السريان",
         "auto_applied": "سيتم تطبيق الترقية تلقائياً في هذا التاريخ",
         "notes": "ملاحظات",
         "notes_placeholder": "أضف أي ملاحظات إضافية حول هذه الترقية...",
-        "create": "إنشاء الترقية",
+        "create": "إنشاء ترقية",
         "success_title": "تم إنشاء الترقية",
-        "success_desc": "تم تسجيل ترقية الموظف وسيتم تطبيقها في تاريخ التفعيل.",
+        "success_desc": "تم تسجيل ترقية الموظف وسيتم تطبيقها في تاريخ السريان.",
         "new_button": "ترقية جديدة"
     },
     "transfer": {
@@ -124,19 +180,19 @@
         "dest_dept": "القسم الوجهة (اختياري)",
         "reason": "سبب النقل",
         "reason_placeholder": "مثال: احتياجات العمل، طلب الموظف، إلخ.",
-        "notes_placeholder": "أضف أي ملاحظات إضافية حول هذا النقل...",
-        "create": "إنشاء النقل",
+        "notes_placeholder": "أضف أي ملاحظات إضافية حول عملية النقل هذه...",
+        "create": "إنشاء نقل",
         "success_title": "تم إنشاء النقل",
-        "success_desc": "تم تسجيل نقل الموظف وسيتم تطبيقه في تاريخ التفعيل.",
+        "success_desc": "تم تسجيل نقل الموظف وسيتم تطبيقه في تاريخ السريان.",
         "new_button": "نقل جديد"
     },
     "roles": {
-        "regional_admin": "مساعد إداري إقليمي",
+        "regional_admin": "مسؤول إقليمي",
         "regional_hr": "موارد بشرية إقليمية",
-        "property_manager": "مدير منشأة",
-        "property_hr": "موارد بشرية للمنشأة",
+        "property_manager": "مدير عقار",
+        "property_hr": "موارد بشرية للعقار",
         "department_head": "رئيس قسم",
         "staff": "موظف",
-        "na": "غير متوفر"
+        "na": "غير متاح"
     }
 }

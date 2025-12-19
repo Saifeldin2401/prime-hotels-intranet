@@ -243,31 +243,21 @@ export function useContentTypeCounts() {
 // ============================================================================
 
 export function useDepartmentContentCounts() {
-    const { user, profile } = useAuth()
+    const { user } = useAuth()
 
     return useQuery({
-        queryKey: ['knowledge-department-counts', user?.id],
+        queryKey: ['knowledge-department-counts-global', user?.id],
         queryFn: async () => {
             if (!user?.id) return {}
 
             const { supabase } = await import('@/lib/supabase')
 
-            // Get user's departments
-            const { data: userDepts } = await supabase
-                .from('user_departments')
-                .select('department_id, departments(id, name)')
-                .eq('user_id', user.id)
-
-            if (!userDepts || userDepts.length === 0) return {}
-
-            const deptIds = userDepts.map(d => d.department_id)
-
-            // Get counts by department and type
+            // Get counts by department and type for ALL visible documents (RLS applied)
             const { data: documents } = await supabase
                 .from('documents')
-                .select('department_id, content_type, departments(name)')
-                .in('department_id', deptIds)
-                .eq('status', 'published')
+                .select('department_id, content_type, departments(id, name)')
+                .not('department_id', 'is', null)
+                .eq('status', 'PUBLISHED') // Uppercase match enum
                 .eq('is_deleted', false)
 
             if (!documents) return {}
@@ -275,7 +265,10 @@ export function useDepartmentContentCounts() {
             // Group by department
             const byDepartment = documents.reduce((acc: any, doc: any) => {
                 const deptId = doc.department_id
-                const deptName = doc.departments?.name || 'General'
+                // Handle cases where departments might be null due to joins/deletes
+                if (!deptId || !doc.departments) return acc
+
+                const deptName = doc.departments.name
 
                 if (!acc[deptId]) {
                     acc[deptId] = {

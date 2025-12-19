@@ -12,7 +12,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAreaManagerStats } from '@/hooks/useDashboardStats'
 
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+
 export function AreaManagerDashboard() {
+  const { t } = useTranslation('dashboard')
   const navigate = useNavigate()
   const { currentProperty, availableProperties } = useProperty()
   const { user, profile, primaryRole } = useAuth()
@@ -92,15 +95,15 @@ export function AreaManagerDashboard() {
       {/* Welcome Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Area Management Dashboard</h1>
-          <p className="text-gray-600">Area Manager • {areaStats.totalProperties} Properties</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('cards.area_dashboard_title')}</h1>
+          <p className="text-gray-600">{t('cards.area_dashboard_subtitle', { count: areaStats.totalProperties })}</p>
         </div>
         <div className="flex items-center space-x-4">
           <Badge className="bg-gray-100 text-gray-800 border border-gray-600 rounded-md text-sm">
-            REGIONAL ADMIN
+            {t('cards.regional_admin_badge')}
           </Badge>
           <Badge className="text-sm bg-green-100 text-green-800">
-            {areaStats.totalProperties} Active Properties
+            {t('cards.active_properties_badge', { count: areaStats.totalProperties })}
           </Badge>
         </div>
       </div>
@@ -109,44 +112,44 @@ export function AreaManagerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="role-area-manager">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Maintenance Efficiency</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.maintenance_efficiency')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{areaStats.maintenanceEfficiency}%</div>
             <Progress value={areaStats.maintenanceEfficiency} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Resolution rate (30d)</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.maintenance_efficiency_subtitle')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-area-manager">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Recruitment</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.recruitment')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{areaStats.openVacancies}</div>
-            <p className="text-sm font-medium mt-1">Open Positions</p>
-            <p className="text-xs text-gray-600 mt-1">Active job postings</p>
+            <p className="text-sm font-medium mt-1">{t('cards.open_positions')}</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.active_job_postings')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-area-manager">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Training Compliance</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.training_compliance')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{areaStats.staffCompliance}%</div>
             <Progress value={areaStats.staffCompliance} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">Completion rate</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.completion_rate')}</p>
           </CardContent>
         </Card>
 
         <Card className="role-area-manager">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Open Issues</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.open_issues')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{areaStats.openIssues}</div>
-            <p className="text-xs text-gray-600 mt-1">Pending tasks/tickets</p>
+            <p className="text-xs text-gray-600 mt-1">{t('cards.pending_tasks_tickets')}</p>
           </CardContent>
         </Card>
       </div>
@@ -154,11 +157,11 @@ export function AreaManagerDashboard() {
       {/* Main Content Tabs */}
       <Tabs defaultValue="feed" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="feed">Feed</TabsTrigger>
-          <TabsTrigger value="properties">Properties</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="budget">Budget</TabsTrigger>
+          <TabsTrigger value="feed">{t('tabs.feed')}</TabsTrigger>
+          <TabsTrigger value="properties">{t('tabs.properties')}</TabsTrigger>
+          <TabsTrigger value="performance">{t('cards.performance')}</TabsTrigger>
+          <TabsTrigger value="reports">{t('tabs.reports')}</TabsTrigger>
+          <TabsTrigger value="budget">{t('cards.budget')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="feed" className="space-y-6">
@@ -181,7 +184,7 @@ export function AreaManagerDashboard() {
                       <Icons.Building className="h-6 w-6" />
                     </div>
                     <Badge variant={property.is_active ? "default" : "secondary"}>
-                      {property.is_active ? 'Active' : 'Inactive'}
+                      {property.is_active ? t('cards.active_status') : t('cards.inactive_status')}
                     </Badge>
                   </div>
                   <CardTitle className="mt-4 text-lg">{property.name}</CardTitle>
@@ -190,11 +193,11 @@ export function AreaManagerDashboard() {
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <Icons.MapPin className="h-4 w-4" />
-                      <span>{property.address || 'No address set'}</span>
+                      <span>{property.address || t('cards.no_address_set')}</span>
                     </div>
                     <div className="text-xs text-gray-400 pt-2 border-t mt-3 flex justify-between">
                       <span>ID: {property.id.substring(0, 8)}...</span>
-                      <span className="text-blue-600 hover:underline">View Details</span>
+                      <span className="text-blue-600 hover:underline">{t('cards.view_details')}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -208,13 +211,13 @@ export function AreaManagerDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.BarChart3 className="h-5 w-5" />
-                <span>Area Performance Metrics</span>
+                <span>{t('cards.area_performance_metrics')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center py-8 text-gray-500">
                 <Icons.BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>Detailed performance metrics coming soon.</p>
+                <p>{t('cards.detailed_performance_coming_soon')}</p>
               </div>
             </CardContent>
           </Card>
@@ -225,13 +228,13 @@ export function AreaManagerDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.FileText className="h-5 w-5" />
-                <span>Area Management Reports</span>
+                <span>{t('cards.area_reports_title')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center py-8 text-gray-500">
                 <Icons.FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>Area reports module coming soon.</p>
+                <p>{t('cards.area_reports_coming_soon')}</p>
               </div>
             </CardContent>
           </Card>
@@ -243,13 +246,13 @@ export function AreaManagerDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Icons.DollarSign className="h-5 w-5" />
-                  <span>Budget Overview</span>
+                  <span>{t('cards.budget_overview')}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center py-8 text-gray-500">
                   <Icons.DollarSign className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>Budget tracking module coming soon.</p>
+                  <p>{t('cards.budget_tracking_coming_soon')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -258,13 +261,13 @@ export function AreaManagerDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Icons.TrendingUp className="h-5 w-5" />
-                  <span>Revenue Analysis</span>
+                  <span>{t('cards.revenue_analysis')}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center py-8 text-gray-500">
                   <Icons.TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>Revenue analysis module coming soon.</p>
+                  <p>{t('cards.revenue_analysis_coming_soon')}</p>
                 </div>
               </CardContent>
             </Card>

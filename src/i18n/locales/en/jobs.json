@@ -36,6 +36,7 @@
     },
     "form": {
         "create_title": "Create New Job Posting",
+        "edit": "Edit",
         "edit_title": "Edit Job Posting",
         "position_title": "Job Title",
         "position_placeholder": "e.g. Front Desk Manager",

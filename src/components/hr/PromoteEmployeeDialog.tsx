@@ -336,27 +336,38 @@ export function PromoteEmployeeDialog({
                                                                 value={item.title}
                                                                 key={item.id}
                                                                 onSelect={() => {
-                                                                    // We match against original title to preserve casing
                                                                     form.setValue("newJobTitle", item.title)
-                                                                    // Auto-set the role default if needed, though this form has explicit role selection.
-                                                                    // Maybe we should update the role dropdown too if it's not set?
-                                                                    // For now, let's just set the title.
                                                                     if (item.default_role && !form.getValues("newRole")) {
-                                                                        // @ts-ignore - casting string to enum
+                                                                        // @ts-ignore
                                                                         form.setValue("newRole", item.default_role)
                                                                     }
                                                                     setOpenJobTitle(false)
                                                                 }}
+                                                                className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                             >
-                                                                <Check
-                                                                    className={cn(
-                                                                        "mr-2 h-4 w-4",
-                                                                        item.title === field.value
-                                                                            ? "opacity-100"
-                                                                            : "opacity-0"
-                                                                    )}
-                                                                />
-                                                                {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                                                                <div
+                                                                    className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                                    onPointerDown={(e) => e.preventDefault()}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        form.setValue("newJobTitle", item.title)
+                                                                        if (item.default_role && !form.getValues("newRole")) {
+                                                                            // @ts-ignore
+                                                                            form.setValue("newRole", item.default_role)
+                                                                        }
+                                                                        setOpenJobTitle(false)
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            item.title === field.value
+                                                                                ? "opacity-100"
+                                                                                : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                                                                </div>
                                                             </CommandItem>
                                                         ))}
                                                     </CommandGroup>

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import type { Announcement } from '@/lib/types'
 import { createNotification } from '@/lib/notificationService'
+import { crudToasts } from '@/lib/toastHelpers'
 
 export function useAnnouncements(options?: {
     includePinned?: boolean
@@ -206,6 +207,10 @@ export function useCreateAnnouncement() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['announcements'] })
+            crudToasts.create.success('Announcement')
+        },
+        onError: () => {
+            crudToasts.create.error('announcement')
         }
     })
 }

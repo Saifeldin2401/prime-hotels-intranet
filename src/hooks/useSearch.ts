@@ -1,12 +1,22 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import type { SearchSuggestion } from '@/components/search/AdvancedSearch'
+// Local interface for suggestions
+export interface SearchSuggestion {
+  id: string
+  text: string
+  type: 'recent' | 'popular' | 'document' | 'page'
+  count?: number
+  category?: string
+}
+
+import { SYSTEM_PAGES } from '@/lib/searchConfig'
 
 interface SearchResult {
   id: string
-  type: 'document' | 'user' | 'training' | 'announcement' | 'sop' | 'ticket' | 'referral'
+  type: 'document' | 'user' | 'training' | 'announcement' | 'sop' | 'ticket' | 'referral' | 'page'
   title: string
   description?: string
   category?: string
@@ -29,6 +39,7 @@ interface UseSearchOptions {
 }
 
 export function useSearch(query: string, options: UseSearchOptions = {}) {
+
   const { profile, primaryRole } = useAuth()
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -54,115 +65,146 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
 
       setIsSearching(true)
       const results: SearchResult[] = []
+      const queryLower = query.toLowerCase()
+
+      // 1. Search System Pages (Local)
+      const matchingPages = SYSTEM_PAGES.filter(page =>
+        page.title.toLowerCase().includes(queryLower) ||
+        page.description.toLowerCase().includes(queryLower) ||
+        page.keywords.some(k => k.toLowerCase().includes(queryLower))
+      )
+
+      results.push(...matchingPages.map(page => ({
+        id: page.id,
+        type: 'page' as const,
+        title: page.title,
+        description: page.description,
+        category: page.category,
+        url: page.url,
+        relevance_score: calculateRelevanceScore(query, page.title, page.description) + 20 // Boost page scores
+      })))
 
       try {
         // Search Documents
         if (includeDocuments) {
-          const { data: documents } = await supabase
-            .from('documents')
-            .select('id, title, description, category, status')
-            .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-            .limit(limit / 2)
+          try {
+            const { data: documents } = await supabase
+              .from('documents')
+              .select('id, title, description, status')
+              .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+              .limit(Math.ceil(limit / 2))
 
-          if (documents) {
-            results.push(...documents.map(doc => ({
-              id: doc.id,
-              type: 'document' as const,
-              title: doc.title,
-              description: doc.description,
-              category: doc.category,
-              url: `/documents/${doc.id}`,
-              metadata: { status: doc.status },
-              relevance_score: calculateRelevanceScore(query, doc.title, doc.description)
-            })))
-          }
+            if (documents) {
+              results.push(...documents.map(doc => ({
+                id: doc.id,
+                type: 'document' as const,
+                title: doc.title,
+                description: doc.description,
+                category: 'Document', // Fallback as column doesn't exist
+                url: `/documents/${doc.id}`,
+                metadata: { status: doc.status },
+                relevance_score: calculateRelevanceScore(query, doc.title, doc.description)
+              })))
+            }
+          } catch (e) { console.error('Error searching documents:', e) }
         }
 
-        // Search Users (if admin/HR/manager)
+        // Search Users
         if (includeUsers && ['regional_admin', 'regional_hr', 'property_manager', 'department_head'].includes(primaryRole || '')) {
-          const { data: users } = await supabase
-            .from('profiles')
-            .select('id, full_name, email, department, property')
-            .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
-            .limit(limit / 4)
+          try {
+            const { data: users } = await supabase
+              .from('profiles')
+              .select('id, full_name, email')
+              .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+              .limit(Math.ceil(limit / 4))
 
-          if (users) {
-            results.push(...users.map(user => ({
-              id: user.id,
-              type: 'user' as const,
-              title: user.full_name,
-              description: user.email,
-              category: user.department,
-              url: `/users/${user.id}`,
-              metadata: { department: user.department, property: user.property },
-              relevance_score: calculateRelevanceScore(query, user.full_name, user.email)
-            })))
-          }
+            if (users) {
+              results.push(...users.map(user => ({
+                id: user.id,
+                type: 'user' as const,
+                title: user.full_name || 'Unknown User',
+                description: user.email,
+                category: 'Staff', // Fallback
+                url: `/users/${user.id}`,
+                metadata: {},
+                relevance_score: calculateRelevanceScore(query, user.full_name || '', user.email)
+              })))
+            }
+          } catch (e) { console.error('Error searching users:', e) }
         }
 
-        // Search Training Modules
+        // Search Training
         if (includeTraining) {
-          const { data: training } = await supabase
-            .from('training_modules')
-            .select('id, title, description, category, status')
-            .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-            .limit(limit / 4)
+          try {
+            const { data: training } = await supabase
+              .from('training_modules')
+              .select('id, title, description, category, status')
+              .or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
+              .limit(Math.ceil(limit / 4))
 
-          if (training) {
-            results.push(...training.map(module => ({
-              id: module.id,
-              type: 'training' as const,
-              title: module.title,
-              description: module.description,
-              category: module.category,
-              url: `/training/modules/${module.id}`,
-              metadata: { status: module.status },
-              relevance_score: calculateRelevanceScore(query, module.title, module.description)
-            })))
-          }
+            if (training) {
+              results.push(...training.map(module => ({
+                id: module.id,
+                type: 'training' as const,
+                title: module.title,
+                description: module.description,
+                category: module.category,
+                url: `/training/modules/${module.id}`,
+                metadata: { status: module.status },
+                relevance_score: calculateRelevanceScore(query, module.title, module.description)
+              })))
+            }
+          } catch (e) { console.error('Error searching training:', e) }
         }
 
         // Search Announcements
         if (includeAnnouncements) {
-          const { data: announcements } = await supabase
-            .from('announcements')
-            .select('id, title, content, category, priority')
-            .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
-            .limit(limit / 4)
+          try {
+            const { data: announcements } = await supabase
+              .from('announcements')
+              .select('id, title, content, priority')
+              .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+              .limit(Math.ceil(limit / 4))
 
-          if (announcements) {
-            results.push(...announcements.map(announcement => ({
-              id: announcement.id,
-              type: 'announcement' as const,
-              title: announcement.title,
-              description: announcement.content,
-              category: announcement.category,
-              url: `/announcements/${announcement.id}`,
-              metadata: { priority: announcement.priority },
-              relevance_score: calculateRelevanceScore(query, announcement.title, announcement.content)
-            })))
-          }
+            if (announcements) {
+              results.push(...announcements.map(announcement => ({
+                id: announcement.id,
+                type: 'announcement' as const,
+                title: announcement.title,
+                description: announcement.content,
+                category: 'Announcement',
+                url: `/announcements/${announcement.id}`,
+                metadata: { priority: announcement.priority },
+                relevance_score: calculateRelevanceScore(query, announcement.title, announcement.content)
+              })))
+            }
+          } catch (e) { console.error('Error searching announcements:', e) }
         }
 
         // Search SOPs
         if (includeSOPs) {
-          const { data: sops } = await supabase
-            .from('sops')
-            .select('id, title, description, category, version')
-            .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-            .limit(limit / 4)
+          try {
+            // Primary Search: sop_documents table
+            const { data: sops } = await supabase
+              .from('sop_documents')
+              .select('id, title, description, category, version')
+              .or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
+              .limit(Math.ceil(limit / 4))
 
-          if (sops) {
-            results.push(...sops.map(sop => ({
-              id: sop.id,
-              type: 'sop' as const,
-              title: sop.title,
-              description: sop.description,
-              category: sop.category,
-              url: `/sops/${sop.id}`,
-              metadata: { version: sop.version },
-              relevance_score: calculateRelevanceScore(query, sop.title, sop.description)
-            })))
+            if (sops) {
+              results.push(...sops.map(sop => ({
+                id: sop.id,
+                type: 'sop' as const,
+                title: sop.title,
+                description: sop.description,
+                category: sop.category,
+                url: `/sops/${sop.id}`,
+                metadata: { version: sop.version },
+                relevance_score: calculateRelevanceScore(query, sop.title, sop.description)
+              })))
+            }
+          } catch (e) {
+            console.warn('SOP search failed:', e)
           }
         }
 
@@ -224,59 +266,117 @@ function calculateRelevanceScore(query: string, title: string, description?: str
 // Hook for search suggestions
 export function useSearchSuggestions(query: string) {
   const { profile } = useAuth()
+  const { t } = useTranslation()
 
   const { data: suggestions = [], isLoading } = useQuery({
     queryKey: ['search-suggestions', query, profile?.id],
     queryFn: async () => {
-      if (!query.trim() || !profile?.id) return []
+      // Always return some suggestions even if query is empty (popular/recent handled in component)
+      if (!query.trim()) return []
 
       const suggestions: SearchSuggestion[] = []
+      const queryLower = query.toLowerCase()
 
-      // Recent searches (would come from user preferences/localStorage)
-      const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]')
-      suggestions.push(...recentSearches.slice(0, 3).map((search: string, index: number) => ({
-        id: `recent-${index}`,
-        text: search,
-        type: 'recent' as const
-      })))
+      // 1. Smart Actions (Intent Detection)
+      if (queryLower.startsWith('add') || queryLower.startsWith('create') || queryLower.startsWith('new')) {
+        const actionMap = [
+          { keywords: ['user', 'staff', 'employee'], text: 'Add New Staff Member', url: '/users/new', icon: 'UserPlus' },
+          { keywords: ['task', 'todo'], text: 'Create New Task', url: '/tasks', icon: 'CheckSquare' },
+          { keywords: ['announcement', 'news'], text: 'Post Announcement', url: '/announcements', icon: 'Megaphone' },
+          { keywords: ['ticket', 'maintenance'], text: 'Raise Maintenance Ticket', url: '/maintenance', icon: 'Wrench' },
+          { keywords: ['job', 'posting'], text: 'Create Job Posting', url: '/jobs/new', icon: 'Briefcase' }
+        ]
 
-      // Popular searches (would come from analytics)
-      const popularSearches = [
-        'training modules', 'SOP documents', 'HR policies', 'safety procedures',
-        'user guide', 'maintenance tickets', 'announcements', 'certifications'
-      ]
-      
-      popularSearches.forEach((search, index) => {
-        if (search.toLowerCase().includes(query.toLowerCase())) {
-          suggestions.push({
-            id: `popular-${index}`,
-            text: search,
-            type: 'popular' as const,
-            count: Math.floor(Math.random() * 100) + 10
-          })
-        }
-      })
+        actionMap.forEach(action => {
+          if (action.keywords.some(k => queryLower.includes(k)) || queryLower.length < 5) {
+            suggestions.push({
+              id: `action-${action.text}`,
+              text: action.text,
+              type: 'action',
+              url: action.url
+            } as any)
+          }
+        })
+      }
 
-      // Document suggestions
-      const { data: documents } = await supabase
-        .from('documents')
-        .select('id, title, category')
-        .ilike('title', `%${query}%`)
-        .limit(3)
+      // 2. Navigation Shortcuts
+      if (queryLower.startsWith('go') || queryLower.startsWith('open') || queryLower.includes('page')) {
+        SYSTEM_PAGES.forEach(page => {
+          if (page.keywords.some(k => queryLower.includes(k)) || page.title.toLowerCase().includes(queryLower)) {
+            suggestions.push({
+              id: `nav-${page.id}`,
+              text: `Go to ${page.title}`,
+              type: 'navigation',
+              url: page.url
+            } as any)
+          }
+        })
+      }
 
-      if (documents) {
-        suggestions.push(...documents.map(doc => ({
-          id: doc.id,
-          text: doc.title,
-          type: 'document' as const,
-          category: doc.category
-        })))
+      // 3. Help / How-To
+      if (queryLower.includes('how') || queryLower.includes('help')) {
+        suggestions.push({
+          id: 'help-sop',
+          text: 'Search Standard Operating Procedures',
+          type: 'help',
+          url: '/sops'
+        } as any)
+        suggestions.push({
+          id: 'help-manual',
+          text: 'Open User Manual',
+          type: 'help',
+          url: '/documents'
+        } as any)
+      }
+
+      // 4. Content Suggestions (Database)
+      // Only fetch if we don't have many smart suggestions
+      // 4. Content Suggestions (Database)
+      // Only fetch if we don't have many smart suggestions
+      if (suggestions.length < 5) {
+        try {
+          // Query Documents
+          const { data: documents } = await supabase
+            .from('documents')
+            .select('id, title, status')
+            .ilike('title', `%${query}%`)
+            .limit(3)
+
+          if (documents) {
+            suggestions.push(...documents.map(doc => ({
+              id: doc.id,
+              text: doc.title,
+              type: 'document' as const,
+              url: `/documents/${doc.id}`
+            })))
+          }
+
+          // Query SOPs
+          if (suggestions.length < 8) {
+            const { data: sops } = await supabase
+              .from('sop_documents')
+              .select('id, title')
+              .ilike('title', `%${query}%`)
+              .limit(3)
+
+            if (sops) {
+              suggestions.push(...sops.map(sop => ({
+                id: sop.id,
+                text: sop.title,
+                type: 'document' as const, // Reusing document type for icon consistency
+                url: `/sops/${sop.id}`,
+                category: 'SOP'
+              })))
+            }
+          }
+
+        } catch (e) { console.warn('Suggestion fetch failed', e) }
       }
 
       return suggestions.slice(0, 8)
     },
     enabled: query.trim().length > 0,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 60 * 1000,
   })
 
   return {

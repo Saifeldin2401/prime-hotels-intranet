@@ -6,6 +6,7 @@
     "update": "Update Announcement",
     "loading": "Loading announcements...",
     "noAnnouncements": "No announcements found.",
+    "announcement": "Announcement",
     "form": {
         "title": "Title",
         "content": "Content",

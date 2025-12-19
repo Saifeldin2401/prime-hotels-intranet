@@ -43,6 +43,7 @@ import OnboardingDashboard from '@/pages/onboarding/OnboardingDashboard'
 import OnboardingTracker from '@/pages/onboarding/OnboardingTracker'
 import OnboardingTemplates from '@/pages/onboarding/OnboardingTemplates'
 import TemplateEditor from '@/pages/onboarding/TemplateEditor'
+import NotificationBatches from '@/pages/admin/notifications/NotificationBatches'
 
 import SubmitTicket from '@/pages/maintenance/SubmitTicket'
 import MaintenanceDashboard from '@/pages/maintenance/MaintenanceDashboard'
@@ -407,6 +408,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
+            <AppLayout>
+              <NotificationBatches />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/pii-audit"
         element={
           <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
@@ -744,49 +755,9 @@ function AppRoutes() {
       />
       {/* Training Routes */}
       <Route
-        path="/training"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <TrainingModules />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/training/dashboard"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <TrainingAnalytics />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/training/modules"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <TrainingModules />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/training/builder"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <TrainingBuilder />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/training/builder/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
             <AppLayout>
               <TrainingBuilder />
             </AppLayout>
@@ -796,7 +767,7 @@ function AppRoutes() {
       <Route
         path="/training/assignments"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'department_head']}>
             <AppLayout>
               <TrainingAssignments />
             </AppLayout>
@@ -849,291 +820,291 @@ function AppRoutes() {
       <Route
         path="/hr/onboarding"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']} >
             <AppLayout>
               <MotionWrapper>
                 <OnboardingTracker />
               </MotionWrapper>
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
 
       <Route
         path="/admin/onboarding/templates"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']} >
             <AppLayout>
               <MotionWrapper>
                 <OnboardingTemplates />
               </MotionWrapper>
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/admin/onboarding/templates/new"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']} >
             <AppLayout>
               <MotionWrapper>
                 <TemplateEditor />
               </MotionWrapper>
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
 
       <Route
         path="/admin/onboarding/templates/:id"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']} >
             <AppLayout>
               <MotionWrapper>
                 <TemplateEditor />
               </MotionWrapper>
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
 
       <Route
         path="/announcements"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <MotionWrapper>
                 <AnnouncementFeed />
               </MotionWrapper>
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
 
       <Route
         path="/maintenance"
         element={
-          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']} >
             <AppLayout>
               <MotionWrapper>
                 <MaintenanceDashboard />
               </MotionWrapper>
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/maintenance/submit"
         element={
-          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']} >
             <AppLayout>
               <SubmitTicket />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/maintenance/tickets/:id"
         element={
-          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+          <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']} >
             <AppLayout>
               <MaintenanceTicketDetail />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <EmployeeReferrals />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/leave"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <MyLeaveRequests />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/request/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <RequestDetail />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/inbox"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head']} >
             <AppLayout>
               <RequestsInbox />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/operations"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']} >
             <AppLayout>
               <HROperationsCenter />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/referrals"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <EmployeeReferrals />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/promotions/new"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']} >
             <AppLayout>
               <PromotionWorkflow />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/transfers/new"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']} >
             <AppLayout>
               <TransferWorkflow />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/promotions/history"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']} >
             <AppLayout>
               <PromotionTransferHistory />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/hr/transfers/history"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']} >
             <AppLayout>
               <PromotionTransferHistory />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/tasks"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <TasksDashboard />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/tasks/:taskId"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <TaskDetail />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/messaging"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <MessagingDashboard />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/reports"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']} >
             <AppLayout>
               <ReportsDashboard />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/messaging/:messageId"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <MessageDetail />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/jobs"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <JobPostings />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/jobs/new"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']} >
             <AppLayout>
               <CreateJobPosting />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/jobs/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute >
             <AppLayout>
               <JobPostingDetail />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
       <Route
         path="/jobs/:id/edit"
         element={
-          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']}>
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']} >
             <AppLayout>
               <EditJobPosting />
             </AppLayout>
-          </ProtectedRoute>
+          </ProtectedRoute >
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      <Route path="*" element={< Navigate to="/" replace />} />
+    </Routes >
   )
 }
 

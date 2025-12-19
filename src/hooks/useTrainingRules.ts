@@ -35,6 +35,7 @@ export function useTrainingRules() {
           *,
           departments (name),
           training_modules (title),
+          job_titles (title),
           profiles:created_by (full_name)
         `)
                 .order('created_at', { ascending: false })

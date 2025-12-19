@@ -11,6 +11,7 @@ import { learningService } from '@/services/learningService'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
 import type { LearningQuiz } from '@/types/learning'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTranslation } from 'react-i18next'
 
 interface QuizComponentProps {
     quizId: string
@@ -22,6 +23,7 @@ interface QuizComponentProps {
 export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: QuizComponentProps) {
     const { toast } = useToast()
     const { user, profile } = useAuth()
+    const { t } = useTranslation(['training', 'common'])
 
     const [quiz, setQuiz] = useState<LearningQuiz | null>(null)
     const [loading, setLoading] = useState(true)
@@ -62,8 +64,8 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
             }
         } catch (error) {
             toast({
-                title: 'Error',
-                description: 'Failed to load quiz',
+                title: t('common.error'),
+                description: t('training:quizzes.player.load_error'),
                 variant: 'destructive',
             })
             if (onExit) onExit()
@@ -147,8 +149,8 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
 
                     if (certificate) {
                         toast({
-                            title: '🏆 Certificate Earned!',
-                            description: `Congratulations! You've earned a certificate for "${quiz.title}"`,
+                            title: t('training:quizzes.player.certificate_earned'),
+                            description: t('training:quizzes.player.certificate_desc', { title: quiz.title }),
                             variant: 'default'
                         })
                     }
@@ -159,8 +161,8 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
             }
 
             toast({
-                title: passed ? 'Quiz Passed!' : 'Quiz Failed',
-                description: `You scored ${Math.round(percentage)}%`,
+                title: passed ? t('training:quizzes.player.passed_toast_title') : t('training:quizzes.player.failed_toast_title'),
+                description: t('training:quizzes.player.score_toast_desc', { score: Math.round(percentage) }),
                 variant: passed ? 'default' : 'destructive'
             })
 
@@ -171,8 +173,8 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
         } catch (error) {
             console.error(error)
             toast({
-                title: 'Error',
-                description: 'Failed to submit quiz results',
+                title: t('common.error'),
+                description: t('training:quizzes.player.submit_error'),
                 variant: 'destructive'
             })
             setSubmitted(false)
@@ -186,7 +188,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
     }
 
     if (loading || !quiz) {
-        return <div className="p-8 text-center">Loading quiz...</div>
+        return <div className="p-8 text-center">{t('training:quizzes.player.loading')}</div>
     }
 
     if (result) {
@@ -210,12 +212,12 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
 
                         <div>
                             <h2 className="text-3xl font-bold mb-2">
-                                {result.passed ? 'Congratulations!' : 'Keep Trying'}
+                                {result.passed ? t('training:quizzes.player.success_passed') : t('training:quizzes.player.failed_title')}
                             </h2>
                             <p className="text-muted-foreground text-lg">
-                                You scored {result.score}%
+                                {t('training:quizzes.player.score_text', { score: result.score })}
                                 <span className="text-sm ml-2">
-                                    (Pass mark: {quiz.passing_score_percentage}%)
+                                    ({t('training:quizzes.player.pass_mark', { score: quiz.passing_score_percentage })})
                                 </span>
                             </p>
                         </div>
@@ -223,17 +225,17 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                         <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
                             <div className="bg-slate-50 p-4 rounded-lg">
                                 <div className="text-2xl font-bold">{result.correctCount}</div>
-                                <div className="text-xs text-muted-foreground uppercase tracking-wide">Correct</div>
+                                <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('training:quizzes.player.correct_answers')}</div>
                             </div>
                             <div className="bg-slate-50 p-4 rounded-lg">
                                 <div className="text-2xl font-bold">{result.totalQuestions}</div>
-                                <div className="text-xs text-muted-foreground uppercase tracking-wide">Total</div>
+                                <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('training:quizzes.player.total_questions')}</div>
                             </div>
                         </div>
 
                         {/* REVIEW ANSWERS SECTION */}
                         <div className="text-left space-y-6 mt-8 border-t pt-6">
-                            <h3 className="font-semibold text-lg">Answer Review</h3>
+                            <h3 className="font-semibold text-lg">{t('training:quizzes.player.review_answers')}</h3>
                             {result.gradedAnswers?.map((answer: any, index: number) => {
                                 const question = quiz.questions?.find(q => q.question_id === answer.question_id)?.question
                                 if (!question) return null
@@ -256,11 +258,11 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
 
                                                 <div className="text-sm space-y-1">
                                                     <p className={answer.correct ? 'text-green-700' : 'text-red-700'}>
-                                                        <strong>Your Answer:</strong> {userAnswerText || '(No Answer)'}
+                                                        <strong>{t('training:quizzes.player.your_answer')}</strong> {userAnswerText || '(No Answer)'}
                                                     </p>
                                                     {!answer.correct && (
                                                         <p className="text-green-700">
-                                                            <strong>Correct Answer:</strong> {correctAnswerText}
+                                                            <strong>{t('training:quizzes.player.correct_answer')}</strong> {correctAnswerText}
                                                         </p>
                                                     )}
                                                 </div>
@@ -268,7 +270,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                                                 {/* EXPLANATION */}
                                                 {question.explanation && (
                                                     <div className="mt-3 text-sm bg-white/50 p-2 rounded text-gray-700 italic border border-gray-100">
-                                                        <strong>Explanation:</strong> {question.explanation}
+                                                        <strong>{t('training:quizzes.player.explanation')}</strong> {question.explanation}
                                                     </div>
                                                 )}
                                             </div>
@@ -290,7 +292,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                                     className="mr-2"
                                     onClick={onExit}
                                 >
-                                    Back
+                                    {t('training:quizzes.player.back')}
                                 </Button>
                             )}
                             {!result.passed && (
@@ -301,7 +303,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                                     setCurrentQuestionIndex(0)
                                     loadQuiz(quiz.id)
                                 }}>
-                                    Try Again
+                                    {t('training:quizzes.player.try_again')}
                                 </Button>
                             )}
                         </div>
@@ -319,7 +321,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                 <div>
                     <h1 className="font-bold text-lg">{quiz.title}</h1>
                     <p className="text-sm text-muted-foreground">
-                        Question {currentQuestionIndex + 1} of {quiz.questions?.length}
+                        {t('training:quizzes.player.question_counter', { current: currentQuestionIndex + 1, total: quiz.questions?.length })}
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -350,7 +352,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                                     onValueChange={(val) => setAnswers({ ...answers, [currentQuestion.question_id]: val })}
                                 >
                                     {!currentQuestion.question.options?.length && (
-                                        <p className="text-red-500">No options available for this question.</p>
+                                        <p className="text-red-500">{t('training:quizzes.player.no_options')}</p>
                                     )}
                                     {currentQuestion.question.options?.map((opt, idx) => {
                                         const optionId = `q-${currentQuestion.question_id}-opt-${idx}`
@@ -362,7 +364,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                                             >
                                                 <RadioGroupItem value={opt.id} id={optionId} />
                                                 <Label htmlFor={optionId} className="flex-1 cursor-pointer font-normal text-base text-slate-900 select-none">
-                                                    {opt.option_text || <span className="text-red-400 italic">Empty Option Text</span>}
+                                                    {opt.option_text || <span className="text-red-400 italic">{t('training:quizzes.player.empty_option')}</span>}
                                                 </Label>
                                             </div>
                                         )
@@ -377,11 +379,11 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                                 >
                                     <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-slate-50 transition-colors">
                                         <RadioGroupItem value="true" id="opt-true" />
-                                        <Label htmlFor="opt-true" className="flex-1 cursor-pointer font-normal text-base">True</Label>
+                                        <Label htmlFor="opt-true" className="flex-1 cursor-pointer font-normal text-base">{t('training:quizzes.player.true_label')}</Label>
                                     </div>
                                     <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-slate-50 transition-colors">
                                         <RadioGroupItem value="false" id="opt-false" />
-                                        <Label htmlFor="opt-false" className="flex-1 cursor-pointer font-normal text-base">False</Label>
+                                        <Label htmlFor="opt-false" className="flex-1 cursor-pointer font-normal text-base">{t('training:quizzes.player.false_label')}</Label>
                                     </div>
                                 </RadioGroup>
                             )}
@@ -390,7 +392,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                                 <Input
                                     value={answers[currentQuestion.question_id] || ''}
                                     onChange={(e) => setAnswers({ ...answers, [currentQuestion.question_id]: e.target.value })}
-                                    placeholder="Type your answer..."
+                                    placeholder={t('training:quizzes.player.type_answer')}
                                     className="text-lg p-6"
                                 />
                             )}
@@ -406,14 +408,14 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                     disabled={currentQuestionIndex === 0}
                     onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
                 >
-                    Previous
+                    {t('training:quizzes.player.previous')}
                 </Button>
 
                 {currentQuestionIndex < (quiz.questions?.length || 0) - 1 ? (
                     <Button
                         onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
                     >
-                        Next <ArrowRight className="ml-2 h-4 w-4" />
+                        {t('training:quizzes.player.next')} <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                 ) : (
                     <Button
@@ -421,7 +423,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit }: Quiz
                         disabled={submitted}
                         className="bg-green-600 hover:bg-green-700"
                     >
-                        Submit Quiz
+                        {t('training:quizzes.player.submit')}
                     </Button>
                 )}
             </div>

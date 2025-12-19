@@ -1,6 +1,20 @@
 {
     "title": "الوظائف الشاغرة",
     "board_title": "لوحة الوظائف الداخلية",
+    "create": "إنشاء",
+    "jobPosting": "إعلان وظيفة",
+    "referrals": {
+        "create_title": "إحالة مرشح",
+        "create_desc": "تقديم إحالة لوظيفة {{jobTitle}}. ارفع السيرة الذاتية أدناه.",
+        "candidate_name": "اسم المرشح",
+        "candidate_email": "البريد الإلكتروني",
+        "candidate_phone": "الهاتف (اختياري)",
+        "resume_upload": "رفع السيرة الذاتية",
+        "drop_file": "انقر للرفع أو اسحب وأفلت الملف",
+        "resume_url": "رابط LinkedIn / معرض الأعمال (اختياري)",
+        "notes": "ملاحظات / توصية",
+        "submit": "تقديم الإحالة"
+    },
     "create_new": "إنشاء وظيفة جديدة",
     "search_placeholder": "بحث في الوظائف...",
     "filters": {

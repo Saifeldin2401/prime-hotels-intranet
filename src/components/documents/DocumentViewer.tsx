@@ -10,6 +10,8 @@ interface DocumentViewerProps {
     id: string
     title: string
     file_url: string
+    content?: string | null
+    description?: string | null
   }
 }
 
@@ -17,10 +19,17 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
   const [loading, setLoading] = useState(true)
 
   const handleDownload = () => {
-    window.open(document.file_url, '_blank')
+    if (document.file_url) {
+      window.open(document.file_url, '_blank')
+    }
   }
 
-  const getFileType = (url: string) => {
+  const getFileType = (url: string | null | undefined) => {
+    if (!url) {
+      // If no URL but has content, treat as an article
+      if (document.content) return 'article'
+      return 'other'
+    }
     const extension = url.split('.').pop()?.toLowerCase()
     if (['pdf'].includes(extension || '')) return 'pdf'
     if (['doc', 'docx'].includes(extension || '')) return 'word'
@@ -32,33 +41,28 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="truncate pr-4">{document.title}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex flex-row items-center justify-between shrink-0">
+          <DialogTitle className="truncate pr-4 text-xl">{document.title}</DialogTitle>
           <DialogDescription className="sr-only">
             Document viewer for {document.title}
           </DialogDescription>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownload}
-              className="flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Download
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            {document.file_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownload}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto p-1">
           {fileType === 'pdf' && (
             <div className="flex flex-col items-center justify-center h-[80vh] text-center p-8">
               <div className="mb-4">
@@ -77,8 +81,8 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
             </div>
           )}
 
-          {fileType === 'image' && (
-            <div className="flex items-center justify-center h-[80vh]">
+          {fileType === 'image' && document.file_url && (
+            <div className="flex items-center justify-center h-full min-h-[50vh]">
               <img
                 src={document.file_url}
                 alt={document.title}
@@ -107,6 +111,17 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
             </div>
           )}
 
+          {fileType === 'article' && (
+            <div className="prose prose-sm sm:prose max-w-none p-6 bg-white rounded-lg">
+              {document.description && (
+                <p className="text-lg text-gray-600 mb-6 italic border-l-4 border-gray-200 pl-4">
+                  {document.description}
+                </p>
+              )}
+              <div dangerouslySetInnerHTML={{ __html: document.content || '' }} />
+            </div>
+          )}
+
           {fileType === 'other' && (
             <div className="flex flex-col items-center justify-center h-[80vh] text-center p-8">
               <div className="mb-4">
@@ -114,14 +129,16 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
                   <div className="text-gray-600 text-2xl font-bold">FILE</div>
                 </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Document Preview Not Available</h3>
+              <h3 className="text-lg font-semibold mb-2">Preview Not Available</h3>
               <p className="text-gray-600 mb-4">
-                This file type cannot be previewed inline. Please download it to view.
+                This content cannot be previewed inline.
               </p>
-              <Button onClick={handleDownload}>
-                <Download className="w-4 h-4 mr-2" />
-                Download Document
-              </Button>
+              {document.file_url && (
+                <Button onClick={handleDownload}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              )}
             </div>
           )}
         </div>

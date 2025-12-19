@@ -96,7 +96,6 @@
     "submit": "Submit Request",
     "cancel": "Cancel",
     "pending": "Pending",
-    "in_progress": "In Progress",
     "resolved": "Resolved",
     "closed": "Closed",
     "search_placeholder": "Search tickets...",
@@ -112,5 +111,6 @@
     "comments": "Comments",
     "no_comments": "No Comments",
     "add_comment_placeholder": "Add a comment...",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "schedules": "Schedules"
 }

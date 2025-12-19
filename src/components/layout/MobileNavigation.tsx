@@ -28,7 +28,7 @@ export function MobileNavigation({ onMenuClick }: MobileNavigationProps) {
     <nav
       className="fixed bottom-0 left-0 right-0 z-[100] bg-background border-t border-border lg:hidden shadow-lg"
       style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
-      aria-label={t('nav.mobileNav', { defaultValue: 'Mobile navigation' })}
+      aria-label={t('mobileNav', { defaultValue: 'Mobile navigation' })}
     >
       <div className="grid grid-cols-5 gap-0">
         {displayItems.map((item) => {
@@ -70,12 +70,12 @@ export function MobileNavigation({ onMenuClick }: MobileNavigationProps) {
             "text-muted-foreground hover:text-foreground hover:bg-accent",
             "active:scale-95 active:bg-accent/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-hotel-gold"
           )}
-          aria-label={t('nav.openMenu', { defaultValue: 'Open navigation menu' })}
+          aria-label={t('openMenu', { defaultValue: 'Open navigation menu' })}
           aria-expanded="false"
         >
           <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
           <span className="text-[9px] sm:text-[10px] font-medium truncate max-w-[56px]" aria-hidden="true">
-            {t('nav.menu', { defaultValue: 'Menu' })}
+            {t('menu', { defaultValue: 'Menu' })}
           </span>
         </button>
       </div>

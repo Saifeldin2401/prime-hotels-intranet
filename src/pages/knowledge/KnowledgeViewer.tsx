@@ -56,6 +56,7 @@ import {
 import { STATUS_CONFIG } from '@/types/knowledge'
 import { RelatedArticles } from '@/components/knowledge'
 import { useRelatedArticles } from '@/hooks/useKnowledge'
+import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -113,10 +114,10 @@ export default function KnowledgeViewer() {
 
             if (error) throw error
 
-            toast.success('Document deleted')
+            toast.success(t('viewer.delete_success'))
             navigate('/knowledge')
         } catch (error: any) {
-            toast.error(error.message || 'Failed to delete document')
+            toast.error(error.message || t('viewer.delete_error'))
         } finally {
             setIsDeleting(false)
         }
@@ -195,11 +196,11 @@ export default function KnowledgeViewer() {
         return (
             <div className="container mx-auto py-8 px-4 text-center">
                 <AlertTriangle className="h-16 w-16 mx-auto text-orange-500 mb-4" />
-                <h1 className="text-2xl font-bold mb-2">Document Not Found</h1>
-                <p className="text-gray-600 mb-4">The document you're looking for doesn't exist or you don't have access.</p>
+                <h1 className="text-2xl font-bold mb-2">{t('viewer.not_found_title')}</h1>
+                <p className="text-gray-600 mb-4">{t('viewer.not_found_desc')}</p>
                 <Button onClick={() => navigate('/knowledge')}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Knowledge Base
+                    {t('viewer.back_to_home')}
                 </Button>
             </div>
         )
@@ -207,6 +208,7 @@ export default function KnowledgeViewer() {
 
     // Default to gray if status not found in config
     const statusConfig = STATUS_CONFIG[article.status as keyof typeof STATUS_CONFIG] || { label: article.status, color: 'gray' }
+    const statusLabel = t(`status.${article.status}`, article.status)
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -312,7 +314,7 @@ export default function KnowledgeViewer() {
                         <div className="flex items-center gap-4">
                             <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
                                 <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back
+                                {t('viewer.back')}
                             </Button>
                             <Separator orientation="vertical" className="h-6" />
                             <div className="flex items-center gap-2">
@@ -322,7 +324,7 @@ export default function KnowledgeViewer() {
                                     statusConfig.color === 'gray' && 'bg-gray-100 text-gray-800',
                                     statusConfig.color === 'red' && 'bg-red-100 text-red-800'
                                 )}>
-                                    {statusConfig.label}
+                                    {statusLabel}
                                 </Badge>
                             </div>
                         </div>
@@ -336,7 +338,7 @@ export default function KnowledgeViewer() {
                                         onClick={() => navigate(`/knowledge/${id}/edit`)}
                                     >
                                         <Pencil className="h-4 w-4 mr-2" />
-                                        Edit
+                                        {t('viewer.edit')}
                                     </Button>
 
                                     <AlertDialog>
@@ -347,24 +349,24 @@ export default function KnowledgeViewer() {
                                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                             >
                                                 <Trash2 className="h-4 w-4 mr-2" />
-                                                Delete
+                                                {t('viewer.delete')}
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+                                                <AlertDialogTitle>{t('viewer.delete_title')}</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    This will permanently delete "{article.title}". This action cannot be undone.
+                                                    {t('viewer.delete_desc', { title: article.title })}
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogCancel>{t('viewer.cancel')}</AlertDialogCancel>
                                                 <AlertDialogAction
                                                     onClick={handleDelete}
                                                     disabled={isDeleting}
                                                     className="bg-red-600 hover:bg-red-700"
                                                 >
-                                                    {isDeleting ? 'Deleting...' : 'Delete'}
+                                                    {isDeleting ? t('viewer.deleting') : t('viewer.delete_confirm')}
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
@@ -396,16 +398,37 @@ export default function KnowledgeViewer() {
                             )}
                             {/* File Attachment */}
                             {article.file_url ? (
-                                <div className="mb-4">
-                                    <Button variant="outline" className="gap-2" onClick={() => window.open(article.file_url, '_blank')}>
-                                        <Download className="h-4 w-4" />
-                                        Download / View Attachment
-                                    </Button>
+                                <div className="mb-8">
+                                    {article.file_url.toLowerCase().endsWith('.pdf') ? (
+                                        <div className="space-y-2">
+                                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                <FileText className="h-5 w-5 text-red-500" />
+                                                {t('viewer.preview_doc')}
+                                            </h3>
+                                            <PdfViewer url={article.file_url} />
+                                        </div>
+                                    ) : (
+                                        <Button variant="outline" className="gap-2" onClick={() => window.open(article.file_url, '_blank')}>
+                                            <Download className="h-4 w-4" />
+                                            {t('viewer.download_attachment')}
+                                        </Button>
+                                    )}
                                 </div>
                             ) : null}
 
                             {/* Meta */}
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                                {article.department && (
+                                    <Badge variant="outline" className="text-xs font-normal border-gray-300 text-gray-600">
+                                        {article.department.name}
+                                    </Badge>
+                                )}
+                                {article.category && (
+                                    <Badge variant="outline" className="text-xs font-normal border-gray-300 text-gray-600">
+                                        {article.category.name}
+                                    </Badge>
+                                )}
+                                <Separator orientation="vertical" className="h-4" />
                                 {article.author && (
                                     <div className="flex items-center gap-2">
                                         <User className="h-4 w-4" />
@@ -414,7 +437,7 @@ export default function KnowledgeViewer() {
                                 )}
                                 <div className="flex items-center gap-2">
                                     <Calendar className="h-4 w-4" />
-                                    <span>Updated {article.updated_at && new Date(article.updated_at).toLocaleDateString()}</span>
+                                    <span>{t('viewer.updated_at', { date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '' })}</span>
                                 </div>
                             </div>
                         </div>
@@ -429,7 +452,7 @@ export default function KnowledgeViewer() {
                                         dangerouslySetInnerHTML={{ __html: article.content }}
                                     />
                                 ) : (
-                                    !article.file_url && <p className="text-gray-500 italic">No content available.</p>
+                                    !article.file_url && <p className="text-gray-500 italic">{t('viewer.no_content')}</p>
                                 )}
                             </CardContent>
                         </Card>
@@ -441,8 +464,8 @@ export default function KnowledgeViewer() {
                                     <div className="flex items-center gap-3">
                                         <CheckCircle className="h-6 w-6 text-blue-600" />
                                         <div>
-                                            <p className="font-semibold text-blue-900">Acknowledge this document</p>
-                                            <p className="text-sm text-blue-700">Confirm that you have read and understood this content.</p>
+                                            <p className="font-semibold text-blue-900">{t('viewer.acknowledge_title')}</p>
+                                            <p className="text-sm text-blue-700">{t('viewer.acknowledge_desc')}</p>
                                         </div>
                                     </div>
                                     <Button
@@ -451,7 +474,7 @@ export default function KnowledgeViewer() {
                                         disabled={acknowledgeArticle.isPending}
                                     >
                                         {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                                        I Acknowledge
+                                        {t('viewer.i_acknowledge')}
                                     </Button>
                                 </CardContent>
                             </Card>
@@ -463,7 +486,7 @@ export default function KnowledgeViewer() {
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="flex items-center gap-2">
                                         <MessageSquare className="h-5 w-5" />
-                                        Discussion ({comments?.length || 0})
+                                        {t('viewer.discussion')} ({comments?.length || 0})
                                     </CardTitle>
                                     <Button variant="ghost" size="sm" onClick={() => setShowComments(!showComments)}>
                                         {showComments ? <ChevronUp className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -476,15 +499,15 @@ export default function KnowledgeViewer() {
                                         <Textarea
                                             value={newComment}
                                             onChange={(e) => setNewComment(e.target.value)}
-                                            placeholder="Leave a comment..."
+                                            placeholder={t('viewer.leave_comment')}
                                             rows={3}
                                         />
                                         <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending}>
-                                            <Send className="h-4 w-4 mr-2" /> Post
+                                            <Send className="h-4 w-4 mr-2" /> {t('viewer.post')}
                                         </Button>
                                     </div>
                                     <Separator />
-                                    {comments?.length === 0 && <p className="text-center text-gray-500">No comments yet.</p>}
+                                    {comments?.length === 0 && <p className="text-center text-gray-500">{t('viewer.no_comments')}</p>}
                                     {/* Comments list would go here */}
                                 </CardContent>
                             )}
@@ -496,7 +519,7 @@ export default function KnowledgeViewer() {
                         {tocItems.length > 0 && (
                             <Card className="sticky top-20">
                                 <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm font-semibold uppercase text-gray-500">On This Page</CardTitle>
+                                    <CardTitle className="text-sm font-semibold uppercase text-gray-500">{t('viewer.on_this_page')}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-1">
                                     {tocItems.map(item => (
@@ -513,7 +536,7 @@ export default function KnowledgeViewer() {
                         )}
                         {article.tags && article.tags.length > 0 && (
                             <Card>
-                                <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold uppercase text-gray-500">Tags</CardTitle></CardHeader>
+                                <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold uppercase text-gray-500">{t('viewer.tags')}</CardTitle></CardHeader>
                                 <CardContent>
                                     <div className="flex flex-wrap gap-2">
                                         {article.tags.map(tag => (
@@ -533,33 +556,33 @@ export default function KnowledgeViewer() {
                                 <CardHeader className="pb-2">
                                     <CardTitle className="text-sm font-semibold uppercase text-hotel-gold flex items-center gap-2">
                                         <GraduationCap className="h-4 w-4" />
-                                        Linked Learning
+                                        {t('viewer.linked_learning')}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     {article.linked_training_id && (
                                         <div className="space-y-2">
-                                            <p className="text-xs text-gray-500">Practice what you just read with a training module.</p>
+                                            <p className="text-xs text-gray-500">{t('viewer.training_hint')}</p>
                                             <Button
                                                 className="w-full bg-hotel-gold hover:bg-hotel-gold/90 text-white"
                                                 onClick={() => navigate(`/learning/training/${article.linked_training_id}`)}
                                             >
                                                 <PlayCircle className="h-4 w-4 mr-2" />
-                                                Start Training
+                                                {t('viewer.start_training')}
                                             </Button>
                                         </div>
                                     )}
                                     {article.linked_quiz_id && (
                                         <div className="space-y-2">
                                             {article.linked_training_id && <Separator />}
-                                            <p className="text-xs text-gray-500">Test your knowledge with a certification quiz.</p>
+                                            <p className="text-xs text-gray-500">{t('viewer.quiz_hint')}</p>
                                             <Button
                                                 variant="outline"
                                                 className="w-full border-hotel-gold text-hotel-gold hover:bg-hotel-gold/10"
                                                 onClick={() => navigate(`/learning/quizzes/${article.linked_quiz_id}/take`)}
                                             >
                                                 <Lightbulb className="h-4 w-4 mr-2" />
-                                                Take Quiz
+                                                {t('viewer.take_quiz')}
                                             </Button>
                                         </div>
                                     )}

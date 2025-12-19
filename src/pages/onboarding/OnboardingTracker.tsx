@@ -10,8 +10,10 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 
 export default function OnboardingTracker() {
+    const { t } = useTranslation('onboarding')
     const [searchTerm, setSearchTerm] = useState('')
 
     const { data: processes, isLoading } = useQuery({
@@ -21,7 +23,7 @@ export default function OnboardingTracker() {
                 .from('onboarding_process')
                 .select(`
           *,
-          user:profiles(*),
+          user:profiles!onboarding_process_user_id_fkey(*),
           template:onboarding_templates(title)
         `)
                 .order('start_date', { ascending: false })
@@ -49,19 +51,19 @@ export default function OnboardingTracker() {
         <div className="space-y-6 p-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Onboarding Tracker</h2>
-                    <p className="text-muted-foreground">Monitor progress of new hires across the organization.</p>
+                    <h2 className="text-3xl font-bold tracking-tight">{t('tracker.title')}</h2>
+                    <p className="text-muted-foreground">{t('tracker.subtitle')}</p>
                 </div>
             </div>
 
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle>Active Onboarding Processes</CardTitle>
+                        <CardTitle>{t('tracker.active_processes')}</CardTitle>
                         <div className="relative w-64">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search employee..."
+                                placeholder={t('tracker.search_placeholder')}
                                 className="pl-8"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -73,18 +75,18 @@ export default function OnboardingTracker() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Employee</TableHead>
-                                <TableHead>Template</TableHead>
-                                <TableHead>Started</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="w-[300px]">Progress</TableHead>
+                                <TableHead>{t('tracker.col_employee')}</TableHead>
+                                <TableHead>{t('tracker.col_template')}</TableHead>
+                                <TableHead>{t('tracker.col_started')}</TableHead>
+                                <TableHead>{t('tracker.col_status')}</TableHead>
+                                <TableHead className="w-[300px]">{t('tracker.col_progress')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredProcesses?.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="h-24 text-center">
-                                        No active onboarding processes found.
+                                        {t('tracker.no_data')}
                                     </TableCell>
                                 </TableRow>
                             ) : (

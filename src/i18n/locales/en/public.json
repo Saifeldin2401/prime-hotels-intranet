@@ -1,1 +1,27 @@
-{ "welcome_title": "Welcome to", "prime_connect": "Prime Connect", "subtitle": "Your Internal Employee Portal", "login_button": "Log In to Portal", "footer": " {{year}} Prime Hotels. All Rights Reserved." }
+{
+    "welcome_title": "Excellence in Hospitality,",
+    "prime_connect": "Empowered by You.",
+    "subtitle": "Prime Connect: Your gateway to career growth, operational excellence, and community at Prime Hotels.",
+    "login_button": "Log In to Portal",
+    "footer": " {{year}} Prime Hotels. All Rights Reserved.",
+    "who_we_are": {
+        "title": "Who We Are",
+        "mission": "At Prime Hotels, we believe that true hospitality starts from within. We are dedicated to creating an environment where every team member feels valued, supported, and inspired to deliver their best."
+    },
+    "growing_together": {
+        "title": "Growing Together",
+        "subtitle": "Investing in Your Potential",
+        "learning": {
+            "title": "Continuous Learning",
+            "desc": "Access world-class training modules and resources to sharpen your skills every day."
+        },
+        "leadership": {
+            "title": "Leadership Pathways",
+            "desc": "Clear career progression and mentorship programs to help you become the leader of tomorrow."
+        },
+        "community": {
+            "title": "Knowledge Community",
+            "desc": "Share insights, collaborate across departments, and build lasting professional relationships."
+        }
+    }
+}

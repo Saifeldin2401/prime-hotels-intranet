@@ -188,5 +188,17 @@
     "update": "Update",
     "refresh": "Refresh",
     "error": "Error"
+  },
+  "priority": {
+    "critical": "Critical",
+    "urgent": "Urgent",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "schedule_types": {
+    "shift": "Shift",
+    "meeting": "Meeting",
+    "training": "Training"
   }
 }

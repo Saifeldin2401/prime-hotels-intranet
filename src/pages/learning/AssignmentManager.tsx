@@ -300,17 +300,28 @@ export default function AssignmentManager() {
                                                                 setFormData({ ...formData, content_id: quiz.id })
                                                                 setContentOpen(false)
                                                             }}
+                                                            className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                         >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    formData.content_id === quiz.id ? "opacity-100" : "opacity-0"
+                                                            <div
+                                                                className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                                onPointerDown={(e) => e.preventDefault()}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setFormData({ ...formData, content_id: quiz.id })
+                                                                    setContentOpen(false)
+                                                                }}
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        formData.content_id === quiz.id ? "opacity-100" : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {quiz.title}
+                                                                {quiz.status !== 'published' && (
+                                                                    <span className="ml-2 text-xs text-muted-foreground capitalize">({quiz.status})</span>
                                                                 )}
-                                                            />
-                                                            {quiz.title}
-                                                            {quiz.status !== 'published' && (
-                                                                <span className="ml-2 text-xs text-muted-foreground capitalize">({quiz.status})</span>
-                                                            )}
+                                                            </div>
                                                         </CommandItem>
                                                     ))
                                                 ) : (
@@ -322,14 +333,25 @@ export default function AssignmentManager() {
                                                                 setFormData({ ...formData, content_id: module.id })
                                                                 setContentOpen(false)
                                                             }}
+                                                            className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                         >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    formData.content_id === module.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {module.title}
+                                                            <div
+                                                                className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                                onPointerDown={(e) => e.preventDefault()}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setFormData({ ...formData, content_id: module.id })
+                                                                    setContentOpen(false)
+                                                                }}
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        formData.content_id === module.id ? "opacity-100" : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {module.title}
+                                                            </div>
                                                         </CommandItem>
                                                     ))
                                                 )}
@@ -388,14 +410,25 @@ export default function AssignmentManager() {
                                                                 setFormData({ ...formData, target_id: user.id })
                                                                 setUserOpen(false)
                                                             }}
+                                                            className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                         >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    formData.target_id === user.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {user.full_name}
+                                                            <div
+                                                                className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                                onPointerDown={(e) => e.preventDefault()}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setFormData({ ...formData, target_id: user.id })
+                                                                    setUserOpen(false)
+                                                                }}
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        formData.target_id === user.id ? "opacity-100" : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {user.full_name}
+                                                            </div>
                                                         </CommandItem>
                                                     ))}
                                                 </CommandGroup>

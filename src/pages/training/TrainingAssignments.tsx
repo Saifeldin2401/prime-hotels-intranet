@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useBulkNotifications } from '@/hooks/useBulkNotifications'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -93,6 +94,7 @@ export default function TrainingAssignments() {
   const [formTargetType, setFormTargetType] = useState<'all' | 'users' | 'departments' | 'properties'>('all')
   const [formTargetIds, setFormTargetIds] = useState<string[]>([])
   const [formDeadline, setFormDeadline] = useState('')
+  const [propertyFilter, setPropertyFilter] = useState<string>('all')
 
   // Fetch assignments
   const { data: rawAssignments, isLoading: isLoadingAssignments } = useQuery({
@@ -168,7 +170,9 @@ export default function TrainingAssignments() {
       // Format with property name for disambiguation
       return (data || []).map((d: any) => ({
         id: d.id,
-        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name
+        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name,
+        propertyName: d.property?.name,
+        rawName: d.name
       }))
     }
   })
@@ -228,45 +232,70 @@ export default function TrainingAssignments() {
         .insert(assignments)
       if (error) throw error
 
-      // Send notifications to affected users
+      // Send bulk notifications to affected users
       const moduleTitle = modules?.find(m => m.id === formModuleId)?.title || 'Training Module'
+      const notificationData = {
+        title: 'New Training Assigned',
+        message: `You have been assigned: ${moduleTitle}`,
+        moduleId: formModuleId,
+        deadline: formDeadline || undefined
+      }
+
+      let userIdsToNotify: string[] = []
 
       if (formTargetType === 'all') {
-        // For 'all', we'll rely on the notification system to handle it
-        // This would require a separate notification for "everyone" which we'll skip for now
-        console.log('Training assigned to all users - bulk notification not implemented yet')
+        // Get all active user IDs
+        const { data: allUsers } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('is_active', true)
+        userIdsToNotify = allUsers?.map(u => u.id) || []
       } else if (formTargetType === 'users') {
-        // Direct user assignments
-        for (const userId of formTargetIds) {
-          await notifyTrainingAssigned(userId, formModuleId, moduleTitle, formDeadline || undefined)
-        }
+        userIdsToNotify = formTargetIds
       } else if (formTargetType === 'departments') {
         // Resolve users from departments
-        for (const deptId of formTargetIds) {
-          const { data: deptUsers } = await supabase
-            .from('user_departments')
-            .select('user_id')
-            .eq('department_id', deptId)
-
-          if (deptUsers) {
-            for (const { user_id } of deptUsers) {
-              await notifyTrainingAssigned(user_id, formModuleId, moduleTitle, formDeadline || undefined)
-            }
-          }
-        }
+        const { data: deptUsers } = await supabase
+          .from('user_departments')
+          .select('user_id')
+          .in('department_id', formTargetIds)
+        userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
       } else if (formTargetType === 'properties') {
         // Resolve users from properties
-        for (const propId of formTargetIds) {
-          const { data: propUsers } = await supabase
-            .from('user_properties')
-            .select('user_id')
-            .eq('property_id', propId)
+        const { data: propUsers } = await supabase
+          .from('user_properties')
+          .select('user_id')
+          .in('property_id', formTargetIds)
+        userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
+      }
 
-          if (propUsers) {
-            for (const { user_id } of propUsers) {
-              await notifyTrainingAssigned(user_id, formModuleId, moduleTitle, formDeadline || undefined)
-            }
+      // Use bulk notification system for 10+ users, direct for smaller groups
+      if (userIdsToNotify.length >= 10) {
+        // Queue for bulk processing
+        const { data: session } = await supabase.auth.getSession()
+        if (session?.session?.access_token) {
+          try {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.session.access_token}`
+              },
+              body: JSON.stringify({
+                action: 'create_batch',
+                userIds: userIdsToNotify,
+                notificationType: 'training_assigned',
+                notificationData
+              })
+            })
+            console.log(`Queued ${userIdsToNotify.length} notifications for bulk processing`)
+          } catch (err) {
+            console.error('Bulk notification error:', err)
           }
+        }
+      } else {
+        // Small group - send directly
+        for (const userId of userIdsToNotify) {
+          await notifyTrainingAssigned(userId, formModuleId, moduleTitle, formDeadline || undefined)
         }
       }
     },
@@ -397,15 +426,38 @@ export default function TrainingAssignments() {
     }
   }, [progressData])
 
+  // Get unique properties from departments
+  const departmentProperties = useMemo(() => {
+    if (!departments) return []
+    const props = new Set<string>()
+    departments.forEach(d => {
+      // Extract property name from the formatted name "Dept (Property)"
+      const match = d.name.match(/\((.+)\)$/)
+      if (match) props.add(match[1])
+    })
+    return Array.from(props).sort()
+  }, [departments])
+
   // Form List Items
   const currentListItems = useMemo(() => {
     switch (formTargetType) {
       case 'users': return users?.map(u => ({ id: u.id, name: u.full_name || u.email })) || []
-      case 'departments': return departments || []
+      case 'departments': {
+        if (!departments) return []
+        // Filter by property if one is selected
+        const filtered = propertyFilter === 'all'
+          ? departments
+          : departments.filter(d => d.name.includes(`(${propertyFilter})`))
+        // Return with clean names (remove property suffix)
+        return filtered.map(d => ({
+          id: d.id,
+          name: d.name.replace(/\s*\(.+\)$/, '')
+        }))
+      }
       case 'properties': return properties?.map(p => ({ id: p.id, name: p.name })) || []
       default: return []
     }
-  }, [formTargetType, users, departments, properties])
+  }, [formTargetType, users, departments, properties, propertyFilter])
 
   const handleExport = () => {
     if (!filteredProgress.length) return
@@ -450,6 +502,14 @@ export default function TrainingAssignments() {
         description={t('trainingDescription', 'Manage assignments and track employee progress')}
         actions={
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin/notifications')}
+              className="hidden md:flex"
+            >
+              <Bell className="w-4 h-4 mr-2" />
+              Batch Status
+            </Button>
             <Button
               variant="outline"
               onClick={() => navigate('/training/assignments/rules')}
@@ -804,127 +864,146 @@ export default function TrainingAssignments() {
             )}
           </div>
         </TabsContent>
-      </Tabs>
+      </Tabs >
 
       {/* CREATE DIALOG */}
-      {showAssignmentDialog && (
-        <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
-          <DialogContent className="max-w-lg bg-white">
-            <DialogHeader>
-              <DialogTitle>
-                {t('createAssignment', 'Create Assignment')}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500">
-                {t('createAssignmentDescription', 'Assign training modules to users, departments, or roles.')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label>{t('selectModule', 'Select Module')}</Label>
-                <select
-                  value={formModuleId}
-                  onChange={(e) => setFormModuleId(e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                >
-                  <option value="">{t('selectModule', 'Select a module...')}</option>
-                  {modules?.map((module) => (
-                    <option key={module.id} value={module.id}>
-                      {module.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('assignTo', 'Assign To')}</Label>
-                <select
-                  value={formTargetType}
-                  onChange={(e) => {
-                    setFormTargetType(e.target.value as any)
-                    setFormTargetIds([])
-                  }}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                >
-                  <option value="all">{t('allUsers', 'All Users')}</option>
-                  <option value="users">{t('specificUsers', 'Specific Users')}</option>
-                  <option value="departments">{t('departments', 'Departments')}</option>
-                  <option value="properties">{t('properties', 'Properties')}</option>
-                </select>
-              </div>
-
-              {formTargetType !== 'all' && (
+      {
+        showAssignmentDialog && (
+          <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
+            <DialogContent className="max-w-lg bg-white">
+              <DialogHeader>
+                <DialogTitle>
+                  {t('createAssignment', 'Create Assignment')}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-500">
+                  {t('createAssignmentDescription', 'Assign training modules to users, departments, or roles.')}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label>
-                    {formTargetType === 'users' ? t('selectUsers', 'Select Users') :
-                      formTargetType === 'departments' ? t('selectDepartments', 'Select Departments') :
-                        t('selectProperties', 'Select Properties')}
-                  </Label>
-                  <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-gray-50">
-                    {currentListItems.length > 0 ? (
-                      currentListItems.map((item) => (
-                        <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={formTargetIds.includes(item.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormTargetIds([...formTargetIds, item.id])
-                              } else {
-                                setFormTargetIds(formTargetIds.filter(id => id !== item.id))
-                              }
-                            }}
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <span className="text-sm">{item.name}</span>
-                        </label>
-                      ))
-                    ) : (
-                      <p className="text-center py-4 text-gray-500 text-sm">
-                        {t('noItemsFound', 'No items found')}
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    {formTargetIds.length} {t('selected', 'selected')}
-                  </p>
+                  <Label>{t('selectModule', 'Select Module')}</Label>
+                  <select
+                    value={formModuleId}
+                    onChange={(e) => setFormModuleId(e.target.value)}
+                    className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
+                  >
+                    <option value="">{t('selectModule', 'Select a module...')}</option>
+                    {modules?.map((module) => (
+                      <option key={module.id} value={module.id}>
+                        {module.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label>{t('deadline', 'Deadline')} ({t('optional', 'Optional')})</Label>
-                <input
-                  type="date"
-                  value={formDeadline}
-                  onChange={(e) => setFormDeadline(e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label>{t('assignTo', 'Assign To')}</Label>
+                  <select
+                    value={formTargetType}
+                    onChange={(e) => {
+                      setFormTargetType(e.target.value as any)
+                      setFormTargetIds([])
+                      setPropertyFilter('all')
+                    }}
+                    className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
+                  >
+                    <option value="all">{t('allUsers', 'All Users')}</option>
+                    <option value="users">{t('specificUsers', 'Specific Users')}</option>
+                    <option value="departments">{t('departments', 'Departments')}</option>
+                    <option value="properties">{t('properties', 'Properties')}</option>
+                  </select>
+                </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowAssignmentDialog(false)
-                    resetForm()
-                  }}
-                >
-                  {t('cancel', 'Cancel')}
-                </Button>
-                <Button
-                  onClick={() => createAssignmentMutation.mutate()}
-                  disabled={!formModuleId || createAssignmentMutation.isPending || (formTargetType !== 'all' && formTargetIds.length === 0)}
-                  className="bg-hotel-navy text-white hover:bg-hotel-navy-light"
-                >
-                  {createAssignmentMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : null}
-                  {t('create', 'Create')}
-                </Button>
+                {formTargetType === 'departments' && departmentProperties.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Filter by Property</Label>
+                    <select
+                      value={propertyFilter}
+                      onChange={(e) => setPropertyFilter(e.target.value)}
+                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
+                    >
+                      <option value="all">All Properties</option>
+                      {departmentProperties.map(prop => (
+                        <option key={prop} value={prop}>{prop}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {formTargetType !== 'all' && (
+                  <div className="space-y-2">
+                    <Label>
+                      {formTargetType === 'users' ? t('selectUsers', 'Select Users') :
+                        formTargetType === 'departments' ? t('selectDepartments', 'Select Departments') :
+                          t('selectProperties', 'Select Properties')}
+                    </Label>
+                    <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-gray-50">
+                      {currentListItems.length > 0 ? (
+                        currentListItems.map((item) => (
+                          <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={formTargetIds.includes(item.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormTargetIds([...formTargetIds, item.id])
+                                } else {
+                                  setFormTargetIds(formTargetIds.filter(id => id !== item.id))
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <span className="text-sm">{item.name}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="text-center py-4 text-gray-500 text-sm">
+                          {t('noItemsFound', 'No items found')}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {formTargetIds.length} {t('selected', 'selected')}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>{t('deadline', 'Deadline')} ({t('optional', 'Optional')})</Label>
+                  <input
+                    type="date"
+                    value={formDeadline}
+                    onChange={(e) => setFormDeadline(e.target.value)}
+                    className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowAssignmentDialog(false)
+                      resetForm()
+                    }}
+                  >
+                    {t('cancel', 'Cancel')}
+                  </Button>
+                  <Button
+                    onClick={() => createAssignmentMutation.mutate()}
+                    disabled={!formModuleId || createAssignmentMutation.isPending || (formTargetType !== 'all' && formTargetIds.length === 0)}
+                    className="bg-hotel-navy text-white hover:bg-hotel-navy-light"
+                  >
+                    {createAssignmentMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
+                    {t('create', 'Create')}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+            </DialogContent>
+          </Dialog>
+        )
+      }
+    </div >
   )
 }
