@@ -1,16 +1,67 @@
-# Prime Hotels Intranet System
+# Prime Hotels Intranet System (PRIME Connect)
 
-A comprehensive multi-property hotel intranet system built with React, TypeScript, and Supabase.
+A comprehensive multi-property hotel intranet system built with React, TypeScript, and Supabase, featuring full bilingual support (English/Arabic).
 
 ## Features
 
+### Core System
 - **6 Role Levels**: Regional Admin, Regional HR, Property Manager, Property HR, Department Head, Staff
-- **Document Management**: Upload, approval workflow, version control, acknowledgments
-- **Training System**: Module creation, quizzes, assignments, certificates
-- **Announcements**: Targeted announcements with priority levels
-- **Notifications**: In-app and email notifications via Resend
-- **Audit Logging**: Comprehensive audit trail and PII access tracking
-- **Approval Engine**: Multi-level approvals with escalation and delegation
+- **Multi-Property Support**: Manage multiple hotel properties from a single platform
+- **Bilingual Interface**: Full English and Arabic localization with RTL support
+- **Responsive Design**: Mobile-first design optimized for all devices
+
+### Knowledge Base
+- **Comprehensive Documentation System**: SOPs, policies, guides, checklists, FAQs, and more
+- **Department-Specific Content**: Organized by department and content type
+- **Search & Browse**: Full-text search with advanced filtering
+- **Review Queue**: Admin workflow for content approval and publishing
+- **Analytics Dashboard**: Content performance metrics and engagement tracking
+- **PDF Support**: View and download PDF documents inline
+- **Required Reading**: Track mandatory document acknowledgments
+
+### Document Management
+- **Upload & Approval Workflow**: Draft → Pending Review → Approved → Published
+- **Version Control**: Track document history and changes
+- **Acknowledgments**: Mandatory acknowledgments with tracking
+- **Visibility Controls**: Property-level and department-level access control
+
+### Training & Development
+- **Module Creation**: Rich content blocks with videos, images, and text
+- **Quiz Builder**: Multiple choice, true/false, and fill-in-the-blank questions
+- **AI-Powered Question Generation**: Automatically generate quiz questions from content
+- **Assignment System**: Assign to users, departments, properties, or all staff
+- **Progress Tracking**: Monitor completion rates and scores
+- **Certificates**: Auto-generated completion certificates
+- **Learning Paths**: Structure training into career development tracks
+
+### Communication
+- **Announcements**: Targeted announcements with priority levels and scheduling
+- **Bulk Notifications**: Batch notification system for large-scale communications
+- **In-App Notifications**: Real-time notifications via Supabase Realtime
+- **Email Notifications**: Automated email delivery via Resend
+- **Notification Preferences**: User-configurable notification settings
+- **HR Operations Center**: Centralized notification management and filtering
+
+### HR & Staff Management
+- **User Directory**: Searchable staff directory with advanced filters
+- **Role Management**: Hierarchical role-based access control
+- **Department Organization**: Organize staff by department and property
+- **Job Posting System**: Internal job postings with application tracking
+- **Leave Request System**: Digital leave request workflow with approvals
+- **Maintenance Requests**: Property maintenance ticket system
+
+### Audit & Compliance
+- **Comprehensive Audit Logging**: All actions tracked with timestamps
+- **PII Access Tracking**: Special tracking for sensitive data access
+- **Retention Policies**: 3-year audit retention, 7-year PII retention
+- **Security Advisors**: Built-in security and performance recommendations
+- **Approval History**: Complete audit trail for all approvals
+
+### Approval Engine
+- **Multi-Level Approval Chains**: Configurable approval workflows
+- **Temporary Delegation**: Delegate approval authority temporarily
+- **Auto-Escalation**: Automatic escalation after configurable thresholds
+- **Approval History**: Track approval decisions and comments
 
 ## Prerequisites
 
@@ -38,39 +89,32 @@ VITE_RESEND_API_KEY=your_resend_api_key
 
 3. **Set Up Supabase Database**
 
-Run the migrations in order:
-
-```bash
-# Apply migrations via Supabase CLI or Dashboard SQL Editor
-supabase/migrations/001_initial_schema.sql
-supabase/migrations/002_security_functions.sql
-supabase/migrations/003_rls_policies.sql
-supabase/migrations/004_documents_schema.sql
-supabase/migrations/005_training_schema.sql
-supabase/migrations/006_announcements_schema.sql
-supabase/migrations/007_notifications_schema.sql
-supabase/migrations/008_audit_schema.sql
-supabase/migrations/009_retention_policy.sql
-supabase/migrations/010_approval_schema.sql
-supabase/migrations/011_escalation_function.sql
-```
+Run all migrations in the `supabase/migrations/` directory in chronological order. Key migrations include:
+- Initial schema and authentication
+- Security functions and RLS policies
+- Documents, training, and knowledge base schemas
+- Notifications and announcements
+- Audit logging and retention
+- Bulk notification system
 
 4. **Set Up Storage Buckets**
 
 Create storage buckets in Supabase:
-- `documents` - For document files
+- `documents` - For document files and PDFs
 - `training` - For training materials
 - `announcements` - For announcement attachments
+- `knowledge` - For knowledge base attachments
 
 5. **Deploy Edge Functions**
 
-Deploy the email sending Edge Function:
+Deploy Edge Functions:
 
 ```bash
 supabase functions deploy send-email
+supabase functions deploy process-notification-batch
 ```
 
-Set the `RESEND_API_KEY` secret:
+Set required secrets:
 
 ```bash
 supabase secrets set RESEND_API_KEY=your_resend_api_key
@@ -78,11 +122,10 @@ supabase secrets set RESEND_API_KEY=your_resend_api_key
 
 6. **Enable pg_cron (Optional)**
 
-If you want automated escalation and retention cleanup:
+For automated escalation and retention cleanup:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pg_cron;
--- Then uncomment the cron schedules in migrations 009 and 011
 ```
 
 ## Development
@@ -105,67 +148,70 @@ prime-hotels/
 │   ├── components/        # React components
 │   │   ├── admin/        # Admin-specific components
 │   │   ├── auth/         # Authentication components
+│   │   ├── documents/    # Document viewer components
 │   │   ├── layout/       # Layout components
 │   │   ├── notifications/# Notification components
-│   │   ├── shared/       # Shared components
+│   │   ├── common/       # Shared/common components
 │   │   └── ui/           # Shadcn UI components
-│   ├── contexts/         # React contexts
+│   ├── contexts/         # React contexts (Auth, Theme)
 │   ├── hooks/            # Custom React hooks
+│   ├── i18n/             # Internationalization
+│   │   └── locales/      # Arabic and English translations
 │   ├── lib/              # Utility functions and services
-│   └── pages/            # Page components
+│   ├── pages/            # Page components
+│   │   ├── knowledge/   # Knowledge Base pages
+│   │   ├── learning/    # Training pages
+│   │   ├── hr/          # HR pages
+│   │   └── public/      # Public pages (login, homepage)
+│   └── types/            # TypeScript type definitions
 ├── supabase/
 │   ├── migrations/       # Database migrations
 │   └── functions/        # Edge Functions
 └── public/               # Static assets
 ```
 
-## Key Features Implementation
+## Recent Updates
 
-### Authentication
-- Email/password authentication via Supabase Auth
-- Session management
-- Protected routes with role-based access
+### December 2024
+- ✅ Complete Arabic localization for Knowledge Base
+- ✅ Fixed translation key conflicts and duplicates
+- ✅ Added bulk notification system for large-scale communications
+- ✅ Implemented PDF viewer for knowledge base documents
+- ✅ Added Saudi/International team representation in public pages
+- ✅ Fixed RTL/LTR layout handling for bilingual interface
+- ✅ Standardized toast notifications across all modules
+- ✅ Added Knowledge Base analytics and review queue
 
-### User Management
-- Create/edit users
-- Assign roles, properties, and departments
-- User directory with filtering
+## Key Technologies
 
-### Document Management
-- Upload documents with metadata
-- Approval workflow (Draft → Pending Review → Approved → Published)
-- Version control
-- Mandatory acknowledgments
-
-### Training System
-- Create training modules with content blocks
-- Quiz builder (MCQ, true/false, fill-in-the-blank)
-- Assign to users, departments, properties, or all
-- Progress tracking and certificates
-
-### Notifications
-- In-app notifications via Supabase Realtime
-- Email notifications via Resend Edge Function
-- User preferences for notification types
-
-### Audit & Compliance
-- Comprehensive audit logging
-- PII access tracking
-- Retention policies (3 years audit, 7 years PII)
-
-### Approval Engine
-- Multi-level approval chains
-- Temporary approver delegation
-- Auto-escalation after threshold
-- Approval history tracking
+- **Frontend**: React 18, TypeScript, Vite
+- **UI Framework**: Tailwind CSS, Shadcn UI
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Realtime)
+- **Internationalization**: react-i18next
+- **Notifications**: Resend Email API
+- **PDF Rendering**: react-pdf
+- **Date Handling**: date-fns with locale support
 
 ## Security
 
 - Row Level Security (RLS) policies on all tables
-- Role-based access control
+- Role-based access control at database level
 - Secure password handling via Supabase Auth
-- Audit logging for compliance
+- Comprehensive audit logging for compliance
+- PII access tracking and retention policies
+- Security advisor recommendations built-in
+
+## Deployment
+
+The application is designed for deployment on:
+- **Frontend**: Netlify, Vercel, or similar
+- **Backend**: Supabase managed service
+- **Edge Functions**: Supabase Edge Runtime
 
 ## License
 
 Private - Prime Hotels Internal Use Only
+
+## Support
+
+For internal support, contact the IT department or HR administration.
