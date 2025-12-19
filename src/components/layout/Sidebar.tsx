@@ -31,6 +31,9 @@ import {
   Bell,
   AlertCircle,
   ShieldAlert,
+  Star,
+  Wallet,
+  Clock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -40,9 +43,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useBadgeCount } from '@/hooks/useSidebarCounts'
+
+function HRBadge({ path }: { path: string }) {
+  const count = useBadgeCount(path)
+  if (!count) return null
+  return (
+    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold ring-2 ring-background">
+      {count}
+    </span>
+  )
+}
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['all'] },
+  { name: 'My Team', href: '/dashboard/my-team', icon: Users, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
   { name: 'Documents', href: '/documents', icon: FileText, roles: ['all'] },
   { name: 'Maintenance', href: '/maintenance', icon: Wrench, roles: ['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin'] },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, roles: ['all'] },
@@ -55,6 +70,13 @@ const navigation = [
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
   { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
   { name: 'Automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
+]
+
+const hrMenu = [
+  { name: 'Attendance', href: '/hr/attendance', icon: Clock, roles: ['all'] },
+  { name: 'Performance', href: '/hr/performance', icon: Star, roles: ['all'] },
+  { name: 'Career Goals', href: '/hr/goals', icon: Target, roles: ['all'] },
+  { name: 'Payroll', href: '/hr/payslips', icon: Wallet, roles: ['all'] },
 ]
 
 const trainingMenu = [
@@ -72,10 +94,12 @@ export function Sidebar() {
   const { primaryRole, signOut } = useAuth()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const [isTrainingMenuOpen, setIsTrainingMenuOpen] = useState(false)
+  const [isHRMenuOpen, setIsHRMenuOpen] = useState(false)
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
 
   const adminMenu = [
     { name: 'Users', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
+    { name: 'Org Structure', href: '/admin/organization', icon: Target, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
     { name: 'Properties', href: '/admin/properties', icon: Building, roles: ['regional_admin'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
     { name: 'Automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
@@ -112,6 +136,10 @@ export function Sidebar() {
 
   // Check if any admin route is active
   const isAdminRouteActive = filteredAdminMenu.some(item =>
+    location.pathname === item.href || location.pathname.startsWith(item.href + '/')
+  )
+
+  const isHRRouteActive = hrMenu.some(item =>
     location.pathname === item.href || location.pathname.startsWith(item.href + '/')
   )
 
@@ -250,6 +278,127 @@ export function Sidebar() {
             </AnimatePresence>
           </div>
         )}
+
+        {/* Administration Menu */}
+        {filteredAdminMenu.length > 0 && (
+          <div className="pt-2">
+            <button
+              onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                isAdminRouteActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              )}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="flex-1 text-start">Administration</span>
+              <ChevronRight className={cn("w-4 h-4 transition-transform duration-200", isAdminMenuOpen && "rotate-90")} />
+            </button>
+
+            <AnimatePresence>
+              {isAdminMenuOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: DURATION.MEDIUM, ease: EASING.DEFAULT as any }}
+                  className="overflow-hidden"
+                >
+                  <div className="ms-4 mt-1 space-y-1 border-l-2 border-muted pl-2">
+                    {filteredAdminMenu.map((item) => {
+                      const Icon = item.icon
+                      const isActive = location.pathname === item.href
+
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                            isActive
+                              ? 'bg-primary/10 text-primary font-semibold'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                          )}
+                        >
+                          <motion.div
+                            whileHover={{ scale: 1.1, x: 2 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </motion.div>
+                          {item.name}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* HR Menu */}
+        <div className="pt-2">
+          <button
+            onClick={() => setIsHRMenuOpen(!isHRMenuOpen)}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              isHRRouteActive
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            )}
+          >
+            <Users className="w-4 h-4" />
+            <span className="flex-1 text-start">My HR</span>
+            <ChevronRight className={cn("w-4 h-4 transition-transform duration-200", isHRMenuOpen && "rotate-90")} />
+          </button>
+
+          <AnimatePresence>
+            {isHRMenuOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: DURATION.MEDIUM, ease: EASING.DEFAULT as any }}
+                className="overflow-hidden"
+              >
+                <div className="ms-4 mt-1 space-y-1 border-l-2 border-muted pl-2">
+                  {hrMenu.map((item) => {
+                    const Icon = item.icon
+                    const isActive = location.pathname === item.href
+                    // Simple inline hook usage might not work inside map if not careful with Rules of Hooks, 
+                    // but Sidebar already uses hooks. We need a way to get counts for all.
+                    // Actually useBadgeCount is a hook, so it MUST be called at top level or 
+                    // we need a different approach for the map.
+
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative',
+                          isActive
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        )}
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1, x: 2 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </motion.div>
+                        <span className="flex-1">{item.name}</span>
+                        <HRBadge path={item.href} />
+                      </Link>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Administration Menu */}
         {filteredAdminMenu.length > 0 && (

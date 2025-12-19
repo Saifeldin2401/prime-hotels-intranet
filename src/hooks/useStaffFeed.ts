@@ -297,6 +297,164 @@ export function useStaffFeed() {
                 })
             })
 
+            // 8. Fetch recent payslips
+            const { data: payslips } = await supabase
+                .from('payslips')
+                .select('*')
+                .eq('employee_id', user.id)
+                .order('period_end', { ascending: false })
+                .limit(1)
+
+            payslips?.forEach((p: any) => {
+                const periodDate = new Date(p.period_end)
+                const isRecent = periodDate > thirtyDaysAgo
+                if (isRecent) {
+                    feedItems.push({
+                        id: `pay-${p.id}`,
+                        type: 'announcement',
+                        author: {
+                            id: 'system',
+                            name: 'Payroll Dept',
+                            email: '',
+                            avatar: null,
+                            role: 'property_hr',
+                            department: 'Finance',
+                            property: 'System',
+                            permissions: []
+                        },
+                        title: `💰 New Payslip Available`,
+                        content: `Your payslip for the period ending ${periodDate.toLocaleDateString()} has been generated.`,
+                        timestamp: new Date(p.created_at || p.period_end),
+                        reactions: {},
+                        comments: [],
+                        actionButton: {
+                            text: 'View Payslip',
+                            onClick: () => window.location.href = `/hr/payslips`
+                        }
+                    })
+                }
+            })
+
+            // 9. Fetch recent performance reviews
+            const { data: recentReviews } = await supabase
+                .from('performance_reviews')
+                .select('*')
+                .eq('employee_id', user.id)
+                .order('review_date', { ascending: false })
+                .limit(1)
+
+            recentReviews?.forEach((r: any) => {
+                const reviewDate = new Date(r.review_date)
+                const isRecent = reviewDate > thirtyDaysAgo
+                if (isRecent) {
+                    feedItems.push({
+                        id: `rev-${r.id}`,
+                        type: 'recognition',
+                        author: {
+                            id: r.reviewer_id || 'system',
+                            name: 'Performance Review',
+                            email: '',
+                            avatar: null,
+                            role: 'property_manager',
+                            department: 'Management',
+                            property: 'System',
+                            permissions: []
+                        },
+                        title: `⭐ New Performance Review`,
+                        content: `A new performance review from ${reviewDate.toLocaleDateString()} has been posted.`,
+                        timestamp: new Date(r.created_at || r.review_date),
+                        reactions: {},
+                        comments: [],
+                        actionButton: {
+                            text: 'View Review',
+                            onClick: () => window.location.href = `/hr/performance`
+                        }
+                    })
+                }
+            })
+
+            // 10. Fetch recent attendance (last 24h)
+            const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+            const { data: attendance } = await supabase
+                .from('attendance')
+                .select('*')
+                .eq('employee_id', user.id)
+                .gte('check_in', twentyFourHoursAgo.toISOString())
+                .order('check_in', { ascending: false })
+                .limit(2)
+
+            attendance?.forEach((a: any) => {
+                feedItems.push({
+                    id: `att-in-${a.id}`,
+                    type: 'announcement',
+                    author: { id: user.id, name: 'You', email: '', avatar: null, role: 'staff', department: '', property: '', permissions: [] },
+                    title: `⏰ Shift Started`,
+                    content: `You clocked in at ${new Date(a.check_in).toLocaleTimeString()}.`,
+                    timestamp: new Date(a.check_in),
+                    reactions: {},
+                    comments: []
+                })
+                if (a.check_out) {
+                    feedItems.push({
+                        id: `att-out-${a.id}`,
+                        type: 'announcement',
+                        author: { id: user.id, name: 'You', email: '', avatar: null, role: 'staff', department: '', property: '', permissions: [] },
+                        title: `🏁 Shift Ended`,
+                        content: `You clocked out at ${new Date(a.check_out).toLocaleTimeString()}.`,
+                        timestamp: new Date(a.check_out),
+                        reactions: {},
+                        comments: []
+                    })
+                }
+            })
+
+            // 11. Fetch recent earned certificates
+            const { data: myCerts } = await supabase
+                .from('certificates')
+                .select('*')
+                .eq('user_id', user.id)
+                .gte('created_at', thirtyDaysAgo.toISOString())
+                .order('created_at', { ascending: false })
+
+            myCerts?.forEach((c: any) => {
+                feedItems.push({
+                    id: `cert-${c.id}`,
+                    type: 'recognition',
+                    author: { id: 'system', name: 'Certification', email: '', avatar: null, role: 'property_hr', department: 'HR', property: '', permissions: [] },
+                    title: `🎓 Graduation: ${c.title}`,
+                    content: `Congratulations! You've earned a new certificate.`,
+                    timestamp: new Date(c.created_at),
+                    reactions: {},
+                    comments: [],
+                    actionButton: {
+                        text: 'View Certificate',
+                        onClick: () => window.location.href = `/profile`
+                    }
+                })
+            })
+
+            // 12. Fetch recently completed goals
+            const { data: recentGoals } = await supabase
+                .from('goals')
+                .select('*')
+                .eq('employee_id', user.id)
+                .eq('status', 'completed')
+                .gte('updated_at', thirtyDaysAgo.toISOString())
+                .order('updated_at', { ascending: false })
+
+            recentGoals?.forEach((g: any) => {
+                feedItems.push({
+                    id: `goal-comp-${g.id}`,
+                    type: 'recognition',
+                    author: { id: user.id, name: 'You', email: '', avatar: null, role: 'staff', department: '', property: '', permissions: [] },
+                    title: `🎯 Goal Achieved: ${g.title}`,
+                    content: `You've successfully completed a career milestone!`,
+                    timestamp: new Date(g.updated_at),
+                    reactions: {},
+                    comments: []
+                })
+            })
+
             // Sort by timestamp desc
             return feedItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
         },

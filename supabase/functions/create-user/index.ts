@@ -33,7 +33,8 @@ Deno.serve(async (req: Request) => {
             jobTitle,
             role,
             propertyIds = [],
-            departmentIds = []
+            departmentIds = [],
+            reportingTo
         } = body;
 
         if (!email || !fullName) {
@@ -43,7 +44,7 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        console.log(`Creating user: ${email}, jobTitle: ${jobTitle}, role: ${role}`);
+        console.log(`Creating user: ${email}, jobTitle: ${jobTitle}, role: ${role}, reportingTo: ${reportingTo}`);
 
         // 1. Create Auth User
         let authData, authError;
@@ -72,7 +73,7 @@ Deno.serve(async (req: Request) => {
         const userId = authData.user!.id;
         console.log(`User created: ${userId}`);
 
-        // 2. Update Profile (Job Title, Phone, Active)
+        // 2. Update Profile (Job Title, Phone, Active, Reporting To)
         // Retry logic could be added here if trigger is slow, but usually it's immediate within transaction or shortly after
         const { error: profileError } = await adminClient
             .from('profiles')
@@ -81,7 +82,8 @@ Deno.serve(async (req: Request) => {
                 phone: phone || null,
                 job_title: jobTitle || null,
                 is_active: true,
-                is_temp_password: true // FORCE PASSWORD CHANGE ON FIRST LOGIN
+                is_temp_password: true, // FORCE PASSWORD CHANGE ON FIRST LOGIN
+                reporting_to: reportingTo || null
             })
             .eq('id', userId);
 
@@ -133,7 +135,11 @@ Deno.serve(async (req: Request) => {
         }
 
         return new Response(
-            JSON.stringify({ userId: userId, success: true }),
+            JSON.stringify({
+                userId: userId,
+                success: true,
+                tempPassword: "TempPassword123!" // Match the password set above
+            }),
             {
                 status: 200,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },

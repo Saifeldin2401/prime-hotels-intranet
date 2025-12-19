@@ -9,6 +9,7 @@ interface DashboardStats {
     upcomingEvents: number
     nextEvent: string | null
     performanceScore: number
+    requiredReading: number
 }
 
 export function useStaffDashboardStats() {
@@ -24,7 +25,8 @@ export function useStaffDashboardStats() {
                     trainingProgress: 0,
                     upcomingEvents: 0,
                     nextEvent: null,
-                    performanceScore: 0
+                    performanceScore: 0,
+                    requiredReading: 0
                 }
             }
 
@@ -82,7 +84,21 @@ export function useStaffDashboardStats() {
                 ? upcomingShifts[0].shift_type || 'Shift'
                 : null
 
-            // Calculate performance score (based on completed tasks and training)
+            // Calculate performance score (based on completed tasks, training, and actual performance reviews)
+            const { data: reviews } = await supabase
+                .from('performance_reviews')
+                .select('rating')
+                .eq('employee_id', user.id)
+                .order('review_date', { ascending: false })
+                .limit(3)
+
+            const avgRating = reviews && reviews.length > 0
+                ? reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / reviews.length
+                : 0 // Default to 0 if no reviews
+
+            // Normalize rating to percentage (assuming rating is 1-5)
+            const ratingScore = (avgRating / 5) * 100
+
             const { data: completedTasks } = await supabase
                 .from('tasks')
                 .select('id')
@@ -98,9 +114,17 @@ export function useStaffDashboardStats() {
                 ? (completedTasks?.length || 0) / allTasks.length
                 : 0
 
+            // Weighting: 40% Rating, 30% Tasks, 30% Training
             const performanceScore = Math.round(
-                (taskCompletionRate * 0.6 + (trainingProgress / 100) * 0.4) * 100
+                (ratingScore * 0.4 + taskCompletionRate * 0.3 + (trainingProgress / 100) * 0.3) * 100
             )
+
+            // Fetch required reading (pending SOPs)
+            const { count: requiredReading } = await supabase
+                .from('document_acknowledgments')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .is('acknowledged_at', null)
 
             return {
                 todaysTasks: todayTasks?.length || 0,
@@ -108,7 +132,8 @@ export function useStaffDashboardStats() {
                 trainingProgress,
                 upcomingEvents: upcomingShifts?.length || 0,
                 nextEvent,
-                performanceScore
+                performanceScore,
+                requiredReading: requiredReading || 0
             }
         },
         enabled: !!user?.id,

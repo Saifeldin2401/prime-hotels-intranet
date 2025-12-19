@@ -25,6 +25,7 @@ export interface SidebarCounts {
     unreadMessages: number
     pendingTraining: number
     requiredReading: number
+    activeGoals: number
 }
 
 export function useSidebarCounts() {
@@ -115,6 +116,7 @@ export function useSidebarCounts() {
                     unreadMessages: 0,
                     pendingTraining: 0,
                     requiredReading: 0,
+                    activeGoals: 0,
                 }
             }
 
@@ -195,6 +197,7 @@ export function useSidebarCounts() {
                 tasksResult,
                 messagesResult,
                 trainingResult,
+                goalsResult,
             ] = await Promise.allSettled([
                 // Unread notifications count (always user-specific)
                 supabase
@@ -222,6 +225,13 @@ export function useSidebarCounts() {
                     .select('id', { count: 'exact', head: true })
                     .eq('user_id', user.id)
                     .in('status', ['not_started', 'in_progress']),
+
+                // Pending goals
+                supabase
+                    .from('goals')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('employee_id', user.id)
+                    .neq('status', 'completed'),
             ])
 
             // Extract counts from results, defaulting to 0 on error
@@ -238,6 +248,7 @@ export function useSidebarCounts() {
                 overdueTasks: extractCount(tasksResult),
                 unreadMessages: extractCount(messagesResult),
                 pendingTraining: extractCount(trainingResult),
+                activeGoals: extractCount(goalsResult),
                 requiredReading: 0, // Will be populated from useRequiredReading hook directly
             }
         },
@@ -259,6 +270,7 @@ export function useBadgeCount(navPath: string): number | undefined {
         '/messaging': counts.unreadMessages,
         '/learning/my': counts.pendingTraining,
         '/knowledge': counts.requiredReading,
+        '/hr/goals': counts.activeGoals,
     }
 
     const count = pathCountMap[navPath]

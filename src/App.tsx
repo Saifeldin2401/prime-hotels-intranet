@@ -25,7 +25,9 @@ import { DepartmentHeadDashboard } from '@/pages/dashboard/DepartmentHeadDashboa
 import { AreaManagerDashboard } from '@/pages/dashboard/AreaManagerDashboard'
 import { CorporateAdminDashboard } from '@/pages/dashboard/CorporateAdminDashboard'
 import DepartmentDetails from '@/pages/dashboard/DepartmentDetails'
+import MyTeam from '@/pages/dashboard/MyTeam'
 import UserManagement from '@/pages/admin/UserManagement'
+import OrganizationalControlCenter from '@/pages/admin/OrganizationalControlCenter'
 import JobTitles from '@/pages/admin/JobTitles'
 import PropertyManagement from '@/pages/admin/PropertyManagement'
 import PropertyDetails from '@/pages/dashboard/PropertyDetails'
@@ -63,6 +65,7 @@ import TaskDetail from '@/pages/tasks/TaskDetail'
 import MessagingDashboard from '@/pages/messaging/MessagingDashboard'
 import MessageDetail from '@/pages/messaging/MessageDetail'
 import MyProfile from '@/pages/profile/MyProfile'
+import UserProfile from '@/pages/profile/UserProfile'
 import Settings from '@/pages/settings/Settings'
 import ApprovalsDashboard from '@/pages/approvals/ApprovalsDashboard'
 import EmployeeDirectory from '@/pages/directory/EmployeeDirectory'
@@ -77,6 +80,10 @@ import PromotionTransferHistory from '@/pages/hr/PromotionTransferHistory'
 import RequestDetail from '@/pages/hr/RequestDetail'
 import RequestsInbox from '@/pages/hr/RequestsInbox'
 import HROperationsCenter from '@/pages/hr/HROperationsCenter'
+import MyAttendance from '@/pages/hr/MyAttendance'
+import MyPerformance from '@/pages/hr/MyPerformance'
+import MyGoals from '@/pages/hr/MyGoals'
+import MyPayslips from '@/pages/hr/MyPayslips'
 
 import KnowledgeHome from '@/pages/knowledge/KnowledgeHome'
 import KnowledgeViewer from '@/pages/knowledge/KnowledgeViewer'
@@ -163,6 +170,48 @@ function AppRoutes() {
         path="/login"
         element={user ? <Navigate to="/home" replace /> : <Login />}
       />
+
+      {/* NEW HR ROUTES */}
+      <Route
+        path="/hr/attendance"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MyAttendance />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/performance"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MyPerformance />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/goals"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MyGoals />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/payslips"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MyPayslips />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/forgot-password"
         element={user ? <Navigate to="/home" replace /> : <ForgotPassword />}
@@ -191,6 +240,18 @@ function AppRoutes() {
             <AppLayout>
               <MotionWrapper>
                 <MyProfile />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MotionWrapper>
+                <UserProfile />
               </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
@@ -423,6 +484,30 @@ function AppRoutes() {
           <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
             <AppLayout>
               <PIIAuditViewer />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/organization"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+            <AppLayout>
+              <MotionWrapper>
+                <OrganizationalControlCenter />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/my-team"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+            <AppLayout>
+              <MotionWrapper>
+                <MyTeam />
+              </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
         }

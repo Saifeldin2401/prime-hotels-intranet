@@ -1,5 +1,6 @@
 {
     "dashboard": "Dashboard",
+    "my_team": "My Team",
     "home": "Home",
     "my_work": "My Work",
     "operations": "Operations",
@@ -49,6 +50,10 @@
     "search": "Search",
     "search_placeholder": "Search documents, staff, tasks...",
     "logout": "Logout",
+    "attendance": "Attendance",
+    "performance": "Performance",
+    "goals": "Career Goals",
+    "payslips": "Payslips",
     "groups": {
         "home": "Home",
         "my_work": "My Work",
@@ -58,6 +63,7 @@
         "question_bank": "Question Bank",
         "operations": "Operations",
         "hr_management": "HR Management",
+        "my_hr": "My HR",
         "communication": "Communication",
         "admin": "Administration",
         "settings": "Settings"
