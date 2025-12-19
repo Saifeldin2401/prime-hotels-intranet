@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
 import { useStaffFeed } from '@/hooks/useStaffFeed'
 import { ListSkeleton } from '@/components/loading/ListSkeleton'
@@ -38,6 +39,22 @@ export function StaffDashboard() {
   const { data: schedule, isLoading: scheduleLoading } = useUserSchedule()
   const { t, i18n } = useTranslation(['dashboard', 'common'])
   const isRTL = i18n.dir() === 'rtl'
+
+  // Animation variants
+  const container: any = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  }
+
+  const item: any = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+  }
 
   // Create a compatible user object for SocialFeed
   const currentUser = user ? {
@@ -122,9 +139,14 @@ export function StaffDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={container}
+      className="space-y-6"
+    >
       {/* Welcome Header */}
-      <div className="prime-card">
+      <motion.div variants={item} className="prime-card">
         <div className="prime-card-header">
           <h1 className="text-xl font-semibold">{t('staff.welcome_back', { name: profile?.full_name || user?.email })}</h1>
         </div>
@@ -151,10 +173,10 @@ export function StaffDashboard() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+      <motion.div variants={item} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
         <div className="prime-card">
           <div className="prime-card-body p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between">
@@ -220,12 +242,15 @@ export function StaffDashboard() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Quick Actions */}
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
-        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/tasks'}>
+      <motion.div variants={item} className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+        <motion.div
+          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer"
+          onClick={() => window.location.href = '/tasks'}
+        >
           <div className="prime-card-body p-6">
             <div className="text-center">
               <div className="h-14 w-14 rounded-full bg-hotel-gold/10 group-hover:bg-hotel-gold/20 flex items-center justify-center mx-auto mb-3 transition-colors">
@@ -235,9 +260,13 @@ export function StaffDashboard() {
               <p className="text-xs text-gray-500">{t('staff.quick_actions.track_work_hours')}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/documents'}>
+        <motion.div
+          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer"
+          onClick={() => window.location.href = '/documents'}
+        >
           <div className="prime-card-body p-6">
             <div className="text-center">
               <div className="h-14 w-14 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mx-auto mb-3 transition-colors">
@@ -247,9 +276,13 @@ export function StaffDashboard() {
               <p className="text-xs text-gray-500">{t('staff.quick_actions.access_policies')}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/hr/leave'}>
+        <motion.div
+          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer"
+          onClick={() => window.location.href = '/hr/leave'}
+        >
           <div className="prime-card-body p-6">
             <div className="text-center">
               <div className="h-14 w-14 rounded-full bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center mx-auto mb-3 transition-colors">
@@ -259,9 +292,13 @@ export function StaffDashboard() {
               <p className="text-xs text-gray-500">{t('staff.quick_actions.submit_requests')}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => window.location.href = '/learning/my'}>
+        <motion.div
+          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer"
+          onClick={() => window.location.href = '/learning/my'}
+        >
           <div className="prime-card-body p-6">
             <div className="text-center">
               <div className="h-14 w-14 rounded-full bg-green-50 group-hover:bg-green-100 flex items-center justify-center mx-auto mb-3 transition-colors">
@@ -271,7 +308,7 @@ export function StaffDashboard() {
               <p className="text-xs text-gray-500">{t('staff.quick_actions.complete_training')}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Promotion Action - Only for HR/Managers */}
         {['regional_admin', 'property_manager', 'property_hr', 'regional_hr'].includes(currentUser?.role || '') && (
@@ -279,7 +316,7 @@ export function StaffDashboard() {
             // Ideally refresh data here
             window.location.reload();
           }}>
-            <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer">
+            <motion.div whileHover={{ y: -4, transition: { duration: 0.2 } }} className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer w-full">
               <div className="prime-card-body p-6">
                 <div className="text-center">
                   <div className="h-14 w-14 rounded-full bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center mx-auto mb-3 transition-colors">
@@ -289,7 +326,7 @@ export function StaffDashboard() {
                   <p className="text-xs text-gray-500">{t('staff.quick_actions.manage_promotions')}</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </PromoteEmployeeDialog>
         )}
 
@@ -298,7 +335,7 @@ export function StaffDashboard() {
           <TransferEmployeeDialog onSuccess={() => {
             window.location.reload();
           }}>
-            <div className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer">
+            <motion.div whileHover={{ y: -4, transition: { duration: 0.2 } }} className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer w-full">
               <div className="prime-card-body p-6">
                 <div className="text-center">
                   <div className="h-14 w-14 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mx-auto mb-3 transition-colors">
@@ -308,136 +345,138 @@ export function StaffDashboard() {
                   <p className="text-xs text-gray-500">{t('staff.quick_actions.cross_property_moves')}</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </TransferEmployeeDialog>
         )}
-      </div>
+      </motion.div>
 
       {/* Knowledge & Quiz Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <KnowledgeWidget />
         <DailyQuizWidget />
-      </div>
+      </motion.div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="feed" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 h-auto">
-          <TabsTrigger value="feed" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.activity_feed')}</TabsTrigger>
-          <TabsTrigger value="tasks" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.my_tasks')}</TabsTrigger>
-          <TabsTrigger value="schedule" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.schedule')}</TabsTrigger>
-        </TabsList>
+      <motion.div variants={item}>
+        <Tabs defaultValue="feed" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="feed" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.activity_feed')}</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.my_tasks')}</TabsTrigger>
+            <TabsTrigger value="schedule" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.schedule')}</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="feed" className="space-y-4">
-          <div className="prime-card">
-            <div className="prime-card-header">
-              <h3 className="text-lg font-semibold">{t('staff.recent_activity')}</h3>
+          <TabsContent value="feed" className="space-y-4">
+            <div className="prime-card">
+              <div className="prime-card-header">
+                <h3 className="text-lg font-semibold">{t('staff.recent_activity')}</h3>
+              </div>
+              <div className="prime-card-body">
+                {currentUser && (
+                  <SocialFeed
+                    user={currentUser}
+                    feedItems={feedItems}
+                    onReact={handleReact}
+                    onComment={handleComment}
+                    onShare={handleShare}
+                  />
+                )}
+              </div>
             </div>
-            <div className="prime-card-body">
-              {currentUser && (
-                <SocialFeed
-                  user={currentUser}
-                  feedItems={feedItems}
-                  onReact={handleReact}
-                  onComment={handleComment}
-                  onShare={handleShare}
-                />
-              )}
-            </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="tasks" className="space-y-4">
-          <EnhancedCard variant="default" padding="lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('staff.your_tasks')}</h3>
-            {tasks && tasks.length > 0 ? (
-              <div className="space-y-3">
-                {tasks.map(task => {
-                  const priorityColors = {
-                    critical: { dot: 'bg-red-600', badge: 'destructive' as const },
-                    urgent: { dot: 'bg-red-500', badge: 'destructive' as const },
-                    high: { dot: 'bg-yellow-500', badge: 'warning' as const },
-                    medium: { dot: 'bg-blue-500', badge: 'default' as const },
-                    low: { dot: 'bg-green-500', badge: 'success' as const }
-                  }
-                  const colors = priorityColors[task.priority] || priorityColors.medium
-                  const dueDate = new Date(task.due_date)
-                  const isToday = dueDate.toDateString() === new Date().toDateString()
-                  const isTomorrow = dueDate.toDateString() === new Date(Date.now() + 86400000).toDateString()
+          <TabsContent value="tasks" className="space-y-4">
+            <EnhancedCard variant="default" padding="lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('staff.your_tasks')}</h3>
+              {tasks && tasks.length > 0 ? (
+                <div className="space-y-3">
+                  {tasks.map(task => {
+                    const priorityColors = {
+                      critical: { dot: 'bg-red-600', badge: 'destructive' as const },
+                      urgent: { dot: 'bg-red-500', badge: 'destructive' as const },
+                      high: { dot: 'bg-yellow-500', badge: 'warning' as const },
+                      medium: { dot: 'bg-blue-500', badge: 'default' as const },
+                      low: { dot: 'bg-green-500', badge: 'success' as const }
+                    }
+                    const colors = priorityColors[task.priority] || priorityColors.medium
+                    const dueDate = new Date(task.due_date)
+                    const isToday = dueDate.toDateString() === new Date().toDateString()
+                    const isTomorrow = dueDate.toDateString() === new Date(Date.now() + 86400000).toDateString()
 
-                  return (
-                    <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className={`h-2 w-2 rounded-full ${colors.dot}`}></div>
-                        <div>
-                          <p className="font-medium text-gray-900">{task.title}</p>
-                          <p className="text-sm text-gray-500">
-                            {isToday ? t('staff.due_today') : isTomorrow ? t('staff.due_tomorrow') : t('staff.due_date', { date: dueDate.toLocaleDateString() })}
-                          </p>
+                    return (
+                      <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-2 w-2 rounded-full ${colors.dot}`}></div>
+                          <div>
+                            <p className="font-medium text-gray-900">{task.title}</p>
+                            <p className="text-sm text-gray-500">
+                              {isToday ? t('staff.due_today') : isTomorrow ? t('staff.due_tomorrow') : t('staff.due_date', { date: dueDate.toLocaleDateString() })}
+                            </p>
+                          </div>
                         </div>
+                        <EnhancedBadge variant={colors.badge} size="sm">
+                          {t(`common:priority.${task.priority}`, task.priority)}
+                        </EnhancedBadge>
                       </div>
-                      <EnhancedBadge variant={colors.badge} size="sm">
-                        {t(`common:priority.${task.priority}`, task.priority)}
-                      </EnhancedBadge>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">{t('staff.no_tasks')}</p>
-            )}
-          </EnhancedCard>
-        </TabsContent>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">{t('staff.no_tasks')}</p>
+              )}
+            </EnhancedCard>
+          </TabsContent>
 
-        <TabsContent value="schedule" className="space-y-4">
-          <EnhancedCard variant="default" padding="lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('staff.weeks_schedule')}</h3>
-            {schedule && schedule.length > 0 ? (
-              <div className="space-y-3">
-                {schedule.map(item => {
-                  const typeColors = {
-                    shift: { border: 'border-blue-500', bg: 'bg-blue-50', badge: 'default' as const },
-                    meeting: { border: 'border-gray-300', bg: 'bg-gray-50', badge: 'secondary' as const },
-                    training: { border: 'border-green-500', bg: 'bg-green-50', badge: 'success' as const }
-                  }
-                  const colors = typeColors[item.type] || typeColors.shift
-                  const startDate = new Date(item.start_time)
-                  const endDate = new Date(item.end_time)
-                  const isToday = startDate.toDateString() === new Date().toDateString()
-                  const isTomorrow = startDate.toDateString() === new Date(Date.now() + 86400000).toDateString()
+          <TabsContent value="schedule" className="space-y-4">
+            <EnhancedCard variant="default" padding="lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('staff.weeks_schedule')}</h3>
+              {schedule && schedule.length > 0 ? (
+                <div className="space-y-3">
+                  {schedule.map(item => {
+                    const typeColors = {
+                      shift: { border: 'border-blue-500', bg: 'bg-blue-50', badge: 'default' as const },
+                      meeting: { border: 'border-gray-300', bg: 'bg-gray-50', badge: 'secondary' as const },
+                      training: { border: 'border-green-500', bg: 'bg-green-50', badge: 'success' as const }
+                    }
+                    const colors = typeColors[item.type] || typeColors.shift
+                    const startDate = new Date(item.start_time)
+                    const endDate = new Date(item.end_time)
+                    const isToday = startDate.toDateString() === new Date().toDateString()
+                    const isTomorrow = startDate.toDateString() === new Date(Date.now() + 86400000).toDateString()
 
-                  const timeString = `${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} - ${endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-                  const dateString = isToday ? t('staff.today') : isTomorrow ? t('staff.tomorrow') : startDate.toLocaleDateString('en-US', { weekday: 'long' })
+                    const timeString = `${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} - ${endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+                    const dateString = isToday ? t('staff.today') : isTomorrow ? t('staff.tomorrow') : startDate.toLocaleDateString('en-US', { weekday: 'long' })
 
-                  return (
-                    <div key={item.id} className={cn(
-                      "flex items-center justify-between p-3 rounded-r-lg",
-                      colors.bg,
-                      isRTL ? "border-r-4 rounded-r-none rounded-l-lg" : "border-l-4 rounded-l-none rounded-r-lg",
-                      isRTL ? `border-r-${colors.border.split('-')[1]}-500` : colors.border // Adjusting border logic is tricky with full class strings, simpler to just rely on border-s/e logic if possible or conditional classes
-                    )}
-                      style={{
-                        borderLeftWidth: isRTL ? '0' : '4px',
-                        borderRightWidth: isRTL ? '4px' : '0',
-                        borderColor: colors.border === 'border-blue-500' ? '#3b82f6' : colors.border === 'border-green-500' ? '#22c55e' : '#d1d5db'
-                      }}
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">{item.title}</p>
-                        <p className="text-sm text-gray-500">{dateString}, {timeString}</p>
+                    return (
+                      <div key={item.id} className={cn(
+                        "flex items-center justify-between p-3 rounded-r-lg",
+                        colors.bg,
+                        isRTL ? "border-r-4 rounded-r-none rounded-l-lg" : "border-l-4 rounded-l-none rounded-r-lg",
+                        isRTL ? `border-r-${colors.border.split('-')[1]}-500` : colors.border // Adjusting border logic is tricky with full class strings, simpler to just rely on border-s/e logic if possible or conditional classes
+                      )}
+                        style={{
+                          borderLeftWidth: isRTL ? '0' : '4px',
+                          borderRightWidth: isRTL ? '4px' : '0',
+                          borderColor: colors.border === 'border-blue-500' ? '#3b82f6' : colors.border === 'border-green-500' ? '#22c55e' : '#d1d5db'
+                        }}
+                      >
+                        <div>
+                          <p className="font-medium text-gray-900">{item.title}</p>
+                          <p className="text-sm text-gray-500">{dateString}, {timeString}</p>
+                        </div>
+                        <EnhancedBadge variant={colors.badge} size="sm">
+                          {t(`common:schedule_types.${item.type}`, item.type)}
+                        </EnhancedBadge>
                       </div>
-                      <EnhancedBadge variant={colors.badge} size="sm">
-                        {t(`common:schedule_types.${item.type}`, item.type)}
-                      </EnhancedBadge>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">{t('staff.no_schedule')}</p>
-            )}
-          </EnhancedCard>
-        </TabsContent>
-      </Tabs>
-    </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">{t('staff.no_schedule')}</p>
+              )}
+            </EnhancedCard>
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+    </motion.div>
   )
 }
