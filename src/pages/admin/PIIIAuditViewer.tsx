@@ -208,12 +208,12 @@ export function PIIAuditViewer() {
 
             <div>
               <Label htmlFor="resource-type">{t('pii_audit.resource_type')}</Label>
-              <Select value={filters.resource_type} onValueChange={(value) => setFilters(prev => ({ ...prev, resource_type: value }))}>
+              <Select value={filters.resource_type || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, resource_type: value === 'all' ? '' : value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder={t('pii_audit.all_types')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('pii_audit.all_types')}</SelectItem>
+                  <SelectItem value="all">{t('pii_audit.all_types')}</SelectItem>
                   <SelectItem value="profile">{t('pii_audit.resource_types.profile')}</SelectItem>
                   <SelectItem value="document">{t('pii_audit.resource_types.document')}</SelectItem>
                   <SelectItem value="leave_request">{t('pii_audit.resource_types.leave_request')}</SelectItem>
@@ -226,12 +226,12 @@ export function PIIAuditViewer() {
 
             <div>
               <Label htmlFor="access-type">{t('pii_audit.access_type')}</Label>
-              <Select value={filters.access_type} onValueChange={(value) => setFilters(prev => ({ ...prev, access_type: value }))}>
+              <Select value={filters.access_type || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, access_type: value === 'all' ? '' : value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder={t('pii_audit.all_types')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('pii_audit.all_types')}</SelectItem>
+                  <SelectItem value="all">{t('pii_audit.all_types')}</SelectItem>
                   <SelectItem value="view">{t('pii_audit.access_types.view')}</SelectItem>
                   <SelectItem value="edit">{t('pii_audit.access_types.edit')}</SelectItem>
                   <SelectItem value="download">{t('pii_audit.access_types.download')}</SelectItem>
