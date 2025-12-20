@@ -61,6 +61,7 @@
     "job_titles": "المسميات الوظيفية",
     "reports": "التقارير",
     "audit_logs": "سجلات التدقيق",
+    "pii_access_logs": "سجلات الوصول للبيانات الشخصية",
     "escalation_rules": "قواعد التصعيد",
     "my_training": "تدريبي",
     "my_certificates": "شهاداتي",

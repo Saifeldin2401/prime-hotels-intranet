@@ -42,6 +42,7 @@
     "notification_batches": "Notification Batches",
     "reports": "Reports",
     "audit_logs": "Audit Logs",
+    "pii_access_logs": "PII Access Logs",
     "escalation_rules": "Escalation",
     "onboarding_tracker": "Onboarding Tracker",
     "promotion_history": "Promotion History",

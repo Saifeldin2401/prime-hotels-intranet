@@ -665,6 +665,15 @@ export const ROUTES: RouteConfig[] = [
         order: 5
     },
     {
+        path: '/admin/pii-access',
+        title: 'pii_access_logs',
+        icon: Shield,
+        description: 'PII access tracking and compliance',
+        allowedRoles: ['regional_admin', 'regional_hr'],
+        group: 'administration',
+        order: 5.5
+    },
+    {
         path: '/admin/escalation',
         title: 'escalation_rules',
         icon: Bell,

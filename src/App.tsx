@@ -449,6 +449,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/pii-access"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
+            <AppLayout>
+              <PIIAuditViewer />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/escalation"
         element={
           <ProtectedRoute allowedRoles={['regional_admin']}>
