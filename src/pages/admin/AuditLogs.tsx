@@ -67,7 +67,7 @@ export default function AuditLogs() {
 
       if (dateRange !== 'all') {
         const now = new Date()
-        let startDate = new Date()
+        const startDate = new Date()
 
         switch (dateRange) {
           case 'today':
@@ -111,7 +111,15 @@ export default function AuditLogs() {
     if (!logs) return
 
     const csvContent = [
-      ['Date', 'User', 'Action', 'Entity Type', 'Entity ID', 'Details', 'IP Address'],
+      [
+        t('audit_logs.export_headers.date'),
+        t('audit_logs.export_headers.user'),
+        t('audit_logs.export_headers.action'),
+        t('audit_logs.export_headers.entity_type'),
+        t('audit_logs.export_headers.entity_id'),
+        t('audit_logs.export_headers.details'),
+        t('audit_logs.export_headers.ip_address')
+      ],
       ...logs.map(log => [
         new Date(log.created_at).toLocaleString(),
         log.user?.full_name || 'System',
@@ -224,11 +232,11 @@ export default function AuditLogs() {
                 <SelectValue placeholder={t('audit_logs.action')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('audit_logs.all_actions')}</SelectItem>
-                <SelectItem value="create">Create</SelectItem>
-                <SelectItem value="update">Update</SelectItem>
-                <SelectItem value="delete">Delete</SelectItem>
-                <SelectItem value="login">Login</SelectItem>
+                <SelectItem value="all">{t('audit_logs.actions.all')}</SelectItem>
+                <SelectItem value="create">{t('audit_logs.actions.create')}</SelectItem>
+                <SelectItem value="update">{t('audit_logs.actions.update')}</SelectItem>
+                <SelectItem value="delete">{t('audit_logs.actions.delete')}</SelectItem>
+                <SelectItem value="login">{t('audit_logs.actions.login')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -238,11 +246,11 @@ export default function AuditLogs() {
                 <SelectValue placeholder={t('audit_logs.entity')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('audit_logs.all_entities')}</SelectItem>
-                <SelectItem value="user">User</SelectItem>
-                <SelectItem value="document">Document</SelectItem>
-                <SelectItem value="role">Role</SelectItem>
-                <SelectItem value="department">Department</SelectItem>
+                <SelectItem value="all">{t('audit_logs.entities.all')}</SelectItem>
+                <SelectItem value="user">{t('audit_logs.entities.user')}</SelectItem>
+                <SelectItem value="document">{t('audit_logs.entities.document')}</SelectItem>
+                <SelectItem value="role">{t('audit_logs.entities.role')}</SelectItem>
+                <SelectItem value="department">{t('audit_logs.entities.department')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -279,8 +287,8 @@ export default function AuditLogs() {
                     <TableHead>{t('audit_logs.date_range')}</TableHead>
                     <TableHead>{t('audit_logs.action')}</TableHead>
                     <TableHead>{t('audit_logs.entity')}</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>User / IP</TableHead>
+                    <TableHead>{t('audit_logs.details')}</TableHead>
+                    <TableHead>{t('audit_logs.user_ip')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

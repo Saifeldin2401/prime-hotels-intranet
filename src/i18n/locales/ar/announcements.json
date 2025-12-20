@@ -6,6 +6,7 @@
     "update": "تحديث الإعلان",
     "loading": "جاري تحميل الإعلانات...",
     "noAnnouncements": "لم يتم العثور على إعلانات.",
+    "announcement": "إعلان",
     "form": {
         "title": "العنوان",
         "content": "المحتوى",

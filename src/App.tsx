@@ -10,11 +10,11 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
-import { AnimatePresence } from 'framer-motion'
+// AnimatePresence removed - unused
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { RoleBasedRedirect } from '@/components/auth/RoleBasedRedirect'
 
-import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
+// LanguageSwitcher removed - unused
 import { useTranslation } from 'react-i18next'
 import Login from '@/pages/Login'
 import Unauthorized from '@/pages/Unauthorized'
@@ -50,7 +50,7 @@ import NotificationBatches from '@/pages/admin/notifications/NotificationBatches
 import SubmitTicket from '@/pages/maintenance/SubmitTicket'
 import MaintenanceDashboard from '@/pages/maintenance/MaintenanceDashboard'
 import MaintenanceTicketDetail from '@/pages/maintenance/MaintenanceTicketDetail'
-import PreventiveMaintenance from '@/pages/maintenance/PreventiveMaintenance'
+// PreventiveMaintenance removed - unused
 import ReportsDashboard from '@/pages/reports/ReportsDashboard'
 import EmployeeReferrals from '@/pages/hr/EmployeeReferrals'
 import MyLeaveRequests from '@/pages/hr/MyLeaveRequests'
@@ -127,7 +127,7 @@ function AppRoutes() {
   useEffect(() => {
     document.documentElement.dir = i18n.dir()
     document.documentElement.lang = i18n.language
-  }, [i18n.language])
+  }, [i18n, i18n.language])
 
   if (loading) {
     return (

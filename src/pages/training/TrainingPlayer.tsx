@@ -32,7 +32,8 @@ import type { TrainingModule, TrainingContentBlock } from '@/lib/types'
 import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
 
 export default function TrainingPlayer() {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
     const { id } = useParams()
     const [searchParams] = useSearchParams()
     const assignmentId = searchParams.get('assignment')
@@ -45,6 +46,13 @@ export default function TrainingPlayer() {
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [completedBlocks, setCompletedBlocks] = useState<Set<string>>(new Set())
     const [quizScore, setQuizScore] = useState<number | null>(null) // Track embedded quiz score
+
+    // Close sidebar on mobile by default
+    useEffect(() => {
+        if (window.innerWidth < 768) {
+            setSidebarOpen(false)
+        }
+    }, [])
 
     // Fetch Module and Blocks
     const { data: moduleData, isLoading } = useQuery({
@@ -158,7 +166,7 @@ export default function TrainingPlayer() {
                         recipientEmail: user.email,
                         certificateType: 'training',
                         title: moduleData.module.title,
-                        description: `Successfully completed ${moduleData.module.title} with a perfect score.`,
+                        description: t('perfectScoreDescription', { moduleName: moduleData.module.title }),
                         completionDate: new Date(),
                         score: 100,
                         trainingModuleId: moduleData.module.id
@@ -168,7 +176,7 @@ export default function TrainingPlayer() {
 
                     if (certificate) {
                         toast({
-                            title: '🏆 Certificate Earned!',
+                            title: t('achievement'),
                             description: t('certificateEarned', { moduleName: moduleData.module.title }),
                             variant: 'default'
                         })
@@ -187,7 +195,7 @@ export default function TrainingPlayer() {
 
             // If there's a linked quiz, ask if they want to take it now
             if (moduleData.linkedQuizId) {
-                if (window.confirm("Module Completed! Would you like to take the certification quiz now?")) {
+                if (window.confirm(t('takeQuizNow'))) {
                     navigate(`/learning/quizzes/${moduleData.linkedQuizId}/take`)
                     return
                 }
@@ -327,13 +335,19 @@ export default function TrainingPlayer() {
     if (!moduleData) return <div className="p-20 text-center">{t('trainingNotFound')}</div>
 
     return (
-        <div className="flex h-[calc(100vh-4rem)]">
+        <div className={`flex h-[calc(100vh-4rem)] relative ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
             {/* Sidebar */}
-            <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 border-r bg-slate-50 relative overflow-hidden flex flex-col`}>
-                <div className="p-4 border-b bg-white">
-                    <h2 className="font-semibold line-clamp-1">{moduleData.module.title}</h2>
+            {/* Sidebar */}
+            <div className={`${sidebarOpen ? 'w-full absolute inset-0 z-50 md:relative md:w-80' : 'w-0'} transition-all duration-300 ${isRTL ? 'border-l' : 'border-r'} bg-slate-50 overflow-hidden flex flex-col shadow-xl md:shadow-none`}>
+                <div className={`p-4 border-b bg-white ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                        <h2 className="font-semibold line-clamp-1">{moduleData.module.title}</h2>
+                        <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 -mr-2" onClick={() => setSidebarOpen(false)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
                     <Progress value={progressPercentage} className="h-2 mt-4" />
-                    <p className="text-xs text-muted-foreground mt-2 text-right">
+                    <p className={`text-xs text-muted-foreground mt-2 ${isRTL ? 'text-left' : 'text-right'}`}>
                         {Math.round(progressPercentage)}% {t('complete')}
                     </p>
                 </div>
@@ -344,7 +358,7 @@ export default function TrainingPlayer() {
                             <button
                                 key={block.id}
                                 onClick={() => setActiveBlockIndex(idx)}
-                                className={`w-full text-left p-3 rounded-md text-sm transition-colors flex items-start gap-3
+                                className={`w-full ${isRTL ? 'text-right' : 'text-left'} p-3 rounded-md text-sm transition-colors flex items-start gap-3
                                     ${idx === activeBlockIndex ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-gray-100 text-slate-600'}
                                 `}
                             >
@@ -359,7 +373,7 @@ export default function TrainingPlayer() {
                                     {t('block', { number: idx + 1 })}
                                 </span>
                                 {completedBlocks.has(block.id) && (
-                                    <CheckCircle className="w-4 h-4 text-green-500 ml-auto shrink-0" />
+                                    <CheckCircle className={`w-4 h-4 text-green-500 ${isRTL ? 'mr-auto' : 'ml-auto'} shrink-0`} />
                                 )}
                             </button>
                         ))}
@@ -368,8 +382,8 @@ export default function TrainingPlayer() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 bg-white">
-                <div className="h-16 border-b flex items-center px-6 justify-between shrink-0">
+            <div className={`flex-1 flex flex-col min-w-0 bg-white ${isRTL ? 'text-right' : 'text-left'}`}>
+                <div className={`h-16 border-b flex items-center px-6 justify-between shrink-0 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
                         {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                     </Button>
@@ -382,7 +396,7 @@ export default function TrainingPlayer() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                    <div className="max-w-4xl mx-auto p-8 lg:p-12">
+                    <div className="max-w-4xl mx-auto p-4 md:p-8 lg:p-12">
                         <Card className="shadow-none border-0">
                             <CardContent className="p-0">
                                 {activeBlock && renderBlockContent(activeBlock)}
@@ -391,21 +405,22 @@ export default function TrainingPlayer() {
                     </div>
                 </div>
 
-                <div className="h-20 border-t flex items-center justify-between px-8 bg-slate-50 shrink-0">
+                <div className="h-20 border-t flex items-center justify-between px-4 md:px-8 bg-slate-50 shrink-0">
                     <Button
                         variant="outline"
                         onClick={handlePrevious}
                         disabled={activeBlockIndex === 0}
+                        className={isRTL ? 'flex-row-reverse' : ''}
                     >
-                        <ChevronLeft className="mr-2 h-4 w-4" /> {t('previous')}
+                        <ChevronLeft className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4 ${isRTL ? 'rotate-180' : ''}`} /> {t('previous')}
                     </Button>
 
                     <Button
                         onClick={handleNext}
-                        className={isLastBlock ? 'bg-green-600 hover:bg-green-700' : ''}
+                        className={`${isLastBlock ? 'bg-green-600 hover:bg-green-700' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}
                     >
                         {isLastBlock ? t('finishTraining') : t('next')}
-                        {!isLastBlock && <ChevronRight className="ml-2 h-4 w-4" />}
+                        {!isLastBlock && <ChevronRight className={`${isRTL ? 'mr-2' : 'ml-2'} h-4 w-4 ${isRTL ? 'rotate-180' : ''}`} />}
                     </Button>
                 </div>
             </div>

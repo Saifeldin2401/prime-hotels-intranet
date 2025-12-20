@@ -114,10 +114,13 @@
             "access_documents": "Access your documents",
             "view_documents_btn": "View Documents",
             "training": "Training",
+            "my_training": "My Training",
             "complete_training": "Complete your training",
             "continue_learning_btn": "Continue Learning",
             "promote_employee": "Promote Employee",
             "manage_promotions": "Manage promotions",
+            "my_requests": "My Requests",
+            "submit_requests": "Submit leave or other requests",
             "transfer_employee": "Transfer Employee",
             "cross_property_moves": "Cross-property moves"
         },

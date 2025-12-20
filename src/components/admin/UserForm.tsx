@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
@@ -37,6 +38,8 @@ interface UserFormProps {
 }
 
 export function UserForm({ user, onClose }: UserFormProps) {
+  const { t } = useTranslation('users')
+  const { t: tCommon } = useTranslation('common')
   const { toast } = useToast()
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
@@ -55,7 +58,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
     mutationFn: async () => {
       // ... (mutation logic same as before)
       if (!email || !fullName || !role) {
-        throw new Error('Please fill in all required fields')
+        throw new Error(t('form.error.required_fields'))
       }
 
       // Prepare payload for atomic creation
@@ -99,15 +102,15 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
       // Show credentials in a persistent toast - NO auto-download needed
       toast({
-        title: "✅ User Created Successfully",
+        title: `✅ ${t('form.success.created_title')}`,
         description: (
           <div className="mt-2 space-y-2">
-            <p><strong>Email:</strong> {email}</p>
-            <p><strong>Password:</strong> <code className="bg-gray-100 px-2 py-0.5 rounded">{tempPwd}</code></p>
-            <p className="text-xs text-gray-500">Password copied to clipboard. User must change on first login.</p>
+            <p><strong>{t('form.email')}:</strong> {email}</p>
+            <p><strong>{tCommon('common.password', 'Password')}:</strong> <code className="bg-gray-100 px-2 py-0.5 rounded">{tempPwd}</code></p>
+            <p className="text-xs text-gray-500">{t('form.success.password_copied')}</p>
           </div>
         ),
-        duration: 30000, // 30 seconds to give time to note it down
+        duration: 30000,
       })
 
       // Also log to console for backup
@@ -121,7 +124,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
     onError: (error) => {
       console.error('User creation error:', error)
       toast({
-        title: "Failed to create user",
+        title: t('form.error.create_failed'),
         description: error.message,
         variant: "destructive"
       })
@@ -174,7 +177,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       if (selectedDepartments.length === 0 && selectedProperties.length === 0) return []
 
       // Fetch profiles with manager-level roles in the selected departments/properties
-      let query = supabase
+      const query = supabase
         .from('profiles')
         .select(`
           id,
@@ -293,8 +296,8 @@ export function UserForm({ user, onClose }: UserFormProps) {
       if (deptHead) {
         setReportingTo(deptHead.id)
         toast({
-          title: "Manager Suggested",
-          description: `${deptHead.full_name} (${deptHead.job_title || 'Manager'}) has been suggested as the reporting manager.`,
+          title: t('form.success.manager_suggested'),
+          description: t('form.success.manager_suggested_desc', { name: deptHead.full_name, jobTitle: deptHead.job_title || 'Manager' }),
         })
       }
     }
@@ -346,8 +349,8 @@ export function UserForm({ user, onClose }: UserFormProps) {
         }
 
         toast({
-          title: "Auto-Assigned",
-          description: "Department and Role updated based on Job Title.",
+          title: t('form.success.auto_assigned'),
+          description: t('form.success.auto_assigned_desc'),
         })
       }
     }
@@ -414,24 +417,24 @@ export function UserForm({ user, onClose }: UserFormProps) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={user ? 'Edit User' : 'Create User'}
+        title={user ? t('form.edit_user') : t('form.create_user')}
         actions={
           <Button variant="ghost" onClick={onClose}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {tCommon('common.back')}
           </Button>
         }
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>User Information</CardTitle>
+          <CardTitle>{t('form.user_info')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('form.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -442,7 +445,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">{t('form.full_name')}</Label>
                 <Input
                   id="fullName"
                   value={fullName}
@@ -453,7 +456,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">{t('form.phone')}</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -463,7 +466,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="jobTitle">Job Title *</Label>
+              <Label htmlFor="jobTitle">{t('form.job_title')} *</Label>
               <Popover open={openJobTitle} onOpenChange={setOpenJobTitle}>
                 <PopoverTrigger asChild>
                   <Button
@@ -473,15 +476,15 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     aria-expanded={openJobTitle}
                     className="w-full justify-between font-normal text-left"
                   >
-                    {jobTitle || "Select job title..."}
+                    {jobTitle || t('form.select_job_title')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search job title..." />
+                    <CommandInput placeholder={t('form.search_job_title')} />
                     <CommandList>
-                      <CommandEmpty>No job title found.</CommandEmpty>
+                      <CommandEmpty>{t('form.no_job_title')}</CommandEmpty>
                       <CommandGroup>
                         {jobTitlesList?.map((item) => (
                           <CommandItem
@@ -517,13 +520,13 @@ export function UserForm({ user, onClose }: UserFormProps) {
                   </Command>
                 </PopoverContent>
               </Popover>
-              <p className="text-xs text-gray-600">
-                Start typing to search available job positions
+              <p className="text-xs text-muted-foreground">
+                {t('form.job_title_helper')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role">Permission Level (System Role) *</Label>
+              <Label htmlFor="role">{t('form.permission_level')} *</Label>
               <select
                 id="role"
                 value={role}
@@ -531,27 +534,27 @@ export function UserForm({ user, onClose }: UserFormProps) {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 required
               >
-                <option value="">Select a role</option>
+                <option value="">{t('form.select_role')}</option>
                 {ROLE_HIERARCHY.map((r) => (
                   <option key={r} value={r}>
-                    {ROLES[r].label}
+                    {tCommon(`roles.${r}`, ROLES[r].label)}
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-600">
-                System role for permissions - auto-suggested based on job title
+              <p className="text-xs text-muted-foreground">
+                {t('form.role_helper')}
               </p>
             </div>
 
             {/* User Status Toggle - Only show for existing users */}
             {user && (
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
                 <div className="space-y-0.5">
-                  <Label htmlFor="is-active" className="font-medium">Account Status</Label>
-                  <p className="text-sm text-gray-500">
+                  <Label htmlFor="is-active" className="font-medium">{t('form.account_status')}</Label>
+                  <p className="text-sm text-muted-foreground">
                     {isActive
-                      ? 'User can log in and access the system'
-                      : 'User is deactivated and cannot log in'}
+                      ? t('form.status_active_helper')
+                      : t('form.status_inactive_helper')}
                   </p>
                 </div>
                 <Switch
@@ -563,7 +566,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
             )}
 
             <div className="space-y-2">
-              <Label>Properties</Label>
+              <Label>{t('form.properties')}</Label>
               <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
                 {properties?.map((property) => (
                   <label key={property.id} className="flex items-center gap-2">
@@ -585,7 +588,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
             </div>
 
             <div className="space-y-4">
-              <Label>Departments</Label>
+              <Label>{t('form.departments')}</Label>
               <div className="max-h-60 overflow-y-auto border rounded-md p-4 space-y-4">
                 {selectedProperties.length > 0 ? (
                   properties?.filter(p => selectedProperties.includes(p.id)).map((property) => {
@@ -595,13 +598,13 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
                     return (
                       <div key={property.id} className="space-y-2">
-                        <h4 className="text-sm font-semibold font-sans text-gray-900 sticky top-0 bg-white py-1 border-b flex items-center gap-2">
+                        <h4 className="text-sm font-semibold font-sans text-gray-900 sticky top-0 bg-background py-1 border-b flex items-center gap-2">
                           <span className="w-1.5 h-1.5 rounded-full bg-hotel-gold"></span>
                           {property.name}
                         </h4>
                         <div className="grid grid-cols-2 gap-2">
                           {propertyDepts.map((department) => (
-                            <label key={department.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                            <label key={department.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1 rounded">
                               <input
                                 type="checkbox"
                                 className="rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold"
@@ -614,7 +617,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                                   }
                                 }}
                               />
-                              <span className="text-sm text-gray-600">{department.name}</span>
+                              <span className="text-sm text-muted-foreground">{department.name}</span>
                             </label>
                           ))}
                         </div>
@@ -622,20 +625,20 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     )
                   })
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8 bg-gray-50 rounded-lg flex flex-col items-center justify-center border border-dashed">
-                    <span className="mb-1">🏢</span>
-                    Select a property above to view departments
-                  </p>
+                  <div className="text-sm text-muted-foreground text-center py-8 bg-muted/50 rounded-lg flex flex-col items-center justify-center border border-dashed">
+                    <span className="mb-1 text-2xl">🏢</span>
+                    <p>{t('form.select_property_helper')}</p>
+                  </div>
                 )}
                 {selectedProperties.length > 0 && (!departments || departments.length === 0) && (
-                  <p className="text-sm text-muted-foreground text-center py-4">No departments found for selected properties.</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">{t('form.no_departments')}</p>
                 )}
               </div>
             </div>
 
             {/* Reports To (Manager) */}
             <div className="space-y-2">
-              <Label htmlFor="reportingTo">Reports To (Manager)</Label>
+              <Label htmlFor="reportingTo">{t('form.reports_to')}</Label>
               <Popover open={openReportingTo} onOpenChange={setOpenReportingTo}>
                 <PopoverTrigger asChild>
                   <Button
@@ -646,22 +649,22 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     className="w-full justify-between font-normal text-left"
                   >
                     {reportingTo
-                      ? potentialManagers?.find((m: any) => m.id === reportingTo)?.full_name || 'Selected manager'
-                      : "Select a manager..."}
+                      ? potentialManagers?.find((m: any) => m.id === reportingTo)?.full_name || t('form.selected_manager')
+                      : t('form.select_manager')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search managers..." />
+                    <CommandInput placeholder={t('form.search_managers')} />
                     <CommandList>
                       <CommandEmpty>
                         {selectedDepartments.length === 0 && selectedProperties.length === 0
-                          ? "Select a department first to see available managers"
-                          : "No managers found in selected departments/properties"
+                          ? t('form.manager_dept_helper')
+                          : t('form.manager_none_helper')
                         }
                       </CommandEmpty>
-                      <CommandGroup heading="Available Managers">
+                      <CommandGroup heading={t('form.available_managers')}>
                         <CommandItem
                           value="no-manager"
                           onSelect={() => {
@@ -685,7 +688,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                                 !reportingTo ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            <span className="text-gray-500">No manager (top-level)</span>
+                            <span className="text-muted-foreground">{t('form.no_manager_top')}</span>
                           </div>
                         </CommandItem>
                         {potentialManagers?.map((manager: any) => (
@@ -719,7 +722,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                               </span>
                               {manager.isDeptHead && (
                                 <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                                  Dept Head
+                                  {t('form.dept_head')}
                                 </span>
                               )}
                             </div>
@@ -730,24 +733,24 @@ export function UserForm({ user, onClose }: UserFormProps) {
                   </Command>
                 </PopoverContent>
               </Popover>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-muted-foreground">
                 {selectedDepartments.length === 0 && selectedProperties.length === 0
-                  ? "Select a department to see suggested managers"
+                  ? t('form.suggested_manager_helper')
                   : reportingTo
-                    ? "Manager automatically suggested based on department"
-                    : "Leave empty for top-level employees (executives)"}
+                    ? t('form.auto_suggested_helper')
+                    : t('form.top_level_helper')}
               </p>
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={onClose}>
-                Cancel
+              <Button type="button" variant="outline" onClick={onClose}>
+                {tCommon('common.cancel')}
               </Button>
               <Button type="submit" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" disabled={createUserMutation.isPending || updateUserMutation.isPending}>
                 {(createUserMutation.isPending || updateUserMutation.isPending) && (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 )}
-                {user ? 'Update' : 'Create'} User
+                {user ? tCommon('common.update') : tCommon('common.create')} {t('user')}
               </Button>
             </div>
           </form>

@@ -246,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
 
       // Mock authentication for local development
-      if (import.meta.env.VITE_MOCK_AUTH === 'true') {
+      if (import.meta.env.DEV && import.meta.env.VITE_MOCK_AUTH === 'true') {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 1000))
 

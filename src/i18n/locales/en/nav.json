@@ -38,6 +38,8 @@
     "documents": "Documents",
     "user_management": "Users",
     "property_management": "Properties",
+    "org_structure": "Org Structure",
+    "notification_batches": "Notification Batches",
     "reports": "Reports",
     "audit_logs": "Audit Logs",
     "escalation_rules": "Escalation",

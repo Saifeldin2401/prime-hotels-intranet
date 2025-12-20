@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { format } from 'date-fns'
+
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -21,8 +21,11 @@ import {
   Eye,
   Calendar,
   User,
-  Filter
+  Filter,
+  AlertTriangle
 } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import { ar, enUS } from 'date-fns/locale'
 import {
   Dialog,
   DialogContent,
@@ -39,11 +42,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { formatRelativeTime } from '@/lib/utils'
 import type { Document, DocumentApproval, LeaveRequest, MaintenanceTicket } from '@/lib/types'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
+import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 
 export default function MyApprovals() {
+  const { t, i18n } = useTranslation('approvals')
+  const isRTL = i18n.dir() === 'rtl'
+  const dateLocale = i18n.language.startsWith('ar') ? ar : enUS
   const { user, primaryRole, departments, properties } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
@@ -569,23 +576,23 @@ export default function MyApprovals() {
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader
-        title="My Approvals"
-        description="Review and approve documents, leave requests, and maintenance tickets pending your attention"
+        title={t('title')}
+        description={t('description')}
       />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
           <Input
-            placeholder="Search approvals..."
+            placeholder={t('search_placeholder', 'Search approvals...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-11"
+            className={cn("h-11", isRTL ? "pr-10" : "pl-10")}
           />
         </div>
         <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-11 w-full sm:w-auto" size="sm">
-          <Filter className="w-4 h-4 mr-2" />
-          Filters
+          <Filter className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+          {t('filter', 'Filters')}
         </Button>
       </div>
 
@@ -593,8 +600,8 @@ export default function MyApprovals() {
         <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
             <TabsTrigger value="documents" className="relative text-xs sm:text-sm whitespace-nowrap">
-              <span className="hidden sm:inline">Documents</span>
-              <span className="sm:hidden">Docs</span>
+              <span className="hidden sm:inline">{t('documents_tab')}</span>
+              <span className="sm:hidden">{t('documents_tab')}</span>
               {filteredPendingDocuments.length > 0 && (
                 <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
                   {filteredPendingDocuments.length}
@@ -602,8 +609,8 @@ export default function MyApprovals() {
               )}
             </TabsTrigger>
             <TabsTrigger value="leave" className="relative text-xs sm:text-sm whitespace-nowrap">
-              <span className="hidden sm:inline">Leave Requests</span>
-              <span className="sm:hidden">Leave</span>
+              <span className="hidden sm:inline">{t('leaves_tab')}</span>
+              <span className="sm:hidden">{t('leaves_tab')}</span>
               {filteredPendingLeave.length > 0 && (
                 <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
                   {filteredPendingLeave.length}
@@ -611,8 +618,8 @@ export default function MyApprovals() {
               )}
             </TabsTrigger>
             <TabsTrigger value="maintenance" className="relative text-xs sm:text-sm whitespace-nowrap">
-              <span className="hidden sm:inline">Maintenance</span>
-              <span className="sm:hidden">Maint.</span>
+              <span className="hidden sm:inline">{t('maintenance_tab')}</span>
+              <span className="sm:hidden">{t('maintenance_tab')}</span>
               {filteredPendingMaintenance.length > 0 && (
                 <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
                   {filteredPendingMaintenance.length}
@@ -620,7 +627,7 @@ export default function MyApprovals() {
               )}
             </TabsTrigger>
             <TabsTrigger value="completed" className="text-xs sm:text-sm whitespace-nowrap">
-              Completed
+              {t('completed_tab')}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -635,9 +642,9 @@ export default function MyApprovals() {
             <Card>
               <CardContent className="text-center py-8">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No pending document approvals</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('all_caught_up_documents')}</h3>
                 <p className="text-gray-600">
-                  All documents have been reviewed. Great job!
+                  {t('all_caught_up_documents_desc')}
                 </p>
               </CardContent>
             </Card>
@@ -681,8 +688,8 @@ export default function MyApprovals() {
                           size="sm"
                           onClick={() => handleViewDocument(approval.documents)}
                         >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
+                          <Eye className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          {t('view')}
                         </Button>
                         <Button
                           variant="default"
@@ -691,8 +698,8 @@ export default function MyApprovals() {
                           disabled={approveMutation.isPending}
                           className="bg-green-600 hover:bg-green-700"
                         >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Approve
+                          <CheckCircle className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          {t('approve')}
                         </Button>
                         <Button
                           variant="destructive"
@@ -700,8 +707,8 @@ export default function MyApprovals() {
                           onClick={() => handleReject(approval.document_id)}
                           disabled={rejectMutation.isPending}
                         >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
+                          <XCircle className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          {t('reject')}
                         </Button>
                       </div>
                     </div>
@@ -722,9 +729,9 @@ export default function MyApprovals() {
             <Card>
               <CardContent className="text-center py-8">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No pending leave requests</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('no_pending_leaves')}</h3>
                 <p className="text-gray-600">
-                  No leave requests require your approval at this time.
+                  {t('no_pending_leaves_desc')}
                 </p>
               </CardContent>
             </Card>
@@ -755,7 +762,7 @@ export default function MyApprovals() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            <span>Requested {formatRelativeTime(leave.created_at)}</span>
+                            <span>Requested {formatDistanceToNow(new Date(leave.created_at), { addSuffix: true, locale: dateLocale })}</span>
                           </div>
                         </div>
 
@@ -810,9 +817,9 @@ export default function MyApprovals() {
             <Card>
               <CardContent className="text-center py-8">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No pending maintenance tickets</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('no_pending_maintenance')}</h3>
                 <p className="text-gray-600">
-                  No critical maintenance tickets require your attention at this time.
+                  {t('no_pending_maintenance_desc')}
                 </p>
               </CardContent>
             </Card>
@@ -845,7 +852,7 @@ export default function MyApprovals() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>Reported {formatRelativeTime(ticket.created_at)}</span>
+                            <span>Reported {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: dateLocale })}</span>
                           </div>
                           {ticket.room_number && (
                             <div className="flex items-center gap-1">
@@ -874,8 +881,8 @@ export default function MyApprovals() {
                           disabled={assignMaintenanceMutation.isPending}
                           className="bg-blue-600 hover:bg-blue-700"
                         >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Assign
+                          <CheckCircle className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          {t('assign')}
                         </Button>
                       </div>
                     </div>
@@ -896,9 +903,9 @@ export default function MyApprovals() {
             <Card>
               <CardContent className="text-center py-8">
                 <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No completed approvals</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('no_completed_approvals')}</h3>
                 <p className="text-gray-600">
-                  Your approval history will appear here once you start reviewing documents.
+                  {t('no_completed_approvals_desc')}
                 </p>
               </CardContent>
             </Card>
@@ -928,8 +935,8 @@ export default function MyApprovals() {
                             <Calendar className="w-4 h-4" />
                             <span>
                               {approval.status === 'approved'
-                                ? `Approved ${formatRelativeTime(approval.approved_at!)}`
-                                : `Rejected ${formatRelativeTime(approval.rejected_at!)}`
+                                ? `Approved ${formatDistanceToNow(new Date(approval.approved_at!), { addSuffix: true, locale: dateLocale })}`
+                                : `Rejected ${formatDistanceToNow(new Date(approval.rejected_at!), { addSuffix: true, locale: dateLocale })}`
                               }
                             </span>
                           </div>
@@ -949,8 +956,8 @@ export default function MyApprovals() {
                           size="sm"
                           onClick={() => handleViewDocument(approval.documents)}
                         >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
+                          <Eye className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          {t('view')}
                         </Button>
                       </div>
                     </div>
@@ -965,16 +972,16 @@ export default function MyApprovals() {
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign Maintenance Ticket</DialogTitle>
+            <DialogTitle>{t('assign_dialog_title')}</DialogTitle>
             <DialogDescription>
-              Select a staff member to assign this ticket to.
+              {t('assign_dialog_desc')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
-            <Label htmlFor="staff-select">Staff Member</Label>
+            <Label htmlFor="staff-select">{t('select_staff_placeholder')}</Label>
             <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
               <SelectTrigger id="staff-select">
-                <SelectValue placeholder="Select staff..." />
+                <SelectValue placeholder={t('select_staff_placeholder')} />
               </SelectTrigger>
               <SelectContent>
                 {staffMembers?.map((staff: any) => (
@@ -986,13 +993,13 @@ export default function MyApprovals() {
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>{t('cancel')}</Button>
             <Button onClick={confirmAssignment} disabled={!selectedStaffId || assignMaintenanceMutation.isPending}>
-              {assignMaintenanceMutation.isPending ? 'Assigning...' : 'Assign'}
+              {assignMaintenanceMutation.isPending ? t('assign') + '...' : t('assign')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   )
 }

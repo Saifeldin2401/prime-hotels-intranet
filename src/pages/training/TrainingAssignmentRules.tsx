@@ -13,7 +13,8 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
 export default function TrainingAssignmentRules() {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation(['training', 'common'])
+    const isRTL = i18n.dir() === 'rtl'
     const { data: rules, isLoading } = useTrainingRules()
     const { data: modules } = useTrainingModulesList()
 
@@ -74,7 +75,7 @@ export default function TrainingAssignmentRules() {
     }
 
     const handleDelete = async (id: string) => {
-        if (confirm('Are you sure you want to delete this rule?')) {
+        if (confirm(t('rules.confirm_delete'))) {
             try {
                 await deleteMutation.mutateAsync(id)
             } catch (error) {
@@ -95,69 +96,69 @@ export default function TrainingAssignmentRules() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className={`space-y-6 animate-fade-in ${isRTL ? 'text-right' : 'text-left'}`}>
             <div className="flex items-center justify-between">
                 <PageHeader
-                    title="Auto-Assignment Rules"
-                    description="Automatically assign training modules to new users based on their role or job title."
+                    title={t('rules.title')}
+                    description={t('rules.description')}
                 />
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                     <DialogTrigger asChild>
                         <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
                             <Plus className="w-4 h-4 mr-2" />
-                            New Rule
+                            {t('rules.new_rule')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Create Assignment Rule</DialogTitle>
+                            <DialogTitle>{t('rules.create_title')}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Assignment Type</label>
+                                <label className="text-sm font-medium">{t('rules.assignment_type')}</label>
                                 <div className="flex bg-gray-100 p-1 rounded-md">
                                     <button
                                         onClick={() => setTargetType('role')}
                                         className={cn("flex-1 py-1 text-sm rounded-sm transition-all", targetType === 'role' ? "bg-white shadow-sm font-medium" : "text-gray-500 hover:text-gray-900")}
                                     >
-                                        By Role
+                                        {t('rules.by_role')}
                                     </button>
                                     <button
                                         onClick={() => setTargetType('job_title')}
                                         className={cn("flex-1 py-1 text-sm rounded-sm transition-all", targetType === 'job_title' ? "bg-white shadow-sm font-medium" : "text-gray-500 hover:text-gray-900")}
                                     >
-                                        By Job Title
+                                        {t('rules.by_job_title')}
                                     </button>
                                 </div>
                             </div>
 
                             {targetType === 'role' ? (
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Target Role</label>
+                                    <label className="text-sm font-medium">{t('rules.target_role')}</label>
                                     <Select
                                         value={newRule.target_role}
                                         onValueChange={(val) => setNewRule(prev => ({ ...prev, target_role: val }))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select role" />
+                                            <SelectValue placeholder={t('rules.select_role')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {roles.map(role => (
-                                                <SelectItem key={role} value={role}>{role.replace('_', ' ').toUpperCase()}</SelectItem>
+                                                <SelectItem key={role} value={role}>{t(`common:roles.${role}`)}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Target Job Title</label>
+                                    <label className="text-sm font-medium">{t('rules.target_job_title')}</label>
                                     <Select
                                         value={newRule.job_title_id}
                                         onValueChange={(val) => setNewRule(prev => ({ ...prev, job_title_id: val }))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select job title" />
+                                            <SelectValue placeholder={t('rules.select_job_title')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {jobTitles?.map(jt => (
@@ -172,13 +173,13 @@ export default function TrainingAssignmentRules() {
                             )}
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Training Module</label>
+                                <label className="text-sm font-medium">{t('module')}</label>
                                 <Select
                                     value={newRule.training_module_id}
                                     onValueChange={(val) => setNewRule(prev => ({ ...prev, training_module_id: val }))}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select module" />
+                                        <SelectValue placeholder={t('rules.select_module')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {modules?.map(module => (
@@ -188,7 +189,7 @@ export default function TrainingAssignmentRules() {
                                 </Select>
                             </div>
                             <Button onClick={handleCreate} className="w-full" disabled={createMutation.isPending || (targetType === 'role' && !newRule.target_role) || (targetType === 'job_title' && !newRule.job_title_id) || !newRule.training_module_id}>
-                                {createMutation.isPending ? 'Creating...' : 'Create Rule'}
+                                {createMutation.isPending ? t('rules.creating') : t('rules.create_rule')}
                             </Button>
                         </div>
                     </DialogContent>
@@ -197,7 +198,7 @@ export default function TrainingAssignmentRules() {
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {isLoading ? (
-                    <div>Loading rules...</div>
+                    <div>{t('loading')}</div>
                 ) : rules?.map((rule) => (
                     <Card key={rule.id} className={cn("transition-all hover:shadow-md", !rule.is_active && "opacity-60")}>
                         <CardHeader className="pb-2">
@@ -207,13 +208,13 @@ export default function TrainingAssignmentRules() {
                                         <Shield className="w-4 h-4 text-hotel-gold" />
                                         {rule.job_title_id
                                             ? rule.job_titles?.title // Assuming join, fallback to checking ID if join missing in hook
-                                            : rule.target_role?.replace('_', ' ').toUpperCase() || 'Unknown Target'
+                                            : t(`common:roles.${rule.target_role}`) || t('unknown')
                                         }
                                     </CardTitle>
-                                    <p className="text-sm text-gray-500">Auto-assigns to {rule.job_title_id ? 'Job Title' : 'Role'}</p>
+                                    <p className="text-sm text-gray-500">{t('rules.auto_assigns_to')} {rule.job_title_id ? t('rules.by_job_title') : t('rules.by_role')}</p>
                                 </div>
                                 <Badge variant={rule.is_active ? 'default' : 'secondary'}>
-                                    {rule.is_active ? 'Active' : 'Inactive'}
+                                    {rule.is_active ? t('common:status.active') : t('common:status.inactive')}
                                 </Badge>
                             </div>
                         </CardHeader>
@@ -228,7 +229,7 @@ export default function TrainingAssignmentRules() {
                                         className="flex-1"
                                         onClick={() => handleToggle(rule.id, rule.is_active)}
                                     >
-                                        {rule.is_active ? 'Deactivate' : 'Activate'}
+                                        {rule.is_active ? t('rules.deactivate') : t('rules.activate')}
                                     </Button>
                                     <Button
                                         variant="ghost"
@@ -245,8 +246,8 @@ export default function TrainingAssignmentRules() {
                 ))}
                 {!isLoading && rules?.length === 0 && (
                     <div className="col-span-full text-center py-12 text-gray-500 border border-dashed rounded-lg">
-                        <p>No assignment rules found.</p>
-                        <Button variant="link" onClick={() => setIsCreateOpen(true)}>Create your first rule</Button>
+                        <p>{t('rules.no_rules')}</p>
+                        <Button variant="link" onClick={() => setIsCreateOpen(true)}>{t('rules.create_first')}</Button>
                     </div>
                 )}
             </div>

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRIME Hotels Intranet - System Architecture | بنية النظام</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            .no-print {
+                display: none;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif;
+            line-height: 1.7;
+            color: #1a1a2e;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #fff;
+        }
+
+        h1 {
+            color: #1a1a2e;
+            border-bottom: 3px solid #c9a962;
+            padding-bottom: 15px;
+            font-size: 2.2em;
+        }
+
+        h2 {
+            color: #2d2d44;
+            border-bottom: 2px solid #e5e5e5;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+
+        h3 {
+            color: #444;
+            margin-top: 25px;
+        }
+
+        .ar {
+            direction: rtl;
+            text-align: right;
+            font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+            color: #555;
+            background: #f9f9f9;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0 20px 0;
+            border-right: 4px solid #c9a962;
+        }
+
+        blockquote {
+            background: #f8f9fa;
+            border-left: 4px solid #c9a962;
+            padding: 15px 20px;
+            margin: 20px 0;
+            font-style: italic;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #2d2d44;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .mermaid {
+            background: #fafafa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        hr {
+            border: none;
+            border-top: 2px solid #e5e5e5;
+            margin: 40px 0;
+        }
+
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #c9a962;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .print-button:hover {
+            background: #b8954f;
+        }
+
+        .header-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header-logo h1 {
+            font-size: 2.5em;
+            border: none;
+            margin-bottom: 5px;
+        }
+
+        .header-logo .subtitle {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .bilingual-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+
+        .bilingual-header .ar-title {
+            font-family: 'Noto Sans Arabic', 'Segoe UI', sans-serif;
+            color: #666;
+            font-size: 0.65em;
+            direction: rtl;
+        }
+    </style>
+</head>
+
+<body>
+    <button class="print-button no-print" onclick="window.print()">📄 Save as PDF | حفظ كـ PDF</button>
+
+    <div class="header-logo">
+        <h1>🏨 PRIME Hotels Intranet</h1>
+        <p class="subtitle">System Architecture Documentation</p>
+        <p class="subtitle" style="font-family: 'Noto Sans Arabic', sans-serif; direction: rtl;">توثيق بنية النظام -
+            فنادق برايم</p>
+    </div>
+
+    <blockquote>
+        <strong>Deep Analysis Document</strong> - Based on examination of 96 database migrations, core contexts, hooks,
+        and services.<br>
+        <span style="direction: rtl; display: block; margin-top: 10px;"><strong>وثيقة التحليل المعمق</strong> - بناءً
+            على فحص 96 ترحيل قاعدة بيانات والسياقات الأساسية والخطافات والخدمات.</span>
+    </blockquote>
+
+    <hr>
+
+    <h2 class="bilingual-header">🗄️ Database Entity Relationship Diagram <span class="ar-title">مخطط علاقات الكيانات في
+            قاعدة البيانات</span></h2>
+
+    <div class="mermaid">
+        erDiagram
+        auth_users ||--|| profiles : "extends"
+        profiles ||--o{ user_roles : "has"
+        profiles ||--o{ user_properties : "assigned to"
+        profiles ||--o{ user_departments : "works in"
+        profiles ||--o| profiles : "reports to"
+        properties ||--o{ departments : "contains"
+        properties ||--o{ user_properties : "has members"
+        departments ||--o{ user_departments : "has members"
+        training_modules ||--o{ training_assignments : "assigned via"
+        training_modules ||--o{ training_progress : "tracks"
+        training_assignments }o--o| profiles : "to user"
+        training_assignments }o--o| departments : "to dept"
+        training_assignments }o--o| properties : "to property"
+        requests ||--o{ request_steps : "has"
+        requests ||--o{ request_comments : "has"
+        requests }o--|| profiles : "requester"
+        leave_requests }o--|| profiles : "requester"
+        leave_requests }o--o| properties : "scoped to"
+        maintenance_tickets }o--|| profiles : "reported by"
+        maintenance_tickets }o--o| properties : "location"
+        documents }o--|| profiles : "created by"
+        documents ||--o{ document_acknowledgments : "requires"
+        promotions }o--|| profiles : "employee"
+        transfers }o--|| profiles : "employee"
+        onboarding_templates ||--o{ onboarding_process : "triggers"
+        onboarding_process ||--o{ onboarding_tasks : "generates"
+
+        profiles {
+        uuid id PK
+        text email
+        text full_name
+        text job_title
+        uuid reporting_to FK
+        }
+        properties {
+        uuid id PK
+        text name
+        text address
+        }
+        departments {
+        uuid id PK
+        uuid property_id FK
+        text name
+        }
+        user_roles {
+        uuid id PK
+        uuid user_id FK
+        app_role role
+        }
+    </div>
+
+    <hr>
+
+    <h2 class="bilingual-header">👥 Role Hierarchy <span class="ar-title">التسلسل الهرمي للأدوار</span></h2>
+
+    <div class="ar">
+        يستخدم النظام 6 أدوار مرتبة من الأعلى صلاحية إلى الأدنى:
+        <br>• <strong>المسؤول الإقليمي</strong> (regional_admin) - المستوى 1: وصول كامل للنظام
+        <br>• <strong>الموارد البشرية الإقليمية</strong> (regional_hr) - المستوى 2: إدارة الموارد البشرية على مستوى
+        السلسلة
+        <br>• <strong>مدير الفندق</strong> (property_manager) - المستوى 3: عمليات الفندق
+        <br>• <strong>الموارد البشرية للفندق</strong> (property_hr) - المستوى 4: الموارد البشرية للفندق
+        <br>• <strong>رئيس القسم</strong> (department_head) - المستوى 5: إدارة القسم
+        <br>• <strong>الموظف</strong> (staff) - المستوى 6: المهام الفردية
+    </div>
+
+    <div class="mermaid">
+        flowchart TD
+        subgraph Regional["🌍 Regional Scope - All Properties | النطاق الإقليمي"]
+        RA["🔴 regional_admin - Level 1 | المسؤول الإقليمي"]
+        RH["🟠 regional_hr - Level 2 | الموارد البشرية الإقليمية"]
+        end
+        subgraph Property["🏨 Property Scope | نطاق الفندق"]
+        PM["🟡 property_manager - Level 3 | مدير الفندق"]
+        PH["🟢 property_hr - Level 4 | موارد بشرية الفندق"]
+        end
+        subgraph Department["📁 Department Scope | نطاق القسم"]
+        DH["🔵 department_head - Level 5 | رئيس القسم"]
+        end
+        subgraph Staff["👤 Self Scope | النطاق الشخصي"]
+        ST["⚪ staff - Level 6 | الموظف"]
+        end
+        RA --> RH --> PM --> PH --> DH --> ST
+    </div>
+
+    <h3>Role Capabilities Matrix | مصفوفة صلاحيات الأدوار</h3>
+
+    <table>
+        <tr>
+            <th>Capability | الصلاحية</th>
+            <th>Regional Admin<br>المسؤول الإقليمي</th>
+            <th>Regional HR<br>موارد بشرية إقليمية</th>
+            <th>Property Manager<br>مدير الفندق</th>
+            <th>Property HR<br>موارد بشرية الفندق</th>
+            <th>Dept Head<br>رئيس القسم</th>
+            <th>Staff<br>الموظف</th>
+        </tr>
+        <tr>
+            <td><strong>View All Properties</strong><br>عرض جميع الفنادق</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td><strong>Manage All Users</strong><br>إدارة جميع المستخدمين</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td><strong>Approve Leave</strong><br>الموافقة على الإجازات</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>❌</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td><strong>Approve Promotions</strong><br>الموافقة على الترقيات</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td><strong>Create Training</strong><br>إنشاء التدريب</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td><strong>Assign Tasks</strong><br>تعيين المهام</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td><strong>Submit Requests</strong><br>تقديم الطلبات</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <h2 class="bilingual-header">🔐 Authentication & Authorization Flow <span class="ar-title">تدفق المصادقة
+            والتفويض</span></h2>
+
+    <div class="ar">
+        عندما يسجل المستخدم الدخول، يقوم النظام بـ:
+        <br>1. التحقق من بيانات الاعتماد عبر Supabase Auth
+        <br>2. تحميل الملف الشخصي من جدول profiles
+        <br>3. تحميل الأدوار من جدول user_roles
+        <br>4. تحميل الفنادق المعينة من user_properties
+        <br>5. تحميل الأقسام المعينة من user_departments
+        <br>6. حساب الدور الأساسي (primaryRole) بناءً على أعلى صلاحية
+    </div>
+
+    <div class="mermaid">
+        sequenceDiagram
+        participant U as User | المستخدم
+        participant A as Supabase Auth
+        participant AC as AuthContext
+        participant PC as PropertyContext
+        participant DB as Database | قاعدة البيانات
+        U->>A: Login | تسجيل الدخول
+        A->>AC: Session + User ID
+        par Load User Data | تحميل بيانات المستخدم
+        AC->>DB: SELECT profiles
+        AC->>DB: SELECT user_roles
+        AC->>DB: SELECT user_properties
+        AC->>DB: SELECT user_departments
+        end
+        AC->>AC: Compute primaryRole | حساب الدور الأساسي
+        AC->>PC: Provide roles + user
+        alt Regional Role | دور إقليمي
+        PC->>DB: SELECT ALL properties
+        else Property Role | دور فندق
+        PC->>DB: SELECT assigned properties
+        end
+        PC->>U: Current Property Context
+    </div>
+
+    <hr class="page-break">
+
+    <h2 class="bilingual-header">📋 Generic Request Workflow System <span class="ar-title">نظام سير عمل الطلبات
+            العام</span></h2>
+
+    <div class="ar">
+        يستخدم النظام جدول <code>requests</code> موحد لجميع عمليات الموافقة:
+        <br>• <strong>طلبات الإجازة</strong> (leave_requests)
+        <br>• <strong>الترقيات</strong> (promotions)
+        <br>• <strong>التنقلات</strong> (transfers)
+        <br>• <strong>الموافقة على المستندات</strong> (documents)
+    </div>
+
+    <div class="mermaid">
+        stateDiagram-v2
+        [*] --> draft: Create | إنشاء
+        draft --> pending_supervisor: Submit | تقديم
+        pending_supervisor --> pending_hr: Approve | موافقة
+        pending_supervisor --> returned: Return | إرجاع
+        pending_supervisor --> rejected: Reject | رفض
+        pending_hr --> approved: HR Approves | موافقة HR
+        pending_hr --> returned: Return | إرجاع
+        pending_hr --> rejected: Reject | رفض
+        returned --> pending_supervisor: Resubmit | إعادة التقديم
+        approved --> closed: Auto | تلقائي
+        rejected --> [*]
+        closed --> [*]
+    </div>
+
+    <h3>Entities Using Request Workflow | الكيانات التي تستخدم سير عمل الطلبات</h3>
+
+    <table>
+        <tr>
+            <th>Entity Type | نوع الكيان</th>
+            <th>Table | الجدول</th>
+            <th>Request Integration | ربط الطلب</th>
+        </tr>
+        <tr>
+            <td>Leave Request | طلب إجازة</td>
+            <td>leave_requests</td>
+            <td>requests.entity_type = 'leave_request'</td>
+        </tr>
+        <tr>
+            <td>Promotion | ترقية</td>
+            <td>promotions</td>
+            <td>requests.entity_type = 'promotion'</td>
+        </tr>
+        <tr>
+            <td>Transfer | نقل</td>
+            <td>transfers</td>
+            <td>requests.entity_type = 'transfer'</td>
+        </tr>
+        <tr>
+            <td>Document | مستند</td>
+            <td>documents</td>
+            <td>Uses document_approvals table</td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <h2 class="bilingual-header">🎯 Training Assignment Targeting <span class="ar-title">استهداف تعيين التدريب</span>
+    </h2>
+
+    <div class="ar">
+        يمكن تعيين التدريب لأنواع مختلفة من الأهداف:
+        <br>• <strong>مستخدم محدد</strong> - assigned_to_user_id
+        <br>• <strong>قسم كامل</strong> - assigned_to_department_id
+        <br>• <strong>فندق كامل</strong> - assigned_to_property_id
+        <br>• <strong>الجميع</strong> - assigned_to_all = true
+    </div>
+
+    <div class="mermaid">
+        flowchart LR
+        TA[training_assignments<br>تعيينات التدريب] --> U["👤 User | مستخدم"]
+        TA --> D["📁 Department | قسم"]
+        TA --> P["🏨 Property | فندق"]
+        TA --> A["🌍 Everyone | الجميع"]
+    </div>
+
+    <hr>
+
+    <h2 class="bilingual-header">📄 Document Visibility System <span class="ar-title">نظام رؤية المستندات</span></h2>
+
+    <div class="ar">
+        المستندات لها 4 مستويات رؤية:
+        <br>• <strong>all_properties</strong> - مرئي لجميع الفنادق عند النشر
+        <br>• <strong>property</strong> - مرئي فقط للمستخدمين في فندق محدد
+        <br>• <strong>department</strong> - مرئي فقط لأعضاء قسم محدد
+        <br>• <strong>role</strong> - مرئي فقط للمستخدمين بدور محدد
+    </div>
+
+    <div class="mermaid">
+        flowchart TD
+        D[Document | مستند] --> V{visibility | الرؤية}
+        V -->|all_properties| AP["All users when PUBLISHED | جميع المستخدمين عند النشر"]
+        V -->|property| PP["Users with property access | مستخدمو الفندق"]
+        V -->|department| DP["Users in same department | أعضاء القسم"]
+        V -->|role| RP["Users with matching role | حسب الدور"]
+        D --> S{status | الحالة}
+        S -->|DRAFT| DR["Only creator + regional | المنشئ + الإقليميين"]
+        S -->|PUBLISHED| PU["Based on visibility rules | حسب قواعد الرؤية"]
+    </div>
+
+    <hr>
+
+    <h2 class="bilingual-header">🚀 Onboarding Auto-Trigger <span class="ar-title">التشغيل التلقائي للتهيئة</span></h2>
+
+    <div class="ar">
+        عندما يتم تعيين موظف جديد إلى قسم، يبدأ النظام تلقائياً عملية التهيئة:
+        <br>1. إدراج في جدول user_departments يفعل المشغل
+        <br>2. البحث عن قالب تهيئة مطابق للقسم أو الدور
+        <br>3. إنشاء عملية تهيئة (onboarding_process)
+        <br>4. توليد المهام من قالب JSON
+        <br>5. ظهور المهام في لوحة تحكم الموارد البشرية
+    </div>
+
+    <div class="mermaid">
+        sequenceDiagram
+        participant HR as HR Admin | إدارة الموارد البشرية
+        participant DB as Database | قاعدة البيانات
+        participant T as Trigger | المشغل
+        participant OP as Onboarding | التهيئة
+        HR->>DB: INSERT user_departments
+        DB->>T: on_department_assigned
+        T->>DB: Find onboarding_template
+        T->>OP: CREATE onboarding_process
+        T->>OP: Generate tasks from template
+        OP->>HR: Tasks appear in dashboard | ظهور المهام
+    </div>
+
+    <hr class="page-break">
+
+    <h2 class="bilingual-header">🔄 Promotion/Transfer Lifecycle <span class="ar-title">دورة حياة الترقية/النقل</span>
+    </h2>
+
+    <div class="ar">
+        عملية الترقية أو النقل تمر بالخطوات التالية:
+        <br>1. موارد بشرية الفندق تستدعي دالة تقديم الطلب
+        <br>2. إنشاء سجل ترقية/نقل بحالة "معلق"
+        <br>3. إنشاء طلب في جدول requests
+        <br>4. الطلب يمر بسير عمل الموافقة
+        <br>5. عند الموافقة، المشغل يحدث بيانات الموظف
+        <br>6. إذا كان تاريخ السريان اليوم أو قبله، يتم التطبيق فوراً
+    </div>
+
+    <div class="mermaid">
+        sequenceDiagram
+        participant HR as Property HR | موارد بشرية الفندق
+        participant RPC as submit_promotion_request
+        participant R as requests | الطلبات
+        participant P as promotions | الترقيات
+        participant TR as Trigger | المشغل
+        HR->>RPC: Call with employee details
+        RPC->>P: INSERT promotion pending
+        RPC->>R: INSERT request
+        R-->>HR: Returns request_no
+        Note over R: Approval workflow | سير عمل الموافقة
+        R->>TR: status = approved
+        TR->>P: promotions approved
+        TR->>TR: process_due_promotions
+        alt effective_date <= TODAY | تاريخ السريان اليوم أو قبله TR->>DB: UPDATE user_roles
+            TR->>DB: UPDATE profiles job_title
+            TR->>P: status = completed
+            end
+    </div>
+
+    <hr>
+
+    <h2 class="bilingual-header">🗂️ Full Module Integration Map <span class="ar-title">خريطة تكامل الوحدات
+            الكاملة</span></h2>
+
+    <div class="mermaid">
+        mindmap
+        root((PRIME Hotels Intranet<br>شبكة فنادق برايم الداخلية))
+        Core Identity<br>الهوية الأساسية
+        profiles<br>الملفات الشخصية
+        user_roles<br>أدوار المستخدمين
+        user_properties<br>فنادق المستخدمين
+        user_departments<br>أقسام المستخدمين
+        HR Management<br>إدارة الموارد البشرية
+        leave_requests<br>طلبات الإجازة
+        promotions<br>الترقيات
+        transfers<br>التنقلات
+        onboarding<br>التهيئة
+        Training<br>التدريب
+        training_modules<br>وحدات التدريب
+        training_assignments<br>تعيينات التدريب
+        training_progress<br>تقدم التدريب
+        certificates<br>الشهادات
+        Documents<br>المستندات
+        documents<br>المستندات
+        versions<br>الإصدارات
+        acknowledgments<br>الإقرارات
+        SOPs<br>إجراءات التشغيل
+        Operations<br>العمليات
+        tasks<br>المهام
+        maintenance<br>الصيانة
+        Communication<br>التواصل
+        messages<br>الرسائل
+        announcements<br>الإعلانات
+        notifications<br>الإشعارات
+        Workflow<br>سير العمل
+        requests<br>الطلبات
+        request_steps<br>خطوات الطلب
+        escalation<br>التصعيد
+        Admin<br>الإدارة
+        audit_logs<br>سجلات المراجعة
+        pii_access<br>وصول البيانات الشخصية
+    </div>
+
+    <hr>
+
+    <h2 class="bilingual-header">📊 Data Flow Summary <span class="ar-title">ملخص تدفق البيانات</span></h2>
+
+    <table>
+        <tr>
+            <th>Action | الإجراء</th>
+            <th>Trigger | المشغل</th>
+            <th>Tables Affected | الجداول المتأثرة</th>
+            <th>Notifications | الإشعارات</th>
+        </tr>
+        <tr>
+            <td><strong>New Employee</strong><br>موظف جديد</td>
+            <td>INSERT user_departments</td>
+            <td>onboarding_process, tasks</td>
+            <td>Manager | المدير</td>
+        </tr>
+        <tr>
+            <td><strong>Submit Leave</strong><br>تقديم إجازة</td>
+            <td>RPC call</td>
+            <td>leave_requests, requests</td>
+            <td>Supervisor | المشرف</td>
+        </tr>
+        <tr>
+            <td><strong>Approve Leave</strong><br>الموافقة على الإجازة</td>
+            <td>request_apply_action</td>
+            <td>requests, events</td>
+            <td>Requester | مقدم الطلب</td>
+        </tr>
+        <tr>
+            <td><strong>Assign Training</strong><br>تعيين التدريب</td>
+            <td>INSERT</td>
+            <td>assignments, progress</td>
+            <td>User | المستخدم</td>
+        </tr>
+        <tr>
+            <td><strong>Complete Training</strong><br>إكمال التدريب</td>
+            <td>UPDATE</td>
+            <td>progress, certificates</td>
+            <td>Manager | المدير</td>
+        </tr>
+        <tr>
+            <td><strong>Submit Promotion</strong><br>تقديم ترقية</td>
+            <td>RPC</td>
+            <td>promotions, requests</td>
+            <td>Regional HR | موارد بشرية إقليمية</td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <h2 class="bilingual-header">🔒 Row-Level Security (RLS) Patterns <span class="ar-title">أنماط أمان مستوى
+            الصف</span></h2>
+
+    <div class="ar">
+        يستخدم النظام دوال مساعدة للتحكم في الوصول على مستوى قاعدة البيانات:
+    </div>
+
+    <table>
+        <tr>
+            <th>Function | الدالة</th>
+            <th>Purpose | الغرض</th>
+        </tr>
+        <tr>
+            <td><code>has_role(user_id, role)</code></td>
+            <td>Check if user has specific role | التحقق من دور المستخدم</td>
+        </tr>
+        <tr>
+            <td><code>has_property_access(user_id, property_id)</code></td>
+            <td>Check user_properties membership | التحقق من عضوية الفندق</td>
+        </tr>
+        <tr>
+            <td><code>can_view_request(user_id, request_id)</code></td>
+            <td>Complex request visibility | رؤية الطلب المعقدة</td>
+        </tr>
+        <tr>
+            <td><code>is_hr(user_id)</code></td>
+            <td>Check if user is any HR role | التحقق من دور HR</td>
+        </tr>
+        <tr>
+            <td><code>is_admin(user_id)</code></td>
+            <td>Check if regional_admin | التحقق من المسؤول الإقليمي</td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <h2 class="bilingual-header">Summary <span class="ar-title">الملخص</span></h2>
+
+    <p>The PRIME Hotels Intranet is a <strong>multi-tenant, role-based, property-scoped</strong> system where:</p>
+
+    <ol>
+        <li><strong>Identity</strong>: Users have profiles + multiple roles + property/department assignments</li>
+        <li><strong>Authorization</strong>: Computed from primaryRole (highest authority) + property/dept scope</li>
+        <li><strong>Workflows</strong>: Generic requests table powers all approval flows</li>
+        <li><strong>Targeting</strong>: Training/docs/announcements target users, departments, properties, or roles</li>
+        <li><strong>Automation</strong>: Database triggers auto-create onboarding, finalize promotions</li>
+        <li><strong>Security</strong>: PostgreSQL RLS enforces access at database level</li>
+    </ol>
+
+    <div class="ar">
+        <strong>شبكة فنادق برايم الداخلية</strong> هي نظام <strong>متعدد المستأجرين، قائم على الأدوار، محدد النطاق
+            بالفندق</strong> حيث:
+        <br><br>
+        1. <strong>الهوية</strong>: المستخدمون لديهم ملفات شخصية + أدوار متعددة + تعيينات فندق/قسم
+        <br>2. <strong>التفويض</strong>: محسوب من الدور الأساسي (أعلى صلاحية) + نطاق الفندق/القسم
+        <br>3. <strong>سير العمل</strong>: جدول الطلبات العام يدعم جميع عمليات الموافقة
+        <br>4. <strong>الاستهداف</strong>: التدريب/المستندات/الإعلانات تستهدف مستخدمين أو أقسام أو فنادق أو أدوار
+        <br>5. <strong>الأتمتة</strong>: مشغلات قاعدة البيانات تنشئ التهيئة تلقائياً وتنهي الترقيات
+        <br>6. <strong>الأمان</strong>: RLS في PostgreSQL يفرض الوصول على مستوى قاعدة البيانات
+    </div>
+
+    <hr>
+    <p style="text-align: center; color: #888; margin-top: 40px;">
+        <em>Generated on December 20, 2025 • PRIME Hotels Intranet v1.0</em><br>
+        <em style="font-family: 'Noto Sans Arabic', sans-serif;">تم الإنشاء في 20 ديسمبر 2025 • شبكة فنادق برايم
+            الداخلية الإصدار 1.0</em>
+    </p>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'neutral',
+            securityLevel: 'loose',
+            flowchart: { useMaxWidth: true, htmlLabels: true },
+            sequence: { useMaxWidth: true }
+        });
+    </script>
+</body>
+
+</html>

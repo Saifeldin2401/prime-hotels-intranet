@@ -69,7 +69,8 @@ export const BuilderCanvas = ({
     onReorderSection,
     onReorderContent
 }: BuilderCanvasProps) => {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
 
     const getContentIcon = (type: ContentType) => {
         switch (type) {
@@ -130,11 +131,11 @@ export const BuilderCanvas = ({
     return (
         <div className="flex-1 p-6 bg-slate-50/30 min-h-[calc(100vh-4rem)]">
             <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-slate-800">{t('courseStructure')}</h3>
-                    <Button onClick={onAddSection} size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm">
-                        <Plus className="w-4 h-4 mr-1" />
-                        {t('addSection')}
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <h3 className="text-lg font-semibold text-slate-800">{t('builder.courseStructure')}</h3>
+                    <Button onClick={onAddSection} size="sm" className={cn("bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm", isRTL ? 'flex-row-reverse' : '')}>
+                        <Plus className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                        {t('builder.addSection')}
                     </Button>
                 </div>
 
@@ -144,11 +145,11 @@ export const BuilderCanvas = ({
                             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                                 <Plus className="w-8 h-8 text-slate-300" />
                             </div>
-                            <h4 className="text-lg font-medium text-slate-700 mb-2">{t('startCreating')}</h4>
-                            <p className="text-slate-500 mb-6 max-w-sm">{t('noContent')}</p>
-                            <Button onClick={onAddSection} variant="outline" className="border-dashed border-slate-300 hover:border-hotel-gold hover:text-hotel-gold hover:bg-hotel-gold/5">
-                                <Plus className="w-4 h-4 mr-1" />
-                                {t('addSection')}
+                            <h4 className="text-lg font-medium text-slate-700 mb-2">{t('builder.startCreating')}</h4>
+                            <p className="text-slate-500 mb-6 max-w-sm">{t('builder.noContent')}</p>
+                            <Button onClick={onAddSection} variant="outline" className={cn("border-dashed border-slate-300 hover:border-hotel-gold hover:text-hotel-gold hover:bg-hotel-gold/5", isRTL ? 'flex-row-reverse' : '')}>
+                                <Plus className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                                {t('builder.addSection')}
                             </Button>
                         </CardContent>
                     </Card>
@@ -170,17 +171,17 @@ export const BuilderCanvas = ({
                                     className="cursor-pointer bg-white hover:bg-slate-50/80 transition-colors py-4 px-6 select-none"
                                     onClick={() => onSectionClick(activeSection === section.id ? null : section.id)}
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
+                                    <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                             <div className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-200 rounded text-slate-400">
                                                 <GripVertical className="w-4 h-4" />
                                             </div>
                                             <h4 className="font-semibold text-slate-800">{section.title}</h4>
                                             <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-normal">
-                                                {section.items.length} {t('items', 'items')}
+                                                {section.items.length} {t('builder.items')}
                                             </Badge>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                             <Button
                                                 size="icon"
                                                 variant="ghost"
@@ -196,7 +197,7 @@ export const BuilderCanvas = ({
                                                 {activeSection === section.id ? (
                                                     <ChevronUp className="w-4 h-4" />
                                                 ) : (
-                                                    <ChevronDown className="w-4 h-4" />
+                                                    <ChevronDown className={cn("w-4 h-4", isRTL && "rotate-180")} />
                                                 )}
                                             </div>
                                         </div>
@@ -209,18 +210,18 @@ export const BuilderCanvas = ({
                                         <div className="space-y-3 mt-4">
                                             {section.items.length === 0 ? (
                                                 <div className="text-center py-8 border-2 border-dashed rounded-lg bg-white/50">
-                                                    <p className="text-sm text-slate-500 mb-4">{t('emptySection', 'This section is empty')}</p>
-                                                    <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto">
+                                                    <p className="text-sm text-slate-500 mb-4">{t('builder.emptySection')}</p>
+                                                    <div className={`flex flex-wrap gap-2 justify-center max-w-lg mx-auto ${isRTL ? 'flex-row-reverse' : ''}`}>
                                                         {(['text', 'video', 'image', 'document_link', 'quiz', 'sop_reference'] as ContentType[]).map((type) => (
                                                             <Button
                                                                 key={type}
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="bg-white hover:bg-hotel-gold/5 hover:border-hotel-gold hover:text-hotel-gold text-xs h-8"
+                                                                className={cn("bg-white hover:bg-hotel-gold/5 hover:border-hotel-gold hover:text-hotel-gold text-xs h-8", isRTL ? 'flex-row-reverse' : '')}
                                                                 onClick={() => onAddContent(type, section.id)}
                                                             >
                                                                 {getContentIcon(type)}
-                                                                <span className="ml-2 capitalize">{type.replace('_', ' ')}</span>
+                                                                <span className={isRTL ? "mr-2 capitalize" : "ml-2 capitalize"}>{t(`wizard.type_${type}`, type.replace('_', ' '))}</span>
                                                             </Button>
                                                         ))}
                                                     </div>
@@ -234,7 +235,7 @@ export const BuilderCanvas = ({
                                                             onDragStart={(e) => handleDragStartContent(e, section.id, itemIndex)}
                                                             onDragOver={handleDragOver}
                                                             onDrop={(e) => handleDropContent(e, section.id, itemIndex)}
-                                                            className="group flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-hotel-navy/30 hover:shadow-sm transition-all"
+                                                            className={cn("group flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-hotel-navy/30 hover:shadow-sm transition-all", isRTL ? 'flex-row-reverse' : '')}
                                                         >
                                                             <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500">
                                                                 <GripVertical className="w-4 h-4" />
@@ -242,22 +243,22 @@ export const BuilderCanvas = ({
                                                             <div className="flex items-center justify-center w-8 h-8 rounded bg-slate-100 text-slate-500 shrink-0">
                                                                 {getContentIcon(item.type)}
                                                             </div>
-                                                            <div className="flex-1 min-w-0">
+                                                            <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                                                                 <p className="font-medium text-sm text-slate-900 truncate">
-                                                                    {item.title || '(Untitled)'}
+                                                                    {item.title || `(${t('builder.untitled')})`}
                                                                 </p>
                                                                 <p className="text-xs text-slate-500 truncate">
-                                                                    {item.type} • {item.is_mandatory ? 'Mandatory' : 'Optional'}
+                                                                    {t(`wizard.type_${item.type}`, item.type)} • {item.is_mandatory ? t('builder.mandatory') : t('builder.optional')}
                                                                 </p>
                                                             </div>
-                                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isRTL ? 'flex-row-reverse' : ''}`}>
                                                                 <Button
                                                                     size="sm"
                                                                     variant="ghost"
                                                                     className="h-7 px-2 text-xs"
                                                                     onClick={() => onEditContent(section.id, item.id)}
                                                                 >
-                                                                    Edit
+                                                                    {t('common:actions.edit')}
                                                                 </Button>
                                                                 <Button
                                                                     size="sm"
@@ -271,14 +272,14 @@ export const BuilderCanvas = ({
                                                         </div>
                                                     ))}
                                                     <div className="mt-4 pt-2 flex justify-center">
-                                                        <div className="flex flex-wrap gap-2 justify-center">
+                                                        <div className={`flex flex-wrap gap-2 justify-center ${isRTL ? 'flex-row-reverse' : ''}`}>
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                className="text-slate-500 hover:text-hotel-gold"
+                                                                className={cn("text-slate-500 hover:text-hotel-gold", isRTL ? 'flex-row-reverse' : '')}
                                                                 onClick={() => onAddContent('text', section.id)}
                                                             >
-                                                                <Plus className="w-3 h-3 mr-1" /> Add Content
+                                                                <Plus className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} /> {t('builder.addContent')}
                                                             </Button>
                                                         </div>
                                                     </div>

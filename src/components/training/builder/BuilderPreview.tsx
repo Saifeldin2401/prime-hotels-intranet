@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link, FileText, Image, Video, FileQuestion, BookOpen } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 
 interface ContentBlock {
     id: string
@@ -28,35 +29,36 @@ interface BuilderPreviewProps {
 }
 
 export const BuilderPreview = ({ title, description, sections }: BuilderPreviewProps) => {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
 
     return (
         <div className="flex-1 p-6 bg-slate-50/30 overflow-y-auto min-h-[calc(100vh-4rem)]">
             <div className="max-w-4xl mx-auto">
                 <Card className="animate-fade-in border-t-4 border-t-hotel-navy shadow-md">
-                    <CardHeader className="bg-white border-b border-gray-100">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-xl font-bold text-hotel-navy">{t('preview')}</CardTitle>
-                            <div className="text-xs text-gray-400 uppercase tracking-wider">Draft Mode</div>
+                    <CardHeader className={cn("bg-white border-b border-gray-100", isRTL ? 'text-right' : 'text-left')}>
+                        <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                            <CardTitle className="text-xl font-bold text-hotel-navy">{t('builder.preview')}</CardTitle>
+                            <div className="text-xs text-gray-400 uppercase tracking-wider">{t('builder.draftMode')}</div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-8">
-                        <div className="prose max-w-none dark:prose-invert">
+                        <div className={cn("prose max-w-none dark:prose-invert", isRTL ? 'text-right' : 'text-left')}>
                             <h1 className="text-3xl font-bold text-gray-900 mb-4">{title}</h1>
                             <p className="text-lg text-gray-600 mb-10 leading-relaxed">{description}</p>
 
                             {sections.map((section) => (
                                 <div key={section.id} className="mb-10 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
-                                    <h2 className="text-2xl font-bold mb-3 text-hotel-navy flex items-center">
-                                        <span className="w-2 h-8 bg-hotel-gold rounded-full mr-3"></span>
+                                    <h2 className={`text-2xl font-bold mb-3 text-hotel-navy flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span className={cn("w-2 h-8 bg-hotel-gold rounded-full", isRTL ? "ml-3" : "mr-3")}></span>
                                         {section.title}
                                     </h2>
-                                    {section.description && <p className="text-gray-600 mb-6 pl-5">{section.description}</p>}
+                                    {section.description && <p className={cn("text-gray-600 mb-6", isRTL ? "pr-5" : "pl-5")}>{section.description}</p>}
 
                                     <div className="space-y-6 mt-6">
                                         {section.items.map((item) => (
                                             <div key={item.id} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                                <div className="flex items-start gap-4">
+                                                <div className={`flex items-start gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                                     <div className="mt-1 p-2 bg-slate-100 rounded-lg text-slate-500">
                                                         {item.type === 'video' && <Video className="w-5 h-5" />}
                                                         {item.type === 'image' && <Image className="w-5 h-5" />}
@@ -65,7 +67,7 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                                         {item.type === 'quiz' && <FileQuestion className="w-5 h-5" />}
                                                         {item.type === 'sop_reference' && <BookOpen className="w-5 h-5" />}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
+                                                    <div className={cn("flex-1 min-w-0", isRTL ? "text-right" : "text-left")}>
                                                         <h3 className="text-lg font-semibold mb-2 text-gray-900">{item.title}</h3>
                                                         {item.content && (
                                                             <div
@@ -94,14 +96,14 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                                         )}
 
                                                         {item.type === 'document_link' && item.content_url && (
-                                                            <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-center gap-3">
+                                                            <div className={`mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                                                 <div className="p-2 bg-white rounded-full text-blue-600 shadow-sm">
                                                                     <Link className="w-5 h-5" />
                                                                 </div>
-                                                                <div>
-                                                                    <p className="font-medium text-blue-900">Attached Document</p>
+                                                                <div className={isRTL ? 'text-right' : 'text-left'}>
+                                                                    <p className="font-medium text-blue-900">{t('builder.attachedDocument')}</p>
                                                                     <a href={item.content_url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline hover:text-blue-800">
-                                                                        Open Document
+                                                                        {t('builder.openDocument')}
                                                                     </a>
                                                                 </div>
                                                             </div>
@@ -111,13 +113,13 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                             </div>
                                         ))}
                                         {section.items.length === 0 && (
-                                            <p className="text-center text-gray-400 italic py-4">No content in this section yet.</p>
+                                            <p className="text-center text-gray-400 italic py-4">{t('builder.noContentInSection')}</p>
                                         )}
                                     </div>
                                 </div>
                             ))}
                             {sections.length === 0 && (
-                                <p className="text-center text-gray-400 italic py-10 border-2 border-dashed rounded-xl">No sections added yet.</p>
+                                <p className="text-center text-gray-400 italic py-10 border-2 border-dashed rounded-xl">{t('builder.noSectionsAdded')}</p>
                             )}
                         </div>
                     </CardContent>

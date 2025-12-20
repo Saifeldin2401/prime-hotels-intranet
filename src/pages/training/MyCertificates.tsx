@@ -33,7 +33,8 @@ import { useTranslation } from 'react-i18next'
 import type { Certificate } from '@/lib/certificateService'
 
 export default function MyCertificates() {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
     const { data: certificates, isLoading } = useMyCertificates()
     const downloadCertificate = useDownloadCertificate()
     const [selectedType, setSelectedType] = useState<string>('all')
@@ -63,11 +64,11 @@ export default function MyCertificates() {
 
     const getTypeLabel = (type: string) => {
         switch (type) {
-            case 'training': return 'Training'
-            case 'sop_quiz': return 'SOP Quiz'
-            case 'compliance': return 'Compliance'
-            case 'achievement': return 'Achievement'
-            default: return 'Certificate'
+            case 'training': return t('training')
+            case 'sop_quiz': return t('sopQuiz')
+            case 'compliance': return t('compliance')
+            case 'achievement': return t('achievement')
+            default: return t('certificate')
         }
     }
 
@@ -98,7 +99,7 @@ export default function MyCertificates() {
                 <CardDescription>
                     <div className="flex items-center gap-1 text-sm">
                         <Clock className="w-3 h-3" />
-                        Completed {format(new Date(certificate.completionDate), 'MMM d, yyyy')}
+                        {t('completedOn', { date: format(new Date(certificate.completionDate), 'MMM d, yyyy') })}
                     </div>
                 </CardDescription>
             </CardHeader>
@@ -135,7 +136,7 @@ export default function MyCertificates() {
                         )}
                         {t('downloadPdf')}
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => window.open(`/certificates/verify/${certificate.verificationCode}`, '_blank')}>
                         <Eye className="w-4 h-4" />
                     </Button>
                 </div>
@@ -168,10 +169,10 @@ export default function MyCertificates() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
             <PageHeader
-                title="My Certificates"
-                description="View and download your earned certificates"
+                title={t('myCertificates')}
+                description={t('viewDownloadCertificates')}
             />
 
             {/* Stats Overview */}
@@ -213,7 +214,7 @@ export default function MyCertificates() {
                 <TabsList>
                     <TabsTrigger value="all">{t('all')}</TabsTrigger>
                     <TabsTrigger value="training">{t('training')}</TabsTrigger>
-                    <TabsTrigger value="sop_quiz">{t('sop')}</TabsTrigger>
+                    <TabsTrigger value="sop_quiz">{t('sopQuiz')}</TabsTrigger>
                     <TabsTrigger value="compliance">{t('compliance')}</TabsTrigger>
                 </TabsList>
 

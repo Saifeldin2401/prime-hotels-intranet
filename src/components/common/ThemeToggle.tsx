@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { EnhancedButton } from '@/components/ui/enhanced-button'
-import { 
-  Sun, 
-  Moon, 
+import {
+  Sun,
+  Moon,
   Monitor,
   Check,
   Palette
@@ -17,19 +17,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 export function ThemeToggle() {
-  const { mode, setMode, isDark } = useTheme()
+  const { mode, setMode } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
 
-  const getIcon = () => {
-    switch (mode) {
-      case 'light':
-        return <Sun className="h-4 w-4" />
-      case 'dark':
-        return <Moon className="h-4 w-4" />
-      default:
-        return <Monitor className="h-4 w-4" />
-    }
-  }
+  // getIcon function removed - unused
 
   const getLabel = () => {
     switch (mode) {
@@ -45,9 +36,9 @@ export function ThemeToggle() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <EnhancedButton 
-          variant="ghost" 
-          size="sm" 
+        <EnhancedButton
+          variant="ghost"
+          size="sm"
           className="h-9 w-9 p-0 relative group"
           aria-label={`Theme: ${getLabel()}`}
         >
@@ -59,8 +50,8 @@ export function ThemeToggle() {
           <div className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full bg-hotel-gold transition-all duration-300 scale-0 group-hover:scale-100" />
         </EnhancedButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
+      <DropdownMenuContent
+        align="end"
         className="w-48 animate-in slide-in-from-top-2 fade-in-0 duration-200"
         sideOffset={8}
       >
@@ -71,8 +62,8 @@ export function ThemeToggle() {
           </p>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          onClick={() => setMode('light')} 
+        <DropdownMenuItem
+          onClick={() => setMode('light')}
           className="cursor-pointer group/item"
         >
           <div className="flex items-center gap-3 flex-1">
@@ -87,8 +78,8 @@ export function ThemeToggle() {
             )}
           </div>
         </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => setMode('dark')} 
+        <DropdownMenuItem
+          onClick={() => setMode('dark')}
           className="cursor-pointer group/item"
         >
           <div className="flex items-center gap-3 flex-1">
@@ -103,8 +94,8 @@ export function ThemeToggle() {
             )}
           </div>
         </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => setMode('system')} 
+        <DropdownMenuItem
+          onClick={() => setMode('system')}
           className="cursor-pointer group/item"
         >
           <div className="flex items-center gap-3 flex-1">

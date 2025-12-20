@@ -648,7 +648,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/admin/notifications',
-        title: 'Notification Batches',
+        title: 'notification_batches',
         icon: Bell,
         description: 'Monitor bulk notification jobs',
         allowedRoles: ['regional_admin', 'regional_hr'],

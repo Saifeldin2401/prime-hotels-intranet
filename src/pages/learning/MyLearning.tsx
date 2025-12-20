@@ -5,21 +5,23 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { useAuth } from '@/contexts/AuthContext'
 import {
     useMyAssignments,
-    useTrainingProgress,
-    useTrainingStats
 } from '@/hooks/useTraining'
-import { formatRelativeTime } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 import { DailyQuizWidget } from '@/components/questions/DailyQuizWidget'
 import { learningService } from '@/services/learningService'
 import type { LearningAssignment } from '@/types/learning'
+import { ar, enUS } from 'date-fns/locale'
 
 export default function MyLearning() {
+    const { t, i18n } = useTranslation(['training', 'common'])
     const navigate = useNavigate()
     const { user } = useAuth()
+    const isRTL = i18n.dir() === 'rtl'
+    const dateLocale = isRTL ? ar : enUS
 
     // Fetch data using new MyAssignments hook which queries learning_assignments
     const { data: assignments, isLoading: assignmentsLoading } = useMyAssignments()
@@ -84,9 +86,9 @@ export default function MyLearning() {
     return (
         <div className="space-y-8 animate-fade-in">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">My Learning</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{t('myLearning')}</h1>
                 <p className="text-muted-foreground mt-2">
-                    Stay up to date with your required training and assessments.
+                    {t('myLearningDescription')}
                 </p>
             </div>
 
@@ -95,25 +97,25 @@ export default function MyLearning() {
                 <Card>
                     <CardContent className="p-6">
                         <div className="text-2xl font-bold text-blue-600">{stats.totalAssigned}</div>
-                        <div className="text-sm text-muted-foreground">Assigned</div>
+                        <div className="text-sm text-muted-foreground">{t('assigned')}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-6">
                         <div className="text-2xl font-bold text-orange-600">{stats.inProgress}</div>
-                        <div className="text-sm text-muted-foreground">In Progress</div>
+                        <div className="text-sm text-muted-foreground">{t('inProgress')}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-6">
                         <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-                        <div className="text-sm text-muted-foreground">Completed</div>
+                        <div className="text-sm text-muted-foreground">{t('completed')}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-6">
                         <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-                        <div className="text-sm text-muted-foreground">Overdue</div>
+                        <div className="text-sm text-muted-foreground">{t('overdue')}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -122,15 +124,15 @@ export default function MyLearning() {
                 <div className="lg:col-span-2 space-y-6">
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                         <AlertCircle className="h-5 w-5 text-orange-500" />
-                        Required Action
+                        {t('requiredAction')}
                     </h2>
 
                     {activeItems.length === 0 ? (
                         <Card className="bg-slate-50 border-dashed">
                             <CardContent className="py-12 text-center text-muted-foreground">
                                 <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                                <h3 className="font-medium text-lg">All Caught Up!</h3>
-                                <p>You have no pending training.</p>
+                                <h3 className="font-medium text-lg">{t('allCaughtUp')}</h3>
+                                <p>{t('noPendingTraining')}</p>
                             </CardContent>
                         </Card>
                     ) : (
@@ -142,39 +144,39 @@ export default function MyLearning() {
                                             <div className="space-y-1 flex-1">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <Badge variant={item.progress?.status === 'in_progress' ? 'default' : 'secondary'}>
-                                                        {(item.progress?.status || 'Not Started').replace('_', ' ')}
+                                                        {t((item.progress?.status || 'notStarted'))}
                                                     </Badge>
                                                     {item.priority === 'compliance' && (
-                                                        <Badge variant="destructive">Mandatory</Badge>
+                                                        <Badge variant="destructive">{t('mandatory')}</Badge>
                                                     )}
                                                     {item.due_date && (
                                                         <span className={`text-xs flex items-center gap-1 ${new Date(item.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
                                                             <Clock className="h-3 w-3" />
-                                                            Due {formatRelativeTime(item.due_date)}
+                                                            {t('due')} {formatDistanceToNow(new Date(item.due_date), { addSuffix: true, locale: dateLocale })}
                                                         </span>
                                                     )}
                                                 </div>
                                                 <h3 className="font-semibold text-lg flex items-center gap-2">
                                                     {item.content_type === 'quiz' ? <FileQuestion className="h-4 w-4 text-purple-500" /> : <BookOpen className="h-4 w-4 text-blue-500" />}
-                                                    {item.content_title || 'Untitled Assignment'}
+                                                    {item.content_title || t('untitledAssignment')}
                                                 </h3>
                                                 <p className="text-sm text-muted-foreground line-clamp-1">
-                                                    {item.content_metadata?.description || 'No description available.'}
+                                                    {item.content_metadata?.description || t('noDescription')}
                                                 </p>
                                                 <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                                    {item.content_metadata?.duration && <span>{item.content_metadata.duration} min</span>}
-                                                    {item.content_metadata?.question_count && <span>{item.content_metadata.question_count} Questions</span>}
+                                                    {item.content_metadata?.duration && <span>{item.content_metadata.duration} {t('min')}</span>}
+                                                    {item.content_metadata?.question_count && <span>{item.content_metadata.question_count} {t('questions')}</span>}
                                                 </div>
                                             </div>
 
                                             <Button
                                                 onClick={() => handleStart(item)}
-                                                className="ml-4"
+                                                className={`ml-4 ${isRTL ? 'flex-row-reverse' : ''}`}
                                             >
                                                 {item.progress?.status === 'in_progress' ? (
-                                                    <>Continue</>
+                                                    <>{t('continue')}</>
                                                 ) : (
-                                                    <><Play className="mr-2 h-4 w-4" /> Start</>
+                                                    <><Play className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} /> {t('start')}</>
                                                 )}
                                             </Button>
                                         </div>
@@ -191,17 +193,17 @@ export default function MyLearning() {
 
                     <h2 className="text-xl font-semibold flex items-center gap-2 mt-8">
                         <CheckCircle className="h-5 w-5 text-green-500" />
-                        Completed History
+                        {t('completedHistory')}
                     </h2>
 
                     <div className="border rounded-lg bg-white overflow-hidden">
-                        <table className="w-full text-sm text-left">
+                        <table className={`w-full text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                             <thead className="bg-slate-50 border-b">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">Topic</th>
-                                    <th className="px-4 py-3 font-medium">Completed</th>
-                                    <th className="px-4 py-3 font-medium">Score</th>
-                                    <th className="px-4 py-3 font-medium">Action</th>
+                                    <th className="px-4 py-3 font-medium">{t('topic')}</th>
+                                    <th className="px-4 py-3 font-medium">{t('completed')}</th>
+                                    <th className="px-4 py-3 font-medium">{t('score')}</th>
+                                    <th className="px-4 py-3 font-medium">{t('action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
@@ -212,15 +214,15 @@ export default function MyLearning() {
                                             {item.content_title}
                                         </td>
                                         <td className="px-4 py-3">
-                                            {item.progress?.completed_at ? format(new Date(item.progress.completed_at), 'MMM d, yyyy') : '-'}
+                                            {item.progress?.completed_at ? format(new Date(item.progress.completed_at), 'MMM d, yyyy', { locale: dateLocale }) : '-'}
                                         </td>
                                         <td className="px-4 py-3 font-mono">
                                             {item.progress?.score_percentage != null ? `${item.progress.score_percentage}%` : 'N/A'}
                                         </td>
                                         <td className="px-4 py-3">
                                             <Button size="sm" variant="ghost" onClick={() => navigate(`/training/certificates`)}>
-                                                <Award className="h-4 w-4 text-purple-600 mr-2" />
-                                                Certificate
+                                                <Award className={`h-4 w-4 text-purple-600 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                                {t('certificate')}
                                             </Button>
                                         </td>
                                     </tr>
@@ -228,7 +230,7 @@ export default function MyLearning() {
                                 {completedItems.length === 0 && (
                                     <tr>
                                         <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                                            No completed training history.
+                                            {t('noCompletedHistory')}
                                         </td>
                                     </tr>
                                 )}
@@ -242,16 +244,16 @@ export default function MyLearning() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Training Summary</CardTitle>
-                            <CardDescription>All-time performance</CardDescription>
+                            <CardTitle>{t('trainingSummary')}</CardTitle>
+                            <CardDescription>{t('allTimePerformance')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex justify-between items-center pb-2 border-b">
-                                <span className="text-sm text-muted-foreground">Total Completed</span>
+                                <span className="text-sm text-muted-foreground">{t('totalCompleted')}</span>
                                 <span className="font-bold">{stats.completed}</span>
                             </div>
                             <div className="flex justify-between items-center pb-2 border-b">
-                                <span className="text-sm text-muted-foreground">On Time</span>
+                                <span className="text-sm text-muted-foreground">{t('onTime')}</span>
                                 <span className="font-bold text-green-600">
                                     {completedItems.filter(i => !i.due_date || new Date(i.progress!.completed_at!) <= new Date(i.due_date)).length}
                                 </span>

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -74,6 +75,7 @@ export default function JobTitles() {
     const { toast } = useToast()
     const queryClient = useQueryClient()
     const { departments } = useDepartments()
+    const { t } = useTranslation('admin')
 
     // Fetch Job Titles
     const { data: jobTitles, isLoading } = useQuery({
@@ -111,8 +113,8 @@ export default function JobTitles() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['job-titles'] })
             toast({
-                title: "Success",
-                description: "Job title created successfully",
+                title: t('common.success'),
+                description: t('job_titles.success.created'),
             })
             setIsDialogOpen(false)
             resetForm()
@@ -147,8 +149,8 @@ export default function JobTitles() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['job-titles'] })
             toast({
-                title: "Success",
-                description: "Job title updated successfully",
+                title: t('common.success'),
+                description: t('job_titles.success.updated'),
             })
             setIsDialogOpen(false)
             resetForm()
@@ -175,16 +177,16 @@ export default function JobTitles() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['job-titles'] })
             toast({
-                title: "Success",
-                description: "Job title deleted successfully",
+                title: t('common.success'),
+                description: t('job_titles.success.deleted'),
             })
         },
         onError: (error: any) => {
             // Check for foreign key violation
             if (error.code === '23503') {
                 toast({
-                    title: "Cannot Delete",
-                    description: "This job title is currently in use by users or templates. Please reassign them first.",
+                    title: t('common.error'),
+                    description: t('job_titles.errors.restricted_delete'),
                     variant: "destructive"
                 })
             } else {
@@ -202,8 +204,8 @@ export default function JobTitles() {
 
         if (!formData.title || !formData.department_id) {
             toast({
-                title: "Validation Error",
-                description: "Title and Department are required",
+                title: t('common.error'),
+                description: t('job_titles.errors.validation'),
                 variant: "destructive"
             })
             return
@@ -257,10 +259,10 @@ export default function JobTitles() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold font-serif text-hotel-navy">Job Titles</h1>
+                    <h1 className="text-2xl font-bold font-serif text-hotel-navy">{t('job_titles.title')}</h1>
                     <p className="text-muted-foreground flex items-center gap-2">
                         <Briefcase className="h-4 w-4" />
-                        Manage the master list of job titles and their default system roles
+                        {t('job_titles.description')}
                     </p>
                 </div>
 
@@ -271,36 +273,36 @@ export default function JobTitles() {
                     <DialogTrigger asChild>
                         <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy">
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Job Title
+                            {t('job_titles.add_title')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>{editingTitle ? 'Edit Job Title' : 'Add New Job Title'}</DialogTitle>
+                            <DialogTitle>{editingTitle ? t('job_titles.edit_title') : t('job_titles.new_title')}</DialogTitle>
                             <DialogDescription>
-                                Define the standard job title and its associated department and role.
+                                {t('job_titles.dialog_desc')}
                             </DialogDescription>
                         </DialogHeader>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="title">Job Title <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="title">{t('job_titles.job_title_label')}</Label>
                                 <Input
                                     id="title"
-                                    placeholder="e.g. Front Desk Agent"
+                                    placeholder={t('job_titles.job_title_placeholder')}
                                     value={formData.title}
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="department">Department <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="department">{t('job_titles.department_label')}</Label>
                                 <Select
                                     value={formData.department_id}
                                     onValueChange={(val) => setFormData({ ...formData, department_id: val })}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select a department..." />
+                                        <SelectValue placeholder={t('job_titles.select_department')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {departments?.map((dept) => (
@@ -313,13 +315,13 @@ export default function JobTitles() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="role">Default System Role (Optional)</Label>
+                                <Label htmlFor="role">{t('job_titles.default_role_label')}</Label>
                                 <Select
                                     value={formData.default_role}
                                     onValueChange={(val) => setFormData({ ...formData, default_role: val })}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select a role..." />
+                                        <SelectValue placeholder={t('job_titles.select_role')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {Object.entries(ROLES).map(([key, role]) => (
@@ -330,19 +332,19 @@ export default function JobTitles() {
                                     </SelectContent>
                                 </Select>
                                 <p className="text-xs text-muted-foreground">
-                                    New users with this job title can be automatically assigned this permission level.
+                                    {t('job_titles.role_helper')}
                                 </p>
                             </div>
 
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                                    Cancel
+                                    {t('common.cancel')}
                                 </Button>
                                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                                     {(createMutation.isPending || updateMutation.isPending) && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     )}
-                                    {editingTitle ? 'Save Changes' : 'Create Job Title'}
+                                    {editingTitle ? t('common.save') : t('job_titles.add_title')}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -354,7 +356,7 @@ export default function JobTitles() {
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                        placeholder="Search titles or departments..."
+                        placeholder={t('job_titles.search_placeholder')}
                         className="pl-9"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -366,10 +368,10 @@ export default function JobTitles() {
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-gray-50/50">
-                            <TableHead>Title</TableHead>
-                            <TableHead>Department</TableHead>
-                            <TableHead>Default Role</TableHead>
-                            <TableHead className="w-[100px] text-right">Actions</TableHead>
+                            <TableHead>{t('job_titles.table.title')}</TableHead>
+                            <TableHead>{t('job_titles.table.department')}</TableHead>
+                            <TableHead>{t('job_titles.table.default_role')}</TableHead>
+                            <TableHead className="w-[100px] text-right">{t('job_titles.table.actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -378,7 +380,7 @@ export default function JobTitles() {
                                 <TableCell colSpan={4} className="h-24 text-center">
                                     <div className="flex items-center justify-center text-muted-foreground">
                                         <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                                        Loading job titles...
+                                        {t('job_titles.loading')}
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -387,8 +389,8 @@ export default function JobTitles() {
                                 <TableCell colSpan={4} className="h-24 text-center">
                                     <div className="flex flex-col items-center justify-center text-muted-foreground py-8">
                                         <Briefcase className="h-10 w-10 text-gray-300 mb-3" />
-                                        <p>No job titles found</p>
-                                        <p className="text-sm mt-1">Try adjusting your search or add a new title.</p>
+                                        <p>{t('job_titles.no_data')}</p>
+                                        <p className="text-sm mt-1">{t('job_titles.no_data_desc')}</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -422,18 +424,18 @@ export default function JobTitles() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem onClick={() => handleEdit(job)}>
                                                     <Pencil className="h-4 w-4 mr-2" />
-                                                    Edit
+                                                    {t('job_titles.edit')}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     className="text-red-600 focus:text-red-600"
                                                     onClick={() => {
-                                                        if (confirm('Are you sure you want to delete this job title? This action cannot be undone if it is actively used.')) {
+                                                        if (confirm(t('job_titles.delete_confirm'))) {
                                                             deleteMutation.mutate(job.id)
                                                         }
                                                     }}
                                                 >
                                                     <Trash2 className="h-4 w-4 mr-2" />
-                                                    Delete
+                                                    {t('job_titles.delete')}
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -448,10 +450,9 @@ export default function JobTitles() {
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
-                    <p className="font-semibold mb-1">About Job Title Management</p>
+                    <p className="font-semibold mb-1">{t('job_titles.about_title')}</p>
                     <p>
-                        Changes made here will be reflected across the entire system immediately.
-                        Deleting a job title is restricted if it is currently assigned to active user profiles or onboarding templates.
+                        {t('job_titles.about_desc')}
                     </p>
                 </div>
             </div>

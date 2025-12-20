@@ -1,4 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,12 +32,24 @@ export default function PropertyDetails() {
         )
     }
 
-    // Dynamic Stats - Real data only, no mock values
+    // Dynamic Stats - Real data only
+    const { data: staffCount } = useQuery({
+        queryKey: ['property_staff_count', id],
+        queryFn: async () => {
+            if (!id) return 0
+            const { count, error } = await supabase
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('property_id', id)
+            if (error) throw error
+            return count || 0
+        },
+        enabled: !!id
+    })
+
     const stats = {
         departments: departments.length,
-        // Staff count would need a separate query or aggregation
-        // Keeping as 0 until proper staff counting is implemented
-        staff: 0
+        staff: staffCount || 0
     }
 
     return (
@@ -83,9 +97,7 @@ export default function PropertyDetails() {
                         <CardTitle className="text-sm font-medium text-gray-600">{t('cards.total_staff')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">{isLoading ? '-' : 0}</div>
-                        {/* Note: useDepartments typically just returns list. To get staff count, we'd need aggregation. 
-                             I'll show 0 for now to be "real" (no mock 145) until I fix the query. */}
+                        <div className="text-2xl font-bold text-blue-600">{isLoading ? '-' : stats.staff}</div>
                         <p className="text-xs text-gray-600 mt-1">{t('cards.active_employees_subtitle')}</p>
                     </CardContent>
                 </Card>

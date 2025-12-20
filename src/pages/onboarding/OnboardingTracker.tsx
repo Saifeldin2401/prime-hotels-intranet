@@ -104,8 +104,8 @@ export default function OnboardingTracker() {
                                         <TableCell>{process.template?.title}</TableCell>
                                         <TableCell>{format(new Date(process.start_date), 'MMM d, yyyy')}</TableCell>
                                         <TableCell>
-                                            <Badge variant={process.status === 'completed' ? 'secondary' : 'default'}>
-                                                {process.status}
+                                            <Badge variant={(process.status as string) === 'completed' ? 'secondary' : 'default'}>
+                                                {t(`status.${process.status}`)}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>

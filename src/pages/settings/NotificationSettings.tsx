@@ -53,14 +53,6 @@ export function NotificationSettings() {
                             }
                         }}
                     />
-                    {preferences.browser_push_enabled && (
-                        <button
-                            onClick={() => new Notification('Test Notification', { body: 'If you see this, browser push works!' })}
-                            className="ml-2 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded border"
-                        >
-                            Test
-                        </button>
-                    )}
                 </div>
 
                 <div className="flex items-center justify-between pb-4 border-b">

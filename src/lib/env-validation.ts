@@ -8,6 +8,7 @@ interface EnvConfig {
   VITE_DEV_MODE?: string
   VITE_API_BASE_URL?: string
   VITE_MOCK_AUTH?: string
+  VITE_ALLOWED_ORIGINS?: string
 }
 
 // Required environment variables
@@ -37,7 +38,8 @@ export function validateEnvironment(): EnvConfig {
     'VITE_APP_DESCRIPTION',
     'VITE_DEV_MODE',
     'VITE_API_BASE_URL',
-    'VITE_MOCK_AUTH'
+    'VITE_MOCK_AUTH',
+    'VITE_ALLOWED_ORIGINS'
   ]
 
   for (const varName of OPTIONAL_VARS) {
@@ -88,8 +90,8 @@ export const securityHeaders = {
 
 // CORS configuration
 export const corsConfig = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] // Replace with actual domains
+  origin: import.meta.env.PROD
+    ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',') || ['https://yourdomain.com'])
     : ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

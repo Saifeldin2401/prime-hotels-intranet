@@ -22,65 +22,68 @@ export const BuilderHeader = ({
     onPreview,
     onMagic
 }: BuilderHeaderProps) => {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
     const navigate = useNavigate()
 
     return (
         <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center justify-between py-4">
-                <div className="flex items-center gap-4">
+            <div className={`container flex h-16 items-center justify-between py-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <Button
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
                         onClick={() => navigate('/training/modules')}
                     >
-                        <ChevronLeft className="h-4 w-4" />
+                        <ChevronLeft className={cn("h-4 w-4", isRTL && "rotate-180")} />
                     </Button>
-                    <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
+                    <div className={`flex flex-col gap-0.5 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                             <h1 className="text-lg font-semibold leading-none tracking-tight">
-                                {title || t('untitledModule')}
+                                {title || t('builder.untitledModule')}
                             </h1>
                             {hasUnsavedChanges && (
                                 <Badge variant="secondary" className="h-5 px-1.5 text-[10px] uppercase font-mono">
-                                    {t('unsaved')}
+                                    {t('builder.unsaved')}
                                 </Badge>
                             )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            {t('trainingBuilder')}
+                            {t('builder.trainingBuilder')}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={onMagic}
-                        className="hidden sm:flex"
+                        className={cn("hidden sm:flex", isRTL && "flex-row-reverse")}
                     >
-                        <Wand2 className="mr-2 h-4 w-4 text-purple-500" />
-                        {t('aiAssistant')}
+                        <Wand2 className={cn("h-4 w-4 text-purple-500", isRTL ? "ml-2" : "mr-2")} />
+                        {t('builder.aiAssistant')}
                     </Button>
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={onPreview}
+                        className={isRTL ? 'flex-row-reverse' : ''}
                     >
-                        <Eye className="mr-2 h-4 w-4" />
+                        <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                         {t('preview')}
                     </Button>
                     <Button
                         size="sm"
                         onClick={onSave}
                         disabled={isSaving}
+                        className={isRTL ? 'flex-row-reverse' : ''}
                     >
                         {isSaving ? (
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            <div className={cn("h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent", isRTL ? "ml-2" : "mr-2")} />
                         ) : (
-                            <Save className="mr-2 h-4 w-4" />
+                            <Save className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                         )}
                         {t('save')}
                     </Button>

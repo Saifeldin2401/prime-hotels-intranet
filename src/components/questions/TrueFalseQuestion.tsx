@@ -6,6 +6,7 @@
 
 import { cn } from '@/lib/utils'
 import { Check, X, CheckCircle, XCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface TrueFalseQuestionProps {
     selectedAnswer: string | null
@@ -20,6 +21,7 @@ export function TrueFalseQuestion({
     disabled = false,
     correctAnswer
 }: TrueFalseQuestionProps) {
+    const { t } = useTranslation('common')
     const showFeedback = correctAnswer !== undefined
 
     const isCorrectTrue = correctAnswer === 'true'
@@ -74,7 +76,7 @@ export function TrueFalseQuestion({
                     selectedTrue || (showFeedback && isCorrectTrue) ? 'text-green-700' : 'text-gray-600',
                     showFeedback && selectedTrue && !isCorrectTrue && 'text-red-700'
                 )}>
-                    True
+                    {t('common.true')}
                 </span>
             </button>
 
@@ -124,7 +126,7 @@ export function TrueFalseQuestion({
                     showFeedback && isCorrectFalse && 'text-green-700',
                     showFeedback && selectedFalse && !isCorrectFalse && 'text-red-700'
                 )}>
-                    False
+                    {t('common.false')}
                 </span>
             </button>
         </div>

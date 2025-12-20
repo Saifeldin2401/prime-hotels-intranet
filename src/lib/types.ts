@@ -524,21 +524,15 @@ export interface AuditLog {
   action: string
   entity_type: string
   entity_id: string | null
-  old_values: Record<string, unknown> | null
-  new_values: Record<string, unknown> | null
+  old_values?: Record<string, unknown> | null
+  new_values?: Record<string, unknown> | null
+  details?: Record<string, unknown> | null
+  changes?: Record<string, { old: any; new: any }> | null
   ip_address: string | null
   user_agent: string | null
   created_at: string
 }
 
-export interface PIIAccessLog {
-  id: string
-  actor_id: string
-  target_user_id: string
-  fields_accessed: string[]
-  reason: string | null
-  created_at: string
-}
 
 export interface TemporaryApprover {
   id: string

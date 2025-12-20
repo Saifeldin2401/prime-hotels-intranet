@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Award, CheckCircle2, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,13 +13,7 @@ export function UserSkillsDisplay() {
     const [skills, setSkills] = useState<UserSkill[]>([])
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
-        if (user) {
-            loadSkills()
-        }
-    }, [user])
-
-    const loadSkills = async () => {
+    const loadSkills = useCallback(async () => {
         try {
             setLoading(true)
             if (user) {
@@ -31,7 +25,13 @@ export function UserSkillsDisplay() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [user])
+
+    useEffect(() => {
+        if (user) {
+            loadSkills()
+        }
+    }, [user, loadSkills])
 
     if (loading) {
         return <div className="text-center py-8 text-gray-500">Loading skills...</div>

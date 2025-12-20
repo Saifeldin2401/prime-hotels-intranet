@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Theme, ThemeMode } from '../lib/theme'
-import { getTheme, applyTheme } from '../lib/theme'
+import { getTheme, applyTheme, lightTheme } from '../lib/theme'
 
 interface ThemeContextType {
   theme: Theme
@@ -18,61 +18,24 @@ interface ThemeProviderProps {
   defaultMode?: ThemeMode
 }
 
-export function ThemeProvider({ children, defaultMode = 'system' }: ThemeProviderProps) {
-  const [mode, setMode] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('theme-mode') as ThemeMode
-    return saved || defaultMode
-  })
-  
-  const [theme, setTheme] = useState<Theme>(() => getTheme(mode))
-  const [isDark, setIsDark] = useState(() => {
-    if (mode === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-    }
-    return mode === 'dark'
-  })
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const [mode, setMode] = useState<ThemeMode>('light')
 
-  useEffect(() => {
-    const newTheme = getTheme(mode)
-    const newIsDark = mode === 'system' 
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : mode === 'dark'
-    
-    setTheme(newTheme)
-    setIsDark(newIsDark)
-    applyTheme(newTheme)
-    const root = document.documentElement
-    if (newIsDark) {
-      root.classList.add('dark')
-    } else {
-      root.classList.remove('dark')
-    }
-    localStorage.setItem('theme-mode', mode)
-  }, [mode])
+  const [theme, setTheme] = useState<Theme>(lightTheme)
+  const isDark = false
 
+  // Force light mode effect
   useEffect(() => {
-    if (mode === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      const handleChange = () => {
-        const newTheme = getTheme(mode)
-        setTheme(newTheme)
-        setIsDark(mediaQuery.matches)
-        applyTheme(newTheme)
-        const root = document.documentElement
-        if (mediaQuery.matches) {
-          root.classList.add('dark')
-        } else {
-          root.classList.remove('dark')
-        }
-      }
-      
-      mediaQuery.addEventListener('change', handleChange)
-      return () => mediaQuery.removeEventListener('change', handleChange)
-    }
-  }, [mode])
+    // Always remove dark class
+    document.documentElement.classList.remove('dark')
+    // Always ensure theme is light
+    setTheme(lightTheme)
+    applyTheme(lightTheme)
+    localStorage.setItem('theme-mode', 'light')
+  }, []) // Run once on mount to clear any existing preference
 
   const toggleDarkMode = () => {
-    setMode(isDark ? 'light' : 'dark')
+    // Disabled
   }
 
   return (

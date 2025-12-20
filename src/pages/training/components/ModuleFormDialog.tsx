@@ -78,7 +78,8 @@ export function ModuleFormDialog({
     existingCategories = [],
     existingDurations = [],
 }: ModuleFormDialogProps) {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation(['training', 'common'])
+    const isRTL = i18n.dir() === 'rtl'
     const { currentProperty } = useProperty()
     const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false)
     const [openDurationCombobox, setOpenDurationCombobox] = useState(false)
@@ -149,16 +150,16 @@ export function ModuleFormDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl bg-white dark:bg-slate-950 border-hotel-gold/20 shadow-2xl">
-                <DialogHeader className="border-b border-gray-100 pb-4 mb-4">
+                <DialogHeader className={`border-b border-gray-100 pb-4 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <DialogTitle className="text-2xl font-serif text-hotel-navy">
-                        {initialData ? t('editModule') : t('createModule')}
+                        {initialData ? t('training:editModule') : t('training:createModule')}
                     </DialogTitle>
                     <DialogDescription className="text-gray-500">
-                        {initialData ? t('editModuleDescription', 'Update the details of your training module') : t('createModuleDescription', 'Fill in the details to create a new training module')}
+                        {initialData ? t('training:editModuleDescription') : t('training:createModuleDescription')}
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                <Form onSubmit={form.handleSubmit(handleSubmit)} className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
@@ -208,7 +209,7 @@ export function ModuleFormDialog({
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50">
-                                                <SelectValue placeholder={t('selectCategory', 'Select category...')} />
+                                                <SelectValue placeholder={t('selectCategory')} />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
@@ -233,7 +234,7 @@ export function ModuleFormDialog({
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50">
-                                                <SelectValue placeholder={t('selectDuration', 'Select duration...')} />
+                                                <SelectValue placeholder={t('selectDuration')} />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
@@ -261,8 +262,8 @@ export function ModuleFormDialog({
                                         value={field.value}
                                     >
                                         <FormControl>
-                                            <SelectTrigger className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50">
-                                                <SelectValue placeholder="Select difficulty" />
+                                            <SelectTrigger className={`border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                <SelectValue placeholder={t('training:selectDifficulty')} />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
@@ -291,8 +292,8 @@ export function ModuleFormDialog({
                                     value={field.value}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50">
-                                            <SelectValue placeholder="Select status" />
+                                        <SelectTrigger className={`border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                            <SelectValue placeholder={t('training:selectStatus')} />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -321,9 +322,9 @@ export function ModuleFormDialog({
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (
-                                <span className="flex items-center gap-2">Processing...</span>
+                                <span className="flex items-center gap-2">{t('common:action.saving')}</span>
                             ) : (
-                                initialData ? t('update') : t('create')
+                                initialData ? t('training:update') : t('training:create')
                             )}
                         </Button>
                     </div>

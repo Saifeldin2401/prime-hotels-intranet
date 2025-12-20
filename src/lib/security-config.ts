@@ -9,19 +9,19 @@ export const securityConfig = {
     passwordRequireLowercase: true,
     passwordRequireNumbers: true,
     passwordRequireSpecialChars: true,
-    
+
     // Session management
     sessionTimeout: 24 * 60 * 60 * 1000, // 24 hours
     maxSessionAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     refreshThreshold: 15 * 60 * 1000, // 15 minutes before expiry
-    
+
     // Rate limiting
     loginAttempts: {
       max: 5,
       windowMs: 15 * 60 * 1000, // 15 minutes
       lockoutDuration: 30 * 60 * 1000 // 30 minutes
     },
-    
+
     // Token security
     tokenRotation: true,
     requireEmailVerification: true
@@ -44,16 +44,16 @@ export const securityConfig = {
         windowMs: 60 * 60 * 1000 // 1 hour
       }
     },
-    
+
     // Request validation
     maxRequestSize: 10 * 1024 * 1024, // 10MB
     maxUrlLength: 2048,
     allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    
+
     // CORS
     cors: {
-      allowedOrigins: process.env.NODE_ENV === 'production' 
-        ? ['https://yourdomain.com'] 
+      allowedOrigins: import.meta.env.PROD
+        ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',') || ['https://yourdomain.com'])
         : ['http://localhost:5173', 'http://localhost:3000'],
       allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'apikey'],
@@ -81,7 +81,7 @@ export const securityConfig = {
   fileUpload: {
     allowedTypes: [
       'image/jpeg',
-      'image/png', 
+      'image/png',
       'image/gif',
       'application/pdf',
       'text/plain',
@@ -99,20 +99,20 @@ export const securityConfig = {
     // PII handling
     piiFields: [
       'email',
-      'phone', 
+      'phone',
       'full_name',
       'address',
       'ssn',
       'credit_card'
     ],
-    
+
     // Data retention
     retentionPeriods: {
       userAccounts: 7 * 365 * 24 * 60 * 60 * 1000, // 7 years
       auditLogs: 365 * 24 * 60 * 60 * 1000, // 1 year
       sessionData: 30 * 24 * 60 * 60 * 1000 // 30 days
     },
-    
+
     // Encryption
     encryptSensitiveData: true,
     encryptionAlgorithm: 'AES-256-GCM'
@@ -132,7 +132,7 @@ export const securityConfig = {
       'rate_limit_exceeded',
       'invalid_api_key'
     ],
-    
+
     // Alerting
     alerts: {
       failedLoginThreshold: 5,
@@ -143,7 +143,7 @@ export const securityConfig = {
 
   // Development vs Production
   isDevelopment: process.env.NODE_ENV === 'development',
-  
+
   // Feature flags
   features: {
     enableAuditLogging: process.env.NODE_ENV === 'production',
@@ -185,10 +185,10 @@ export const securityUtils = {
   // Validate file upload
   validateFileUpload: (file: File) => {
     const { allowedTypes, maxFileSize } = securityConfig.fileUpload
-    
+
     const isValidType = allowedTypes.includes(file.type)
     const isValidSize = file.size <= maxFileSize
-    
+
     return {
       isValid: isValidType && isValidSize,
       errors: [
@@ -206,5 +206,24 @@ export const securityUtils = {
   // Get retention period for data type
   getRetentionPeriod: (dataType: keyof typeof securityConfig.dataProtection.retentionPeriods): number => {
     return securityConfig.dataProtection.retentionPeriods[dataType]
+  },
+
+  // Centralized exception logging
+  logException: (error: Error, context?: Record<string, any>) => {
+    // In a real app, integrate with Sentry/LogRocket here
+    // Example: Sentry.captureException(error, { extra: context })
+
+    // For now, structured console logging
+    const timestamp = new Date().toISOString()
+    const logData = { error: { name: error.name, message: error.message, stack: error.stack }, context, timestamp }
+
+    if (import.meta.env.PROD) {
+      console.error('[Production Error Log]:', JSON.stringify(logData))
+    } else {
+      console.group('🚨 Dev Exception Caught')
+      console.error(error)
+      if (context) console.table(context)
+      console.groupEnd()
+    }
   }
 }

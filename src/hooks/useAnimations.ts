@@ -27,7 +27,7 @@ export function useAnimation(
 ) {
   const [isAnimating, setIsAnimating] = useState(false)
   const { theme } = useTheme()
-  
+
   const {
     duration = 250,
     easing = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
@@ -40,7 +40,7 @@ export function useAnimation(
     if (!element) return
 
     setIsAnimating(true)
-    
+
     const animationConfig: KeyframeAnimationOptions = {
       duration,
       easing,
@@ -58,7 +58,7 @@ export function useAnimation(
     })
 
     return animationInstance
-  }, [elementRef, animation, duration, easing, delay, fill, theme])
+  }, [elementRef, animation, duration, easing, delay, fill])
 
   return { animate, isAnimating }
 }
@@ -90,7 +90,7 @@ export function useScrollAnimation(
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsVisible(true)
-            
+
             if (!hasAnimated || !triggerOnce) {
               const animationConfig: KeyframeAnimationOptions = {
                 duration,
@@ -103,7 +103,7 @@ export function useScrollAnimation(
                 getAnimationKeyframes(animation),
                 animationConfig
               )
-              
+
               if (triggerOnce) {
                 setHasAnimated(true)
               }
@@ -171,7 +171,7 @@ export function useStaggeredAnimation(
       if (!element) return
 
       const staggeredDelay = delay + (staggerIndex * staggerDelay)
-      
+
       const animationConfig: KeyframeAnimationOptions = {
         duration,
         easing,
@@ -192,7 +192,7 @@ export function useStaggeredAnimation(
     })
 
     return animations
-  }, [elementsRef, animation, staggerDelay, staggerFrom, reverse, duration, easing, delay, theme])
+  }, [elementsRef, animation, staggerDelay, staggerFrom, reverse, duration, easing, delay])
 
   return { animate, isAnimating }
 }
@@ -262,7 +262,7 @@ export function useTypewriterAnimation(
   useEffect(() => {
     const timer = setTimeout(() => {
       let currentIndex = 0
-      
+
       const interval = setInterval(() => {
         if (currentIndex <= text.length) {
           setDisplayedText(text.slice(0, currentIndex))
@@ -288,7 +288,7 @@ export function useCounterAnimation(
 ) {
   const [current, setCurrent] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
-  
+
   const {
     duration = 1000,
     delay = 0,
@@ -306,13 +306,13 @@ export function useCounterAnimation(
         const now = Date.now()
         const elapsed = now - startTime
         const progress = Math.min(elapsed / duration, 1)
-        
+
         // Easing function
         const easeOutQuart = 1 - Math.pow(1 - progress, 4)
         const newValue = startValue + (target - startValue) * easeOutQuart
-        
+
         setCurrent(Math.round(newValue))
-        
+
         if (progress < 1) {
           requestAnimationFrame(animate)
         } else {
@@ -327,7 +327,7 @@ export function useCounterAnimation(
   }, [target, duration, delay, current])
 
   const displayValue = `${prefix}${current.toLocaleString()}${suffix}`
-  
+
   return { displayValue, current, isAnimating }
 }
 
@@ -366,10 +366,10 @@ export function useMagneticEffect(
       const rect = element.getBoundingClientRect()
       const centerX = rect.left + rect.width / 2
       const centerY = rect.top + rect.height / 2
-      
+
       const deltaX = (e.clientX - centerX) * strength
       const deltaY = (e.clientY - centerY) * strength
-      
+
       element.style.transform = `translate(${deltaX}px, ${deltaY}px)`
     }
 

@@ -19,7 +19,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 
 export default function NotificationBatches() {
-    const { t, i18n } = useTranslation('common')
+    const { t, i18n } = useTranslation(['admin', 'common'])
     const { data: batches, isLoading } = useNotificationBatches()
     const { processBatch, isProcessing } = useBulkNotifications()
     const queryClient = useQueryClient()
@@ -54,22 +54,22 @@ export default function NotificationBatches() {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Notification Batches"
-                description="Monitor and manage bulk notification jobs"
+                title={t('notification_batches.title', { ns: 'admin' })}
+                description={t('notification_batches.description', { ns: 'admin' })}
                 actions={
                     <Button
                         variant="outline"
                         onClick={() => queryClient.invalidateQueries({ queryKey: ['notification-batches'] })}
                     >
                         <RefreshCw className="w-4 h-4 mr-2" />
-                        Refresh
+                        {t('notification_batches.refresh_button', { ns: 'admin' })}
                     </Button>
                 }
             />
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Batch Jobs</CardTitle>
+                    <CardTitle>{t('notification_batches.batch_jobs', { ns: 'admin' })}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -78,18 +78,18 @@ export default function NotificationBatches() {
                         </div>
                     ) : !batches || batches.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                            No notification batches found
+                            {t('notification_batches.no_batches', { ns: 'admin' })}
                         </div>
                     ) : (
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Job Type</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Progress</TableHead>
-                                    <TableHead>Created By</TableHead>
-                                    <TableHead>Created</TableHead>
-                                    <TableHead>Actions</TableHead>
+                                    <TableHead>{t('notification_batches.job_type', { ns: 'admin' })}</TableHead>
+                                    <TableHead>{t('notification_batches.status', { ns: 'admin' })}</TableHead>
+                                    <TableHead>{t('notification_batches.progress', { ns: 'admin' })}</TableHead>
+                                    <TableHead>{t('notification_batches.created_by', { ns: 'admin' })}</TableHead>
+                                    <TableHead>{t('notification_batches.created', { ns: 'admin' })}</TableHead>
+                                    <TableHead>{t('notification_batches.actions', { ns: 'admin' })}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -97,16 +97,16 @@ export default function NotificationBatches() {
                                     <TableRow key={batch.id}>
                                         <TableCell className="font-medium">
                                             <div className="flex flex-col">
-                                                <span>{batch.job_type}</span>
+                                                <span>{t(`notification_batches.types.${batch.job_type}`, { ns: 'admin', defaultValue: batch.job_type })}</span>
                                                 <span className="text-xs text-muted-foreground text-ellipsis overflow-hidden max-w-[200px]">
-                                                    {batch.metadata?.title || 'No title'}
+                                                    {batch.metadata?.title || t('no_title', { ns: 'common', defaultValue: 'No title' })}
                                                 </span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline" className={`flex w-fit items-center gap-1 ${getStatusColor(batch.status)}`}>
                                                 {getStatusIcon(batch.status)}
-                                                <span className="capitalize">{batch.status}</span>
+                                                <span className="capitalize">{t(`notification_batches.statuses.${batch.status}`, { ns: 'admin', defaultValue: batch.status })}</span>
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="w-[200px]">
@@ -136,7 +136,7 @@ export default function NotificationBatches() {
                                                     disabled={isProcessing}
                                                 >
                                                     <Play className="w-3 h-3 mr-1" />
-                                                    Process
+                                                    {t('notification_batches.process_button', { ns: 'admin' })}
                                                 </Button>
                                             )}
                                         </TableCell>

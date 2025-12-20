@@ -29,7 +29,7 @@ export function ReportingLineEditor({
     employee,
     propertyId
 }: ReportingLineEditorProps) {
-    const { t } = useTranslation('admin')
+    const { t } = useTranslation(['admin', 'common'])
     const [newManagerId, setNewManagerId] = useState<string | null>(null)
     const updateReportingLine = useUpdateReportingLine()
     const { data: reportingChain } = useReportingChain(employee?.id || '')
@@ -86,7 +86,7 @@ export function ReportingLineEditor({
                             </div>
                             <div>
                                 <p className="font-semibold text-gray-900 dark:text-white">{employee.full_name}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{employee.job_title || 'No title'}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{employee.job_title || t('common:common.no_title')}</p>
                             </div>
                         </div>
                     </div>
@@ -160,8 +160,8 @@ export function ReportingLineEditor({
                         disabled={!hasChanged || updateReportingLine.isPending}
                     >
                         {updateReportingLine.isPending
-                            ? t('common:saving', 'Saving...')
-                            : t('common:save_changes', 'Save Changes')}
+                            ? t('common:action.saving')
+                            : t('common:action.save_changes')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

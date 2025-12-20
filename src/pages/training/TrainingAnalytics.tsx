@@ -62,7 +62,8 @@ interface KnowledgeGap {
 }
 
 export default function TrainingAnalytics() {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
     const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
     const [departmentFilter, setDepartmentFilter] = useState<string>('all')
 
@@ -282,10 +283,10 @@ export default function TrainingAnalytics() {
     )
 
     return (
-        <div className="space-y-6">
+        <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
             <PageHeader
-                title={t('trainingAnalytics', 'Training Analytics')}
-                description="Monitor training completion, quiz performance, and identify knowledge gaps"
+                title={t('analytics.title')}
+                description={t('analytics.description')}
                 actions={
                     <div className="flex items-center gap-3">
                         <Select value={timeRange} onValueChange={(v: any) => setTimeRange(v)}>
@@ -293,10 +294,10 @@ export default function TrainingAnalytics() {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="7d">Last 7 Days</SelectItem>
-                                <SelectItem value="30d">Last 30 Days</SelectItem>
-                                <SelectItem value="90d">Last 90 Days</SelectItem>
-                                <SelectItem value="all">All Time</SelectItem>
+                                <SelectItem value="7d">{t('analytics.last7Days')}</SelectItem>
+                                <SelectItem value="30d">{t('analytics.last30Days')}</SelectItem>
+                                <SelectItem value="90d">{t('analytics.last90Days')}</SelectItem>
+                                <SelectItem value="all">{t('analytics.allTime')}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -336,27 +337,27 @@ export default function TrainingAnalytics() {
                 <TabsList>
                     <TabsTrigger value="modules" className="gap-2">
                         <BookOpen className="w-4 h-4" />
-                        Module Performance
+                        {t('analytics.modulePerformance')}
                     </TabsTrigger>
                     <TabsTrigger value="gaps" className="gap-2">
                         <Brain className="w-4 h-4" />
-                        Knowledge Gaps
+                        {t('analytics.knowledgeGaps')}
                     </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="modules">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Training Module Performance</CardTitle>
+                            <CardTitle>{t('analytics.modulePerformanceTitle')}</CardTitle>
                             <CardDescription>
-                                Completion rates and scores by module
+                                {t('analytics.modulePerformanceDesc')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 {modulePerformance?.length === 0 ? (
                                     <p className="text-center text-muted-foreground py-8">
-                                        No training data available yet.
+                                        {t('analytics.noAnalyticsData')}
                                     </p>
                                 ) : (
                                     modulePerformance?.map((module) => (
@@ -367,13 +368,13 @@ export default function TrainingAnalytics() {
                                             <div className="flex items-center justify-between mb-2">
                                                 <h4 className="font-medium">{module.title}</h4>
                                                 <Badge variant="outline">
-                                                    {module.assignmentCount} assigned
+                                                    {t('analytics.assignedCount', { count: module.assignmentCount })}
                                                 </Badge>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <p className="text-xs text-muted-foreground mb-1">
-                                                        Completion Rate
+                                                        {t('progress')}
                                                     </p>
                                                     <div className="flex items-center gap-2">
                                                         <Progress
@@ -387,7 +388,7 @@ export default function TrainingAnalytics() {
                                                 </div>
                                                 <div>
                                                     <p className="text-xs text-muted-foreground mb-1">
-                                                        Avg Score
+                                                        {t('analytics.avgScore')}
                                                     </p>
                                                     <div className="flex items-center gap-2">
                                                         <Progress
@@ -413,10 +414,10 @@ export default function TrainingAnalytics() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Brain className="w-5 h-5 text-orange-500" />
-                                Knowledge Gap Analysis
+                                {t('analytics.gapAnalysisTitle')}
                             </CardTitle>
                             <CardDescription>
-                                Categories where staff accuracy is below 70%
+                                {t('analytics.gapAnalysisDesc')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -425,10 +426,10 @@ export default function TrainingAnalytics() {
                                     <div className="text-center py-8">
                                         <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
                                         <p className="font-medium text-green-700">
-                                            No significant knowledge gaps detected!
+                                            {t('analytics.noGapsDetected')}
                                         </p>
                                         <p className="text-sm text-muted-foreground">
-                                            Staff are performing well across all categories.
+                                            {t('analytics.staffPerformingWell')}
                                         </p>
                                     </div>
                                 ) : (
@@ -442,16 +443,16 @@ export default function TrainingAnalytics() {
                                                     {gap.category}
                                                 </h4>
                                                 <Badge variant="destructive">
-                                                    {gap.averageAccuracy}% accuracy
+                                                    {t('analytics.accuracy', { percent: gap.averageAccuracy })}
                                                 </Badge>
                                             </div>
                                             <p className="text-sm text-orange-700 mb-2">
-                                                Based on {gap.questionCount} question attempts
+                                                {t('analytics.basedOnAttempts', { count: gap.questionCount })}
                                             </p>
                                             {gap.weakAreas.length > 0 && (
                                                 <div className="mt-2">
                                                     <p className="text-xs font-medium text-orange-800 mb-1">
-                                                        Frequently missed questions:
+                                                        {t('analytics.frequentlyMissed')}
                                                     </p>
                                                     <ul className="text-xs text-orange-600 space-y-1">
                                                         {gap.weakAreas.map((q, i) => (

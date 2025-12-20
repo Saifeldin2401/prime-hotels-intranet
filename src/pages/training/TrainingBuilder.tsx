@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -188,8 +189,8 @@ export default function TrainingBuilder() {
 
       setSections([{
         id: 'main-section',
-        title: 'Main Content',
-        description: 'Training content blocks',
+        title: t('mainContent'),
+        description: t('mainContentDescription'),
         items: blocks,
         order: 0
       }])
@@ -298,7 +299,7 @@ export default function TrainingBuilder() {
   const addSection = () => {
     const newSection: TrainingSection = {
       id: `section-${Date.now()}`,
-      title: `${t('sections')} ${sections.length + 1}`,
+      title: `${t('builder.untitled')} ${sections.length + 1}`,
       items: [],
       order: sections.length
     }
@@ -410,14 +411,14 @@ export default function TrainingBuilder() {
       }))
 
       toast({
-        title: 'Upload Successful',
-        description: `${type === 'image' ? 'Image' : 'Document'} uploaded successfully.`
+        title: t('uploadSuccessful'),
+        description: type === 'image' ? t('imageUploaded') : t('documentUploaded')
       })
     } catch (error) {
       console.error('Upload failed:', error)
       toast({
-        title: 'Upload Failed',
-        description: 'Please try again.',
+        title: t('uploadFailed'),
+        description: t('tryAgain'),
         variant: 'destructive'
       })
     } finally {
@@ -773,10 +774,7 @@ export default function TrainingBuilder() {
 
 
 
-  const toggleLanguage = () => {
-    const newLang = i18n.language === 'en' ? 'ar' : 'en'
-    i18n.changeLanguage(newLang)
-  }
+
 
   const handleReorderSection = (dragIndex: number, hoverIndex: number) => {
     const newSections = [...sections]
@@ -804,7 +802,7 @@ export default function TrainingBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className={`min-h-screen bg-background flex flex-col ${isRTL ? 'text-right' : 'text-left'}`}>
       {/* Header */}
       <BuilderHeader
         title={title}
@@ -859,60 +857,60 @@ export default function TrainingBuilder() {
             {/* Module Settings */}
             <Card className="shadow-sm border-slate-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium uppercase tracking-wider text-slate-500">{t('moduleSettings')}</CardTitle>
+                <CardTitle className={cn("text-sm font-medium uppercase tracking-wider text-slate-500", isRTL ? 'text-right' : 'text-left')}>{t('builder.moduleSettings')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-xs">{t('title')}</Label>
+                  <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('title')}</Label>
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder={t('title')}
-                    className="bg-white"
+                    className={cn("bg-white", isRTL ? "text-right" : "")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">{t('description')}</Label>
+                  <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('description')}</Label>
                   <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={t('description')}
                     rows={3}
-                    className="bg-white resize-none"
+                    className={cn("bg-white resize-none", isRTL ? "text-right" : "")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">{t('category')}</Label>
+                  <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('category')}</Label>
                   <Select>
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Select category" />
+                    <SelectTrigger className={cn("bg-white", isRTL ? "flex-row-reverse" : "")}>
+                      <SelectValue placeholder={t('builder.selectCategory')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="onboarding">Onboarding</SelectItem>
-                      <SelectItem value="compliance">Compliance</SelectItem>
-                      <SelectItem value="skills">Job Skills</SelectItem>
+                      <SelectItem value="onboarding" className={isRTL ? "flex-row-reverse" : ""}>{t('builder.onboarding')}</SelectItem>
+                      <SelectItem value="compliance" className={isRTL ? "flex-row-reverse" : ""}>{t('builder.compliance')}</SelectItem>
+                      <SelectItem value="skills" className={isRTL ? "flex-row-reverse" : ""}>{t('builder.skills')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label className="text-xs">{t('duration')} (min)</Label>
+                    <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('duration')} (min)</Label>
                     <Input
                       type="number"
                       value={estimatedDuration}
                       onChange={(e) => setEstimatedDuration(e.target.value)}
-                      placeholder="e.g. 45"
-                      className="bg-white"
+                      placeholder={t('duration')}
+                      className={cn("bg-white", isRTL ? "text-right" : "")}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs">{t('validity')} (days)</Label>
+                    <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('builder.validity')} (days)</Label>
                     <Input
                       type="number"
                       value={validityPeriod}
                       onChange={(e) => setValidityPeriod(e.target.value)}
-                      placeholder="e.g. 365"
-                      className="bg-white"
+                      placeholder={t('validity')}
+                      className={cn("bg-white", isRTL ? "text-right" : "")}
                     />
                   </div>
                 </div>
@@ -922,27 +920,27 @@ export default function TrainingBuilder() {
             {/* AI Tools */}
             <Card className="shadow-sm border-purple-100 bg-purple-50/50">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium uppercase tracking-wider text-purple-600 flex items-center gap-2">
+                <CardTitle className={cn("text-sm font-medium uppercase tracking-wider text-purple-600 flex items-center gap-2", isRTL ? 'flex-row-reverse' : '')}>
                   <Sparkles className="w-4 h-4" />
-                  {t('aiTools')}
+                  {t('builder.aiTools')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button
                   variant="outline"
-                  className="w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100"
+                  className={cn("w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100", isRTL ? "flex-row-reverse" : "")}
                   onClick={() => setShowAIDialog(true)}
                 >
-                  <FileQuestion className="w-4 h-4 mr-2" />
-                  {t('generateQuiz', 'Generate Quiz')}
+                  <FileQuestion className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                  {t('builder.generateQuiz')}
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100"
+                  className={cn("w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100", isRTL ? "flex-row-reverse" : "")}
                   onClick={() => setShowSmartWizard(true)}
                 >
-                  <Layers className="w-4 h-4 mr-2" />
-                  {t('smartWizard')}
+                  <Layers className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                  {t('builder.smartWizard')}
                 </Button>
               </CardContent>
             </Card>
@@ -958,15 +956,15 @@ export default function TrainingBuilder() {
       <Dialog open={showContentDialog} onOpenChange={setShowContentDialog}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {selectedContent ? t('editContent') : t('addContent')}
+            <DialogTitle className={isRTL ? 'text-right' : ''}>
+              {selectedContent ? t('builder.editContent') : t('builder.addContent')}
             </DialogTitle>
-            <DialogDescription>
-              {t('contentDialogDescription', 'Add or edit content for this training section')}
+            <DialogDescription className={isRTL ? 'text-right' : ''}>
+              {t('builder.contentDialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-5 py-4">
-            <div>
+            <div className={isRTL ? 'text-right' : ''}>
               <Label>{t('title')}</Label>
               <Input
                 value={currentBlock.title}
@@ -977,9 +975,9 @@ export default function TrainingBuilder() {
             </div>
 
             {currentBlock.type === 'quiz' && (
-              <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                <Label className="text-blue-900">{t('selectQuiz', 'Link Knowledge Quiz')}</Label>
-                <div className="mt-1.5">
+              <div className={cn("bg-blue-50 p-4 rounded-md border border-blue-100", isRTL ? 'text-right' : '')}>
+                <Label className="text-blue-900">{t('builder.selectQuiz')}</Label>
+                <div className="mt-1.5 text-left">
                   <Select
                     value={(currentBlock.content_data?.quiz_id as string) || ''}
                     onValueChange={(val) => {
@@ -992,17 +990,17 @@ export default function TrainingBuilder() {
                       })
                     }}
                   >
-                    <SelectTrigger className="bg-white border-blue-200">
-                      <SelectValue placeholder={t('selectQuizPlaceholder', 'Choose a published quiz...')} />
+                    <SelectTrigger className={cn("bg-white border-blue-200", isRTL ? "flex-row-reverse" : "")}>
+                      <SelectValue placeholder={t('builder.selectQuizPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableQuizzes?.length === 0 ? (
-                        <div className="p-2 text-sm text-gray-500 text-center">No published quizzes found</div>
+                        <div className="p-2 text-sm text-gray-500 text-center">{t('builder.noQuizzesFound')}</div>
                       ) : (
                         availableQuizzes?.map(q => (
-                          <SelectItem key={q.id} value={q.id}>
+                          <SelectItem key={q.id} value={q.id} className={isRTL ? "flex-row-reverse" : ""}>
                             <span className="font-medium">{q.title}</span>
-                            <span className="ml-2 text-xs text-gray-400">({q.question_count || 0} qs)</span>
+                            <span className={cn("text-xs text-gray-400", isRTL ? "mr-2" : "ml-2")}>({q.question_count || 0} qs)</span>
                           </SelectItem>
                         ))
                       )}
@@ -1010,15 +1008,15 @@ export default function TrainingBuilder() {
                   </Select>
                 </div>
                 <p className="text-xs text-blue-600 mt-2">
-                  Select a quiz from the Knowledge Bank to embed in this training module.
+                  {t('builder.quizEmbedHint')}
                 </p>
               </div>
             )}
 
             {currentBlock.type === 'sop_reference' && (
-              <div className="bg-emerald-50 p-4 rounded-md border border-emerald-100">
-                <Label className="text-emerald-900">{t('selectSop', 'Link SOP Document')}</Label>
-                <div className="mt-1.5">
+              <div className={cn("bg-emerald-50 p-4 rounded-md border border-emerald-100", isRTL ? 'text-right' : '')}>
+                <Label className="text-emerald-900">{t('builder.selectSop')}</Label>
+                <div className="mt-1.5 text-left">
                   <Select
                     value={(currentBlock.content_data?.sop_id as string) || ''}
                     onValueChange={(val) => {
@@ -1030,15 +1028,15 @@ export default function TrainingBuilder() {
                       })
                     }}
                   >
-                    <SelectTrigger className="bg-white border-emerald-200">
-                      <SelectValue placeholder={t('selectSopPlaceholder', 'Choose a published SOP...')} />
+                    <SelectTrigger className={cn("bg-white border-emerald-200", isRTL ? "flex-row-reverse" : "")}>
+                      <SelectValue placeholder={t('builder.selectSopPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableSOPs?.length === 0 ? (
-                        <div className="p-2 text-sm text-gray-500 text-center">No published SOPs found</div>
+                        <div className="p-2 text-sm text-gray-500 text-center">{t('builder.noSopsFound')}</div>
                       ) : (
                         availableSOPs?.map(s => (
-                          <SelectItem key={s.id} value={s.id}>
+                          <SelectItem key={s.id} value={s.id} className={isRTL ? "flex-row-reverse" : ""}>
                             <span className="font-medium">{s.title}</span>
                             {/* s.category removed */}
                           </SelectItem>
@@ -1048,48 +1046,50 @@ export default function TrainingBuilder() {
                   </Select>
                 </div>
                 <p className="text-xs text-emerald-600 mt-2">
-                  Select a published SOP to reference. Trainees will see the live content from the SOP.
+                  {t('builder.sopEmbedHint')}
                 </p>
               </div>
             )}
 
-            <div>
+            <div className={isRTL ? 'text-right' : ''}>
               <Label>{t('content')}</Label>
               <RichTextEditor
                 value={currentBlock.content}
                 onChange={(val) => setCurrentBlock({ ...currentBlock, content: val })}
                 placeholder={t('content')}
-                className="mt-2"
+                className="mt-2 text-left"
                 minHeight={300}
                 direction={isRTL ? 'rtl' : 'ltr'}
               />
-              <p className="text-xs text-gray-500 mt-1">Supports smart headings (Purpose:, SOP:), alerts (IMPORTANT:), and Arabic text.</p>
+              <p className="text-xs text-gray-500 mt-1">{t('builder.contentHint')}</p>
             </div>
 
             {currentBlock.type === 'video' && (
-              <div>
-                <Label>{t('embedUrl')}</Label>
+              <div className={isRTL ? 'text-right' : ''}>
+                <Label>{t('builder.embedUrl')}</Label>
                 <Input
                   value={currentBlock.content_url}
                   onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
                   placeholder="https://youtube.com/watch?v=..."
+                  className={isRTL ? 'text-right' : ''}
                 />
               </div>
             )}
 
             {/* Image Support */}
             {currentBlock.type === 'image' && (
-              <div>
-                <Label>{t('imageUrl')}</Label>
+              <div className={isRTL ? 'text-right' : ''}>
+                <Label>{t('builder.imageUrl')}</Label>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Input
                       value={currentBlock.content_url}
                       onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
                       placeholder="https://example.com/image.jpg"
+                      className={isRTL ? 'text-right' : ''}
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-2 ${isRTL ? 'justify-end' : ''}`}>
                     <div className="relative">
                       <Input
                         type="file"
@@ -1101,10 +1101,10 @@ export default function TrainingBuilder() {
                       />
                       <label
                         htmlFor="image-upload"
-                        className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}
                       >
                         <Upload className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">{uploading ? 'Uploading...' : 'Upload Image'}</span>
+                        <span className="text-sm text-gray-600">{uploading ? t('uploading') : t('uploadImage')}</span>
                       </label>
                     </div>
                   </div>
@@ -1113,15 +1113,16 @@ export default function TrainingBuilder() {
             )}
 
             {currentBlock.type === 'document_link' && (
-              <div>
-                <Label>{t('documentUrl')}</Label>
+              <div className={isRTL ? 'text-right' : ''}>
+                <Label>{t('builder.documentUrl')}</Label>
                 <div className="space-y-3">
                   <Input
                     value={currentBlock.content_url}
                     onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
                     placeholder="https://example.com/document.pdf"
+                    className={isRTL ? 'text-right' : ''}
                   />
-                  <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-2 ${isRTL ? 'justify-end' : ''}`}>
                     <div className="relative">
                       <Input
                         type="file"
@@ -1133,10 +1134,10 @@ export default function TrainingBuilder() {
                       />
                       <label
                         htmlFor="doc-upload"
-                        className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}
                       >
                         <Upload className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">{uploading ? 'Uploading...' : 'Upload Document'}</span>
+                        <span className="text-sm text-gray-600">{uploading ? t('uploading') : t('uploadDocument')}</span>
                       </label>
                     </div>
                   </div>
@@ -1144,8 +1145,8 @@ export default function TrainingBuilder() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
+            <div className={`grid grid-cols-2 gap-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={isRTL ? 'text-right' : ''}>
                 <Label>{t('duration')}</Label>
                 <div className="relative">
                   <Input
@@ -1153,12 +1154,12 @@ export default function TrainingBuilder() {
                     value={currentBlock.duration || ''}
                     onChange={(e) => setCurrentBlock({ ...currentBlock, duration: parseInt(e.target.value) })}
                     placeholder="10"
-                    className="pr-8"
+                    className={cn(isRTL ? "pl-8 text-right" : "pr-8")}
                   />
-                  <span className="absolute right-3 top-2.5 text-gray-400 text-sm">min</span>
+                  <span className={cn("absolute top-2.5 text-gray-400 text-sm", isRTL ? "left-3" : "right-3")}>{t('min')}</span>
                 </div>
               </div>
-              <div>
+              <div className={isRTL ? 'text-right' : ''}>
                 <Label>{t('points')}</Label>
                 <div className="relative">
                   <Input
@@ -1166,29 +1167,29 @@ export default function TrainingBuilder() {
                     value={currentBlock.points || ''}
                     onChange={(e) => setCurrentBlock({ ...currentBlock, points: parseInt(e.target.value) })}
                     placeholder="1"
-                    className="pr-8"
+                    className={cn(isRTL ? "pl-8 text-right" : "pr-8")}
                   />
-                  <span className="absolute right-3 top-2.5 text-gray-400 text-sm">pts</span>
+                  <span className={cn("absolute top-2.5 text-gray-400 text-sm", isRTL ? "left-3" : "right-3")}>{t('pts')}</span>
                 </div>
               </div>
             </div>
 
-            <label className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+            <label className={`flex items-center gap-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
               <input
                 type="checkbox"
                 checked={currentBlock.is_mandatory}
                 onChange={(e) => setCurrentBlock({ ...currentBlock, is_mandatory: e.target.checked })}
                 className="rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold h-4 w-4"
               />
-              <span className="font-medium text-gray-700">{t('mandatory')}</span>
+              <span className="font-medium text-gray-700">{t('builder.mandatory')}</span>
             </label>
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className={`flex justify-end gap-3 pt-4 border-t ${isRTL ? 'flex-row-reverse' : ''}`}>
               <Button variant="outline" onClick={() => setShowContentDialog(false)}>
                 {t('cancel')}
               </Button>
               <Button onClick={saveContent} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
-                {selectedContent ? t('save') : t('addContent')}
+                {selectedContent ? t('save') : t('builder.addContent')}
               </Button>
             </div>
           </div>
@@ -1199,12 +1200,12 @@ export default function TrainingBuilder() {
       < Dialog open={showAIDialog} onOpenChange={setShowAIDialog} >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <Sparkles className="w-5 h-5 text-purple-600" />
-              {t('aiQuestionGenerator', 'AI Question Generator')}
+              {t('builder.aiQuestionGenerator')}
             </DialogTitle>
-            <DialogDescription>
-              {t('aiDialogDescription', 'Generate questions using AI based on your content')}
+            <DialogDescription className={isRTL ? 'text-right' : ''}>
+              {t('builder.aiDialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -1215,12 +1216,12 @@ export default function TrainingBuilder() {
             */}
             <AIQuestionGenerator
               sopId="general"
-              sopTitle={title || 'Training Module'}
+              sopTitle={title || t('builder.untitledModule')}
               sopContent=""
               onQuestionsCreated={(count) => {
                 setShowAIDialog(false)
                 // Show toast or feedback
-                alert(`${count} questions saved to Knowledge Bank!`)
+                alert(t('questionsSaved', { count }))
               }}
             />
           </div>

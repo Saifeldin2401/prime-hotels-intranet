@@ -138,7 +138,7 @@ export default function OnboardingDashboard() {
                                     {task.due_date && (
                                         <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
                                             <Calendar className="h-3 w-3" />
-                                            Due {format(new Date(task.due_date), 'MMM d, yyyy')}
+                                            {t('dashboard.due')} {format(new Date(task.due_date), 'MMM d, yyyy')}
                                         </div>
                                     )}
                                 </div>

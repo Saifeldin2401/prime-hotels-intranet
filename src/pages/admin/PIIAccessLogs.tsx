@@ -4,8 +4,10 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatDateTime } from '@/lib/utils'
 import type { PIIAccessLog } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
 export default function PIIAccessLogs() {
+  const { t } = useTranslation('admin')
   const { data: logs, isLoading } = useQuery({
     queryKey: ['pii-access-logs'],
     queryFn: async () => {
@@ -22,13 +24,13 @@ export default function PIIAccessLogs() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="PII Access Logs" description="Personal information access tracking" />
+      <PageHeader title={t('pii_audit.title')} description={t('pii_audit.description')} />
 
       <Card>
         <CardContent className="p-6">
           {isLoading ? (
             <div className="text-center py-8 text-gray-600">
-              Loading PII access logs...
+              {t('pii_audit.loading', { defaultValue: 'Loading PII access logs...' })}
             </div>
           ) : (
             <div className="space-y-2">
@@ -37,14 +39,14 @@ export default function PIIAccessLogs() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-medium">
-                        Accessed fields: {log.fields_accessed.join(', ')}
+                        {t('pii_audit.accessed_fields', { fields: log.pii_fields.join(', ') })}
                       </p>
                       <p className="text-sm text-gray-600">
                         {formatDateTime(log.created_at)}
                       </p>
-                      {log.reason && (
+                      {log.justification && (
                         <p className="text-sm text-gray-600 mt-1">
-                          Reason: {log.reason}
+                          {t('pii_audit.reason', { reason: log.justification })}
                         </p>
                       )}
                     </div>

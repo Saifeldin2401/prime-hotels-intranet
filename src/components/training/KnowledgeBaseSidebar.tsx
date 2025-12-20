@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAITrainingContent } from '@/hooks/training/useAITrainingContent'
+import { useTranslation } from 'react-i18next'
 
 interface KnowledgeBaseSidebarProps {
     moduleId?: string
@@ -52,6 +53,8 @@ export function KnowledgeBaseSidebar({
     onAddQuestions,
     className
 }: KnowledgeBaseSidebarProps) {
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
     const [search, setSearch] = useState('')
     const [activeTab, setActiveTab] = useState('documents')
     const [generatingFor, setGeneratingFor] = useState<string | null>(null)
@@ -160,34 +163,34 @@ export function KnowledgeBaseSidebar({
     return (
         <Card className={cn("h-full flex flex-col", className)}>
             <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className={`text-lg flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <BookOpen className="h-5 w-5 text-hotel-navy" />
-                    Knowledge Base
+                    {t('knowledgeBase.title')}
                 </CardTitle>
                 <div className="relative mt-2">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400`} />
                     <Input
-                        placeholder="Search resources..."
+                        placeholder={t('knowledgeBase.searchResources')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-9"
+                        className={isRTL ? 'pr-9 text-right' : 'pl-9 text-left'}
                     />
                 </div>
             </CardHeader>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <TabsList className="mx-4">
+                <TabsList className={`mx-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <TabsTrigger value="documents" className="flex-1">
-                        <FileText className="h-4 w-4 mr-1" />
-                        Docs
+                        <FileText className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
+                        {t('knowledgeBase.docs')}
                     </TabsTrigger>
                     <TabsTrigger value="quizzes" className="flex-1">
-                        <ClipboardCheck className="h-4 w-4 mr-1" />
-                        Quizzes
+                        <ClipboardCheck className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
+                        {t('knowledgeBase.quizzes')}
                     </TabsTrigger>
                     <TabsTrigger value="questions" className="flex-1">
-                        <HelpCircle className="h-4 w-4 mr-1" />
-                        Q&A
+                        <HelpCircle className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
+                        {t('knowledgeBase.qa')}
                     </TabsTrigger>
                 </TabsList>
 
@@ -198,9 +201,9 @@ export function KnowledgeBaseSidebar({
                                 <Skeleton key={i} className="h-20 w-full" />
                             ))
                         ) : documents?.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
+                            <div className={`text-center py-8 text-gray-500`}>
                                 <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                <p>No documents found</p>
+                                <p>{t('knowledgeBase.noDocuments')}</p>
                             </div>
                         ) : (
                             documents?.map((doc) => (
@@ -208,7 +211,7 @@ export function KnowledgeBaseSidebar({
                                     key={doc.id}
                                     className="p-3 rounded-lg border border-gray-100 hover:border-hotel-gold/50 hover:bg-gray-50/50 transition-colors group"
                                 >
-                                    <div className="flex items-start gap-2">
+                                    <div className={`flex items-start gap-2 ${isRTL ? 'flex-row-reverse text-right' : 'flex-row text-left'}`}>
                                         {getDocTypeIcon(doc.content_type)}
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-sm truncate">{doc.title}</p>
@@ -226,8 +229,8 @@ export function KnowledgeBaseSidebar({
                                             className="h-7 text-xs flex-1"
                                             onClick={() => onLinkDocument?.(doc.id)}
                                         >
-                                            <Link2 className="h-3 w-3 mr-1" />
-                                            Link
+                                            <Link2 className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1")} />
+                                            {t('knowledgeBase.link')}
                                         </Button>
                                         <Button
                                             size="sm"
@@ -236,11 +239,11 @@ export function KnowledgeBaseSidebar({
                                             disabled={aiGenerating && generatingFor === doc.id}
                                         >
                                             {aiGenerating && generatingFor === doc.id ? (
-                                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                                <Loader2 className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1", "animate-spin")} />
                                             ) : (
-                                                <Sparkles className="h-3 w-3 mr-1" />
+                                                <Sparkles className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1")} />
                                             )}
-                                            Generate
+                                            {t('knowledgeBase.generate')}
                                         </Button>
                                     </div>
                                 </div>
@@ -256,7 +259,7 @@ export function KnowledgeBaseSidebar({
                         ) : quizzes?.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
                                 <ClipboardCheck className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                <p>No quizzes found</p>
+                                <p>{t('knowledgeBase.noQuizzes')}</p>
                             </div>
                         ) : (
                             quizzes?.map((quiz) => (
@@ -265,14 +268,14 @@ export function KnowledgeBaseSidebar({
                                     className="p-3 rounded-lg border border-gray-100 hover:border-hotel-gold/50 hover:bg-gray-50/50 transition-colors cursor-pointer group"
                                     onClick={() => onLinkQuiz?.(quiz.id)}
                                 >
-                                    <div className="flex items-center justify-between">
+                                    <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse text-right' : 'flex-row text-left'}`}>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-sm truncate">{quiz.title}</p>
                                             <p className="text-xs text-gray-500">
-                                                {quiz.question_count || 0} questions
+                                                {t('knowledgeBase.questionsCount', { count: quiz.question_count || 0 })}
                                             </p>
                                         </div>
-                                        <ChevronRight className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <ChevronRight className={cn("h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity", isRTL ? "rotate-180" : "")} />
                                     </div>
                                 </div>
                             ))
@@ -287,7 +290,7 @@ export function KnowledgeBaseSidebar({
                         ) : questions?.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
                                 <HelpCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                <p>No questions found</p>
+                                <p>{t('knowledgeBase.noQuestions')}</p>
                             </div>
                         ) : (
                             questions?.map((q) => (
@@ -312,11 +315,11 @@ export function KnowledgeBaseSidebar({
                         {questions && questions.length > 0 && (
                             <Button
                                 variant="outline"
-                                className="w-full mt-2"
+                                className={`w-full mt-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
                                 onClick={() => onAddQuestions?.(questions.map(q => q.id))}
                             >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add All ({questions.length})
+                                <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                {t('knowledgeBase.addAll', { count: questions.length })}
                             </Button>
                         )}
                     </TabsContent>

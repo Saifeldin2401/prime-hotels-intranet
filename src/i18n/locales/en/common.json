@@ -8,6 +8,7 @@
     "cancel": "Cancel",
     "edit": "Edit",
     "delete": "Delete",
+    "create": "Create",
     "submit": "Submit",
     "back": "Back",
     "next": "Next",
@@ -28,7 +29,10 @@
     "upload": "Upload",
     "filter": "Filter",
     "clear_filters": "Clear Filters",
-    "apply": "Apply"
+    "apply": "Apply",
+    "true": "True",
+    "false": "False",
+    "no_title": "No title"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -48,6 +52,13 @@
     "my_profile": "My Profile",
     "settings": "Settings",
     "promotion_history": "Promotions & Transfers",
+    "job_titles": "Job Titles",
+    "org_structure": "Organization Structure",
+    "notification_batches": "Notification Batches",
+    "automations": "Automations",
+    "escalation_rules": "Escalation Rules",
+    "audit_logs": "Audit Logs",
+    "onboarding_templates": "Onboarding Templates",
     "logout": "Log Out"
   },
   "dashboard": {
@@ -184,8 +195,12 @@
     "cancel": "Cancel",
     "close": "Close",
     "save": "Save",
+    "save_changes": "Save Changes",
+    "saving": "Saving...",
     "create": "Create",
     "update": "Update",
+    "edit": "Edit",
+    "delete": "Delete",
     "refresh": "Refresh",
     "error": "Error"
   },

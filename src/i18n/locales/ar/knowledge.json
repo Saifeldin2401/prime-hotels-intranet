@@ -97,6 +97,11 @@
         "delete": "حذف"
     },
     "editor": {
+        "languages": {
+            "english_only": "الإنجليزية فقط",
+            "arabic_only": "العربية فقط",
+            "bilingual": "ثنائي اللغة (إنجليزي/عربي)"
+        },
         "create_title": "إنشاء مستند",
         "edit_title": "تعديل المستند",
         "subtitle": "الإضافة إلى قاعدة المعرفة",

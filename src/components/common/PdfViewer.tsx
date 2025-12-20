@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { FileText, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import * as pdfjsLib from 'pdfjs-dist'
@@ -26,35 +26,7 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
     const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null)
     const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null)
 
-    useEffect(() => {
-        if (url) {
-            setLoading(true)
-            setError(null)
-            setPageNumber(1)
-            setRotation(0)
-
-            const loadingTask = pdfjsLib.getDocument(url)
-
-            loadingTask.promise.then(pdf => {
-                pdfDocRef.current = pdf
-                setNumPages(pdf.numPages)
-                setLoading(false)
-                renderPage(1, pdf)
-            }).catch(err => {
-                console.error('Error loading PDF:', err)
-                setError(err instanceof Error ? err : new Error(String(err)))
-                setLoading(false)
-            })
-        }
-    }, [url])
-
-    useEffect(() => {
-        if (pdfDocRef.current) {
-            renderPage(pageNumber, pdfDocRef.current)
-        }
-    }, [pageNumber, scale, rotation])
-
-    const renderPage = async (num: number, pdf: pdfjsLib.PDFDocumentProxy) => {
+    const renderPage = useCallback(async (num: number, pdf: pdfjsLib.PDFDocumentProxy) => {
         if (!canvasRef.current) return
 
         // Cancel pending render
@@ -88,7 +60,35 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                 console.error('Error rendering page:', err)
             }
         }
-    }
+    }, [scale, rotation])
+
+    useEffect(() => {
+        if (url) {
+            setLoading(true)
+            setError(null)
+            setPageNumber(1)
+            setRotation(0)
+
+            const loadingTask = pdfjsLib.getDocument(url)
+
+            loadingTask.promise.then(pdf => {
+                pdfDocRef.current = pdf
+                setNumPages(pdf.numPages)
+                setLoading(false)
+                renderPage(1, pdf)
+            }).catch(err => {
+                console.error('Error loading PDF:', err)
+                setError(err instanceof Error ? err : new Error(String(err)))
+                setLoading(false)
+            })
+        }
+    }, [url, renderPage])
+
+    useEffect(() => {
+        if (pdfDocRef.current) {
+            renderPage(pageNumber, pdfDocRef.current)
+        }
+    }, [pageNumber, renderPage])
 
     const changePage = (offset: number) => {
         setPageNumber(prevPage => {

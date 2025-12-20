@@ -5,17 +5,18 @@ import { useTranslation } from 'react-i18next'
 
 export default function TrainingBuilderTest() {
   const [count, setCount] = useState(0)
-  const { t } = useTranslation('training')
+  const { t, i18n } = useTranslation('training')
+  const isRTL = i18n.dir() === 'rtl'
 
   return (
-    <div className="p-6">
+    <div className={`p-6 ${isRTL ? 'text-right' : 'text-left'}`}>
       <Card>
         <CardHeader>
-          <CardTitle>{t('trainingBuilderTest')}</CardTitle>
+          <CardTitle>{t('test.trainingBuilderTest')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Count: {count}</p>
-          <Button onClick={() => setCount(count + 1)}>{t('increment')}</Button>
+          <p>{t('test.count')}: {count}</p>
+          <Button onClick={() => setCount(count + 1)}>{t('test.increment')}</Button>
         </CardContent>
       </Card>
     </div>

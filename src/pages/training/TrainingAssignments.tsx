@@ -44,6 +44,7 @@ import {
   Download,
   Settings
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { TrainingModule } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
@@ -192,7 +193,7 @@ export default function TrainingAssignments() {
   // Mutations
   const createAssignmentMutation = useMutation({
     mutationFn: async () => {
-      if (!formModuleId) throw new Error('Module is required')
+      if (!formModuleId) throw new Error(t('moduleRequired'))
 
       const assignments: any[] = []
       const typeMap: Record<string, string> = {
@@ -233,10 +234,10 @@ export default function TrainingAssignments() {
       if (error) throw error
 
       // Send bulk notifications to affected users
-      const moduleTitle = modules?.find(m => m.id === formModuleId)?.title || 'Training Module'
+      const moduleTitle = modules?.find(m => m.id === formModuleId)?.title || t('unknownModule')
       const notificationData = {
-        title: 'New Training Assigned',
-        message: `You have been assigned: ${moduleTitle}`,
+        title: t('notifications.newAssignmentTitle'),
+        message: t('notifications.newAssignmentMessage', { title: moduleTitle }),
         moduleId: formModuleId,
         deadline: formDeadline || undefined
       }
@@ -327,7 +328,7 @@ export default function TrainingAssignments() {
   }
 
   const handleDelete = (id: string) => {
-    if (confirm(t('confirmAssignmentDelete', 'Are you sure?'))) {
+    if (confirm(t('confirmAssignmentDelete'))) {
       deleteAssignmentMutation.mutate(id)
     }
   }
@@ -367,11 +368,22 @@ export default function TrainingAssignments() {
   const getTargetLabel = (type: string) => {
     switch (type) {
       case 'all':
-      case 'everyone': return t('allUsers', 'All Users')
-      case 'user': return t('specificUser', 'Specific User')
-      case 'department': return t('department', 'Department')
-      case 'property': return t('property', 'Property')
-      default: return t('allUsers', 'All Users')
+      case 'everyone': return t('allUsers')
+      case 'user': return t('specificUser')
+      case 'department': return t('department')
+      case 'property': return t('property')
+      default: return t('allUsers')
+    }
+  }
+
+  const getTargetRawLabel = (type: string) => {
+    switch (type) {
+      case 'all':
+      case 'everyone': return t('everyone')
+      case 'user': return t('specificUser')
+      case 'department': return t('department')
+      case 'property': return t('property')
+      default: return t('everyone')
     }
   }
 
@@ -462,7 +474,15 @@ export default function TrainingAssignments() {
   const handleExport = () => {
     if (!filteredProgress.length) return
 
-    const headers = ['Employee', 'Department/Property', 'Module', 'Status', 'Progress', 'Score', 'Last Access']
+    const headers = [
+      t('employee'),
+      t('department') + '/' + t('property'),
+      t('module'),
+      t('status'),
+      t('progress'),
+      t('score'),
+      t('lastAccess')
+    ]
     const csvContent = [
       headers.join(','),
       ...filteredProgress.map(item => {
@@ -471,13 +491,13 @@ export default function TrainingAssignments() {
         const deptName = Array.isArray(deptData) ? deptData[0]?.name : (deptData as any)?.name
         const propName = Array.isArray(propData) ? propData[0]?.name : (propData as any)?.name
         const user = users?.find(u => u.id === item.user_id)
-        const moduleTitle = modules?.find(m => m.id === item.content_id)?.title || 'Unknown'
+        const moduleTitle = modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')
 
         return [
-          `"${item.profiles?.full_name || user?.full_name || 'Unknown'}"`,
+          `"${item.profiles?.full_name || user?.full_name || t('unknownUser')}"`,
           `"${deptName || propName || '-'}"`,
           `"${moduleTitle}"`,
-          item.status,
+          t(item.status),
           `${item.progress_percentage}%`,
           item.score_percentage ? `${item.score_percentage}%` : '-',
           formatDate(item.last_accessed_at || item.created_at)
@@ -498,8 +518,8 @@ export default function TrainingAssignments() {
   return (
     <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
       <PageHeader
-        title={t('trainingCenter', 'Training Center')}
-        description={t('trainingDescription', 'Manage assignments and track employee progress')}
+        title={t('trainingCenter')}
+        description={t('trainingDescription')}
         actions={
           <div className="flex gap-2">
             <Button
@@ -507,16 +527,16 @@ export default function TrainingAssignments() {
               onClick={() => navigate('/admin/notifications')}
               className="hidden md:flex"
             >
-              <Bell className="w-4 h-4 mr-2" />
-              Batch Status
+              <Bell className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+              {t('batchStatus')}
             </Button>
             <Button
               variant="outline"
               onClick={() => navigate('/training/assignments/rules')}
               className="hidden md:flex"
             >
-              <Settings className="w-4 h-4 mr-2" />
-              Auto-Assign Rules
+              <Settings className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+              {t('autoAssignRules')}
             </Button>
           </div>
         }
@@ -525,12 +545,12 @@ export default function TrainingAssignments() {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="bg-white p-1 border rounded-lg">
           <TabsTrigger value="overview" className="data-[state=active]:bg-hotel-navy data-[state=active]:text-white">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            {t('overview', 'Progress Tracking')}
+            <BarChart3 className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            {t('overview')}
           </TabsTrigger>
           <TabsTrigger value="assignments" className="data-[state=active]:bg-hotel-navy data-[state=active]:text-white">
-            <Edit className="w-4 h-4 mr-2" />
-            {t('manageAssignments', 'Manage Assignments')}
+            <Edit className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            {t('manageAssignments')}
           </TabsTrigger>
         </TabsList>
 
@@ -542,7 +562,7 @@ export default function TrainingAssignments() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{t('totalEnrollments', 'Total Enrollments')}</p>
+                    <p className="text-sm font-medium text-gray-500">{t('totalEnrollments')}</p>
                     <h3 className="text-2xl font-bold mt-1">{progressMetrics.total}</h3>
                   </div>
                   <div className="h-10 w-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
@@ -555,7 +575,7 @@ export default function TrainingAssignments() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{t('completed', 'Completed')}</p>
+                    <p className="text-sm font-medium text-gray-500">{t('completed')}</p>
                     <h3 className="text-2xl font-bold mt-1 text-green-600">{progressMetrics.completed}</h3>
                   </div>
                   <div className="h-10 w-10 bg-green-50 rounded-full flex items-center justify-center text-green-600">
@@ -568,7 +588,7 @@ export default function TrainingAssignments() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{t('inProgress', 'In Progress')}</p>
+                    <p className="text-sm font-medium text-gray-500">{t('inProgress')}</p>
                     <h3 className="text-2xl font-bold mt-1 text-yellow-600">{progressMetrics.in_progress}</h3>
                   </div>
                   <div className="h-10 w-10 bg-yellow-50 rounded-full flex items-center justify-center text-yellow-600">
@@ -581,7 +601,7 @@ export default function TrainingAssignments() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{t('overdue', 'Overdue')}</p>
+                    <p className="text-sm font-medium text-gray-500">{t('overdue')}</p>
                     <h3 className="text-2xl font-bold mt-1 text-red-600">{progressMetrics.overdue}</h3>
                   </div>
                   <div className="h-10 w-10 bg-red-50 rounded-full flex items-center justify-center text-red-600">
@@ -595,55 +615,55 @@ export default function TrainingAssignments() {
           {/* Progress Table */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t('employeeProgress', 'Employee Progress')}</CardTitle>
+              <CardTitle>{t('employeeProgress')}</CardTitle>
               <div className="flex gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className={filterStatus || filterDept || filterProp ? "bg-blue-50 border-blue-200 text-blue-700" : ""}>
-                      <span className="mr-2">Filter</span>
+                    <Button variant="outline" size="sm" className={cn(filterStatus || filterDept || filterProp ? "bg-blue-50 border-blue-200 text-blue-700" : "", isRTL ? "flex-row-reverse" : "")}>
+                      <span className={isRTL ? "ml-2" : "mr-2"}>{t('filter')}</span>
                       {(filterStatus || filterDept || filterProp) && (
-                        <span className="flex h-2 w-2 rounded-full bg-blue-600 mr-2" />
+                        <span className={cn("flex h-2 w-2 rounded-full bg-blue-600", isRTL ? "ml-2" : "mr-2")} />
                       )}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[200px] bg-white">
-                    <DropdownMenuLabel>Filter By...</DropdownMenuLabel>
+                  <DropdownMenuContent align={isRTL ? "start" : "end"} className="w-[200px] bg-white">
+                    <DropdownMenuLabel>{t('filterBy')}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
 
                     {/* Status Sub-menu */}
                     <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
+                      <DropdownMenuSubTrigger>{t('status')}</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-white">
                         <DropdownMenuCheckboxItem
                           checked={filterStatus === 'assigned'}
                           onCheckedChange={() => setFilterStatus(filterStatus === 'assigned' ? null : 'assigned')}
                         >
-                          Assigned
+                          {t('assigned')}
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuCheckboxItem
                           checked={filterStatus === 'in_progress'}
                           onCheckedChange={() => setFilterStatus(filterStatus === 'in_progress' ? null : 'in_progress')}
                         >
-                          In Progress
+                          {t('inProgress')}
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuCheckboxItem
                           checked={filterStatus === 'completed'}
                           onCheckedChange={() => setFilterStatus(filterStatus === 'completed' ? null : 'completed')}
                         >
-                          Completed
+                          {t('completed')}
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuCheckboxItem
                           checked={filterStatus === 'overdue'}
                           onCheckedChange={() => setFilterStatus(filterStatus === 'overdue' ? null : 'overdue')}
                         >
-                          Overdue
+                          {t('overdue')}
                         </DropdownMenuCheckboxItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
 
                     {/* Department Sub-menu */}
                     <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Department</DropdownMenuSubTrigger>
+                      <DropdownMenuSubTrigger>{t('department')}</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="max-h-[300px] overflow-y-auto bg-white">
                         {departments?.map(dept => (
                           <DropdownMenuCheckboxItem
@@ -655,14 +675,14 @@ export default function TrainingAssignments() {
                           </DropdownMenuCheckboxItem>
                         ))}
                         {(!departments || departments.length === 0) && (
-                          <DropdownMenuItem disabled>No departments</DropdownMenuItem>
+                          <DropdownMenuItem disabled>{t('noDepartments')}</DropdownMenuItem>
                         )}
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
 
                     {/* Property Sub-menu */}
                     <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Property</DropdownMenuSubTrigger>
+                      <DropdownMenuSubTrigger>{t('property')}</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="max-h-[300px] overflow-y-auto bg-white">
                         {properties?.map(prop => (
                           <DropdownMenuCheckboxItem
@@ -674,7 +694,7 @@ export default function TrainingAssignments() {
                           </DropdownMenuCheckboxItem>
                         ))}
                         {(!properties || properties.length === 0) && (
-                          <DropdownMenuItem disabled>No properties</DropdownMenuItem>
+                          <DropdownMenuItem disabled>{t('noProperties')}</DropdownMenuItem>
                         )}
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
@@ -688,14 +708,14 @@ export default function TrainingAssignments() {
                         setFilterProp(null)
                       }}
                     >
-                      Reset Filters
+                      {t('resetFilters')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button variant="outline" size="sm" onClick={handleExport}>
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('exportReport', 'Export Report')}
+                <Button variant="outline" size="sm" onClick={handleExport} className={isRTL ? "flex-row-reverse" : ""}>
+                  <Download className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                  {t('exportReport')}
                 </Button>
               </div>
             </CardHeader>
@@ -708,19 +728,19 @@ export default function TrainingAssignments() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('employee', 'Employee')}</TableHead>
-                      <TableHead>{t('module', 'Module')}</TableHead>
-                      <TableHead>{t('status', 'Status')}</TableHead>
-                      <TableHead>{t('progress', 'Progress')}</TableHead>
-                      <TableHead>{t('score', 'Score')}</TableHead>
-                      <TableHead>{t('lastAccess', 'Last Access')}</TableHead>
+                      <TableHead className={isRTL ? "text-right" : ""}>{t('employee')}</TableHead>
+                      <TableHead className={isRTL ? "text-right" : ""}>{t('module')}</TableHead>
+                      <TableHead className={isRTL ? "text-right" : ""}>{t('status')}</TableHead>
+                      <TableHead className={isRTL ? "text-right" : ""}>{t('progress')}</TableHead>
+                      <TableHead className={isRTL ? "text-right" : ""}>{t('score')}</TableHead>
+                      <TableHead className={isRTL ? "text-right" : ""}>{t('lastAccess')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredProgress.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                          {t('noProgressFound', 'No progress records found')}
+                          {t('noProgressFound')}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -737,9 +757,9 @@ export default function TrainingAssignments() {
                           <TableRow key={item.id}>
                             <TableCell>
                               <div className="flex flex-col">
-                                <span className="font-medium">{item.profiles?.full_name || user?.full_name || 'Unknown User'}</span>
+                                <span className="font-medium">{item.profiles?.full_name || user?.full_name || t('unknownUser')}</span>
                                 <span className="text-xs text-gray-500">
-                                  {deptName || propName || 'No Dept'}
+                                  {deptName || propName || t('noDept')}
                                 </span>
                               </div>
                             </TableCell>
@@ -787,17 +807,17 @@ export default function TrainingAssignments() {
         <TabsContent value="assignments" className="space-y-6">
           <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
               <Input
-                placeholder={t('searchAssignments', 'Search assignments...')}
+                placeholder={t('searchAssignments')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className={isRTL ? "pr-10 text-right" : "pl-10"}
               />
             </div>
-            <Button onClick={() => setShowAssignmentDialog(true)} className="bg-hotel-navy">
-              <Plus className="w-4 h-4 mr-2" />
-              {t('createAssignment', 'Create Assignment')}
+            <Button onClick={() => setShowAssignmentDialog(true)} className={cn("bg-hotel-navy", isRTL ? "flex-row-reverse" : "")}>
+              <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+              {t('createAssignment')}
             </Button>
           </div>
 
@@ -812,7 +832,7 @@ export default function TrainingAssignments() {
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
-                        {t('module', 'Module')}
+                        {t('module')}
                       </Badge>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-600" onClick={() => handleDelete(assignment.id)}>
@@ -821,25 +841,25 @@ export default function TrainingAssignments() {
                       </div>
                     </div>
                     <CardTitle className="text-lg mt-2 line-clamp-1" title={assignment.training_modules?.title}>
-                      {assignment.training_modules?.title || t('unknownModule', 'Unknown Module')}
+                      {assignment.training_modules?.title || t('unknownModule')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex items-center text-sm text-gray-600">
+                      <div className={cn("flex items-center text-sm text-gray-600", isRTL ? "flex-row-reverse" : "")}>
                         {getTargetIcon(assignment.target_type)}
-                        <span className="ml-2 truncate max-w-[200px]" title={getTargetLabel(assignment.target_type)}>
+                        <span className={cn("truncate max-w-[200px]", isRTL ? "mr-2" : "ml-2")} title={getTargetLabel(assignment.target_type)}>
                           {getTargetLabel(assignment.target_type)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
-                        <span className="flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
+                        <span className={cn("flex items-center", isRTL ? "flex-row-reverse" : "")}>
+                          <Clock className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
                           {formatDate(assignment.created_at)}
                         </span>
                         {assignment.due_date && (
                           <span className={`${new Date(assignment.due_date) < new Date() ? 'text-red-500 font-medium' : ''}`}>
-                            {t('due', 'Due')}: {formatDate(assignment.due_date)}
+                            {t('due')}: {formatDate(assignment.due_date)}
                           </span>
                         )}
                       </div>
@@ -852,12 +872,12 @@ export default function TrainingAssignments() {
                 <div className="mx-auto h-12 w-12 text-gray-300">
                   <Edit className="h-12 w-12" />
                 </div>
-                <h3 className="mt-2 text-sm font-semibold text-gray-900">{t('noAssignments', 'No assignments found')}</h3>
-                <p className="mt-1 text-sm text-gray-500">{t('startAssigning', 'Get started by creating a new assignment.')}</p>
+                <h3 className="mt-2 text-sm font-semibold text-gray-900">{t('noAssignments')}</h3>
+                <p className="mt-1 text-sm text-gray-500">{t('startAssigning')}</p>
                 <div className="mt-6">
                   <Button onClick={() => setShowAssignmentDialog(true)}>
                     <Plus className="w-4 h-4 mr-2" />
-                    {t('createAssignment', 'Create Assignment')}
+                    {t('createAssignment')}
                   </Button>
                 </div>
               </div>
@@ -873,21 +893,21 @@ export default function TrainingAssignments() {
             <DialogContent className="max-w-lg bg-white">
               <DialogHeader>
                 <DialogTitle>
-                  {t('createAssignment', 'Create Assignment')}
+                  {t('createAssignment')}
                 </DialogTitle>
                 <DialogDescription className="text-sm text-gray-500">
-                  {t('createAssignmentDescription', 'Assign training modules to users, departments, or roles.')}
+                  {t('createAssignmentDescription')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label>{t('selectModule', 'Select Module')}</Label>
+                  <Label>{t('selectModule')}</Label>
                   <select
                     value={formModuleId}
                     onChange={(e) => setFormModuleId(e.target.value)}
                     className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
                   >
-                    <option value="">{t('selectModule', 'Select a module...')}</option>
+                    <option value="">{t('selectModule')}</option>
                     {modules?.map((module) => (
                       <option key={module.id} value={module.id}>
                         {module.title}
@@ -897,7 +917,7 @@ export default function TrainingAssignments() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('assignTo', 'Assign To')}</Label>
+                  <Label>{t('assignTo')}</Label>
                   <select
                     value={formTargetType}
                     onChange={(e) => {
@@ -907,22 +927,22 @@ export default function TrainingAssignments() {
                     }}
                     className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
                   >
-                    <option value="all">{t('allUsers', 'All Users')}</option>
-                    <option value="users">{t('specificUsers', 'Specific Users')}</option>
-                    <option value="departments">{t('departments', 'Departments')}</option>
-                    <option value="properties">{t('properties', 'Properties')}</option>
+                    <option value="all">{t('allUsers')}</option>
+                    <option value="users">{t('specificEmployees')}</option>
+                    <option value="departments">{t('entireDepartments')}</option>
+                    <option value="properties">{t('entireProperties')}</option>
                   </select>
                 </div>
 
                 {formTargetType === 'departments' && departmentProperties.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Filter by Property</Label>
+                    <Label>{t('filterByProperty')}</Label>
                     <select
                       value={propertyFilter}
                       onChange={(e) => setPropertyFilter(e.target.value)}
                       className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
                     >
-                      <option value="all">All Properties</option>
+                      <option value="all">{t('allProperties')}</option>
                       {departmentProperties.map(prop => (
                         <option key={prop} value={prop}>{prop}</option>
                       ))}
@@ -933,9 +953,9 @@ export default function TrainingAssignments() {
                 {formTargetType !== 'all' && (
                   <div className="space-y-2">
                     <Label>
-                      {formTargetType === 'users' ? t('selectUsers', 'Select Users') :
-                        formTargetType === 'departments' ? t('selectDepartments', 'Select Departments') :
-                          t('selectProperties', 'Select Properties')}
+                      {formTargetType === 'users' ? t('selectUsers') :
+                        formTargetType === 'departments' ? t('selectDepartments') :
+                          t('selectProperties')}
                     </Label>
                     <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-gray-50">
                       {currentListItems.length > 0 ? (
@@ -958,18 +978,18 @@ export default function TrainingAssignments() {
                         ))
                       ) : (
                         <p className="text-center py-4 text-gray-500 text-sm">
-                          {t('noItemsFound', 'No items found')}
+                          {t('noItemsFound')}
                         </p>
                       )}
                     </div>
                     <p className="text-xs text-gray-500">
-                      {formTargetIds.length} {t('selected', 'selected')}
+                      {formTargetIds.length} {t('selected')}
                     </p>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label>{t('deadline', 'Deadline')} ({t('optional', 'Optional')})</Label>
+                  <Label>{t('deadline')} ({t('optional')})</Label>
                   <input
                     type="date"
                     value={formDeadline}
@@ -978,7 +998,7 @@ export default function TrainingAssignments() {
                   />
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t">
+                <div className={cn("flex justify-end gap-3 pt-4 border-t", isRTL ? "flex-row-reverse" : "")}>
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -986,17 +1006,17 @@ export default function TrainingAssignments() {
                       resetForm()
                     }}
                   >
-                    {t('cancel', 'Cancel')}
+                    {t('cancel')}
                   </Button>
                   <Button
                     onClick={() => createAssignmentMutation.mutate()}
                     disabled={!formModuleId || createAssignmentMutation.isPending || (formTargetType !== 'all' && formTargetIds.length === 0)}
-                    className="bg-hotel-navy text-white hover:bg-hotel-navy-light"
+                    className={cn("bg-hotel-navy text-white hover:bg-hotel-navy-light", isRTL ? "flex-row-reverse" : "")}
                   >
                     {createAssignmentMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
                     ) : null}
-                    {t('create', 'Create')}
+                    {t('create')}
                   </Button>
                 </div>
               </div>

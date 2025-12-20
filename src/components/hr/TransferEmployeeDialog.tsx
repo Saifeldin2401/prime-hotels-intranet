@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -97,13 +97,7 @@ export function TransferEmployeeDialog({
         },
     });
 
-    useEffect(() => {
-        if (open) {
-            loadData();
-        }
-    }, [open]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoadingData(true);
         try {
             // Fetch Employees
@@ -164,7 +158,13 @@ export function TransferEmployeeDialog({
         } finally {
             setLoadingData(false);
         }
-    };
+    }, [user?.id, toast]);
+
+    useEffect(() => {
+        if (open) {
+            loadData();
+        }
+    }, [open, loadData]);
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         if (!user) return;

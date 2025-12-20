@@ -8,7 +8,8 @@
         "of": "of",
         "assigned_manager": "Assigned to Manager",
         "all_set": "You're all set!",
-        "no_active": "There are no active onboarding checklists assigned to you at the moment."
+        "no_active": "There are no active onboarding checklists assigned to you at the moment.",
+        "due": "Due"
     },
     "editor": {
         "create_title": "Create Onboarding Template",
@@ -39,7 +40,12 @@
         "link_url": "External URL",
         "select_module": "Select Module",
         "select_document": "Select Document",
-        "enter_url": "Enter URL"
+        "enter_url": "Enter URL",
+        "placeholders": {
+            "template_title": "e.g., Sales Team Onboarding",
+            "task_title": "e.g., Sign NDA",
+            "task_description": "Instructions for the user..."
+        }
     },
     "templates": {
         "title": "Onboarding Templates",
@@ -75,7 +81,16 @@
         "back": "Back",
         "add_task": "Add Task",
         "save_template": "Save Template",
-        "update_template": "Update Template"
+        "update_template": "Update Template",
+        "template_deleted": "Template deleted",
+        "error_deleting": "Error deleting template",
+        "loading": "Loading templates...",
+        "title_required": "Title is required",
+        "task_required": "At least one task is required",
+        "template_updated": "Template updated",
+        "update_failed": "Update failed",
+        "template_created": "Template created",
+        "create_failed": "Create failed"
     },
     "dialogs": {
         "delete_title": "Delete Template?",
@@ -83,6 +98,11 @@
     },
     "status": {
         "active": "Active",
-        "draft": "Draft"
+        "inactive": "Inactive",
+        "pending": "Pending",
+        "archived": "Archived",
+        "draft": "Draft",
+        "completed": "Completed",
+        "in_progress": "In Progress"
     }
 }

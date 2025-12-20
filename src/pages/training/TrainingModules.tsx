@@ -51,7 +51,8 @@ export default function TrainingModules() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { t } = useTranslation('training')
+  const { t, i18n } = useTranslation('training')
+  const isRTL = i18n.dir() === 'rtl'
 
   // State management
   const [search, setSearch] = useState('')
@@ -101,29 +102,29 @@ export default function TrainingModules() {
 
   // Default values to seed the dropdowns
   const DEFAULT_CATEGORIES = [
-    'Front Office',
-    'Housekeeping',
-    'Food & Beverage',
-    'Maintenance',
-    'Security',
-    'Human Resources',
-    'Sales & Marketing',
-    'Management',
-    'General'
+    t('categories.front_office'),
+    t('categories.housekeeping'),
+    t('categories.food_beverage'),
+    t('categories.maintenance'),
+    t('categories.security'),
+    t('categories.human_resources'),
+    t('categories.sales_marketing'),
+    t('categories.management'),
+    t('categories.general')
   ]
 
   const DEFAULT_DURATIONS = [
-    '15 minutes',
-    '30 minutes',
-    '45 minutes',
-    '1 hour',
-    '1.5 hours',
-    '2 hours',
-    '3 hours',
-    '4 hours',
-    '1 day',
-    '2 days',
-    '1 week'
+    `15 ${t('min')}`,
+    `30 ${t('min')}`,
+    `45 ${t('min')}`,
+    `1 ${t('h')}`,
+    `1.5 ${t('h')}`,
+    `2 ${t('h')}`,
+    `3 ${t('h')}`,
+    `4 ${t('h')}`,
+    `1 ${t('day')}`,
+    `2 ${t('days')}`,
+    `1 ${t('week')}`
   ]
 
   // Get categories for filter and form
@@ -336,8 +337,8 @@ export default function TrainingModules() {
       // Send bulk notifications
       const module = modules?.find(m => m.id === assigningModuleId)
       const notificationData = {
-        title: 'New Training Assigned',
-        message: `You have been assigned: ${module?.title || 'Training Module'}`,
+        title: t('notifications.newAssignmentTitle'),
+        message: t('notifications.newAssignmentMessage', { title: module?.title || t('trainingModule') }),
         moduleId: assigningModuleId,
         deadline
       }
@@ -382,7 +383,6 @@ export default function TrainingModules() {
           title: notificationData.title,
           message: notificationData.message,
           type: 'training_assigned',
-          data: notificationData,
           data: notificationData
         }))
         await supabase.from('notifications').insert(notifications)
@@ -466,24 +466,24 @@ export default function TrainingModules() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className={`container mx-auto px-4 py-6 ${isRTL ? 'text-right' : 'text-left'}`}>
       <PageHeader
         title={t('modules')}
         description={t('moduleDescription')}
         actions={
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400", isRTL ? "right-3" : "left-3")} />
               <Input
                 type="text"
                 placeholder={t('search')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 w-64"
+                className={cn(isRTL ? "pr-10 text-right" : "pl-10", "w-64")}
               />
             </div>
-            <Button onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={handleCreate} className={isRTL ? "flex-row-reverse" : ""}>
+              <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
               {t('createModule')}
             </Button>
           </div>
@@ -494,49 +494,49 @@ export default function TrainingModules() {
       <div className="mb-8 p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-4 w-full md:w-auto">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-hotel-muted" />
+            <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-hotel-muted", isRTL ? "right-3" : "left-3")} />
             <Input
               type="text"
               placeholder={t('search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 w-full md:w-64 border-gray-200 bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all"
+              className={cn(isRTL ? "pr-10 text-right" : "pl-10", "w-full md:w-64 border-gray-200 bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all")}
             />
           </div>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[160px] border-gray-200 bg-gray-50/50">
+            <SelectTrigger className={cn("w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
               <SelectValue placeholder={t('category')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t('allCategories')}</SelectItem>
+              <SelectItem value="all" className={isRTL ? "flex-row-reverse" : ""}>{t('allCategories')}</SelectItem>
               {categories?.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                <SelectItem key={cat} value={cat} className={isRTL ? "flex-row-reverse" : ""}>{cat}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(value: ModuleStatus | 'all') => setStatusFilter(value)}>
-            <SelectTrigger className="w-[140px] border-gray-200 bg-gray-50/50">
+            <SelectTrigger className={cn("w-[140px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
               <SelectValue placeholder={t('status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t('allModules')}</SelectItem>
-              <SelectItem value="published">{t('published')}</SelectItem>
-              <SelectItem value="draft">{t('draft')}</SelectItem>
-              <SelectItem value="archived">{t('archived')}</SelectItem>
+              <SelectItem value="all" className={isRTL ? "flex-row-reverse" : ""}>{t('allModules')}</SelectItem>
+              <SelectItem value="published" className={isRTL ? "flex-row-reverse" : ""}>{t('published')}</SelectItem>
+              <SelectItem value="draft" className={isRTL ? "flex-row-reverse" : ""}>{t('draft')}</SelectItem>
+              <SelectItem value="archived" className={isRTL ? "flex-row-reverse" : ""}>{t('archived')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <span className="text-sm text-muted-foreground mr-2 hidden md:inline-block">{t('sortBy')}</span>
+        <div className={cn("flex items-center gap-2 w-full md:w-auto", isRTL ? "flex-row-reverse" : "")}>
+          <span className={cn("text-sm text-muted-foreground hidden md:inline-block", isRTL ? "ml-2" : "mr-2")}>{t('sortBy')}</span>
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[160px] border-gray-200 bg-gray-50/50">
+            <SelectTrigger className={cn("w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
               <SelectValue placeholder={t('sortBy')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="created_at">{t('created')}</SelectItem>
-              <SelectItem value="updated_at">{t('updated')}</SelectItem>
-              <SelectItem value="title">{t('title')}</SelectItem>
+              <SelectItem value="created_at" className={isRTL ? "flex-row-reverse" : ""}>{t('created')}</SelectItem>
+              <SelectItem value="updated_at" className={isRTL ? "flex-row-reverse" : ""}>{t('updated')}</SelectItem>
+              <SelectItem value="title" className={isRTL ? "flex-row-reverse" : ""}>{t('title')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -558,17 +558,17 @@ export default function TrainingModules() {
                     <CardTitle className="text-xl font-medium font-serif text-hotel-navy line-clamp-1 group-hover:text-hotel-gold transition-colors">
                       {module.title}
                     </CardTitle>
-                    <p className="text-sm text-gray-500 line-clamp-2 min-h-[40px]">
-                      {module.description || t('noDescription', 'No description provided')}
+                    <p className={cn("text-sm text-gray-500 line-clamp-2 min-h-[40px]", isRTL ? "text-right" : "text-left")}>
+                      {module.description || t('noDescription')}
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">
                   <Badge variant="secondary" className={cn("rounded-sm font-normal", getStatusColor(module.status || 'draft'))}>
-                    {module.status}
+                    {t(module.status)}
                   </Badge>
                   <Badge variant="outline" className={cn("rounded-sm font-normal", getDifficultyColor(module.difficulty || 'beginner'))}>
-                    {module.difficulty}
+                    {t(module.difficulty || 'beginner')}
                   </Badge>
                   {module.category && (
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-normal">
@@ -580,11 +580,11 @@ export default function TrainingModules() {
               <CardContent className="pt-2">
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-6 px-1">
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5" title="Estimated Duration">
+                    <div className={cn("flex items-center gap-1.5", isRTL ? "flex-row-reverse" : "")} title={t('estimatedDuration')}>
                       <Clock className="h-3.5 w-3.5" />
-                      <span>{module.estimated_duration || '0 min'}</span>
+                      <span>{module.estimated_duration || `0 ${t('min')}`}</span>
                     </div>
-                    <div className="flex items-center gap-1.5" title="Total Views">
+                    <div className={cn("flex items-center gap-1.5", isRTL ? "flex-row-reverse" : "")} title={t('totalViews')}>
                       <Eye className="h-3.5 w-3.5" />
                       <span>{module.view_count || 0}</span>
                     </div>
@@ -594,50 +594,51 @@ export default function TrainingModules() {
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
-                    className="w-full border-gray-200 hover:bg-hotel-gold hover:text-white hover:border-hotel-gold transition-colors group"
+                    className={cn("w-full border-gray-200 hover:bg-hotel-gold hover:text-white hover:border-hotel-gold transition-colors group", isRTL ? "flex-row-reverse" : "")}
                     size="sm"
                     onClick={() => handleEdit(module)}
                   >
-                    <Edit className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                    {t('edit', 'Info')}
+                    <Edit className={cn("h-4 w-4 transition-transform duration-300", isRTL ? "ml-2 group-hover:-translate-y-0.5 group-hover:-translate-x-0.5" : "mr-2 group-hover:-translate-y-0.5 group-hover:translate-x-0.5")} />
+                    {t('edit')}
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full border-gray-200 hover:bg-hotel-navy hover:text-white hover:border-hotel-navy transition-colors group"
+                    className={cn("w-full border-gray-200 hover:bg-hotel-navy hover:text-white hover:border-hotel-navy transition-colors group", isRTL ? "flex-row-reverse" : "")}
                     size="sm"
                     onClick={() => navigate(`/training/builder/${module.id}`)}
                   >
-                    <FileText className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" />
-                    {t('content', 'Content')}
+                    <FileText className={cn("h-4 w-4 transition-transform duration-300", isRTL ? "ml-2 group-hover:-translate-x-1" : "mr-2 group-hover:translate-x-1")} />
+                    {t('content')}
                   </Button>
                   <Button
                     className={cn(
                       "w-full transition-colors group",
                       module.status === 'published'
                         ? "bg-hotel-navy text-white hover:bg-hotel-navy-light"
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200",
+                      isRTL ? "flex-row-reverse" : ""
                     )}
                     size="sm"
                     onClick={() => {
                       if (module.status !== 'published') {
-                        alert(t('onlyPublishedModulesCanBeAssigned', 'Only published modules can be assigned. Please publish this module first.'));
+                        alert(t('onlyPublishedModulesCanBeAssigned'));
                         return;
                       }
                       handleAssign(module.id);
                     }}
                   >
-                    <Users className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:scale-110" />
-                    {t('assign', 'Assign')}
+                    <Users className={cn("h-4 w-4 transition-transform duration-300 group-hover:scale-110", isRTL ? "ml-2" : "mr-2")} />
+                    {t('assign')}
                   </Button>
                   <Button
                     variant="ghost"
-                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 group"
+                    className={cn("w-full text-red-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 group", isRTL ? "flex-row-reverse" : "")}
                     size="sm"
                     onClick={() => handleDelete(module)}
                     disabled={deleteModuleMutation.isPending}
                   >
-                    <Trash2 className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:rotate-12" />
-                    {t('delete', 'Delete')}
+                    <Trash2 className={cn("h-4 w-4 transition-transform duration-300 group-hover:rotate-12", isRTL ? "ml-2" : "mr-2")} />
+                    {t('delete')}
                   </Button>
                 </div>
               </CardContent>
@@ -651,12 +652,12 @@ export default function TrainingModules() {
             <h3 className="text-lg font-medium text-gray-900 mb-1">{t('noModulesFound')}</h3>
             <p className="text-gray-500 max-w-sm mx-auto mb-6">
               {search || categoryFilter !== 'all' || statusFilter !== 'all'
-                ? t('adjustFilters', 'Try adjusting your search or filters to find what you are looking for.')
-                : t('createFirstModule', 'Get started by creating your first training module.')}
+                ? t('adjustFilters')
+                : t('createFirstModule')}
             </p>
             {!(search || categoryFilter !== 'all' || statusFilter !== 'all') && (
-              <Button onClick={handleCreate} className="bg-hotel-navy text-white hover:bg-hotel-navy-light">
-                <Plus className="h-4 w-4 mr-2" />
+              <Button onClick={handleCreate} className={cn("bg-hotel-navy text-white hover:bg-hotel-navy-light", isRTL ? "flex-row-reverse" : "")}>
+                <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                 {t('createModule')}
               </Button>
             )}
@@ -672,7 +673,7 @@ export default function TrainingModules() {
           title: editingModule.title,
           description: editingModule.description,
           estimated_duration: editingModule.estimated_duration || '',
-          difficulty: editingModule.difficulty || 'beginner',
+          difficulty_level: editingModule.difficulty || 'beginner',
           category: editingModule.category || '',
           status: editingModule.status,
         } : null}

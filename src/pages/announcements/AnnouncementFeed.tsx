@@ -17,7 +17,7 @@ import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 export default function AnnouncementFeed() {
   const { user, profile, primaryRole, roles, properties, departments } = useAuth()
   const queryClient = useQueryClient()
-  const { t } = useTranslation('announcements')
+  const { t, i18n } = useTranslation('announcements')
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
   const [deleteData, setDeleteData] = useState<Announcement | null>(null)
@@ -141,9 +141,11 @@ export default function AnnouncementFeed() {
     await queryClient.invalidateQueries({ queryKey: ['announcement-reads', profile?.id] })
   }
 
+  const isRTL = i18n.dir() === 'rtl'
+
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="space-y-6">
+      <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
         <PageHeader
           title={t('title')}
           description={t('description')}
@@ -239,7 +241,7 @@ export default function AnnouncementFeed() {
 
         <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
           <DialogContent className="max-w-4xl p-0 overflow-hidden" aria-describedby="announcement-editor-desc">
-            <DialogTitle className="sr-only">Create Announcement</DialogTitle>
+            <DialogTitle className="sr-only">{editingAnnouncement ? t('edit') : t('create')}</DialogTitle>
             <DialogDescription id="announcement-editor-desc" className="sr-only">
               Form to create or edit an announcement
             </DialogDescription>
@@ -256,7 +258,7 @@ export default function AnnouncementFeed() {
           onOpenChange={(open) => !open && setDeleteData(null)}
           onConfirm={() => deleteData && deleteMutation.mutate(deleteData.id)}
           itemName={deleteData?.title || ''}
-          itemType={t('announcement', 'Announcement')}
+          itemType={t('announcement')}
           isLoading={deleteMutation.isPending}
         />
       </div>

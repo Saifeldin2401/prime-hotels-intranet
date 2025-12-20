@@ -163,33 +163,45 @@ export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]>
 
 export async function getRequiredReading(userId: string): Promise<RequiredReading[]> {
     try {
-        // Fallback or RPC? If RPC exists update it, otherwise query manually
-        // Assuming documents with requires_acknowledgment = true meant for user
-        const { data, error } = await supabase
+        // 1. Get published documents that require acknowledgment
+        const { data: requiredDocs, error } = await supabase
             .from('documents')
             .select('*')
             .eq('requires_acknowledgment', true)
             .eq('status', 'PUBLISHED')
-            // Filter logic for user likely needs improvement (department match etc)
-            // limiting to 10 for safety if RPC is gone
-            .limit(10)
+            .eq('is_deleted', false)
+            .limit(50)
 
-        // Mocking RequiredReading structure from document
-        if (data) {
-            return data.map(d => ({
-                id: d.id,
+        if (error || !requiredDocs) return []
+
+        // 2. Get user's acknowledgments for these documents
+        const { data: acks } = await supabase
+            .from('document_acknowledgments')
+            .select('document_id, acknowledged_at')
+            .eq('user_id', userId)
+            .in('document_id', requiredDocs.map(d => d.id))
+
+        const ackMap = new Map(acks?.map(a => [a.document_id, a]))
+
+        // 3. Map to RequiredReading type
+        return requiredDocs.map(d => {
+            const acknowledgment = ackMap.get(d.id)
+            return {
+                id: d.id, // Using document ID as the listing ID
                 document_id: d.id,
                 title: d.title,
                 content_type: (d.content_type?.toLowerCase() as any) || 'document',
-                is_acknowledged: false,
-                due_date: new Date().toISOString(), // Placeholder
+                is_acknowledged: !!acknowledgment,
+                acknowledged_at: acknowledgment?.acknowledged_at,
+                // In a real system, due_date might come from a specific assignment table
+                // For global required reading, we might not have a strict due date, or default to creation + 7 days
+                due_date: new Date(new Date(d.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
                 is_overdue: false,
                 priority: 'high'
-            }))
-        }
-
-        return []
-    } catch {
+            }
+        })
+    } catch (e) {
+        console.error('getRequiredReading error:', e)
         return []
     }
 }
@@ -218,7 +230,29 @@ export async function getBookmarks(userId: string): Promise<KnowledgeBookmark[]>
 export async function toggleBookmark(documentId: string, userId: string): Promise<boolean> { return false }
 export async function submitFeedback(documentId: string, userId: string, helpful: boolean, feedbackText?: string): Promise<void> { }
 export async function getCategories(departmentId?: string) { return [] }
-export async function getContentTypeCounts(): Promise<Record<string, number>> { return {} }
+
+export async function getContentTypeCounts(): Promise<Record<string, number>> {
+    try {
+        // This is a rough count. For better performance on large datasets, use an RPC function.
+        // But for < 1000 docs, this fetch is acceptable.
+        const { data, error } = await supabase
+            .from('documents')
+            .select('content_type')
+            .eq('is_deleted', false)
+            .eq('status', 'PUBLISHED')
+
+        if (error || !data) return {}
+
+        const counts: Record<string, number> = {}
+        data.forEach(d => {
+            const type = d.content_type?.toLowerCase() || 'unknown'
+            counts[type] = (counts[type] || 0) + 1
+        })
+        return counts
+    } catch {
+        return {}
+    }
+}
 
 // ============================================================================
 // RELATED ARTICLES

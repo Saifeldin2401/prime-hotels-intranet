@@ -22,8 +22,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from '@/hooks/useAuth'
+import { useTranslation } from 'react-i18next'
+import { ar, enUS } from 'date-fns/locale'
 
 export default function MyGoals() {
+    const { t, i18n } = useTranslation('hr')
+    const dateLocale = i18n.language.startsWith('ar') ? ar : enUS
     const { user } = useAuth()
     const { data: goals, isLoading } = useGoals()
     const createGoalMutation = useCreateGoal()
@@ -45,11 +49,11 @@ export default function MyGoals() {
                 employee_id: user.id,
                 status: 'pending'
             })
-            toast.success('Goal created successfully')
+            toast.success(t('career_goals.success_create'))
             setIsAddOpen(false)
             setNewGoal({ title: '', description: '', target_date: '', category: 'performance' })
         } catch (error) {
-            toast.error('Failed to create goal')
+            toast.error(t('career_goals.error_create'))
         }
     }
 
@@ -60,9 +64,9 @@ export default function MyGoals() {
                 id,
                 updates: { status: nextStatus as any }
             })
-            toast.success(`Goal marked as ${nextStatus.replace('_', ' ')}`)
+            toast.success(t('career_goals.success_update', { status: nextStatus.replace('_', ' ') }))
         } catch (error) {
-            toast.error('Failed to update status')
+            toast.error(t('career_goals.error_update'))
         }
     }
 
@@ -75,42 +79,42 @@ export default function MyGoals() {
             <div className="p-6 space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Career Goals</h1>
-                        <p className="text-muted-foreground">Define and track your professional development milestones.</p>
+                        <h1 className="text-3xl font-bold tracking-tight">{t('career_goals.title')}</h1>
+                        <p className="text-muted-foreground">{t('career_goals.description')}</p>
                     </div>
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
                             <Button className="gap-2">
                                 <Plus className="w-4 h-4" />
-                                Add New Goal
+                                {t('career_goals.add_new_goal')}
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Create New Goal</DialogTitle>
-                                <DialogDescription>Set a new milestone for your professional growth.</DialogDescription>
+                                <DialogTitle>{t('career_goals.create_title')}</DialogTitle>
+                                <DialogDescription>{t('career_goals.create_description')}</DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="title">Goal Title</Label>
+                                    <Label htmlFor="title">{t('career_goals.goal_title')}</Label>
                                     <Input
                                         id="title"
-                                        placeholder="e.g., Complete Advanced Service Training"
+                                        placeholder={t('career_goals.goal_title_placeholder')}
                                         value={newGoal.title}
                                         onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="description">Description</Label>
+                                    <Label htmlFor="description">{t('career_goals.goal_desc')}</Label>
                                     <Textarea
                                         id="description"
-                                        placeholder="Describe what success looks like..."
+                                        placeholder={t('career_goals.goal_desc_placeholder')}
                                         value={newGoal.description}
                                         onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="date">Target Date</Label>
+                                    <Label htmlFor="date">{t('career_goals.target_date')}</Label>
                                     <Input
                                         id="date"
                                         type="date"
@@ -120,9 +124,9 @@ export default function MyGoals() {
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                                <Button variant="outline" onClick={() => setIsAddOpen(false)}>{t('career_goals.cancel')}</Button>
                                 <Button onClick={handleCreate} disabled={createGoalMutation.isPending}>
-                                    {createGoalMutation.isPending ? 'Creating...' : 'Create Goal'}
+                                    {createGoalMutation.isPending ? t('career_goals.creating') : t('career_goals.create')}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
@@ -132,16 +136,16 @@ export default function MyGoals() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <Card className="md:col-span-1 shadow-lg border-primary/10 bg-hotel-navy text-white">
                         <CardHeader>
-                            <CardTitle className="text-lg">Goal Stats</CardTitle>
+                            <CardTitle className="text-lg">{t('career_goals.stats_title')}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="text-center py-4">
                                 <div className="text-4xl font-bold mb-1">{completedGoals}/{totalGoals}</div>
-                                <div className="text-xs text-white/60">Goals Completed</div>
+                                <div className="text-xs text-white/60">{t('career_goals.completed_label')}</div>
                             </div>
                             <div className="space-y-2">
                                 <div className="flex justify-between text-xs">
-                                    <span>Overall Progress</span>
+                                    <span>{t('career_goals.overall_progress')}</span>
                                     <span>{Math.round(completionPercentage)}%</span>
                                 </div>
                                 <Progress value={completionPercentage} className="h-2 bg-white/10" />
@@ -149,15 +153,15 @@ export default function MyGoals() {
                             <div className="pt-4 space-y-3">
                                 <div className="flex items-center gap-3 text-sm">
                                     <div className="w-2 h-2 rounded-full bg-green-500" />
-                                    <span>{completedGoals} Completed</span>
+                                    <span>{completedGoals} {t('career_goals.completed')}</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-sm">
                                     <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                    <span>{goals?.filter(g => g.status === 'in_progress')?.length || 0} In Progress</span>
+                                    <span>{goals?.filter(g => g.status === 'in_progress')?.length || 0} {t('career_goals.in_progress')}</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-sm">
                                     <div className="w-2 h-2 rounded-full bg-gray-500" />
-                                    <span>{goals?.filter(g => g.status === 'pending')?.length || 0} Pending</span>
+                                    <span>{goals?.filter(g => g.status === 'pending')?.length || 0} {t('career_goals.pending')}</span>
                                 </div>
                             </div>
                         </CardContent>
@@ -167,8 +171,8 @@ export default function MyGoals() {
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <CardTitle>My Goals</CardTitle>
-                                    <CardDescription>Active and historical goals</CardDescription>
+                                    <CardTitle>{t('career_goals.my_goals')}</CardTitle>
+                                    <CardDescription>{t('career_goals.my_goals_desc')}</CardDescription>
                                 </div>
                                 <Target className="w-5 h-5 text-primary" />
                             </div>
@@ -213,11 +217,18 @@ export default function MyGoals() {
                                                         <div className="flex items-center gap-4 pt-2">
                                                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                                                 <CalendarIcon className="w-3 h-3" />
-                                                                <span>Due: {goal.target_date ? format(new Date(goal.target_date), 'MMM d, yyyy') : 'No date'}</span>
+                                                                <span>{t('career_goals.due')}: {goal.target_date ? format(new Date(goal.target_date), 'MMM d, yyyy', { locale: dateLocale }) : 'No date'}</span>
                                                             </div>
                                                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                                                 <Clock className="w-3 h-3" />
-                                                                <span>Status: {goal.status?.replace('_', ' ')}</span>
+                                                                <span>
+                                                                    {t('career_goals.status')}: {
+                                                                        goal.status === 'in_progress' ? t('career_goals.in_progress') :
+                                                                            goal.status === 'completed' ? t('career_goals.completed') :
+                                                                                goal.status === 'pending' ? t('career_goals.pending') :
+                                                                                    goal.status?.replace('_', ' ')
+                                                                    }
+                                                                </span>
                                                             </div>
                                                         </div>
 
@@ -226,7 +237,7 @@ export default function MyGoals() {
                                                                 <div className="flex justify-between items-center text-xs">
                                                                     <span className="font-medium text-blue-700 flex items-center gap-1">
                                                                         <BookOpen className="w-3 h-3" />
-                                                                        Linked Training: {goal.training_module.title}
+                                                                        {t('career_goals.linked_training')}: {goal.training_module.title}
                                                                     </span>
                                                                     <span className="font-bold text-blue-700">
                                                                         {goal.training_module.progress?.status === 'completed' ? '100%' : goal.training_module.progress?.status === 'in_progress' ? '50%' : '0%'}
@@ -238,7 +249,7 @@ export default function MyGoals() {
                                                                 />
                                                                 {goal.training_module.progress?.quiz_score !== null && (
                                                                     <p className="text-[10px] text-blue-600">
-                                                                        Quiz Score: {goal.training_module.progress.quiz_score}%
+                                                                        {t('career_goals.quiz_score')}: {goal.training_module.progress.quiz_score}%
                                                                     </p>
                                                                 )}
                                                             </div>
@@ -250,7 +261,7 @@ export default function MyGoals() {
                                         {goals?.length === 0 && (
                                             <div className="text-center py-12">
                                                 <Target className="w-12 h-12 text-muted/30 mx-auto mb-3" />
-                                                <p className="text-muted-foreground">No goals set yet. Start by adding one!</p>
+                                                <p className="text-muted-foreground">{t('career_goals.no_goals')}</p>
                                             </div>
                                         )}
                                     </div>
@@ -260,6 +271,6 @@ export default function MyGoals() {
                     </Card>
                 </div>
             </div>
-        </MotionWrapper>
+        </MotionWrapper >
     )
 }

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -371,19 +372,12 @@ export default function TrainingPaths() {
     <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
       <PageHeader
         title={t('paths')}
-        description={isRTL ? 'إدارة مسارات التعلم المهيكلة للموظفين' : 'Manage structured learning paths for employees'}
+        description={t('paths_description')}
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors"
-              size="sm"
-              onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'ar' : 'en')}
-            >
-              {i18n.language === 'en' ? 'العربية' : 'English'}
-            </Button>
             {['regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
-              <Button onClick={() => setShowPathDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button onClick={() => setShowPathDialog(true)} className={isRTL ? "flex-row-reverse" : ""}>
+                <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
                 {t('createPath')}
               </Button>
             )}
@@ -420,15 +414,15 @@ export default function TrainingPaths() {
                           <p className="text-sm text-gray-600">
                             {enrollment.training_paths.description}
                           </p>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                          <div className={cn("flex items-center gap-4 mt-2 text-sm text-gray-600", isRTL ? "flex-row-reverse" : "")}>
                             <span>{t('modules')}: {enrollment.training_paths.training_path_modules?.length || 0}</span>
-                            <span>{t('estimatedDuration')}: {enrollment.training_paths.estimated_duration_hours}h</span>
-                            <span>{t('enrolled')}: {new Date(enrollment.enrolled_at).toLocaleDateString()}</span>
+                            <span>{t('estimatedDuration')}: {enrollment.training_paths.estimated_duration_hours}{t('h')}</span>
+                            <span>{t('enrolled')}: {new Date(enrollment.enrolled_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US')}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-right">
+                      <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                        <div className={isRTL ? "text-left" : "text-right"}>
                           <div className="text-sm font-medium">{calculateProgress(enrollment)}%</div>
                           <div className="w-20 bg-gray-200 rounded-full h-2">
                             <div
@@ -448,7 +442,7 @@ export default function TrainingPaths() {
                 <EmptyState
                   icon={BookOpen}
                   title={t('noEnrollments')}
-                  description={isRTL ? 'ابدأ رحلة التعلم الخاصة بك عن طريق التسجيل في مسار تعلم.' : 'Start your learning journey by enrolling in a learning path.'}
+                  description={t('no_enrollments_desc')}
                 />
               )}
             </CardContent>
@@ -475,9 +469,9 @@ export default function TrainingPaths() {
                           <div>
                             <h3 className="font-medium">{path.title}</h3>
                             <p className="text-sm text-gray-600">{path.description}</p>
-                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                            <div className={cn("flex items-center gap-4 mt-2 text-sm text-gray-600", isRTL ? "flex-row-reverse" : "")}>
                               <span>{t('modules')}: {path.training_path_modules?.length || 0}</span>
-                              <span>{t('estimatedDuration')}: {path.estimated_duration_hours}h</span>
+                              <span>{t('estimatedDuration')}: {path.estimated_duration_hours}{t('h')}</span>
                               {path.is_mandatory && (
                                 <Badge className="bg-hotel-gold text-white border border-hotel-gold rounded-md">{t('mandatory')}</Badge>
                               )}
@@ -502,7 +496,7 @@ export default function TrainingPaths() {
                   <EmptyState
                     icon={BookOpen}
                     title={t('noPaths')}
-                    description={isRTL ? 'قم بإنشاء مسارات تعلم منظمة لتوجيه تطوير الموظفين.' : 'Create structured learning paths to guide employee development.'}
+                    description={t('no_paths_desc')}
                     action={{
                       label: t('newPath'),
                       onClick: () => setShowPathDialog(true),
@@ -531,13 +525,13 @@ export default function TrainingPaths() {
               <TabsTrigger value="targeting">{t('targeting')}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="general" className="space-y-4 pt-4 text-left">
+            <TabsContent value="general" className={cn("space-y-4 pt-4", isRTL ? "text-right" : "text-left")}>
               <div className="space-y-2">
                 <Label>{t('pathTitle')}</Label>
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder={isRTL ? 'أدخل عنوان المسار' : 'Enter path title'}
+                  placeholder={t('enter_path_title')}
                 />
               </div>
 
@@ -546,7 +540,7 @@ export default function TrainingPaths() {
                 <Textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder={isRTL ? 'أدخل وصف المسار' : 'Enter path description'}
+                  placeholder={t('enter_path_description')}
                   rows={3}
                 />
               </div>
@@ -572,7 +566,7 @@ export default function TrainingPaths() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('estimatedDuration')} (hours)</Label>
+                  <Label>{t('estimatedDuration')} ({t('hours')})</Label>
                   <Input
                     type="number"
                     value={formData.estimated_duration_hours}
@@ -582,8 +576,8 @@ export default function TrainingPaths() {
                 </div>
               </div>
 
-              <div className="flex gap-4">
-                <div className="flex items-center space-x-2">
+              <div className={cn("flex gap-4", isRTL ? "flex-row-reverse" : "")}>
+                <div className={cn("flex items-center", isRTL ? "space-x-reverse space-x-2" : "space-x-2")}>
                   <input
                     type="checkbox"
                     id="mandatory"
@@ -594,7 +588,7 @@ export default function TrainingPaths() {
                   <Label htmlFor="mandatory">{t('mandatory')}</Label>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className={cn("flex items-center", isRTL ? "space-x-reverse space-x-2" : "space-x-2")}>
                   <input
                     type="checkbox"
                     id="certificate"
@@ -607,7 +601,7 @@ export default function TrainingPaths() {
               </div>
             </TabsContent>
 
-            <TabsContent value="modules" className="space-y-4 pt-4 text-left">
+            <TabsContent value="modules" className={cn("space-y-4 pt-4", isRTL ? "text-right" : "text-left")}>
               <div className="space-y-2">
                 <Label>{t('selectModules')}</Label>
                 <div className="border rounded-md p-4 max-h-[300px] overflow-y-auto space-y-2">
@@ -629,18 +623,18 @@ export default function TrainingPaths() {
                         <span className="text-sm font-medium">{module.title}</span>
                       </div>
                       <Badge variant="outline" className="text-[10px]">
-                        {module.estimated_duration_minutes} min
+                        {module.estimated_duration_minutes} {t('min')}
                       </Badge>
                     </div>
                   ))}
                 </div>
                 <p className="text-[11px] text-gray-500 italic">
-                  * Modules will be presented to the user in the order they are selected.
+                  * {t('modulesOrderHint')}
                 </p>
               </div>
             </TabsContent>
 
-            <TabsContent value="targeting" className="space-y-4 pt-4 text-left">
+            <TabsContent value="targeting" className={cn("space-y-4 pt-4", isRTL ? "text-right" : "text-left")}>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t('targetHotel')}</Label>
@@ -722,10 +716,10 @@ export default function TrainingPaths() {
                 </div>
               </div>
 
-              <div className="p-3 bg-blue-50 text-blue-800 text-[11px] rounded border border-blue-100 flex items-start gap-2">
-                <Target className="w-4 h-4 mt-0.5 text-blue-600" />
-                <p>
-                  <strong>Targeting Logic:</strong> Employees matching <em>any</em> of the criteria above (Hotel, Dept, Role, or Specific Name) will be enrolled in this Learning Path.
+              <div className={cn("p-3 bg-blue-50 text-blue-800 text-[11px] rounded border border-blue-100 flex items-start gap-2", isRTL ? "flex-row-reverse" : "")}>
+                <Target className={cn("w-4 h-4 mt-0.5 text-blue-600", isRTL ? "ml-2" : "")} />
+                <p className={isRTL ? "text-right" : ""}>
+                  <strong>{t('targeting_logic')}:</strong> {t('targeting_logic_desc')}
                 </p>
               </div>
             </TabsContent>
@@ -736,7 +730,7 @@ export default function TrainingPaths() {
               {t('cancel')}
             </Button>
             <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors px-6" onClick={handleSubmit} disabled={pathMutation.isPending}>
-              {pathMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {pathMutation.isPending ? <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ml-2" : "mr-1")} /> : null}
               {pathMutation.isPending ? t('saving') : t('savePath')}
             </Button>
           </div>

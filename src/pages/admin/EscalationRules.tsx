@@ -41,7 +41,7 @@ const roleLabels: Record<AppRole, string> = {
 }
 
 export default function EscalationRules() {
-  const { t } = useTranslation('admin')
+  const { t } = useTranslation(['admin', 'common'])
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editingRule, setEditingRule] = useState<EscalationRule | null>(null)
@@ -255,14 +255,14 @@ export default function EscalationRules() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <h3 className="font-medium capitalize">
-                            {rule.action_type.replace('_', ' ')}
+                            {t(`escalation_rules.types.${rule.action_type}`)}
                           </h3>
                           <Badge variant={rule.is_active ? 'default' : 'secondary'}>
-                            {rule.is_active ? t('escalation_rules.active') : t('profile.inactive')}
+                            {rule.is_active ? t('escalation_rules.active') : t('common:common.inactive', { defaultValue: 'Inactive' })}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600">
-                          {t('escalation_rules.escalates_to')} {roleLabels[rule.next_role]} {t('escalation_rules.after_hours', { count: rule.threshold_hours })}
+                          {t('escalation_rules.escalates_to')} {t(`common:roles.${rule.next_role}`)} {t('escalation_rules.after_hours', { count: rule.threshold_hours })}
                         </p>
                         <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                           <span>{t('escalation_rules.created')} {new Date(rule.created_at).toLocaleDateString()}</span>
@@ -318,7 +318,7 @@ interface EscalationRuleFormProps {
 }
 
 function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps) {
-  const { t } = useTranslation('admin')
+  const { t } = useTranslation(['admin', 'common'])
   const [formData, setFormData] = useState({
     action_type: rule?.action_type || '',
     threshold_hours: rule?.threshold_hours || 48,
@@ -360,12 +360,12 @@ function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps
                   onValueChange={(value) => updateFormData('action_type', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select action type" />
+                    <SelectValue placeholder={t('escalation_rules.select_action')} />
                   </SelectTrigger>
                   <SelectContent>
                     {entityTypes.map(type => (
                       <SelectItem key={type} value={type}>
-                        {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {t(`escalation_rules.types.${type}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -393,12 +393,12 @@ function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps
                 onValueChange={(value) => updateFormData('next_role', value as AppRole)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select escalation role" />
+                  <SelectValue placeholder={t('escalation_rules.select_role')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(roleLabels).map(([role, label]) => (
+                  {Object.keys(roleLabels).map((role) => (
                     <SelectItem key={role} value={role}>
-                      {label}
+                      {t(`common:roles.${role}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>

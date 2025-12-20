@@ -8,7 +8,8 @@
         "of": "من",
         "assigned_manager": "مسندة للمدير",
         "all_set": "أنت جاهز تماماً!",
-        "no_active": "لا توجد قوائم تأهيل نشطة مسندة إليك حالياً."
+        "no_active": "لا توجد قوائم تأهيل نشطة مسندة إليك حالياً.",
+        "due": "مستحق في"
     },
     "editor": {
         "create_title": "إنشاء قالب تأهيل",
@@ -39,7 +40,12 @@
         "link_url": "رابط خارجي",
         "select_module": "اختر وحدة",
         "select_document": "اختر مستند",
-        "enter_url": "أدخل الرابط"
+        "enter_url": "أدخل الرابط",
+        "placeholders": {
+            "template_title": "مثال: تدريب فريق المبيعات",
+            "task_title": "مثال: توقيع اتفاقية عدم الإفصاح",
+            "task_description": "تعليمات للمستخدم..."
+        }
     },
     "templates": {
         "title": "قوالب التأهيل",
@@ -75,7 +81,16 @@
         "back": "رجوع",
         "add_task": "إضافة مهمة",
         "save_template": "حفظ القالب",
-        "update_template": "تحديث القالب"
+        "update_template": "تحديث القالب",
+        "template_deleted": "تم حذف القالب",
+        "error_deleting": "خطأ في حذف القالب",
+        "loading": "جاري تحميل القوالب...",
+        "title_required": "العنوان مطلوب",
+        "task_required": "يجب إضافة مهمة واحدة على الأقل",
+        "template_updated": "تم تحديث القالب",
+        "update_failed": "فشل التحديث",
+        "template_created": "تم إنشاء القالب",
+        "create_failed": "فشل الإنشاء"
     },
     "dialogs": {
         "delete_title": "حذف القالب؟",
@@ -83,6 +98,11 @@
     },
     "status": {
         "active": "نشط",
-        "draft": "مسودة"
+        "inactive": "غير نشط",
+        "pending": "قيد الانتظار",
+        "archived": "مؤرشف",
+        "draft": "مسودة",
+        "completed": "مكتمل",
+        "in_progress": "قيد التنفيذ"
     }
 }

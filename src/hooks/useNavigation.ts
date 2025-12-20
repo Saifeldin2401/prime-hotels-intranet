@@ -5,7 +5,7 @@
  * Consumes the centralized navigation configuration.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSidebarCounts } from '@/hooks/useSidebarCounts'
@@ -92,7 +92,7 @@ export function useNavigation(): UseNavigationReturn {
     }
 
     // Enrich route with active state, badge count, and resolved path
-    const enrichRoute = (route: RouteConfig): NavigationItem => {
+    const enrichRoute = useCallback((route: RouteConfig): NavigationItem => {
         const resolvedPath = resolvePathForRole(route, primaryRole)
         return {
             ...route,
@@ -100,7 +100,7 @@ export function useNavigation(): UseNavigationReturn {
             isActive: isPathActive(resolvedPath),
             badgeCount: route.badgeKey ? badgeCounts[route.badgeKey] : undefined
         }
-    }
+    }, [primaryRole, badgeCounts, isPathActive])
 
     // Grouped navigation for sidebar
     const groupedNavigation = useMemo((): NavigationGroupWithItems[] => {
@@ -122,17 +122,17 @@ export function useNavigation(): UseNavigationReturn {
         }
 
         return groups.sort((a, b) => a.config.order - b.config.order)
-    }, [primaryRole, location.pathname, badgeCounts])
+    }, [primaryRole, enrichRoute])
 
     // Flat navigation for mobile
     const flatNavigation = useMemo((): NavigationItem[] => {
         return getFlatRoutesForRole(primaryRole).map(enrichRoute)
-    }, [primaryRole, location.pathname, badgeCounts])
+    }, [primaryRole, enrichRoute])
 
     // Quick actions for mobile bottom bar
     const quickActions = useMemo((): NavigationItem[] => {
         return getMobileQuickActions(primaryRole).map(enrichRoute)
-    }, [primaryRole, location.pathname, badgeCounts])
+    }, [primaryRole, enrichRoute])
 
     // Check if user can access a path
     const canAccess = (path: string): boolean => {

@@ -301,13 +301,13 @@ export default function PromotionTransferHistory() {
                         <PromoteEmployeeDialog onSuccess={() => { refetchPromos(); }}>
                             <Button className="bg-purple-600 hover:bg-purple-700">
                                 <ArrowUp className="h-4 w-4 me-2" />
-                                Promote
+                                {t('history.promote_button')}
                             </Button>
                         </PromoteEmployeeDialog>
                         <TransferEmployeeDialog onSuccess={() => { refetchTransfers(); }}>
                             <Button className="bg-blue-600 hover:bg-blue-700">
                                 <Target className="h-4 w-4 me-2" />
-                                Transfer
+                                {t('history.transfer_button')}
                             </Button>
                         </TransferEmployeeDialog>
                     </div>
@@ -359,7 +359,7 @@ export default function PromotionTransferHistory() {
                                                                 record.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                                                     'bg-gray-100 text-gray-800'
                                                     }>
-                                                        {record.status === 'pending' ? 'Pending Approval' : record.status}
+                                                        {record.status === 'pending' ? t('status.pending_approval') : t(`status.${record.status}`, { defaultValue: record.status })}
                                                     </Badge>
                                                 </div>
 
@@ -381,7 +381,7 @@ export default function PromotionTransferHistory() {
                                                                 className="text-red-600 focus:text-red-600"
                                                                 onClick={() => setRecordToCancel(record as HistoryRecord)}
                                                             >
-                                                                <XCircle className="mr-2 h-4 w-4" /> Cancel Request
+                                                                <XCircle className="mr-2 h-4 w-4" /> {t('history.cancel_action')}
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -458,7 +458,7 @@ export default function PromotionTransferHistory() {
                             <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('history.no_records', { defaultValue: 'No records found' })}</h3>
                             <p className="text-gray-600 mb-4">
-                                {searchTerm ? 'No results found for your search' : 'No promotions or transfers found. Try submitting one!'}
+                                {searchTerm ? t('history.no_search_results', { defaultValue: 'No results found for your search' }) : t('history.empty_list_desc', { defaultValue: 'No promotions or transfers found.' })}
                             </p>
                             {canInitiate && user && isGlobalAdmin && (
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -473,15 +473,15 @@ export default function PromotionTransferHistory() {
             <AlertDialog open={!!recordToCancel} onOpenChange={(open) => !open && setRecordToCancel(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Cancel Request?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('history.cancel_request_title')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel this {recordToCancel?.type} request? This action cannot be undone.
+                            {t('history.cancel_request_desc', { type: recordToCancel?.type })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Keep Request</AlertDialogCancel>
+                        <AlertDialogCancel>{t('history.keep_request')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleCancel} className="bg-red-600 hover:bg-red-700">
-                            Yes, Cancel
+                            {t('history.confirm_cancel')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

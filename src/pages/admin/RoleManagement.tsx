@@ -66,7 +66,7 @@ const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
 
 export default function RoleManagement() {
   const { hasPermission } = usePermissions()
-  const { t, i18n } = useTranslation('admin')
+  const { t, i18n } = useTranslation(['admin', 'common'])
   const isRTL = i18n.dir() === 'rtl'
 
   // State
@@ -120,15 +120,7 @@ export default function RoleManagement() {
   }
 
   const getRoleDisplayName = (role: AppRole) => {
-    const roleNames = {
-      regional_admin: 'Regional Admin',
-      regional_hr: 'Regional HR',
-      property_manager: 'Property Manager',
-      property_hr: 'Property HR',
-      department_head: 'Department Head',
-      staff: 'Staff'
-    }
-    return roleNames[role] || role
+    return t(`common:roles.${role}`, { defaultValue: role })
   }
 
   if (!hasPermission('users.view')) {

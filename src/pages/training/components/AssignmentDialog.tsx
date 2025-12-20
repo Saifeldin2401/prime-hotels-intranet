@@ -47,7 +47,8 @@ export function AssignmentDialog({
     onAssign,
     isAssigning = false,
 }: AssignmentDialogProps) {
-    const { t } = useTranslation('training')
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
     const [targetType, setTargetType] = useState<'all' | 'users' | 'departments' | 'properties'>('all')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [deadline, setDeadline] = useState('')
@@ -138,7 +139,7 @@ export function AssignmentDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-lg bg-white dark:bg-slate-950 border-hotel-gold/20 shadow-2xl">
-                <DialogHeader className="border-b border-gray-100 pb-4 mb-4">
+                <DialogHeader className={`border-b border-gray-100 pb-4 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <DialogTitle className="text-2xl font-serif text-hotel-navy">
                         {t('assignModule')}
                     </DialogTitle>
@@ -146,13 +147,13 @@ export function AssignmentDialog({
                         {t('assignModuleDescription', 'Select who should receive this training module')}
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className="space-y-2">
                         <Label className="text-hotel-navy font-medium">{t('assignTo')}</Label>
                         <select
                             value={targetType}
                             onChange={handleTargetTypeChange}
-                            className="w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none"
+                            className={`w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none ${isRTL ? 'text-right' : 'text-left'}`}
                         >
                             <option value="all">{t('allUsers', 'All Users')}</option>
                             <option value="users">{t('specificUsers', 'Specific Users')}</option>
@@ -163,13 +164,13 @@ export function AssignmentDialog({
 
                     {targetType === 'departments' && departmentProperties.length > 0 && (
                         <div className="space-y-2">
-                            <Label className="text-hotel-navy font-medium">Filter by Property</Label>
+                            <Label className="text-hotel-navy font-medium">{t('filterByProperty')}</Label>
                             <select
                                 value={propertyFilter}
                                 onChange={(e) => setPropertyFilter(e.target.value)}
-                                className="w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none"
+                                className={`w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none ${isRTL ? 'text-right' : 'text-left'}`}
                             >
-                                <option value="all">All Properties</option>
+                                <option value="all">{t('allProperties')}</option>
                                 {departmentProperties.map(prop => (
                                     <option key={prop} value={prop}>{prop}</option>
                                 ))}
@@ -197,7 +198,7 @@ export function AssignmentDialog({
                                                     type="checkbox"
                                                     checked={selectedIds.includes(item.id)}
                                                     onChange={() => handleToggle(item.id)}
-                                                    className="h-4 w-4 rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold"
+                                                    className={`h-4 w-4 rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold ${isRTL ? 'ml-3' : 'mr-3'}`}
                                                 />
                                                 <div className="flex-1">
                                                     <span className="text-sm font-medium text-gray-700">
@@ -218,20 +219,22 @@ export function AssignmentDialog({
                                     )}
                                 </div>
                             </ScrollArea>
-                            <p className="text-xs text-hotel-navy font-medium flex justify-end">
+                            <p className={`text-xs text-hotel-navy font-medium flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
                                 {selectedIds.length} {t('selected', 'selected')}
                             </p>
                         </div>
                     )}
 
                     <div className="space-y-2">
-                        <Label htmlFor="deadline" className="text-hotel-navy font-medium">{t('deadline', 'Deadline')} (Optional)</Label>
+                        <Label htmlFor="deadline" className="text-hotel-navy font-medium">
+                            {t('deadline', 'Deadline')} ({t('common:optional', 'Optional')})
+                        </Label>
                         <input
                             id="deadline"
                             type="date"
                             value={deadline}
                             onChange={(e) => setDeadline(e.target.value)}
-                            className="w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none"
+                            className={`w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none ${isRTL ? 'text-right' : 'text-left'}`}
                         />
                     </div>
 
@@ -249,7 +252,7 @@ export function AssignmentDialog({
                             className="bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-md min-w-[120px]"
                             disabled={isAssigning || (targetType !== 'all' && selectedIds.length === 0)}
                         >
-                            {isAssigning ? 'Assigning...' : t('assign', 'Assign')}
+                            {isAssigning ? t('common:saving', 'Assigning...') : t('assign', 'Assign')}
                         </Button>
                     </div>
                 </form>

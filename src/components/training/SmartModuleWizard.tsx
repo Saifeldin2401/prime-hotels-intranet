@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
@@ -64,20 +65,22 @@ interface ModuleOutline {
 }
 
 const CATEGORIES = [
-    'Front Office',
-    'Housekeeping',
-    'Food & Beverage',
-    'Maintenance',
-    'Security',
-    'Human Resources',
-    'Sales & Marketing',
-    'Management',
-    'Safety & Compliance',
-    'Customer Service',
-    'General'
+    { key: 'front_office', label: 'Front Office' },
+    { key: 'housekeeping', label: 'Housekeeping' },
+    { key: 'food_beverage', label: 'Food & Beverage' },
+    { key: 'maintenance', label: 'Maintenance' },
+    { key: 'security', label: 'Security' },
+    { key: 'human_resources', label: 'Human Resources' },
+    { key: 'sales_marketing', label: 'Sales & Marketing' },
+    { key: 'management', label: 'Management' },
+    { key: 'safety_compliance', label: 'Safety & Compliance' },
+    { key: 'customer_service', label: 'Customer Service' },
+    { key: 'general', label: 'General' }
 ]
 
 export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: SmartModuleWizardProps) {
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
     const navigate = useNavigate()
     const { profile } = useAuth()
     const { generateFullModuleContent, generating, progress } = useAITrainingContent()
@@ -392,47 +395,47 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
         switch (step) {
             case 'topic':
                 return (
-                    <div className="space-y-6 py-4">
+                    <div className={`space-y-6 py-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                         <div className="text-center mb-6">
                             <Lightbulb className="h-12 w-12 mx-auto text-hotel-gold mb-3" />
-                            <h3 className="text-lg font-medium">What do you want to train on?</h3>
-                            <p className="text-sm text-gray-500">Enter a topic and we'll help you build a training module</p>
+                            <h3 className="text-lg font-medium">{t('wizard.topicQuestion')}</h3>
+                            <p className="text-sm text-gray-500">{t('wizard.topicSubtitle')}</p>
                         </div>
 
                         <div>
-                            <Label>Training Topic</Label>
+                            <Label className={isRTL ? 'text-right block w-full' : ''}>{t('wizard.trainingTopic')}</Label>
                             <Input
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
-                                placeholder="e.g., Guest Check-in Procedures, Fire Safety, Customer Service Excellence"
-                                className="text-lg py-6"
+                                placeholder={t('wizard.topicPlaceholder')}
+                                className={`text-lg py-6 ${isRTL ? 'text-right' : ''}`}
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className={`grid grid-cols-2 gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                             <div>
-                                <Label>Category</Label>
+                                <Label className={isRTL ? 'text-right block w-full' : ''}>{t('wizard.category')}</Label>
                                 <Select value={category} onValueChange={setCategory}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a category" />
+                                    <SelectTrigger className={isRTL ? 'flex-row-reverse' : ''}>
+                                        <SelectValue placeholder={t('wizard.selectCategory')} />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className={isRTL ? 'text-right' : 'text-left'}>
                                         {CATEGORIES.map(cat => (
-                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                            <SelectItem key={cat.key} value={cat.label}>{t(`categories.${cat.key}`)}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div>
-                                <Label>Content Language</Label>
+                                <Label className={isRTL ? 'text-right block w-full' : ''}>{t('wizard.contentLanguage')}</Label>
                                 <Select value={aiLanguage} onValueChange={setAiLanguage}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Language" />
+                                    <SelectTrigger className={isRTL ? 'flex-row-reverse' : ''}>
+                                        <SelectValue placeholder={t('wizard.selectLanguage')} />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="English">English Only</SelectItem>
-                                        <SelectItem value="Arabic">Arabic Only</SelectItem>
-                                        <SelectItem value="English and Arabic">Bilingual (En/Ar)</SelectItem>
+                                    <SelectContent className={isRTL ? 'text-right' : 'text-left'}>
+                                        <SelectItem value="English">{t('wizard.englishOnly')}</SelectItem>
+                                        <SelectItem value="Arabic">{t('wizard.arabicOnly')}</SelectItem>
+                                        <SelectItem value="English and Arabic">{t('wizard.bilingual')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -442,12 +445,12 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
 
             case 'documents':
                 return (
-                    <div className="space-y-4 py-4">
+                    <div className={`space-y-4 py-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                         <div className="text-center mb-4">
                             <FileText className="h-10 w-10 mx-auto text-hotel-navy mb-2" />
-                            <h3 className="text-lg font-medium">Select Reference Documents</h3>
+                            <h3 className="text-lg font-medium">{t('wizard.selectDocs')}</h3>
                             <p className="text-sm text-gray-500">
-                                Choose documents to include in your training (optional)
+                                {t('wizard.selectDocsSubtitle')}
                             </p>
                         </div>
 
@@ -455,15 +458,15 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                             {loadingDocs ? (
                                 <div className="text-center py-8 text-gray-500">
                                     <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
-                                    Loading documents...
+                                    {t('wizard.loadingDocs')}
                                 </div>
                             ) : docsError ? (
                                 <div className="text-center py-8 text-red-500">
-                                    Error loading documents
+                                    {t('wizard.errorDocs')}
                                 </div>
                             ) : !documents || documents.length === 0 ? (
                                 <div className="text-center py-8 text-gray-500">
-                                    No published documents available
+                                    {t('wizard.noDocs')}
                                 </div>
                             ) : (
                                 <div className="space-y-2">
@@ -482,7 +485,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                                 checked={selectedDocIds.includes(doc.id)}
                                                 className="mt-1"
                                             />
-                                            <div className="flex-1">
+                                            <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                                                 <p className="font-medium text-sm">{doc.title}</p>
                                                 {doc.description && (
                                                     <p className="text-xs text-gray-500 line-clamp-2">
@@ -501,7 +504,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
 
                         {selectedDocIds.length > 0 && (
                             <p className="text-sm text-gray-600">
-                                {selectedDocIds.length} document(s) selected
+                                {t('wizard.docsSelected', { count: selectedDocIds.length })}
                             </p>
                         )}
                     </div>
@@ -509,12 +512,12 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
 
             case 'outline':
                 return (
-                    <div className="space-y-4 py-4">
+                    <div className={`space-y-4 py-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                         <div className="text-center mb-4">
                             <Target className="h-10 w-10 mx-auto text-green-600 mb-2" />
-                            <h3 className="text-lg font-medium">Review Module Outline</h3>
+                            <h3 className="text-lg font-medium">{t('wizard.reviewOutline')}</h3>
                             <p className="text-sm text-gray-500">
-                                AI has generated an outline based on your topic
+                                {t('wizard.reviewOutlineSubtitle')}
                             </p>
                         </div>
 
@@ -547,7 +550,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                 </div>
 
                                 <div>
-                                    <Label>Sections</Label>
+                                    <Label className={isRTL ? 'text-right block w-full' : ''}>{t('wizard.sections')}</Label>
                                     <div className="space-y-2 mt-2">
                                         {outline.sections.map((section, index) => (
                                             <div
@@ -557,7 +560,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                                 <span className="text-sm font-medium text-gray-500 w-6">
                                                     {index + 1}
                                                 </span>
-                                                <div className="flex-1">
+                                                <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                                                     <p className="font-medium text-sm">{section.title}</p>
                                                     <p className="text-xs text-gray-500">{section.description}</p>
                                                 </div>
@@ -573,12 +576,12 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
 
             case 'review':
                 return (
-                    <div className="space-y-4 py-4">
+                    <div className={`space-y-4 py-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                         <div className="text-center">
                             <CheckCircle className="h-12 w-12 mx-auto text-green-600 mb-3" />
-                            <h3 className="text-lg font-medium">Ready to Create!</h3>
+                            <h3 className="text-lg font-medium">{t('wizard.readyToCreate')}</h3>
                             <p className="text-sm text-gray-500">
-                                Your training module will be created as a draft
+                                {t('wizard.readyToCreateSubtitle')}
                             </p>
                         </div>
 
@@ -588,15 +591,15 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                     <BookOpen className="h-5 w-5 text-hotel-navy" />
                                     <span className="font-medium">{outline.title}</span>
                                 </div>
-                                <p className="text-sm text-gray-600">{outline.description}</p>
-                                <div className="flex gap-3 text-sm text-gray-500">
-                                    <span className="flex items-center gap-1">
+                                <p className={`text-sm text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`}>{outline.description}</p>
+                                <div className={`flex gap-3 text-sm text-gray-500 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                                    <span className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                         <Clock className="h-4 w-4" />
                                         {outline.estimatedDuration}
                                     </span>
-                                    <span>{outline.sections.length} sections</span>
+                                    <span>{t('wizard.sectionsCount', { count: outline.sections.length })}</span>
                                     {selectedDocIds.length > 0 && (
-                                        <span>{selectedDocIds.length} linked documents</span>
+                                        <span>{t('wizard.linkedDocsCount', { count: selectedDocIds.length })}</span>
                                     )}
                                 </div>
                             </div>
@@ -643,19 +646,19 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-lg">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
+                <DialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+                    <DialogTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                         <Sparkles className="h-5 w-5 text-hotel-gold" />
-                        Smart Module Wizard
+                        {t('wizard.title')}
                     </DialogTitle>
                 </DialogHeader>
 
                 <Progress value={getStepProgress()} className="h-2" />
 
                 {generating && (
-                    <div className="flex items-center justify-center gap-3 py-4 text-hotel-navy">
+                    <div className={`flex items-center justify-center gap-3 py-4 text-hotel-navy ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                         <Loader2 className="h-5 w-5 animate-spin" />
-                        <span className="text-sm font-medium">{progress || 'Generating content...'}</span>
+                        <span className="text-sm font-medium">{progress || t('wizard.generatingContent')}</span>
                     </div>
                 )}
 
@@ -663,9 +666,9 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
 
                 <div className="flex justify-between pt-4 border-t">
                     {step !== 'topic' ? (
-                        <Button variant="outline" onClick={handleBack} disabled={generating || creating}>
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back
+                        <Button variant="outline" onClick={handleBack} disabled={generating || creating} className={isRTL ? 'flex-row-reverse' : ''}>
+                            <ArrowLeft className={cn("h-4 w-4", isRTL ? "ml-2 rotate-180" : "mr-2")} />
+                            {t('common:action.back')}
                         </Button>
                     ) : (
                         <div />
@@ -677,24 +680,24 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                     >
                         {generating || creating ? (
                             <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                {generating ? 'Generating...' : 'Creating...'}
+                                <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
+                                {generating ? t('wizard.generating') : t('wizard.creating')}
                             </>
                         ) : step === 'review' ? (
-                            <>
-                                Create Module
-                                <CheckCircle className="h-4 w-4 ml-2" />
-                            </>
+                            <div className={isRTL ? 'flex-row-reverse' : ''}>
+                                {t('wizard.createModule')}
+                                <CheckCircle className={cn("h-4 w-4", isRTL ? "mr-2" : "ml-2")} />
+                            </div>
                         ) : step === 'documents' ? (
-                            <>
-                                <Sparkles className="h-4 w-4 mr-2" />
-                                Generate Outline
-                            </>
+                            <div className={isRTL ? 'flex-row-reverse' : ''}>
+                                <Sparkles className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                {t('wizard.generateOutline')}
+                            </div>
                         ) : (
-                            <>
-                                Next
-                                <ArrowRight className="h-4 w-4 ml-2" />
-                            </>
+                            <div className={isRTL ? 'flex-row-reverse' : ''}>
+                                {t('common:action.next')}
+                                <ArrowRight className={cn("h-4 w-4", isRTL ? "mr-2 rotate-180" : "ml-2")} />
+                            </div>
                         )}
                     </Button>
                 </div>

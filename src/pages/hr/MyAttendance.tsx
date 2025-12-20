@@ -9,8 +9,12 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { useTranslation } from 'react-i18next'
+import { ar, enUS } from 'date-fns/locale'
 
 export default function MyAttendance() {
+    const { t, i18n } = useTranslation('hr')
+    const dateLocale = i18n.language.startsWith('ar') ? ar : enUS
     const { data: attendance, isLoading } = useAttendance()
     const checkInMutation = useCheckIn()
     const checkOutMutation = useCheckOut()
@@ -23,10 +27,10 @@ export default function MyAttendance() {
     const handleCheckIn = async () => {
         try {
             await checkInMutation.mutateAsync({ notes })
-            toast.success('Successfully checked in')
+            toast.success(t('attendance.check_in_success'))
             setNotes('')
         } catch (error) {
-            toast.error('Failed to check in')
+            toast.error(t('attendance.check_in_fail'))
         }
     }
 
@@ -34,10 +38,10 @@ export default function MyAttendance() {
         if (!todayAttendance) return
         try {
             await checkOutMutation.mutateAsync({ id: todayAttendance.id, notes })
-            toast.success('Successfully checked out')
+            toast.success(t('attendance.check_out_success'))
             setNotes('')
         } catch (error) {
-            toast.error('Failed to check out')
+            toast.error(t('attendance.check_out_fail'))
         }
     }
 
@@ -46,12 +50,12 @@ export default function MyAttendance() {
             <div className="p-6 space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-                        <p className="text-muted-foreground">Track your daily clock-in and clock-out times.</p>
+                        <h1 className="text-3xl font-bold tracking-tight">{t('attendance.title')}</h1>
+                        <p className="text-muted-foreground">{t('attendance.description')}</p>
                     </div>
                     <div className="flex items-center gap-2 bg-muted px-4 py-2 rounded-full">
                         <Clock className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-medium">{format(new Date(), 'pp')}</span>
+                        <span className="text-sm font-medium">{format(new Date(), 'pp', { locale: dateLocale })}</span>
                     </div>
                 </div>
 
@@ -61,30 +65,30 @@ export default function MyAttendance() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <MapPin className="w-5 h-5 text-primary" />
-                                Current Status
+                                {t('attendance.current_status')}
                             </CardTitle>
-                            <CardDescription>Your status for today</CardDescription>
+                            <CardDescription>{t('attendance.status_for_today')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex flex-col items-center justify-center py-6 gap-4">
                                 {todayAttendance?.check_in ? (
                                     todayAttendance.check_out ? (
-                                        <Badge variant="outline" className="px-4 py-1 text-lg">Shift Completed</Badge>
+                                        <Badge variant="outline" className="px-4 py-1 text-lg">{t('attendance.shift_completed')}</Badge>
                                     ) : (
-                                        <Badge variant="default" className="px-4 py-1 text-lg bg-green-500 hover:bg-green-600">On Duty</Badge>
+                                        <Badge variant="default" className="px-4 py-1 text-lg bg-green-500 hover:bg-green-600">{t('attendance.on_duty')}</Badge>
                                     )
                                 ) : (
-                                    <Badge variant="secondary" className="px-4 py-1 text-lg">Off Duty</Badge>
+                                    <Badge variant="secondary" className="px-4 py-1 text-lg">{t('attendance.off_duty')}</Badge>
                                 )}
 
                                 {todayAttendance?.check_in && (
                                     <p className="text-sm text-muted-foreground">
-                                        Started at: {format(new Date(todayAttendance.check_in), 'pp')}
+                                        {t('attendance.started_at')}: {format(new Date(todayAttendance.check_in), 'pp', { locale: dateLocale })}
                                     </p>
                                 )}
                                 {todayAttendance?.check_out && (
                                     <p className="text-sm text-muted-foreground">
-                                        Finished at: {format(new Date(todayAttendance.check_out), 'pp')}
+                                        {t('attendance.finished_at')}: {format(new Date(todayAttendance.check_out), 'pp', { locale: dateLocale })}
                                     </p>
                                 )}
                             </div>
@@ -96,7 +100,7 @@ export default function MyAttendance() {
                                     disabled={checkInMutation.isPending}
                                 >
                                     <LogIn className="w-5 h-5 mr-2" />
-                                    Clock In
+                                    {t('attendance.clock_in')}
                                 </Button>
                             )}
 
@@ -107,7 +111,7 @@ export default function MyAttendance() {
                                     disabled={checkOutMutation.isPending}
                                 >
                                     <LogOut className="w-5 h-5 mr-2" />
-                                    Clock Out
+                                    {t('attendance.clock_out')}
                                 </Button>
                             )}
                         </CardContent>
@@ -118,9 +122,9 @@ export default function MyAttendance() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <CalendarIcon className="w-5 h-5 text-primary" />
-                                Recent History
+                                {t('attendance.recent_history')}
                             </CardTitle>
-                            <CardDescription>Your last 30 days of attendance</CardDescription>
+                            <CardDescription>{t('attendance.last_30_days')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ScrollArea className="h-[400px] w-full rounded-md border p-4">
@@ -142,9 +146,9 @@ export default function MyAttendance() {
                                                         <CalendarIcon className="w-4 h-4 text-primary" />
                                                     </div>
                                                     <div>
-                                                        <p className="font-semibold">{format(new Date(record.date), 'EEE, MMM d')}</p>
+                                                        <p className="font-semibold">{format(new Date(record.date), 'EEE, MMM d', { locale: dateLocale })}</p>
                                                         <p className="text-xs text-muted-foreground">
-                                                            {record.check_in ? format(new Date(record.check_in), 'p') : '--'} - {record.check_out ? format(new Date(record.check_out), 'p') : 'Active'}
+                                                            {record.check_in ? format(new Date(record.check_in), 'p', { locale: dateLocale }) : '--'} - {record.check_out ? format(new Date(record.check_out), 'p', { locale: dateLocale }) : t('attendance.active')}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -152,13 +156,13 @@ export default function MyAttendance() {
                                                     variant={record.status === 'present' ? 'default' : 'secondary'}
                                                     className={record.status === 'present' ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20' : ''}
                                                 >
-                                                    {record.status}
+                                                    {record.status === 'present' ? t('attendance.present') : record.status}
                                                 </Badge>
                                             </motion.div>
                                         ))}
                                         {attendance?.length === 0 && (
                                             <div className="text-center py-8 text-muted-foreground">
-                                                No attendance records found.
+                                                {t('attendance.no_records')}
                                             </div>
                                         )}
                                     </div>

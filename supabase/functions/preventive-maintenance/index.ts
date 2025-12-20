@@ -30,8 +30,8 @@ Deno.serve(async (req) => {
 
         console.log(`Found ${schedules?.length || 0} due schedules.`);
 
-        let validSchedules = schedules || [];
-        let processingResults = [];
+        const validSchedules = schedules || [];
+        const processingResults = [];
 
         for (const schedule of validSchedules) {
             try {

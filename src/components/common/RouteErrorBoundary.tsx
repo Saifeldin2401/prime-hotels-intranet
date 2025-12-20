@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw, Home, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { securityUtils } from '@/lib/security-config'
 
 interface Props {
     children: ReactNode
@@ -103,37 +104,17 @@ export class RouteErrorBoundary extends Component<Props, State> {
     }
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error(`Route Error in ${this.props.section || 'unknown section'}:`, error, errorInfo)
-
         this.setState({
             error,
             errorInfo
         })
 
-        // Log to error tracking service
-        this.logError(error, errorInfo)
-    }
-
-    private logError = (error: Error, errorInfo: ErrorInfo) => {
-        // In production, send to error tracking service like Sentry
-        const errorData = {
+        // Log to error tracking service via centralized utility
+        securityUtils.logException(error, {
             section: this.props.section,
-            error: {
-                name: error.name,
-                message: error.message,
-                stack: error.stack
-            },
             componentStack: errorInfo.componentStack,
-            timestamp: new Date().toISOString(),
             url: window.location.href
-        }
-
-        console.group('🚨 Route Error Logged')
-        console.error(errorData)
-        console.groupEnd()
-
-        // TODO: Send to Sentry/LogRocket/etc
-        // Sentry.captureException(error, { extra: errorData })
+        })
     }
 
     private handleRetry = () => {

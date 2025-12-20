@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -10,9 +11,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Award, 
-  Download, 
+import {
+  Award,
+  Download,
   Eye
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -39,13 +40,15 @@ interface TrainingCertificateGeneratorProps {
   className?: string
 }
 
-export function TrainingCertificateGenerator({ 
-  trainingCompletionId, 
-  userId, 
-  className 
+export function TrainingCertificateGenerator({
+  trainingCompletionId,
+  userId,
+  className
 }: TrainingCertificateGeneratorProps) {
+  const { t, i18n } = useTranslation('training')
+  const isRTL = i18n.dir() === 'rtl'
   const { user } = useAuth()
-  
+
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
   const [certificateData, setCertificateData] = useState({
     recipient_name: '',
@@ -80,7 +83,7 @@ export function TrainingCertificateGenerator({
     queryKey: ['training-completion', trainingCompletionId],
     queryFn: async () => {
       if (!trainingCompletionId) return null
-      
+
       const { data, error } = await supabase
         .from('training_completions')
         .select(`
@@ -127,7 +130,7 @@ export function TrainingCertificateGenerator({
 
       // Generate HTML certificate
       const certificateHtml = generateCertificateHTML(template, certificateData)
-      
+
       // Create download link
       const blob = new Blob([certificateHtml], { type: 'text/html' })
       const url = URL.createObjectURL(blob)
@@ -139,7 +142,7 @@ export function TrainingCertificateGenerator({
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch {
-      toast.error('Failed to download certificate')
+      toast.error(t('certificateGenerator.failedDownload'))
     }
   }
 
@@ -279,31 +282,31 @@ export function TrainingCertificateGenerator({
             ${template.logo_url ? `<img src="${template.logo_url}" alt="Logo" style="max-width: 150px; margin-bottom: 20px;">` : ''}
             
             <div class="certificate-header">
-              <div class="certificate-title">Certificate of Completion</div>
-              <div class="certificate-subtitle">This is to certify that</div>
+              <div class="certificate-title">${t('certificateGenerator.certificateOfCompletion')}</div>
+              <div class="certificate-subtitle">${t('certificateGenerator.certifyThat')}</div>
             </div>
             
             <div class="certificate-body">
               <div class="recipient-name">${data.recipient_name}</div>
               <div class="certificate-text">
-                has successfully completed the training course
+                ${t('certificateGenerator.completedCourse')}
               </div>
               <div class="course-name">${data.course_name}</div>
               <div class="certificate-text">
-                with a score of ${data.score}% on ${format(new Date(data.completion_date), 'MMMM dd, yyyy')}
+                ${t('certificateGenerator.withScoreOf')} ${data.score}% ${t('certificateGenerator.on')} ${format(new Date(data.completion_date), 'MMMM dd, yyyy')}
               </div>
               ${data.custom_message ? `<div class="certificate-text" style="font-style: italic;">${data.custom_message}</div>` : ''}
             </div>
             
             <div class="certificate-details">
               <div>
-                <strong>Course Duration:</strong> ${trainingCompletion?.training_module?.duration_minutes || 60} minutes
+                <strong>${t('certificateGenerator.courseDuration')}:</strong> ${trainingCompletion?.training_module?.duration_minutes || 60} ${t('minutes')}
               </div>
               <div>
-                <strong>Category:</strong> ${trainingCompletion?.training_module?.category || 'General'}
+                <strong>${t('wizard.category')}:</strong> ${trainingCompletion?.training_module?.category || t('categories.general')}
               </div>
               <div>
-                <strong>Completion Date:</strong> ${format(new Date(data.completion_date), 'MMMM dd, yyyy')}
+                <strong>${t('certificateGenerator.completionDate')}:</strong> ${format(new Date(data.completion_date), 'MMMM dd, yyyy')}
               </div>
             </div>
             
@@ -311,20 +314,20 @@ export function TrainingCertificateGenerator({
               <div class="signature">
                 <div class="signature-line"></div>
                 <div class="signature-text">${data.instructor_name}</div>
-                <div class="signature-text">Instructor</div>
+                <div class="signature-text">${t('certificateGenerator.instructor')}</div>
               </div>
             ` : ''}
             
             ${data.include_seal ? `
               <div class="seal">
-                <div>OFFICIAL</div>
-                <div>SEAL</div>
+                <div>${t('certificateGenerator.official')}</div>
+                <div>${t('certificateGenerator.seal')}</div>
               </div>
             ` : ''}
             
             <div class="certificate-footer">
-              Certificate Number: ${trainingCompletion?.id || 'N/A'} | 
-              Issued on ${format(new Date(), 'MMMM dd, yyyy')}
+              ${t('certificateGenerator.certificateNumber')}: ${trainingCompletion?.id || 'N/A'} | 
+              ${t('certificateGenerator.issuedOn')} ${format(new Date(), 'MMMM dd, yyyy')}
             </div>
           </div>
         </body>
@@ -354,27 +357,27 @@ export function TrainingCertificateGenerator({
   return (
     <div className={cn("space-y-6", className)}>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className={isRTL ? 'text-right' : 'text-left'}>
+          <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
             <Award className="h-5 w-5" />
-            Certificate Generator
+            {t('certificateGenerator.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Training Selection */}
           {!trainingCompletionId && userCompletions && (
-            <div className="space-y-2">
-              <Label>Select Training Completion</Label>
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label>{t('certificateGenerator.selectCompletion')}</Label>
               <Select value={trainingCompletionId || ''} onValueChange={(value) => {
                 // This would typically navigate to the specific completion
                 window.location.href = `/training/certificates/${value}`
               }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a completed training" />
+                <SelectTrigger className={isRTL ? 'flex-row-reverse' : ''}>
+                  <SelectValue placeholder={t('certificateGenerator.selectCompletionPlaceholder')} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={isRTL ? 'text-right' : 'text-left'}>
                   {userCompletions.map((completion: any) => (
-                    <SelectItem key={completion.id} value={completion.id}>
+                    <SelectItem key={completion.id} value={completion.id} className={isRTL ? 'flex-row-reverse' : ''}>
                       {completion.training_module?.title} - {format(new Date(completion.completed_at), 'MMM dd, yyyy')}
                     </SelectItem>
                   ))}
@@ -384,11 +387,11 @@ export function TrainingCertificateGenerator({
           )}
 
           {/* Template Selection */}
-          <div className="space-y-2">
-            <Label>Certificate Template</Label>
+          <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label>{t('certificateGenerator.template')}</Label>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {templates?.map((template) => (
-                <Card 
+                <Card
                   key={template.id}
                   className={cn(
                     "cursor-pointer transition-all",
@@ -398,22 +401,22 @@ export function TrainingCertificateGenerator({
                 >
                   <CardContent className="p-4">
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                         <h4 className="font-medium">{template.name}</h4>
                         {template.is_default && (
-                          <Badge variant="secondary" className="text-xs">Default</Badge>
+                          <Badge variant="secondary" className="text-xs">{t('certificateGenerator.default')}</Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2">
                         {template.description}
                       </p>
-                      <div className="flex gap-1">
-                        <div 
-                          className="w-6 h-6 rounded border-2" 
+                      <div className={`flex gap-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div
+                          className="w-6 h-6 rounded border-2"
                           style={{ backgroundColor: template.background_color, borderColor: template.accent_color }}
                         />
-                        <div 
-                          className="w-6 h-6 rounded" 
+                        <div
+                          className="w-6 h-6 rounded"
                           style={{ backgroundColor: template.accent_color }}
                         />
                       </div>
@@ -426,38 +429,41 @@ export function TrainingCertificateGenerator({
 
           {/* Certificate Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="recipient_name">Recipient Name *</Label>
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="recipient_name">{t('certificateGenerator.recipientName')}</Label>
               <Input
                 id="recipient_name"
                 value={certificateData.recipient_name}
                 onChange={(e) => setCertificateData({ ...certificateData, recipient_name: e.target.value })}
-                placeholder="Enter recipient's full name"
+                placeholder={t('certificateGenerator.recipientNamePlaceholder')}
+                className={isRTL ? 'text-right' : 'text-left'}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="course_name">Course Name *</Label>
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="course_name">{t('certificateGenerator.courseName')}</Label>
               <Input
                 id="course_name"
                 value={certificateData.course_name}
                 onChange={(e) => setCertificateData({ ...certificateData, course_name: e.target.value })}
-                placeholder="Enter course name"
+                placeholder={t('certificateGenerator.courseNamePlaceholder')}
+                className={isRTL ? 'text-right' : 'text-left'}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="completion_date">Completion Date *</Label>
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="completion_date">{t('certificateGenerator.completionDate')}</Label>
               <Input
                 id="completion_date"
                 type="date"
                 value={certificateData.completion_date}
                 onChange={(e) => setCertificateData({ ...certificateData, completion_date: e.target.value })}
+                className={isRTL ? 'text-right flex-row-reverse' : 'text-left'}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="score">Score (%)</Label>
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="score">{t('certificateGenerator.score')}</Label>
               <Input
                 id="score"
                 type="number"
@@ -465,75 +471,79 @@ export function TrainingCertificateGenerator({
                 max="100"
                 value={certificateData.score}
                 onChange={(e) => setCertificateData({ ...certificateData, score: parseInt(e.target.value) || 0 })}
+                className={isRTL ? 'text-right' : 'text-left'}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="instructor_name">Instructor Name</Label>
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="instructor_name">{t('certificateGenerator.instructorName')}</Label>
               <Input
                 id="instructor_name"
                 value={certificateData.instructor_name}
                 onChange={(e) => setCertificateData({ ...certificateData, instructor_name: e.target.value })}
-                placeholder="Enter instructor name"
+                placeholder={t('certificateGenerator.instructorNamePlaceholder')}
+                className={isRTL ? 'text-right' : 'text-left'}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="custom_message">Custom Message</Label>
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="custom_message">{t('certificateGenerator.customMessage')}</Label>
               <Textarea
                 id="custom_message"
                 value={certificateData.custom_message}
                 onChange={(e) => setCertificateData({ ...certificateData, custom_message: e.target.value })}
-                placeholder="Optional custom message"
+                placeholder={t('certificateGenerator.customMessagePlaceholder')}
                 rows={3}
+                className={isRTL ? 'text-right' : 'text-left'}
               />
             </div>
           </div>
 
           {/* Certificate Options */}
-          <div className="space-y-4">
-            <Label>Certificate Options</Label>
+          <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label>{t('certificateGenerator.options')}</Label>
             <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+              <div className={`flex items-center space-x-2 ${isRTL ? 'space-x-reverse flex-row-reverse' : ''}`}>
                 <Checkbox
                   id="include_signature"
                   checked={certificateData.include_signature}
                   onCheckedChange={(checked) => setCertificateData({ ...certificateData, include_signature: !!checked })}
                 />
-                <Label htmlFor="include_signature">Include signature</Label>
+                <Label htmlFor="include_signature" className={isRTL ? 'mr-2' : ''}>{t('certificateGenerator.includeSignature')}</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className={`flex items-center space-x-2 ${isRTL ? 'space-x-reverse flex-row-reverse' : ''}`}>
                 <Checkbox
                   id="include_seal"
                   checked={certificateData.include_seal}
                   onCheckedChange={(checked) => setCertificateData({ ...certificateData, include_seal: !!checked })}
                 />
-                <Label htmlFor="include_seal">Include official seal</Label>
+                <Label htmlFor="include_seal" className={isRTL ? 'mr-2' : ''}>{t('certificateGenerator.includeSeal')}</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className={`flex items-center space-x-2 ${isRTL ? 'space-x-reverse flex-row-reverse' : ''}`}>
                 <Checkbox
                   id="include_qr_code"
                   checked={certificateData.include_qr_code}
                   onCheckedChange={(checked) => setCertificateData({ ...certificateData, include_qr_code: !!checked })}
                 />
-                <Label htmlFor="include_qr_code">Include QR code for verification</Label>
+                <Label htmlFor="include_qr_code" className={isRTL ? 'mr-2' : ''}>{t('certificateGenerator.includeQr')}</Label>
               </div>
             </div>
           </div>
 
           {/* Preview */}
           {selectedTemplateData && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Preview</Label>
+            <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                <Label>{t('certificateGenerator.preview')}</Label>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setPreviewMode(!previewMode)}
+                    className={isRTL ? 'flex-row-reverse' : ''}
                   >
-                    <Eye className="h-4 w-4 mr-2" />
-                    {previewMode ? 'Hide' : 'Show'} Preview
+                    <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                    {previewMode ? t('certificateGenerator.hide') : t('certificateGenerator.show')} {t('certificateGenerator.preview')}
                   </Button>
                 </div>
               </div>
@@ -551,21 +561,23 @@ export function TrainingCertificateGenerator({
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
             <Button
               onClick={() => handleDownloadCertificate()}
               disabled={!selectedTemplate || !certificateData.recipient_name || !certificateData.course_name}
+              className={isRTL ? 'flex-row-reverse' : ''}
             >
-              <Download className="h-4 w-4 mr-2" />
-              Generate & Download Certificate
+              <Download className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+              {t('certificateGenerator.generateDownload')}
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={() => setPreviewMode(!previewMode)}
+              className={isRTL ? 'flex-row-reverse' : ''}
             >
-              <Eye className="h-4 w-4 mr-2" />
-              Preview
+              <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+              {t('certificateGenerator.preview')}
             </Button>
           </div>
         </CardContent>

@@ -21,12 +21,14 @@ import {
 import { cn } from '@/lib/utils'
 import { useDailyChallenge, useRecordAttempt, useUserQuestionStats, useDailyChallengeStatus } from '@/hooks/useQuestions'
 import { QuestionRenderer } from './QuestionRenderer'
+import { useTranslation } from 'react-i18next'
 
 interface DailyQuizWidgetProps {
     className?: string
 }
 
 export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
+    const { t } = useTranslation(['training', 'common'])
     const { data: questions, isLoading } = useDailyChallenge()
     const { data: userStats } = useUserQuestionStats()
     const { data: status, isLoading: statusLoading } = useDailyChallengeStatus()
@@ -60,7 +62,7 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                 <CardContent className="pt-6 text-center">
                     <Trophy className="h-10 w-10 text-purple-400 mx-auto mb-3" />
                     <p className="text-sm text-purple-700">
-                        No questions available today. Check back later!
+                        {t('noQuestionsToday')}
                     </p>
                 </CardContent>
             </Card>
@@ -98,19 +100,19 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                 <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Zap className="h-5 w-5 text-purple-600" />
-                        Daily Challenge
+                        {t('dailyChallenge')}
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <p className="text-sm text-gray-600 mb-1">
-                                {questions.length} questions today
+                                {questions.length} {t('questionsToday')}
                             </p>
                             {userStats && userStats.recentStreak > 0 && (
                                 <div className="flex items-center gap-1 text-orange-600">
                                     <Flame className="h-4 w-4" />
-                                    <span className="text-sm font-medium">{userStats.recentStreak} day streak!</span>
+                                    <span className="text-sm font-medium">{userStats.recentStreak} {t('dayStreak')}</span>
                                 </div>
                             )}
                         </div>
@@ -118,7 +120,7 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                             {userStats && (
                                 <div className="flex items-center gap-1 text-green-600">
                                     <Star className="h-4 w-4" />
-                                    <span className="text-sm font-medium">{userStats.accuracyRate.toFixed(0)}% accuracy</span>
+                                    <span className="text-sm font-medium">{t('analytics.accuracy', { percent: userStats.accuracyRate.toFixed(0) })}</span>
                                 </div>
                             )}
                         </div>
@@ -128,7 +130,7 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                         onClick={() => setIsStarted(true)}
                         className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
                     >
-                        Start Challenge
+                        {t('startChallenge')}
                         <ChevronRight className="h-4 w-4 ml-2" />
                     </Button>
                 </CardContent>
@@ -179,8 +181,8 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
 
                     <h3 className="text-lg font-bold mb-1">
                         {justFinished
-                            ? (isPerfect ? 'Perfect Score!' : percentage >= 70 ? 'Well Done!' : 'Good Effort!')
-                            : 'Daily Challenge Complete'
+                            ? (isPerfect ? t('perfectScore') : percentage >= 70 ? t('wellDone') : t('goodEffort'))
+                            : t('dailyChallengeComplete')
                         }
                     </h3>
 
@@ -190,29 +192,28 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                                 <p className="text-3xl font-bold text-gray-900">
                                     {correctCount}/{totalCount}
                                 </p>
-                                <p className="text-xs text-gray-500">Correct</p>
+                                <p className="text-xs text-gray-500">{t('correct')}</p>
                             </div>
                             <div className="text-center">
                                 <p className="text-3xl font-bold text-gray-900">
                                     {percentage}%
                                 </p>
-                                <p className="text-xs text-gray-500">Score</p>
+                                <p className="text-xs text-gray-500">{t('score')}</p>
                             </div>
                         </div>
                     )}
 
-                    {/* Streak Display */}
                     {userStats && userStats.recentStreak > 0 && (
                         <div className="flex items-center justify-center gap-1 text-orange-600 mb-3 mt-4">
                             <Flame className="h-5 w-5" />
-                            <span className="font-medium">{userStats.recentStreak} day streak!</span>
+                            <span className="font-medium">{userStats.recentStreak} {t('dayStreak')}</span>
                         </div>
                     )}
 
                     <p className="text-sm text-gray-600 mt-2">
                         {justFinished
-                            ? "Come back tomorrow for more questions!"
-                            : "You've already completed today's challenge. Come back tomorrow!"}
+                            ? t('comeBackTomorrow')
+                            : t('alreadyCompletedToday')}
                     </p>
                 </CardContent>
             </Card>
@@ -226,7 +227,7 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Zap className="h-5 w-5 text-purple-600" />
-                        Daily Challenge
+                        {t('dailyChallenge')}
                     </CardTitle>
                     <Badge variant="secondary" className="bg-purple-100 text-purple-700">
                         {currentIndex + 1} / {questions.length}

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useOnboardingTemplates, useDeleteOnboardingTemplate } from '@/hooks/useOnboarding'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Edit, FileText, Settings, Users } from 'lucide-react'
+import { Plus, Trash2, Edit, FileText, Settings, Users, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { useToast } from '@/components/ui/use-toast'
@@ -30,16 +30,16 @@ export default function OnboardingTemplates() {
     const handleDelete = (id: string) => {
         deleteTemplate(id, {
             onSuccess: () => {
-                toast({ title: "Template deleted" })
+                toast({ title: t('actions.template_deleted') })
             },
             onError: () => {
-                toast({ title: "Error deleting template", variant: "destructive" })
+                toast({ title: t('actions.error_deleting'), variant: "destructive" })
             }
         })
     }
 
     if (isLoading) {
-        return <div>Loading templates...</div>
+        return <div className="flex p-8 justify-center items-center"><Loader2 className="h-8 w-8 animate-spin text-hotel-gold" /> <span className="ml-2">{t('actions.loading')}</span></div>
     }
 
     return (

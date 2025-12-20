@@ -443,9 +443,9 @@ export default function KnowledgeEditor() {
                                             <SelectValue placeholder="Language" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="English">English Only</SelectItem>
-                                            <SelectItem value="Arabic">Arabic Only</SelectItem>
-                                            <SelectItem value="English and Arabic">Bilingual (En/Ar)</SelectItem>
+                                            <SelectItem value="English">{t('languages.english_only', { defaultValue: 'English Only' })}</SelectItem>
+                                            <SelectItem value="Arabic">{t('languages.arabic_only', { defaultValue: 'Arabic Only' })}</SelectItem>
+                                            <SelectItem value="English and Arabic">{t('languages.bilingual', { defaultValue: 'Bilingual (En/Ar)' })}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

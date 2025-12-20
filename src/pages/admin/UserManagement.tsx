@@ -129,7 +129,7 @@ export default function UserManagement() {
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{user.full_name || 'No name'}</p>
+                      <p className="font-medium text-gray-900">{user.full_name || t('no_name')}</p>
                       <p className="text-sm text-gray-500">{user.email}</p>
                       {user.properties && user.properties.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">

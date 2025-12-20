@@ -184,7 +184,7 @@ export default function EmployeeReferrals() {
             {isHR && referrals && referrals.length > 0 && (
               <Button variant="outline" onClick={handleExportCSV}>
                 <Download className="h-4 w-4 mr-2" />
-                Export CSV
+                {t('referrals.export_csv')}
               </Button>
             )}
             <Link to="/jobs">
@@ -262,7 +262,10 @@ export default function EmployeeReferrals() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900">{referral.applicant_name}</h3>
                       <p className="text-sm text-gray-600">
-                        Referred by {getReferrerName(referral.referred_by)} for {getJobTitle(referral.job_posting_id)}
+                        {t('referrals.referred_by', {
+                          referrer: getReferrerName(referral.referred_by),
+                          position: getJobTitle(referral.job_posting_id)
+                        })}
                       </p>
                       {/* Property & Department */}
                       {(getPropertyName(referral.job_posting_id) || getDepartmentName(referral.job_posting_id)) && (
@@ -281,7 +284,7 @@ export default function EmployeeReferrals() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge className={statusColors[referral.status] || 'bg-gray-100'}>
-                      {referral.status}
+                      {t(`status.${referral.status}`, { defaultValue: referral.status })}
                     </Badge>
                     {/* CV Link */}
                     {referral.cv_url && (
@@ -294,7 +297,7 @@ export default function EmployeeReferrals() {
                     {/* View Profile */}
                     <Button size="sm" variant="outline" onClick={() => handleViewProfile(referral)}>
                       <Eye className="h-4 w-4 mr-1" />
-                      View
+                      {t('referrals.view')}
                     </Button>
                   </div>
                 </div>

@@ -672,7 +672,7 @@ export async function getUserQuestionStats(userId: string): Promise<{
         if (newest === today || newest === yesterday) {
             streak = 1
             // Check previous days
-            let currentDate = new Date(newest)
+            const currentDate = new Date(newest)
 
             for (let i = 1; i < sortedDates.length; i++) {
                 currentDate.setDate(currentDate.getDate() - 1)

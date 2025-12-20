@@ -46,7 +46,7 @@ export default function AnalyticsDashboard() {
     queryKey: ['analytics-dashboard', timeRange],
     queryFn: async () => {
       const now = new Date()
-      let startDate = new Date()
+      const startDate = new Date()
 
       switch (timeRange) {
         case 'today':

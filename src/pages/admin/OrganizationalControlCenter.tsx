@@ -410,7 +410,7 @@ function AssignmentsTable({
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className="text-xs">
-                                            {emp.user_roles?.[0]?.role || 'staff'}
+                                            {t(`common:roles.${emp.user_roles?.[0]?.role || 'staff'}`, { defaultValue: emp.user_roles?.[0]?.role || 'staff' })}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
@@ -430,7 +430,7 @@ function AssignmentsTable({
                                                 children: []
                                             })}
                                         >
-                                            Edit
+                                            {t('common:action.edit')}
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -667,13 +667,13 @@ function OrgChangeHistory() {
                                         </TableCell>
                                         <TableCell className="max-w-xs truncate text-xs text-gray-500">
                                             {entry.operation === 'UPDATE' && entry.old_data?.reporting_to !== entry.new_data?.reporting_to && (
-                                                <span>Reporting line changed</span>
+                                                <span>{t('organization.reporting_changed')}</span>
                                             )}
                                             {entry.operation === 'INSERT' && entry.table_name === 'employee_promotions' && (
-                                                <span>Promotion created</span>
+                                                <span>{t('organization.promotion_created')}</span>
                                             )}
                                             {entry.operation === 'INSERT' && entry.table_name === 'employee_transfers' && (
-                                                <span>Transfer created</span>
+                                                <span>{t('organization.transfer_created')}</span>
                                             )}
                                         </TableCell>
                                     </TableRow>

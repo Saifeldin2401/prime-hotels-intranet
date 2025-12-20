@@ -8,6 +8,7 @@
     "cancel": "إلغاء",
     "edit": "تعديل",
     "delete": "حذف",
+    "create": "إنشاء",
     "submit": "إرسال",
     "back": "رجوع",
     "next": "التالي",
@@ -29,7 +30,10 @@
     "filter": "تصفية",
     "clear_filters": "مسح التصفيات",
     "apply": "تطبيق",
-    "confirm_delete": "هل أنت متأكد؟ لا يمكن التراجع عن هذا."
+    "confirm_delete": "هل أنت متأكد؟ لا يمكن التراجع عن هذا.",
+    "true": "صح",
+    "false": "خطأ",
+    "no_title": "بدون مسمى"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -49,6 +53,13 @@
     "my_profile": "ملفي الشخصي",
     "settings": "الإعدادات",
     "promotion_history": "سجل الترقيات",
+    "job_titles": "المسميات الوظيفية",
+    "org_structure": "الهيكل التنظيمي",
+    "notification_batches": "دفعات الإشعارات",
+    "automations": "الأتمتة",
+    "escalation_rules": "قواعد التصعيد",
+    "audit_logs": "سجلات التدقيق",
+    "onboarding_templates": "نماذج التأهيل",
     "logout": "تسجيل الخروج"
   },
   "dashboard": {
@@ -185,8 +196,12 @@
     "cancel": "إلغاء",
     "close": "إغلاق",
     "save": "حفظ",
+    "save_changes": "حفظ التغييرات",
+    "saving": "جاري الحفظ...",
     "create": "إنشاء",
     "update": "تحديث",
+    "edit": "تعديل",
+    "delete": "حذف",
     "refresh": "تحديث",
     "error": "خطأ"
   },

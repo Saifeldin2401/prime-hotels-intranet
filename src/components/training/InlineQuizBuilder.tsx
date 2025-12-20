@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -79,6 +80,8 @@ export function InlineQuizBuilder({
     sopTitle,
     className
 }: InlineQuizBuilderProps) {
+    const { t, i18n } = useTranslation('training')
+    const isRTL = i18n.dir() === 'rtl'
     const [questions, setQuestions] = useState<InlineQuestion[]>(initialQuestions)
     const [editingQuestion, setEditingQuestion] = useState<InlineQuestion | null>(null)
     const [showAddDialog, setShowAddDialog] = useState(false)
@@ -176,23 +179,23 @@ export function InlineQuizBuilder({
     }
 
     return (
-        <div className={cn("space-y-4", className)}>
+        <div className={cn("space-y-4", className, isRTL ? "text-right" : "text-left")}>
             {/* Question List */}
             <div className="space-y-2">
                 {questions.length === 0 ? (
                     <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
                         <HelpCircle className="h-10 w-10 mx-auto text-gray-300 mb-3" />
-                        <p className="text-gray-500 mb-4">No questions yet</p>
+                        <p className="text-gray-500 mb-4">{t('inlineQuiz.noQuestions')}</p>
                         <Button onClick={handleAddQuestion}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Question
+                            <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                            {t('inlineQuiz.addQuestion')}
                         </Button>
                     </div>
                 ) : (
                     questions.map((question, index) => (
                         <div
                             key={question.id}
-                            className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100 group"
+                            className={`flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100 group ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
                         >
                             <div className="cursor-grab text-gray-400 hover:text-gray-600">
                                 <GripVertical className="h-5 w-5" />
@@ -203,7 +206,7 @@ export function InlineQuizBuilder({
                                         Q{index + 1}
                                     </span>
                                     <Badge variant="outline" className="text-xs">
-                                        {question.question_type}
+                                        {t(`inlineQuiz.${question.question_type}`)}
                                     </Badge>
                                     <Badge className={cn("text-xs",
                                         question.difficulty_level === 'easy' ? 'bg-green-100 text-green-700' :
@@ -211,13 +214,13 @@ export function InlineQuizBuilder({
                                                 question.difficulty_level === 'hard' ? 'bg-orange-100 text-orange-700' :
                                                     'bg-red-100 text-red-700'
                                     )}>
-                                        {question.difficulty_level}
+                                        {t(`inlineQuiz.${question.difficulty_level}`)}
                                     </Badge>
-                                    <span className="text-xs text-gray-400 ml-auto">
-                                        {question.points} pts
+                                    <span className={cn("text-xs text-gray-400", isRTL ? "mr-auto" : "ml-auto")}>
+                                        {question.points} {t('inlineQuiz.pts')}
                                     </span>
                                 </div>
-                                <p className="text-sm">{question.question_text || 'Untitled question'}</p>
+                                <p className="text-sm">{question.question_text || t('inlineQuiz.untitledQuestion')}</p>
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
@@ -228,7 +231,7 @@ export function InlineQuizBuilder({
                                         setShowAddDialog(true)
                                     }}
                                 >
-                                    Edit
+                                    {t('edit')}
                                 </Button>
                                 <Button
                                     size="sm"
@@ -246,14 +249,14 @@ export function InlineQuizBuilder({
 
             {/* Add Question Actions */}
             {questions.length > 0 && (
-                <div className="flex gap-2">
+                <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <Button onClick={handleAddQuestion}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Question
+                        <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                        {t('inlineQuiz.addQuestion')}
                     </Button>
                     <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Import from Bank
+                        <BookOpen className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                        {t('inlineQuiz.importFromBank')}
                     </Button>
                     {sopContent && (
                         <Button
@@ -263,8 +266,8 @@ export function InlineQuizBuilder({
                                 setShowAddDialog(true)
                             }}
                         >
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Generate with AI
+                            <Sparkles className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                            {t('inlineQuiz.generateWithAi')}
                         </Button>
                     )}
                 </div>
@@ -273,15 +276,15 @@ export function InlineQuizBuilder({
             {/* Add/Edit Question Dialog */}
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
+                    <DialogHeader className={isRTL ? 'text-right' : 'text-left'}>
                         <DialogTitle>
                             {editingQuestion && questions.find(q => q.id === editingQuestion.id)
-                                ? 'Edit Question'
-                                : 'Add Question'
+                                ? t('inlineQuiz.editQuestion')
+                                : t('inlineQuiz.addQuestion')
                             }
                         </DialogTitle>
                         <DialogDescription>
-                            Create or modify a quiz question
+                            {t('inlineQuiz.createModifyDescription')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -293,25 +296,26 @@ export function InlineQuizBuilder({
                             onQuestionsCreated={handleAIGenerated}
                         />
                     ) : editingQuestion && (
-                        <div className="space-y-4">
+                        <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                             {/* Question Text */}
                             <div>
-                                <Label>Question</Label>
+                                <Label>{t('inlineQuiz.questionLabel')}</Label>
                                 <Textarea
                                     value={editingQuestion.question_text}
                                     onChange={(e) => setEditingQuestion({
                                         ...editingQuestion,
                                         question_text: e.target.value
                                     })}
-                                    placeholder="Enter your question..."
+                                    placeholder={t('inlineQuiz.enterQuestionPlaceholder')}
                                     rows={3}
+                                    className={isRTL ? 'text-right' : 'text-left'}
                                 />
                             </div>
 
                             {/* Question Type & Difficulty */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label>Type</Label>
+                                    <Label>{t('inlineQuiz.typeLabel')}</Label>
                                     <Select
                                         value={editingQuestion.question_type}
                                         onValueChange={(v) => setEditingQuestion({
@@ -319,18 +323,18 @@ export function InlineQuizBuilder({
                                             question_type: v as QuestionType
                                         })}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className={isRTL ? 'flex-row-reverse' : ''}>
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="mcq">Multiple Choice</SelectItem>
-                                            <SelectItem value="true_false">True/False</SelectItem>
-                                            <SelectItem value="fill_blank">Fill in Blank</SelectItem>
+                                        <SelectContent className={isRTL ? 'text-right' : 'text-left'}>
+                                            <SelectItem value="mcq" className={isRTL ? 'flex-row-reverse' : ''}>{t('inlineQuiz.mcq')}</SelectItem>
+                                            <SelectItem value="true_false" className={isRTL ? 'flex-row-reverse' : ''}>{t('inlineQuiz.trueFalse')}</SelectItem>
+                                            <SelectItem value="fill_blank" className={isRTL ? 'flex-row-reverse' : ''}>{t('inlineQuiz.fillBlank')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div>
-                                    <Label>Difficulty</Label>
+                                    <Label>{t('inlineQuiz.difficultyLabel')}</Label>
                                     <Select
                                         value={editingQuestion.difficulty_level}
                                         onValueChange={(v) => setEditingQuestion({
@@ -338,14 +342,14 @@ export function InlineQuizBuilder({
                                             difficulty_level: v as DifficultyLevel
                                         })}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className={isRTL ? 'flex-row-reverse' : ''}>
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="easy">Easy</SelectItem>
-                                            <SelectItem value="medium">Medium</SelectItem>
-                                            <SelectItem value="hard">Hard</SelectItem>
-                                            <SelectItem value="expert">Expert</SelectItem>
+                                        <SelectContent className={isRTL ? 'text-right' : 'text-left'}>
+                                            <SelectItem value="easy" className={isRTL ? 'flex-row-reverse' : ''}>{t('inlineQuiz.easy')}</SelectItem>
+                                            <SelectItem value="medium" className={isRTL ? 'flex-row-reverse' : ''}>{t('inlineQuiz.medium')}</SelectItem>
+                                            <SelectItem value="hard" className={isRTL ? 'flex-row-reverse' : ''}>{t('inlineQuiz.hard')}</SelectItem>
+                                            <SelectItem value="expert" className={isRTL ? 'flex-row-reverse' : ''}>{t('inlineQuiz.expert')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -354,10 +358,10 @@ export function InlineQuizBuilder({
                             {/* MCQ Options */}
                             {editingQuestion.question_type === 'mcq' && editingQuestion.options && (
                                 <div>
-                                    <Label>Answer Options</Label>
+                                    <Label>{t('inlineQuiz.answerOptions')}</Label>
                                     <div className="space-y-2 mt-2">
                                         {editingQuestion.options.map((option, i) => (
-                                            <div key={i} className="flex items-center gap-2">
+                                            <div key={i} className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                                                 <RadioGroupItem
                                                     value={String(i)}
                                                     checked={option.is_correct}
@@ -367,8 +371,8 @@ export function InlineQuizBuilder({
                                                 <Input
                                                     value={option.text}
                                                     onChange={(e) => handleOptionChange(i, e.target.value)}
-                                                    placeholder={`Option ${i + 1}`}
-                                                    className="flex-1"
+                                                    placeholder={t('inlineQuiz.optionPlaceholder', { number: i + 1 })}
+                                                    className={cn("flex-1", isRTL ? "text-right" : "text-left")}
                                                 />
                                                 {editingQuestion.options!.length > 2 && (
                                                     <Button
@@ -385,9 +389,10 @@ export function InlineQuizBuilder({
                                             variant="outline"
                                             size="sm"
                                             onClick={addOption}
+                                            className={isRTL ? 'flex-row-reverse' : ''}
                                         >
-                                            <Plus className="h-4 w-4 mr-1" />
-                                            Add Option
+                                            <Plus className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
+                                            {t('inlineQuiz.addOption', 'Add Option')}
                                         </Button>
                                     </div>
                                 </div>
@@ -396,22 +401,22 @@ export function InlineQuizBuilder({
                             {/* True/False */}
                             {editingQuestion.question_type === 'true_false' && (
                                 <div>
-                                    <Label>Correct Answer</Label>
+                                    <Label>{t('inlineQuiz.correctAnswer')}</Label>
                                     <RadioGroup
                                         value={editingQuestion.correct_answer || 'true'}
                                         onValueChange={(v) => setEditingQuestion({
                                             ...editingQuestion,
                                             correct_answer: v
                                         })}
-                                        className="flex gap-4 mt-2"
+                                        className={`flex gap-4 mt-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
                                     >
-                                        <div className="flex items-center gap-2">
+                                        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                                             <RadioGroupItem value="true" />
-                                            <Label>True</Label>
+                                            <Label>{t('true')}</Label>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                                             <RadioGroupItem value="false" />
-                                            <Label>False</Label>
+                                            <Label>{t('false')}</Label>
                                         </div>
                                     </RadioGroup>
                                 </div>
@@ -420,38 +425,40 @@ export function InlineQuizBuilder({
                             {/* Fill in Blank */}
                             {editingQuestion.question_type === 'fill_blank' && (
                                 <div>
-                                    <Label>Correct Answer</Label>
+                                    <Label>{t('inlineQuiz.correctAnswer')}</Label>
                                     <Input
                                         value={editingQuestion.correct_answer || ''}
                                         onChange={(e) => setEditingQuestion({
                                             ...editingQuestion,
                                             correct_answer: e.target.value
                                         })}
-                                        placeholder="The correct answer"
+                                        placeholder={t('inlineQuiz.correctAnswerPlaceholder')}
+                                        className={isRTL ? 'text-right' : 'text-left'}
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Use [BLANK] in your question text to indicate where the blank goes.
+                                        {t('inlineQuiz.fillBlankHint')}
                                     </p>
                                 </div>
                             )}
 
                             {/* Explanation */}
                             <div>
-                                <Label>Explanation (shown after answering)</Label>
+                                <Label>{t('inlineQuiz.explanationLabel')}</Label>
                                 <Textarea
                                     value={editingQuestion.explanation || ''}
                                     onChange={(e) => setEditingQuestion({
                                         ...editingQuestion,
                                         explanation: e.target.value
                                     })}
-                                    placeholder="Explain why the correct answer is correct..."
+                                    placeholder={t('inlineQuiz.explanationPlaceholder')}
                                     rows={2}
+                                    className={isRTL ? 'text-right' : 'text-left'}
                                 />
                             </div>
 
                             {/* Points */}
                             <div>
-                                <Label>Points</Label>
+                                <Label>{t('inlineQuiz.pointsLabel')}</Label>
                                 <Input
                                     type="number"
                                     value={editingQuestion.points}
@@ -461,18 +468,18 @@ export function InlineQuizBuilder({
                                     })}
                                     min={0}
                                     max={100}
-                                    className="w-24"
+                                    className={cn("w-24", isRTL ? "text-right" : "text-left")}
                                 />
                             </div>
 
                             {/* Actions */}
-                            <div className="flex justify-end gap-2 pt-4 border-t">
+                            <div className={`flex justify-end gap-2 pt-4 border-t ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                                 <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                                    Cancel
+                                    {t('cancel')}
                                 </Button>
                                 <Button onClick={handleSaveQuestion}>
-                                    <Save className="h-4 w-4 mr-2" />
-                                    Save Question
+                                    <Save className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                    {t('inlineQuiz.saveQuestion')}
                                 </Button>
                             </div>
                         </div>

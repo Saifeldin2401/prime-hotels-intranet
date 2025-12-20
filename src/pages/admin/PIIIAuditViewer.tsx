@@ -19,7 +19,7 @@ import type { DateRange } from 'react-day-picker'
 import { useTranslation } from 'react-i18next'
 
 export function PIIAuditViewer() {
-  const { t } = useTranslation('admin')
+  const { t } = useTranslation(['admin', 'common'])
   const [filters, setFilters] = useState({
     user_id: '',
     resource_type: '',
@@ -121,7 +121,7 @@ export function PIIAuditViewer() {
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-medium">Error loading PII access logs</h3>
+          <h3 className="text-red-800 font-medium">{t('pii_audit.error_loading')}</h3>
           <p className="text-red-600 text-sm mt-1">{error.message}</p>
         </div>
       </div>
@@ -214,12 +214,12 @@ export function PIIAuditViewer() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">{t('pii_audit.all_types')}</SelectItem>
-                  <SelectItem value="profile">Profile</SelectItem>
-                  <SelectItem value="document">Document</SelectItem>
-                  <SelectItem value="leave_request">Leave Request</SelectItem>
-                  <SelectItem value="training_record">Training Record</SelectItem>
-                  <SelectItem value="maintenance_ticket">Maintenance Ticket</SelectItem>
-                  <SelectItem value="message">Message</SelectItem>
+                  <SelectItem value="profile">{t('pii_audit.resource_types.profile')}</SelectItem>
+                  <SelectItem value="document">{t('pii_audit.resource_types.document')}</SelectItem>
+                  <SelectItem value="leave_request">{t('pii_audit.resource_types.leave_request')}</SelectItem>
+                  <SelectItem value="training_record">{t('pii_audit.resource_types.training_record')}</SelectItem>
+                  <SelectItem value="maintenance_ticket">{t('pii_audit.resource_types.maintenance_ticket')}</SelectItem>
+                  <SelectItem value="message">{t('pii_audit.resource_types.message')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -232,11 +232,11 @@ export function PIIAuditViewer() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">{t('pii_audit.all_types')}</SelectItem>
-                  <SelectItem value="view">View</SelectItem>
-                  <SelectItem value="edit">Edit</SelectItem>
-                  <SelectItem value="download">Download</SelectItem>
-                  <SelectItem value="export">Export</SelectItem>
-                  <SelectItem value="delete">Delete</SelectItem>
+                  <SelectItem value="view">{t('pii_audit.access_types.view')}</SelectItem>
+                  <SelectItem value="edit">{t('pii_audit.access_types.edit')}</SelectItem>
+                  <SelectItem value="download">{t('pii_audit.access_types.download')}</SelectItem>
+                  <SelectItem value="export">{t('pii_audit.access_types.export')}</SelectItem>
+                  <SelectItem value="delete">{t('pii_audit.access_types.delete')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -303,7 +303,7 @@ export function PIIAuditViewer() {
                   <TableHead>{t('pii_audit.resource')}</TableHead>
                   <TableHead>{t('pii_audit.access_type')}</TableHead>
                   <TableHead>{t('pii_audit.pii_fields')}</TableHead>
-                  <TableHead>IP Address</TableHead>
+                  <TableHead>{t('pii_audit.ip_address')}</TableHead>
                   <TableHead>{t('pii_audit.status')}</TableHead>
                   <TableHead>{t('pii_audit.actions')}</TableHead>
                 </TableRow>
@@ -315,20 +315,20 @@ export function PIIAuditViewer() {
                       <div>
                         <div className="font-medium">{formatDate(log.created_at)}</div>
                         <div className="text-sm text-muted-foreground">
-                          {formatDistanceToNow(new Date(log.created_at))} ago
+                          {formatDistanceToNow(new Date(log.created_at))} {t('common:social.ago')}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{log.accessed_by_profile?.full_name || 'Unknown'}</div>
+                        <div className="font-medium">{log.accessed_by_profile?.full_name || t('pii_audit.unknown')}</div>
                         <div className="text-sm text-muted-foreground">{log.accessed_by_profile?.email}</div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Badge className={getResourceTypeColor(log.resource_type)}>
-                          {log.resource_type.replace('_', ' ')}
+                          {t(`pii_audit.resource_types.${log.resource_type}`, { defaultValue: log.resource_type.replace('_', ' ') })}
                         </Badge>
                         <span className="text-sm text-muted-foreground">ID: {log.resource_id}</span>
                       </div>
@@ -337,7 +337,7 @@ export function PIIAuditViewer() {
                       <div className="flex items-center gap-2">
                         {getAccessTypeIcon(log.access_type)}
                         <Badge className={getAccessTypeColor(log.access_type)}>
-                          {log.access_type}
+                          {t(`pii_audit.access_types.${log.access_type}`, { defaultValue: log.access_type })}
                         </Badge>
                       </div>
                     </TableCell>
@@ -439,7 +439,7 @@ export function PIIAuditViewer() {
                 </div>
                 <div>
                   <Label>{t('pii_audit.justification')}</Label>
-                  <p className="text-sm">{selectedLog.justification || 'No justification provided'}</p>
+                  <p className="text-sm">{selectedLog.justification || t('pii_audit.no_justification')}</p>
                 </div>
               </div>
               <div>
@@ -456,7 +456,7 @@ export function PIIAuditViewer() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedLog(null)}>
-              Close
+              {t('common:action.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

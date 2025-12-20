@@ -114,7 +114,7 @@ export default function TrainingCertificates() {
       return {
         valid: false,
         certificate: null,
-        message: 'Certificate verification not yet implemented'
+        message: t('verificationNotImplemented', 'Certificate verification not yet implemented')
       }
     },
     onSuccess: (result) => {
@@ -201,7 +201,7 @@ export default function TrainingCertificates() {
   const copyCertificateLink = (certificate: CertificateWithDetails) => {
     const url = generateCertificateURL(certificate)
     navigator.clipboard.writeText(url)
-    alert(isRTL ? 'تم نسخ الرابط' : 'Link copied to clipboard')
+    alert(t('linkCopied', 'Link copied to clipboard'))
   }
 
   // Filter certificates
@@ -276,7 +276,7 @@ export default function TrainingCertificates() {
                               </div>
                             </div>
                             <Badge className={getStatusColor(status)}>
-                              {t[status]}
+                              {t(status)}
                             </Badge>
                           </div>
 
@@ -288,7 +288,7 @@ export default function TrainingCertificates() {
                             <div className="flex justify-between text-sm">
                               <span>{t('certificateType')}:</span>
                               <Badge className={`bg-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-100 text-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-800 border border-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'} rounded-md`}>
-                                {t[type]}
+                                {t(type)}
                               </Badge>
                             </div>
                             {certificate.expires_at && (
@@ -456,10 +456,10 @@ export default function TrainingCertificates() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={getStatusColor(status)}>
-                            {t[status]}
+                            {t(status)}
                           </Badge>
                           <Badge className={`bg-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-100 text-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-800 border border-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'} rounded-md`}>
-                            {t[type]}
+                            {t(type)}
                           </Badge>
                           <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleViewCertificate(certificate)}>
                             {t('viewCertificate')}
@@ -507,10 +507,10 @@ export default function TrainingCertificates() {
                     <Award className="w-16 h-16 text-yellow-500" />
                   </div>
                   <h1 className="text-3xl font-bold text-gray-800">
-                    {isRTL ? 'شهادة إتمام' : 'Certificate of Completion'}
+                    {t('certificateOfCompletion', 'Certificate of Completion')}
                   </h1>
                   <p className="text-lg text-gray-600">
-                    {isRTL ? 'هذه الشهادة تؤكد أن' : 'This is to certify that'}
+                    {t('thisIsToCertifyThat', 'This is to certify that')}
                   </p>
                   <div className="py-4 border-b-2 border-yellow-400">
                     <h2 className="text-2xl font-semibold text-gray-800">
@@ -518,7 +518,7 @@ export default function TrainingCertificates() {
                     </h2>
                   </div>
                   <p className="text-gray-600">
-                    {isRTL ? 'قد أكمل بنجاح وحدة التدريب' : 'has successfully completed the training module'}
+                    {t('successfullyCompletedModule', 'has successfully completed the training module')}
                   </p>
                   <h3 className="text-xl font-medium text-gray-800">
                     {selectedCertificate.training_progress.training_modules.title}
