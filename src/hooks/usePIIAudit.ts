@@ -15,12 +15,13 @@ export function usePIIAccessLogs(filters?: {
   return useQuery({
     queryKey: ['pii-access-logs', filters],
     queryFn: async () => {
-      // Use explicit FK hints to avoid ambiguous relationship error
       let query = supabase
         .from('pii_access_logs')
         .select(`
           *,
-          accessed_by_profile:profiles!pii_access_logs_accessed_by_fkey(full_name, email)
+          accessed_by_profile:profiles!pii_access_logs_actor_id_fkey(full_name, email),
+          user:profiles!pii_access_logs_target_user_id_fkey(full_name, email),
+          approved_by_profile:profiles!pii_access_logs_approved_by_fkey(full_name, email)
         `)
         .order('created_at', { ascending: false })
 
@@ -54,12 +55,10 @@ export function usePIIAccessLogs(filters?: {
   })
 }
 
-// Compute summary client-side instead of using non-existent RPC
 export function usePIIAccessSummary(dateRange?: { from: string; to: string }) {
   return useQuery({
     queryKey: ['pii-access-summary', dateRange],
     queryFn: async (): Promise<PIIAccessSummary> => {
-      // Build query with date filters
       let query = supabase
         .from('pii_access_logs')
         .select('id, accessed_by, pii_fields, access_type, resource_type')
@@ -72,16 +71,23 @@ export function usePIIAccessSummary(dateRange?: { from: string; to: string }) {
       }
 
       const { data, error } = await query
-
       if (error) throw error
 
-      // Compute summary from data
       const logs = data || []
       const uniqueUsers = new Set(logs.map(l => l.accessed_by))
       const allPiiFields = logs.flatMap(l => l.pii_fields || [])
       const sensitiveFields = [...new Set(allPiiFields)]
 
-      // High risk = delete or export operations, or accessing salary/ssn fields
+      const accessByType = logs.reduce((acc, log) => {
+        acc[log.access_type] = (acc[log.access_type] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+
+      const accessByResource = logs.reduce((acc, log) => {
+        acc[log.resource_type] = (acc[log.resource_type] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+
       const highRiskAccesses = logs.filter(l =>
         l.access_type === 'delete' ||
         l.access_type === 'export' ||
@@ -96,7 +102,10 @@ export function usePIIAccessSummary(dateRange?: { from: string; to: string }) {
         total_accesses: logs.length,
         unique_users: uniqueUsers.size,
         sensitive_fields_accessed: sensitiveFields,
-        high_risk_accesses: highRiskAccesses.map(l => l.id)
+        access_by_type: accessByType,
+        access_by_resource: accessByResource,
+        recent_accesses: [], // Not used in summary cards
+        high_risk_accesses: highRiskAccesses as any // The UI only needs .length usually
       }
     }
   })
@@ -171,7 +180,6 @@ export function useDeletePIIAccessLog() {
   })
 }
 
-// Export as CSV client-side instead of using non-existent RPC
 export function useExportPIIAccessLogs() {
   return useMutation({
     mutationFn: async (filters?: {
@@ -181,13 +189,11 @@ export function useExportPIIAccessLogs() {
       date_from?: string
       date_to?: string
     }) => {
-      // Fetch all data matching filters
       let query = supabase
         .from('pii_access_logs')
         .select(`
-          id, created_at, accessed_by, user_id, resource_type, resource_id, 
-          access_type, pii_fields, ip_address, user_agent, session_id, justification,
-          accessed_by_profile:profiles!pii_access_logs_accessed_by_fkey(full_name, email)
+          *,
+          accessed_by_profile:profiles!pii_access_logs_actor_id_fkey(full_name, email)
         `)
         .order('created_at', { ascending: false })
 
@@ -200,51 +206,49 @@ export function useExportPIIAccessLogs() {
       const { data, error } = await query
       if (error) throw error
 
-      // Generate CSV
-      const headers = ['Date', 'User', 'Email', 'Resource Type', 'Resource ID', 'Access Type', 'PII Fields', 'IP Address', 'Justification']
+      // Simple CSV generation
+      const headers = ['Timestamp', 'Accessed By', 'Target User', 'Resource Type', 'Access Type', 'Fields', 'Justification', 'IP Address']
       const rows = (data || []).map(log => [
-        new Date(log.created_at).toISOString(),
-        log.accessed_by_profile?.full_name || 'Unknown',
-        log.accessed_by_profile?.email || '',
+        log.created_at,
+        log.accessed_by_profile?.full_name || log.accessed_by,
+        log.user_id,
         log.resource_type,
-        log.resource_id,
         log.access_type,
-        (log.pii_fields || []).join('; '),
-        log.ip_address,
-        log.justification || ''
+        log.pii_fields?.join(', '),
+        log.justification || '',
+        log.ip_address || ''
       ])
 
-      const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n')
-
-      // Trigger download
-      const blob = new Blob([csv], { type: 'text/csv' })
+      const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n")
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement("a")
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `pii_access_logs_${new Date().toISOString().split('T')[0]}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
+      link.setAttribute("href", url)
+      link.setAttribute("download", `pii_access_logs_${new Date().toISOString()}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
 
       return data
     }
   })
 }
 
-// Helper function to log PII access automatically
-export function logPIIAccess(accessData: {
+export async function logPIIAccess(accessData: {
   user_id: string
-  accessed_by: string
   resource_type: PIIAccessLog['resource_type']
   resource_id: string
   access_type: PIIAccessLog['access_type']
   pii_fields: string[]
-  ip_address: string
-  user_agent: string
-  session_id: string
   justification?: string
 }) {
-  return supabase.from('pii_access_logs').insert({
-    ...accessData,
-    justification: accessData.justification || null
+  return supabase.rpc('log_pii_access', {
+    p_user_id: accessData.user_id,
+    p_resource_type: accessData.resource_type,
+    p_resource_id: accessData.resource_id,
+    p_access_type: accessData.access_type,
+    p_pii_fields: accessData.pii_fields,
+    p_justification: accessData.justification
   })
 }

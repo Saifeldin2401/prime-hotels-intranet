@@ -21,6 +21,21 @@ export default function PropertyDetails() {
     // For now, let's assume kpis might be useful later, or remove if redundant.
     const { data: kpis } = useDepartmentKPIs(id)
 
+    // Dynamic Stats - Real data only
+    const { data: staffCount } = useQuery({
+        queryKey: ['property_staff_count', id],
+        queryFn: async () => {
+            if (!id) return 0
+            const { count, error } = await supabase
+                .from('user_properties')
+                .select('*', { count: 'exact', head: true })
+                .eq('property_id', id)
+            if (error) throw error
+            return count || 0
+        },
+        enabled: !!id
+    })
+
     const property = availableProperties.find(p => p.id === id)
 
     if (!property) {
@@ -31,21 +46,6 @@ export default function PropertyDetails() {
             </div>
         )
     }
-
-    // Dynamic Stats - Real data only
-    const { data: staffCount } = useQuery({
-        queryKey: ['property_staff_count', id],
-        queryFn: async () => {
-            if (!id) return 0
-            const { count, error } = await supabase
-                .from('profiles')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', id)
-            if (error) throw error
-            return count || 0
-        },
-        enabled: !!id
-    })
 
     const stats = {
         departments: departments.length,

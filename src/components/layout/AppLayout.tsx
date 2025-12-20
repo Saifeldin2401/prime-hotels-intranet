@@ -31,6 +31,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, signOut } = useAuth()
   const { t } = useTranslation(['nav', 'common'])
   const [sidebarOpen, setSidebarOpen] = useState(false)

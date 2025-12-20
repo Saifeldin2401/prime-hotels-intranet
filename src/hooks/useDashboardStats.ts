@@ -521,6 +521,7 @@ export function useCorporateStats() {
             const { count: totalStaff } = await supabase
                 .from('profiles')
                 .select('*', { count: 'exact', head: true })
+                .eq('is_active', true)
 
             // Calculate compliance from training
             const { count: completedTraining } = await supabase
