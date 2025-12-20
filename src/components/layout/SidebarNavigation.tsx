@@ -57,8 +57,11 @@ export function SidebarNavigation({
       .map(group => group.config.id)
 
     setExpandedGroups(prev => {
-      const newExpanded = [...new Set([...prev, ...activeGroups])]
-      return newExpanded
+      // Only add groups that aren't already in prev to avoid infinite re-renders
+      const newGroups = activeGroups.filter(id => !prev.includes(id))
+      // Only update state if there are ACTUALLY new groups to add
+      if (newGroups.length === 0) return prev
+      return [...prev, ...newGroups]
     })
   }, [groupedNavigation])
 
