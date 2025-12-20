@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,18 +23,18 @@ export function CorporateAdminDashboard() {
   const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
   const { data: corporateStats, isLoading: statsLoading } = useCorporateStats()
 
-  // Create real user object from auth context
-  const currentUser: User = {
+  // Memoize currentUser to prevent unnecessary re-renders
+  const currentUser: User = useMemo(() => ({
     id: user?.id || 'guest',
     name: profile?.full_name || user?.email || 'Corporate Admin',
     email: user?.email || '',
     role: (primaryRole as User['role']) || 'corporate_admin',
     property: 'Corporate HQ',
     permissions: []
-  }
+  }), [user?.id, user?.email, profile?.full_name, primaryRole])
 
-  // Transform announcements to feed items format
-  const feedItems: FeedItem[] = announcements.map(announcement => ({
+  // Memoize feedItems transformation to prevent infinite re-renders
+  const feedItems: FeedItem[] = useMemo(() => announcements.map(announcement => ({
     id: announcement.id,
     type: 'announcement' as const,
     author: {
@@ -53,29 +53,31 @@ export function CorporateAdminDashboard() {
     priority: (announcement.priority === 'critical' ? 'high' : announcement.priority === 'important' ? 'medium' : 'low') as 'high' | 'medium' | 'low',
     reactions: {},
     comments: []
-  }))
+  })), [announcements])
 
   const loading = announcementsLoading || statsLoading
 
-  const stats = corporateStats || {
+  // Memoize stats to prevent unnecessary re-renders
+  const stats = useMemo(() => corporateStats || {
     totalProperties: 0,
     totalStaff: 0,
     maintenanceEfficiency: 0,
     openVacancies: 0,
     complianceRate: 0
-  }
+  }, [corporateStats])
 
-  const handleReact = (_itemId: string, _reaction: string) => {
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleReact = useCallback((_itemId: string, _reaction: string) => {
     // Reaction functionality placeholder - to be implemented
-  }
+  }, [])
 
-  const handleComment = (_itemId: string, _content: string) => {
+  const handleComment = useCallback((_itemId: string, _content: string) => {
     // Comment functionality placeholder - to be implemented
-  }
+  }, [])
 
-  const handleShare = (_itemId: string) => {
+  const handleShare = useCallback((_itemId: string) => {
     // Share functionality placeholder - to be implemented
-  }
+  }, [])
 
 
   if (loading) {
