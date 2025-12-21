@@ -1,0 +1,33 @@
+{
+    "title": "Requests Inbox",
+    "description": "View and manage all requests across the organization",
+    "search_placeholder": "Search by request number or employee name...",
+    "filters": "Filters",
+    "clear_all": "Clear all",
+    "status_label": "Status",
+    "start_date": "Start Date",
+    "end_date": "End Date",
+    "pick_date": "Pick a date",
+    "requests_found": "{{count}} requests found",
+    "one_request_found": "1 request found",
+    "no_requests": "No requests found",
+    "no_requests_desc": "Try adjusting your filters or search terms",
+    "request_no": "Request #{{no}}",
+    "submitted": "Submitted: {{date}}",
+    "current_assignee": "Current assignee: {{name}}",
+    "view_details": "View Details",
+    "error_loading": "Error loading requests",
+    "error_loading_desc": "Please try again later",
+    "status": {
+        "draft": "Draft",
+        "pending_supervisor": "Pending Supervisor",
+        "pending_hr": "Pending HR",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "returned": "Returned",
+        "closed": "Closed"
+    },
+    "leave_request": "Leave Request",
+    "document": "Document",
+    "transfer": "Transfer"
+}

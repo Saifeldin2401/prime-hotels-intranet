@@ -110,9 +110,34 @@
     "add_comment_placeholder": "أضف تعليقاً...",
     "processing": "جاري المعالجة...",
     "pending_parts": "بانتظار قطع غيار",
-    "pending_parts": "بانتظار قطع غيار",
     "cancelled": "ملغاة",
     "open": "مفتوحة",
     "completed": "مكتملة",
-    "schedules": "الجداول"
+    "schedules": "الجداول",
+    "preventive": {
+        "title": "الصيانة الوقائية",
+        "description": "إدارة جداول الصيانة المتكررة وسير العمل الآلي",
+        "new_schedule": "جدول جديد",
+        "create_title": "إنشاء جدول صيانة",
+        "title_label": "العنوان",
+        "description_label": "الوصف",
+        "frequency": "التكرار",
+        "priority": "الأولوية",
+        "next_run": "تاريخ التشغيل القادم",
+        "creating": "جاري الإنشاء...",
+        "create_button": "إنشاء الجدول",
+        "active": "نشط",
+        "paused": "متوقف مؤقتاً",
+        "pause": "إيقاف مؤقت",
+        "resume": "استئناف",
+        "no_schedules": "لا توجد جداول صيانة.",
+        "create_first": "أنشئ جدولك الأول",
+        "frequencies": {
+            "daily": "يومي",
+            "weekly": "أسبوعي",
+            "monthly": "شهري",
+            "quarterly": "ربع سنوي",
+            "yearly": "سنوي"
+        }
+    }
 }

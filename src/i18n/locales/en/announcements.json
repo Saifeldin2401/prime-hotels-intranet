@@ -24,6 +24,37 @@
     },
     "actions": {
         "markRead": "Mark as read",
-        "edit": "Edit"
+        "edit": "Edit",
+        "back": "Back",
+        "acknowledge": "Acknowledge",
+        "comment": "Comment"
+    },
+    "detail": {
+        "not_found": "Announcement Not Found",
+        "not_found_message": "This announcement may have been deleted or you don't have access to it.",
+        "attachments": "Attachments",
+        "acknowledgment_required": "Acknowledgment Required",
+        "acknowledgment_prompt": "Please acknowledge that you have read this announcement.",
+        "acknowledged": "Acknowledged",
+        "acknowledge_button": "I Acknowledge",
+        "acknowledgments": "Acknowledgments",
+        "acknowledgments_count": "{{count}} people acknowledged",
+        "comments": "Comments",
+        "no_comments": "No comments yet. Be the first to comment!",
+        "add_comment": "Add a comment...",
+        "post_comment": "Post"
+    },
+    "status": {
+        "read": "Read",
+        "pinned": "Pinned"
+    },
+    "notifications": {
+        "viewed_title": "Announcement Viewed",
+        "viewed_message": "You viewed: {{title}}"
+    },
+    "toast": {
+        "marked_read": "Marked as read!",
+        "acknowledged": "Announcement acknowledged!",
+        "comment_added": "Comment added!"
     }
 }

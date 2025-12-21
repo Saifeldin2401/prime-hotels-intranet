@@ -64,23 +64,23 @@ export default function PreventiveMaintenance() {
         <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
                 <PageHeader
-                    title="Preventive Maintenance"
-                    description="Manage recurring maintenance schedules and specific automated workflows"
+                    title={t('preventive.title')}
+                    description={t('preventive.description')}
                 />
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                     <DialogTrigger asChild>
                         <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
                             <Plus className="w-4 h-4 mr-2" />
-                            New Schedule
+                            {t('preventive.new_schedule')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Create Maintenance Schedule</DialogTitle>
+                            <DialogTitle>{t('preventive.create_title')}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <Label>Title</Label>
+                                <Label>{t('preventive.title_label')}</Label>
                                 <Input
                                     value={newSchedule.title}
                                     onChange={(e) => setNewSchedule(prev => ({ ...prev, title: e.target.value }))}
@@ -88,7 +88,7 @@ export default function PreventiveMaintenance() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>Description</Label>
+                                <Label>{t('preventive.description_label')}</Label>
                                 <Textarea
                                     value={newSchedule.description}
                                     onChange={(e) => setNewSchedule(prev => ({ ...prev, description: e.target.value }))}
@@ -97,7 +97,7 @@ export default function PreventiveMaintenance() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Frequency</Label>
+                                    <Label>{t('preventive.frequency')}</Label>
                                     <Select
                                         value={newSchedule.frequency}
                                         onValueChange={(val) => setNewSchedule(prev => ({ ...prev, frequency: val }))}
@@ -106,16 +106,16 @@ export default function PreventiveMaintenance() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="daily">Daily</SelectItem>
-                                            <SelectItem value="weekly">Weekly</SelectItem>
-                                            <SelectItem value="monthly">Monthly</SelectItem>
-                                            <SelectItem value="quarterly">Quarterly</SelectItem>
-                                            <SelectItem value="yearly">Yearly</SelectItem>
+                                            <SelectItem value="daily">{t('preventive.frequencies.daily')}</SelectItem>
+                                            <SelectItem value="weekly">{t('preventive.frequencies.weekly')}</SelectItem>
+                                            <SelectItem value="monthly">{t('preventive.frequencies.monthly')}</SelectItem>
+                                            <SelectItem value="quarterly">{t('preventive.frequencies.quarterly')}</SelectItem>
+                                            <SelectItem value="yearly">{t('preventive.frequencies.yearly')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Priority</Label>
+                                    <Label>{t('preventive.priority')}</Label>
                                     <Select
                                         value={newSchedule.priority}
                                         onValueChange={(val) => setNewSchedule(prev => ({ ...prev, priority: val }))}
@@ -124,16 +124,16 @@ export default function PreventiveMaintenance() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="low">Low</SelectItem>
-                                            <SelectItem value="medium">Medium</SelectItem>
-                                            <SelectItem value="high">High</SelectItem>
-                                            <SelectItem value="critical">Critical</SelectItem>
+                                            <SelectItem value="low">{t('priority.low')}</SelectItem>
+                                            <SelectItem value="medium">{t('priority.medium')}</SelectItem>
+                                            <SelectItem value="high">{t('priority.high')}</SelectItem>
+                                            <SelectItem value="critical">{t('priority.critical')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label>Next Run Date</Label>
+                                <Label>{t('preventive.next_run')}</Label>
                                 <Input
                                     type="datetime-local"
                                     value={newSchedule.next_run_at}
@@ -141,7 +141,7 @@ export default function PreventiveMaintenance() {
                                 />
                             </div>
                             <Button onClick={handleCreate} className="w-full" disabled={createMutation.isPending}>
-                                {createMutation.isPending ? 'Creating...' : 'Create Schedule'}
+                                {createMutation.isPending ? t('preventive.creating') : t('preventive.create_button')}
                             </Button>
                         </div>
                     </DialogContent>
@@ -150,14 +150,14 @@ export default function PreventiveMaintenance() {
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {isLoading ? (
-                    <div>Loading schedules...</div>
+                    <div>{t('dashboard.loading')}</div>
                 ) : schedules?.map((schedule) => (
                     <Card key={schedule.id} className={cn("transition-all hover:shadow-md", !schedule.is_active && "opacity-60")}>
                         <CardHeader className="pb-2">
                             <div className="flex justify-between items-start">
                                 <CardTitle className="text-lg font-bold">{schedule.title}</CardTitle>
                                 <Badge variant={schedule.is_active ? 'default' : 'secondary'}>
-                                    {schedule.is_active ? 'Active' : 'Paused'}
+                                    {schedule.is_active ? t('preventive.active') : t('preventive.paused')}
                                 </Badge>
                             </div>
                         </CardHeader>
@@ -183,7 +183,7 @@ export default function PreventiveMaintenance() {
                                         className="flex-1"
                                         onClick={() => handleToggle(schedule.id, schedule.is_active)}
                                     >
-                                        {schedule.is_active ? 'Pause' : 'Resume'}
+                                        {schedule.is_active ? t('preventive.pause') : t('preventive.resume')}
                                     </Button>
                                     <Button
                                         variant="ghost"
@@ -200,8 +200,8 @@ export default function PreventiveMaintenance() {
                 ))}
                 {!isLoading && schedules?.length === 0 && (
                     <div className="col-span-full text-center py-12 text-gray-500 border border-dashed rounded-lg">
-                        <p>No maintenance schedules found.</p>
-                        <Button variant="link" onClick={() => setIsCreateOpen(true)}>Create your first schedule</Button>
+                        <p>{t('preventive.no_schedules')}</p>
+                        <Button variant="link" onClick={() => setIsCreateOpen(true)}>{t('preventive.create_first')}</Button>
                     </div>
                 )}
             </div>

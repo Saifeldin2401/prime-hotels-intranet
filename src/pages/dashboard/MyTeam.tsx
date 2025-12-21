@@ -142,7 +142,7 @@ export default function MyTeam() {
     if (!user) {
         return (
             <div className="flex items-center justify-center h-64">
-                <p className="text-gray-500">{t('common:please_login', 'Please log in to view your team')}</p>
+                <p className="text-gray-500">{t('common:common.please_login')}</p>
             </div>
         )
     }
@@ -155,7 +155,7 @@ export default function MyTeam() {
                 actions={
                     <Button variant="outline" onClick={() => refetch()}>
                         <RefreshCw className="h-4 w-4 me-2" />
-                        {t('common:refresh', 'Refresh')}
+                        {t('common:action.refresh')}
                     </Button>
                 }
             />
@@ -237,7 +237,7 @@ export default function MyTeam() {
                 <Card>
                     <CardContent className="flex items-center justify-center py-12">
                         <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                        {t('common:loading', 'Loading...')}
+                        {t('common:common.loading')}
                     </CardContent>
                 </Card>
             ) : filteredMembers.length === 0 ? (
@@ -273,7 +273,7 @@ export default function MyTeam() {
                                             {member.full_name}
                                         </h3>
                                         <p className="text-sm text-gray-500 truncate">
-                                            {member.job_title || t('common:no_title', 'No title')}
+                                            {member.job_title || t('common:common.no_title')}
                                         </p>
                                         <div className="flex items-center gap-2 mt-2">
                                             {(member.pending_leave_count || 0) > 0 && (
@@ -308,7 +308,7 @@ export default function MyTeam() {
                                         size="sm"
                                         onClick={() => navigate(`/profile/${member.id}`)}
                                     >
-                                        {t('common:view_profile', 'View Profile')}
+                                        {t('common:common.view_profile')}
                                         <ChevronRight className="h-4 w-4 ms-1" />
                                     </Button>
                                 </div>

@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogContent,
@@ -56,9 +57,11 @@ interface Profile {
     job_title: string;
     user_properties?: {
         property_id: string;
-        properties?: {
+        properties: {
             name: string;
-        };
+        } | {
+            name: string;
+        }[];
     }[];
 }
 
@@ -87,7 +90,8 @@ export function TransferEmployeeDialog({
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loadingData, setLoadingData] = useState(false);
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user } = useAuth()
+    const { t } = useTranslation('hr');
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -129,7 +133,7 @@ export function TransferEmployeeDialog({
             const { data: profiles, error: profilesError } = await query;
 
             if (profilesError) throw profilesError;
-            setEmployees(profiles || []);
+            setEmployees((profiles as unknown as Profile[]) || []);
 
             // Fetch Properties (exclude current if possible, but basic list is fine for now)
             const { data: props, error: propsError } = await supabase
@@ -191,7 +195,9 @@ export function TransferEmployeeDialog({
             console.error("Transfer error:", error);
             toast({
                 title: "Error",
-                description: error.message || "Failed to submit transfer request",
+                description: typeof error === 'object' && error !== null && 'message' in error
+                    ? String(error.message)
+                    : "Failed to submit transfer request",
                 variant: "destructive",
             });
         }
@@ -200,7 +206,7 @@ export function TransferEmployeeDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                {children || <Button>Transfer Employee</Button>}
+                {children || <Button>{t('transfer.title')}</Button>}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -217,7 +223,8 @@ export function TransferEmployeeDialog({
                             name="employeeId"
                             render={({ field }) => {
                                 const selectedEmp = employees.find(e => e.id === field.value);
-                                const currentPropName = selectedEmp?.user_properties?.[0]?.properties?.name;
+                                const currentProp = selectedEmp?.user_properties?.[0]?.properties;
+                                const currentPropName = Array.isArray(currentProp) ? currentProp[0]?.name : currentProp?.name;
 
                                 return (
                                     <FormItem>

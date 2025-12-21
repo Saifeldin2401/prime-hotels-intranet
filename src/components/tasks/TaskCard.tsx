@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { format } from 'date-fns'
 import type { Task, TaskPriority } from '@/lib/types'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 interface TaskCardProps {
     task: Task
@@ -18,6 +19,7 @@ const priorityColors: Record<TaskPriority, string> = {
 }
 
 export function TaskCard({ task }: TaskCardProps) {
+    const { t } = useTranslation('tasks')
     const navigate = useNavigate()
 
     return (
@@ -31,13 +33,13 @@ export function TaskCard({ task }: TaskCardProps) {
                         {task.title}
                     </CardTitle>
                     <Badge variant="outline" className={`${priorityColors[task.priority]} border-none whitespace-nowrap`}>
-                        {task.priority}
+                        {t(`priorities.${task.priority}`)}
                     </Badge>
                 </div>
             </CardHeader>
             <CardContent className="p-4 pt-2">
                 <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-                    {task.description || 'No description'}
+                    {task.description || t('description_placeholder')}
                 </p>
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">

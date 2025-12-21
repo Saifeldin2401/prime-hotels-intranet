@@ -58,7 +58,7 @@ export function QuestionReview() {
             <div className="flex flex-col items-center justify-center h-96 text-center">
                 <p className="text-gray-500 mb-4">Question not found</p>
                 <Button variant="outline" onClick={() => navigate('/questions')}>
-                    Back to Library
+                    {t('question_review.back_to_library')}
                 </Button>
             </div>
         )
@@ -72,8 +72,8 @@ export function QuestionReview() {
         approveQuestion.mutate({ id: question.id }, {
             onSuccess: () => {
                 toast({
-                    title: 'Question Approved',
-                    description: 'The question is now published and available for use.'
+                    title: t('question_review.toasts.approved_title'),
+                    description: t('question_review.toasts.approved_desc')
                 })
                 navigate('/questions')
             }
@@ -84,8 +84,8 @@ export function QuestionReview() {
         rejectQuestion.mutate({ id: question.id, notes: rejectNotes }, {
             onSuccess: () => {
                 toast({
-                    title: 'Question Returned',
-                    description: 'The question has been returned to draft status with your notes.'
+                    title: t('question_review.toasts.returned_title'),
+                    description: t('question_review.toasts.returned_desc')
                 })
                 setIsRejectDialogOpen(false)
                 navigate('/questions')
@@ -100,11 +100,11 @@ export function QuestionReview() {
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" onClick={() => navigate('/questions')}>
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
+                        {t('common:common.back')}
                     </Button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold">Question Details</h1>
+                            <h1 className="text-2xl font-bold">{t('question_review.title')}</h1>
                             <Badge variant="outline" className={`text-${statusConfig.color}-600 bg-${statusConfig.color}-50`}>
                                 {statusConfig.label}
                             </Badge>
@@ -119,7 +119,7 @@ export function QuestionReview() {
                     <Button variant="outline" asChild>
                         <Link to={`/questions/${question.id}/edit`}>
                             <FileEdit className="h-4 w-4 mr-2" />
-                            Edit
+                            {t('common:common.edit')}
                         </Link>
                     </Button>
 
@@ -129,31 +129,31 @@ export function QuestionReview() {
                                 <DialogTrigger asChild>
                                     <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
                                         <XCircle className="h-4 w-4 mr-2" />
-                                        Reject
+                                        {t('question_review.reject')}
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
-                                        <DialogTitle>Return to Draft</DialogTitle>
+                                        <DialogTitle>{t('question_review.return_to_draft')}</DialogTitle>
                                         <DialogDescription>
                                             Please provide feedback on why this question is being returned. The author will be notified.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <Textarea
-                                        placeholder="Enter your feedback..."
+                                        placeholder={t('question_review.feedback_placeholder')}
                                         value={rejectNotes}
                                         onChange={(e) => setRejectNotes(e.target.value)}
                                         className="min-h-[100px]"
                                     />
                                     <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>Cancel</Button>
+                                        <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>{t('common:common.cancel')}</Button>
                                         <Button
                                             variant="destructive"
                                             onClick={handleReject}
                                             disabled={!rejectNotes.trim() || rejectQuestion.isPending}
                                         >
                                             {rejectQuestion.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                            Return Question
+                                            {t('question_review.return_question')}
                                         </Button>
                                     </DialogFooter>
                                 </DialogContent>
@@ -169,7 +169,7 @@ export function QuestionReview() {
                                 ) : (
                                     <CheckCircle className="h-4 w-4 mr-2" />
                                 )}
-                                Approve & Publish
+                                {t('question_review.approve_publish')}
                             </Button>
                         </>
                     )}

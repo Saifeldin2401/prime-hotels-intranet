@@ -22,6 +22,54 @@ import type {
 // ============================================================================
 
 // ============================================================================
+// SEARCH SYNONYMS - Map hotel jargon to full terms for better search
+// ============================================================================
+
+const SEARCH_SYNONYMS: Record<string, string[]> = {
+    // Common abbreviations
+    'lc': ['late checkout', 'late check out'],
+    'ec': ['early checkin', 'early check in'],
+    'ooo': ['out of order'],
+    'oos': ['out of service'],
+    'dnr': ['do not return', 'blacklist'],
+    'vip': ['very important person', 'vip guest'],
+    'fo': ['front office', 'reception'],
+    'hk': ['housekeeping'],
+    'fb': ['food and beverage', 'f&b'],
+    'gm': ['general manager'],
+    'dnd': ['do not disturb'],
+    'mu': ['make up room'],
+    'nc': ['no show', 'no-show'],
+    'pm': ['preventive maintenance'],
+    'wo': ['work order'],
+    // Arabic abbreviations
+    'مغادرة متأخرة': ['late checkout'],
+    'صيانة': ['maintenance', 'preventive maintenance'],
+}
+
+/**
+ * Expand search query with synonyms for hotel jargon
+ */
+function expandSearchQuery(query: string): string[] {
+    const normalizedQuery = query.toLowerCase().trim()
+    const terms = [normalizedQuery]
+
+    // Check if query matches any synonym key
+    if (SEARCH_SYNONYMS[normalizedQuery]) {
+        terms.push(...SEARCH_SYNONYMS[normalizedQuery])
+    }
+
+    // Also check if query contains any synonym key
+    Object.entries(SEARCH_SYNONYMS).forEach(([key, values]) => {
+        if (normalizedQuery.includes(key)) {
+            values.forEach(v => terms.push(normalizedQuery.replace(key, v)))
+        }
+    })
+
+    return [...new Set(terms)] // Remove duplicates
+}
+
+// ============================================================================
 // ARTICLES
 // ============================================================================
 
@@ -47,7 +95,12 @@ export async function getArticles(
 
         // Apply filters
         if (filters.query) {
-            query = query.or(`title.ilike.%${filters.query}%,description.ilike.%${filters.query}%`)
+            // Expand search query with hotel jargon synonyms
+            const expandedTerms = expandSearchQuery(filters.query)
+            const searchConditions = expandedTerms
+                .map(term => `title.ilike.%${term}%,description.ilike.%${term}%`)
+                .join(',')
+            query = query.or(searchConditions)
         }
         if (filters.content_type) {
             query = query.eq('content_type', filters.content_type)

@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
-import { Upload, X, FileText, Loader2 } from 'lucide-react'
+import { Upload, X, File, AlertCircle, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useUploadEmployeeDocument } from '@/hooks/useEmployeeDocuments'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,8 @@ interface DocumentUploaderProps {
 export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) {
     console.log('DocumentUploader rendered, open:', open)
     const [file, setFile] = useState<File | null>(null)
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+    const { t } = useTranslation()
     const [category, setCategory] = useState<string>('other')
     const [title, setTitle] = useState('')
     const [isDragging, setIsDragging] = useState(false)
@@ -154,7 +157,7 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                             </>
                         ) : (
                             <div className="flex items-center p-3 bg-gray-50 border rounded-lg">
-                                <FileText className="h-8 w-8 text-blue-500 mr-3" />
+                                <File className="h-8 w-8 text-blue-500 mr-3" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-900 truncate">
                                         {file.name}
@@ -180,13 +183,13 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
                     <Button
                         onClick={handleUpload}
                         disabled={!file || uploadDocument.isPending}
                     >
                         {uploadDocument.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Upload
+                        {t('common.upload')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -13,6 +13,14 @@
     "back": "رجوع",
     "next": "التالي",
     "previous": "السابق",
+    "approveAll": "موافقة على الكل",
+    "deleteItems": "حذف {{count}} عناصر",
+    "deleteItems_label": "حذف {{count}} من {{entityLabel}}؟",
+    "deleteConfirmationDescription": "سيؤدي هذا الإجراء إلى الحذف المؤقت للعناصر المحددة. يمكن استعادتها من قبل المسؤول.",
+    "status": "الحالة",
+    "assign": "تعيين",
+    "unassign": "إلغاء التعيين",
+    "selected": "محدد",
     "search": "بحث...",
     "loading": "جاري التحميل...",
     "error": "حدث خطأ",
@@ -21,7 +29,6 @@
     "yes": "نعم",
     "no": "لا",
     "actions": "إجراءات",
-    "status": "الحالة",
     "created_at": "تاريخ الإنشاء",
     "updated_at": "تاريخ التحديث",
     "view_details": "عرض التفاصيل",
@@ -30,10 +37,14 @@
     "filter": "تصفية",
     "clear_filters": "مسح التصفيات",
     "apply": "تطبيق",
+    "all": "الكل",
+    "no_records_found": "لم يتم العثور على سجلات",
     "confirm_delete": "هل أنت متأكد؟ لا يمكن التراجع عن هذا.",
     "true": "صح",
     "false": "خطأ",
-    "no_title": "بدون مسمى"
+    "no_title": "بدون عنوان",
+    "please_login": "يرجى تسجيل الدخول لعرض هذه الصفحة",
+    "view_profile": "عرض الملف الشخصي"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -192,6 +203,8 @@
     "keep_editing": "متابعة التحرير"
   },
   "action": {
+    "next": "التالي",
+    "back": "رجوع",
     "try_again": "حاول مرة أخرى",
     "cancel": "إلغاء",
     "close": "إغلاق",

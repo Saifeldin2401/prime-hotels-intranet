@@ -52,6 +52,7 @@ import { useProperties } from '@/hooks/useProperties'
 interface ArticleFormData {
     title: string
     description: string
+    summary: string              // TL;DR summary for quick reading
     content: string
     file_url: string
     content_type: string
@@ -75,6 +76,7 @@ export default function KnowledgeEditor() {
     const [formData, setFormData] = useState<ArticleFormData>({
         title: '',
         description: '',
+        summary: '',
         content: '',
         file_url: '',
         content_type: 'document',
@@ -149,6 +151,7 @@ export default function KnowledgeEditor() {
                         setFormData({
                             title: data.title || '',
                             description: data.description || '',
+                            summary: data.summary || '',
                             content: data.content || '',
                             file_url: data.file_url || '',
                             content_type: data.content_type || 'document',
@@ -267,6 +270,7 @@ export default function KnowledgeEditor() {
             const articleData = {
                 title: formData.title,
                 description: formData.description || null,
+                summary: formData.summary || null,
                 content: formData.content || null,
                 file_url: formData.file_url || null,
                 content_type: formData.content_type,
@@ -355,6 +359,20 @@ export default function KnowledgeEditor() {
                             <div>
                                 <Label>{t('editor.description_label')}</Label>
                                 <Textarea value={formData.description} onChange={e => updateField('description', e.target.value)} placeholder={t('editor.description_placeholder')} className="mt-1" rows={2} />
+                            </div>
+                            <div>
+                                <Label>{t('editor.summary_label')}</Label>
+                                <Textarea
+                                    value={formData.summary}
+                                    onChange={e => updateField('summary', e.target.value)}
+                                    placeholder={t('editor.summary_placeholder')}
+                                    className="mt-1"
+                                    rows={2}
+                                    maxLength={300}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {t('editor.summary_hint')} ({formData.summary.length}/300)
+                                </p>
                             </div>
                             <div>
                                 <Label>{t('editor.url_label')}</Label>

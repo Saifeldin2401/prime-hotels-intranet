@@ -320,10 +320,10 @@ export default function PromotionTransferHistory() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             type="text"
-                            placeholder={t('common:search', { defaultValue: 'Search employee...' })}
+                            placeholder={t('common:common.search')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9"
+                            className={isRTL ? "pr-9" : "pl-9"}
                         />
                     </div>
                 </div>
@@ -351,7 +351,7 @@ export default function PromotionTransferHistory() {
                                                         {record.employee?.full_name}
                                                     </h3>
                                                     <Badge variant="outline" className="uppercase text-xs">
-                                                        {record.type}
+                                                        {t(`history.${record.type === 'promotion' ? 'promotions' : 'transfers'}`)}
                                                     </Badge>
                                                     <Badge className={
                                                         record.status === 'completed' || record.status === 'approved' ? 'bg-green-100 text-green-800' :
@@ -359,7 +359,7 @@ export default function PromotionTransferHistory() {
                                                                 record.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                                                     'bg-gray-100 text-gray-800'
                                                     }>
-                                                        {record.status === 'pending' ? t('status.pending_approval') : t(`status.${record.status}`, { defaultValue: record.status })}
+                                                        {record.status === 'pending' ? t('status.pending_approval') : t(`status.${record.status}`)}
                                                     </Badge>
                                                 </div>
 
@@ -392,7 +392,7 @@ export default function PromotionTransferHistory() {
                                                 {record.type === 'promotion' ? (
                                                     <>
                                                         <div className="flex items-center gap-2 text-sm">
-                                                            <span className="text-gray-600">Job Title:</span>
+                                                            <span className="text-gray-600">{t('history.job_title')}:</span>
                                                             <span className="text-gray-500">
                                                                 {record.old_job_title || 'N/A'}
                                                             </span>
@@ -403,20 +403,20 @@ export default function PromotionTransferHistory() {
                                                         </div>
                                                         {(record.old_role && record.new_role) && (
                                                             <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                                <span>Role:</span>
+                                                                <span>{t('history.role')}:</span>
                                                                 <span>
-                                                                    {ROLES[record.old_role as AppRole]?.label || record.old_role}
+                                                                    {t(`roles.${record.old_role}`) || record.old_role}
                                                                 </span>
                                                                 <ArrowRightLeft className="h-2.5 w-2.5" />
                                                                 <span>
-                                                                    {ROLES[record.new_role as AppRole]?.label || record.new_role}
+                                                                    {t(`roles.${record.new_role}`) || record.new_role}
                                                                 </span>
                                                             </div>
                                                         )}
                                                     </>
                                                 ) : (
                                                     <div className="flex items-center gap-2 text-sm">
-                                                        <span className="text-gray-600">Property:</span>
+                                                        <span className="text-gray-600">{t('history.property')}:</span>
                                                         <span className="text-gray-500">
                                                             {record.from_property?.name || 'N/A'}
                                                         </span>
@@ -430,12 +430,12 @@ export default function PromotionTransferHistory() {
                                                 <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
                                                     <span className="flex items-center gap-1">
                                                         <Calendar className="h-4 w-4" />
-                                                        Effective: {new Date(record.effective_date).toLocaleDateString(i18n.language)}
+                                                        {t('history.effective')}: {new Date(record.effective_date).toLocaleDateString(i18n.language)}
                                                     </span>
                                                     {record.type === 'promotion' && record.promoter && (
                                                         <span className="flex items-center gap-1">
                                                             <User className="h-4 w-4" />
-                                                            By: {record.promoter.full_name}
+                                                            {t('history.by')}: {record.promoter.full_name}
                                                         </span>
                                                     )}
                                                 </div>
@@ -456,9 +456,9 @@ export default function PromotionTransferHistory() {
                     <div className="prime-card">
                         <div className="prime-card-body text-center py-12">
                             <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('history.no_records', { defaultValue: 'No records found' })}</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('history.no_records')}</h3>
                             <p className="text-gray-600 mb-4">
-                                {searchTerm ? t('history.no_search_results', { defaultValue: 'No results found for your search' }) : t('history.empty_list_desc', { defaultValue: 'No promotions or transfers found.' })}
+                                {searchTerm ? t('history.no_search_results') : t('history.empty_list_desc')}
                             </p>
                             {canInitiate && user && isGlobalAdmin && (
                                 <p className="text-xs text-muted-foreground mt-2">

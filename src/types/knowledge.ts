@@ -44,6 +44,8 @@ export interface KnowledgeArticle {
     title_ar?: string
     description?: string
     description_ar?: string
+    summary?: string             // TL;DR summary for quick reading
+    summary_ar?: string          // Arabic TL;DR summary
     content?: string
     content_type: KnowledgeContentType
     status: KnowledgeStatus

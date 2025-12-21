@@ -17,19 +17,19 @@ import { cn } from '@/lib/utils'
 import { ar, enUS } from 'date-fns/locale'
 
 const statusConfig: Record<RequestStatus, { label: string; color: string; icon: React.ReactNode }> = {
-  draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800', icon: <FileText className="w-4 h-4" /> },
-  pending_supervisor_approval: { label: 'Pending Supervisor', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-4 h-4" /> },
-  pending_hr_review: { label: 'Pending HR', color: 'bg-blue-100 text-blue-800', icon: <Clock className="w-4 h-4" /> },
-  approved: { label: 'Approved', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
-  rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4" /> },
-  returned_for_correction: { label: 'Returned', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4" /> },
-  closed: { label: 'Closed', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4" /> },
+  draft: { label: 'status.draft', color: 'bg-gray-100 text-gray-800', icon: <FileText className="w-4 h-4" /> },
+  pending_supervisor_approval: { label: 'status.pending_supervisor', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-4 h-4" /> },
+  pending_hr_review: { label: 'status.pending_hr', color: 'bg-blue-100 text-blue-800', icon: <Clock className="w-4 h-4" /> },
+  approved: { label: 'status.approved', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
+  rejected: { label: 'status.rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4" /> },
+  returned_for_correction: { label: 'status.returned', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4" /> },
+  closed: { label: 'status.closed', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4" /> },
 }
 
 const entityConfig: Record<string, { label: string; icon: React.ReactNode }> = {
-  leave_request: { label: 'Leave Request', icon: <CalendarIcon className="w-4 h-4" /> },
-  document: { label: 'Document', icon: <FileText className="w-4 h-4" /> },
-  transfer: { label: 'Transfer', icon: <User className="w-4 h-4" /> },
+  leave_request: { label: 'leave_request', icon: <CalendarIcon className="w-4 h-4" /> },
+  document: { label: 'document', icon: <FileText className="w-4 h-4" /> },
+  transfer: { label: 'transfer', icon: <User className="w-4 h-4" /> },
 }
 
 export default function RequestsInbox() {
@@ -82,7 +82,7 @@ export default function RequestsInbox() {
     return (
       <Badge className={cn(config.color, "rounded-md")}>
         {config.icon}
-        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{config.label}</span>
+        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{t(config.label)}</span>
       </Badge>
     )
   }
@@ -92,7 +92,7 @@ export default function RequestsInbox() {
     return (
       <Badge variant="outline" className="rounded-md">
         {config.icon}
-        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{config.label}</span>
+        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{t(config.label)}</span>
       </Badge>
     )
   }
@@ -102,8 +102,8 @@ export default function RequestsInbox() {
       <div className="container mx-auto py-6">
         <div className="text-center py-12 border rounded-lg bg-red-50">
           <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-red-800">Error loading requests</h3>
-          <p className="text-red-600">Please try again later</p>
+          <h3 className="text-lg font-medium text-red-800">{t('error_loading')}</h3>
+          <p className="text-red-600">{t('error_loading_desc')}</p>
         </div>
       </div>
     )
@@ -114,8 +114,8 @@ export default function RequestsInbox() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Requests Inbox</h1>
-          <p className="text-gray-600">View and manage all requests across the organization</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-gray-600">{t('description')}</p>
         </div>
       </div>
 
@@ -126,7 +126,7 @@ export default function RequestsInbox() {
             <div className="flex items-center space-x-2">
               <Search className="w-4 h-4 text-gray-500" />
               <Input
-                placeholder="Search by request number or employee name..."
+                placeholder={t('search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-64"
@@ -138,7 +138,7 @@ export default function RequestsInbox() {
               className="flex items-center gap-2"
             >
               <Filter className="w-4 h-4" />
-              Filters
+              {t('filters')}
               {selectedStatuses.length > 0 || selectedEmployee || dateRange && (
                 <Badge variant="secondary" className="ml-1">
                   {selectedStatuses.length + (selectedEmployee ? 1 : 0) + (dateRange ? 1 : 0)}
@@ -147,7 +147,7 @@ export default function RequestsInbox() {
             </Button>
             {(selectedStatuses.length > 0 || selectedEmployee || dateRange) && (
               <Button variant="ghost" onClick={clearFilters}>
-                Clear all
+                {t('clear_all')}
               </Button>
             )}
           </div>
@@ -157,7 +157,7 @@ export default function RequestsInbox() {
           <CardContent className="space-y-4">
             {/* Status Filters */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">Status</Label>
+              <Label className="text-sm font-medium mb-2 block">{t('status_label')}</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {Object.entries(statusConfig).map(([status, config]) => (
                   <div key={status} className="flex items-center space-x-2">
@@ -167,7 +167,7 @@ export default function RequestsInbox() {
                       onCheckedChange={(checked) => handleStatusChange(status as RequestStatus, checked as boolean)}
                     />
                     <Label htmlFor={status} className="text-sm cursor-pointer">
-                      {config.label}
+                      {t(config.label)}
                     </Label>
                   </div>
                 ))}
@@ -177,12 +177,12 @@ export default function RequestsInbox() {
             {/* Date Range */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium mb-2 block">Start Date</Label>
+                <Label className="text-sm font-medium mb-2 block">{t('start_date')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.start ? format(new Date(dateRange.start), 'PPP', { locale }) : 'Pick a date'}
+                      {dateRange?.start ? format(new Date(dateRange.start), 'PPP', { locale }) : t('pick_date')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -196,12 +196,12 @@ export default function RequestsInbox() {
                 </Popover>
               </div>
               <div>
-                <Label className="text-sm font-medium mb-2 block">End Date</Label>
+                <Label className="text-sm font-medium mb-2 block">{t('end_date')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.end ? format(new Date(dateRange.end), 'PPP', { locale }) : 'Pick a date'}
+                      {dateRange?.end ? format(new Date(dateRange.end), 'PPP', { locale }) : t('pick_date')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -222,7 +222,7 @@ export default function RequestsInbox() {
       {/* Results */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">
-          {requests.length} request{requests.length !== 1 ? 's' : ''} found
+          {requests.length === 1 ? t('one_request_found') : t('requests_found', { count: requests.length })}
         </h2>
       </div>
 
@@ -233,8 +233,8 @@ export default function RequestsInbox() {
       ) : requests.length === 0 ? (
         <div className="text-center py-12 border rounded-lg bg-muted/20">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium">No requests found</h3>
-          <p className="text-gray-600">Try adjusting your filters or search terms</p>
+          <h3 className="text-lg font-medium">{t('no_requests')}</h3>
+          <p className="text-gray-600">{t('no_requests_desc')}</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -244,32 +244,32 @@ export default function RequestsInbox() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium text-gray-500">Request #{request.request_no}</span>
+                      <span className="text-sm font-medium text-gray-500">{t('request_no', { no: request.request_no })}</span>
                       {getEntityBadge(request.entity_type)}
                       {getStatusBadge(request.status)}
                     </div>
-                    
+
                     <h3 className="text-lg font-medium mb-1">
                       {request.requester?.full_name || 'Unknown Employee'}
                     </h3>
-                    
+
                     <div className="text-sm text-gray-600 space-y-1">
-                      <div>Submitted: {format(new Date(request.created_at), 'MMM d, yyyy')}</div>
+                      <div>{t('submitted', { date: format(new Date(request.created_at), 'MMM d, yyyy') })}</div>
                       {request.current_assignee && (
                         <div>
-                          Current assignee: {request.current_assignee.full_name}
+                          {t('current_assignee', { name: request.current_assignee.full_name })}
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => navigate(`/hr/request/${request.id}`)}
                     >
-                      View Details
+                      {t('view_details')}
                     </Button>
                   </div>
                 </div>

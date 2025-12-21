@@ -45,8 +45,10 @@ import {
     useRequiredReading,
     useCategories,
     useContentTypeCounts,
-    useDepartmentContentCounts
+    useDepartmentContentCounts,
+    useArticles
 } from '@/hooks/useKnowledge'
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
 import { CONTENT_TYPE_CONFIG, type KnowledgeContentType } from '@/types/knowledge'
 
 const CONTENT_TYPE_ICONS: Record<KnowledgeContentType, any> = {
@@ -70,6 +72,16 @@ export default function KnowledgeHome() {
     const { data: featured, isLoading: featuredLoading } = useFeaturedArticles(6)
     const { data: recent, isLoading: recentLoading } = useRecentArticles(8)
     const { data: required, isLoading: requiredLoading } = useRequiredReading()
+    const { documents: recentlyViewed, isLoading: recentlyViewedLoading } = useRecentlyViewed(5)
+
+    // Department Quick Access
+    const { departments } = useAuth()
+    const primaryDept = departments?.[0]
+    const { data: deptArticles, isLoading: deptLoading } = useArticles({
+        departmentId: primaryDept?.id,
+        limit: 6
+    })
+
     const { data: categories } = useCategories()
     const { data: typeCounts } = useContentTypeCounts()
     const { data: deptCounts } = useDepartmentContentCounts()
@@ -186,6 +198,77 @@ export default function KnowledgeHome() {
                     </Card>
                 )}
 
+                {/* Your Recently Viewed */}
+                {recentlyViewed.length > 0 && (
+                    <section>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Clock className="h-5 w-5 text-blue-600" />
+                            <h2 className="text-xl font-bold">{t('your_recently_viewed')}</h2>
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto pb-2">
+                            {recentlyViewed.map(article => {
+                                const Icon = CONTENT_TYPE_ICONS[article.content_type as KnowledgeContentType] || FileText
+                                return (
+                                    <Link
+                                        key={article.id}
+                                        to={`/knowledge/${article.id}`}
+                                        className="flex-shrink-0 w-64 p-4 rounded-lg border bg-white hover:shadow-md transition-shadow"
+                                    >
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Icon className="h-4 w-4 text-gray-500" />
+                                            <span className="text-xs text-gray-500 uppercase">
+                                                {t(`content_types.${article.content_type}`, article.content_type).toString()}
+                                            </span>
+                                        </div>
+                                        <h4 className="font-medium line-clamp-2">{article.title}</h4>
+                                    </Link>
+                                )
+                            })}
+                        </div>
+                    </section>
+                )}
+
+                {/* Department Quick Access */}
+                {primaryDept && deptArticles && deptArticles.length > 0 && (
+                    <section>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <ClipboardList className="h-5 w-5 text-hotel-navy" />
+                                <h2 className="text-xl font-bold">{t('quick_access_dept', { dept: primaryDept.name }).toString()}</h2>
+                            </div>
+                            <Link
+                                to={`/knowledge/browse?department=${primaryDept.id}`}
+                                className="text-sm text-hotel-navy hover:underline flex items-center gap-1"
+                            >
+                                {t('view_all')} <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {deptArticles.map(article => {
+                                const Icon = CONTENT_TYPE_ICONS[article.content_type as KnowledgeContentType] || FileText
+                                return (
+                                    <Link key={article.id} to={`/knowledge/${article.id}`}>
+                                        <Card className="h-full hover:shadow-md transition-shadow border-hotel-navy/10">
+                                            <CardContent className="p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Icon className="h-4 w-4 text-hotel-navy" />
+                                                    <span className="text-xs font-medium text-hotel-navy/70 uppercase">
+                                                        {t(`content_types.${article.content_type}`, article.content_type)}
+                                                    </span>
+                                                </div>
+                                                <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">{article.title}</h4>
+                                                {article.description && (
+                                                    <p className="text-sm text-gray-500 line-clamp-2">{article.description}</p>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                )
+                            })}
+                        </div>
+                    </section>
+                )}
+
                 {/* Featured Articles */}
                 <section>
                     <div className="flex items-center justify-between mb-4">
@@ -221,7 +304,7 @@ export default function KnowledgeHome() {
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <Icon className="h-4 w-4 text-hotel-gold" />
                                                     <span className="text-xs uppercase text-gray-500 font-medium">
-                                                        {t(`content_types.${article.content_type}`, article.content_type)}
+                                                        {t(`content_types.${article.content_type}`, article.content_type).toString()}
                                                     </span>
                                                     {article.department?.name && (
                                                         <Badge variant="outline" className="text-xs">

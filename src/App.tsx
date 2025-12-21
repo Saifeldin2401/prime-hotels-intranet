@@ -41,6 +41,8 @@ import TrainingAssignmentRules from '@/pages/training/TrainingAssignmentRules'
 import TrainingCertificates from '@/pages/training/TrainingCertificates'
 import TrainingPaths from '@/pages/training/TrainingPaths'
 import AnnouncementFeed from '@/pages/announcements/AnnouncementFeed'
+import AnnouncementDetail from '@/pages/announcements/AnnouncementDetail'
+import AnnouncementAnalytics from '@/pages/announcements/AnnouncementAnalytics'
 import OnboardingDashboard from '@/pages/onboarding/OnboardingDashboard'
 import OnboardingTracker from '@/pages/onboarding/OnboardingTracker'
 import OnboardingTemplates from '@/pages/onboarding/OnboardingTemplates'
@@ -973,6 +975,32 @@ function AppRoutes() {
               </MotionWrapper>
             </AppLayout>
           </ProtectedRoute >
+        }
+      />
+
+      <Route
+        path="/announcements/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <MotionWrapper>
+                <AnnouncementDetail />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/announcements/:id/analytics"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+            <AppLayout>
+              <MotionWrapper>
+                <AnnouncementAnalytics />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
         }
       />
 

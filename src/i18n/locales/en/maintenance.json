@@ -112,5 +112,31 @@
     "no_comments": "No Comments",
     "add_comment_placeholder": "Add a comment...",
     "processing": "Processing...",
-    "schedules": "Schedules"
+    "schedules": "Schedules",
+    "preventive": {
+        "title": "Preventive Maintenance",
+        "description": "Manage recurring maintenance schedules and specific automated workflows",
+        "new_schedule": "New Schedule",
+        "create_title": "Create Maintenance Schedule",
+        "title_label": "Title",
+        "description_label": "Description",
+        "frequency": "Frequency",
+        "priority": "Priority",
+        "next_run": "Next Run Date",
+        "creating": "Creating...",
+        "create_button": "Create Schedule",
+        "active": "Active",
+        "paused": "Paused",
+        "pause": "Pause",
+        "resume": "Resume",
+        "no_schedules": "No maintenance schedules found.",
+        "create_first": "Create your first schedule",
+        "frequencies": {
+            "daily": "Daily",
+            "weekly": "Weekly",
+            "monthly": "Monthly",
+            "quarterly": "Quarterly",
+            "yearly": "Yearly"
+        }
+    }
 }

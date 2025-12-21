@@ -5,7 +5,7 @@ import { TaskKanban } from '@/components/tasks/TaskKanban'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskForm } from '@/components/tasks/TaskForm'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,7 +47,7 @@ export default function TasksDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('tasks')}</h1>
           <p className="text-gray-600">
-            Manage and track your tasks and projects.
+            {t('page_description')}
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
@@ -59,11 +59,11 @@ export default function TasksDashboard() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <StatCard label="Total" value={stats.total_tasks} />
-          <StatCard label="To Do" value={stats.todo_tasks} />
-          <StatCard label="In Progress" value={stats.in_progress_tasks} />
-          <StatCard label="Review" value={stats.review_tasks} />
-          <StatCard label="Completed" value={stats.completed_tasks} />
+          <StatCard label={t('stats.total')} value={stats.total_tasks} />
+          <StatCard label={t('stats.todo')} value={stats.todo_tasks} />
+          <StatCard label={t('stats.in_progress')} value={stats.in_progress_tasks} />
+          <StatCard label={t('stats.review')} value={stats.review_tasks} />
+          <StatCard label={t('stats.completed')} value={stats.completed_tasks} />
         </div>
       )}
 
@@ -76,7 +76,7 @@ export default function TasksDashboard() {
         <Tabs value={view} onValueChange={(v) => setView(v as any)} className="w-[200px]">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="kanban"><LayoutGrid className="w-4 h-4 mr-2" />{t('board')}</TabsTrigger>
-            <TabsTrigger value="list"><ListIcon className="w-4 h-4 mr-2" />List</TabsTrigger>
+            <TabsTrigger value="list"><ListIcon className="w-4 h-4 mr-2" />{t('list')}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -88,7 +88,7 @@ export default function TasksDashboard() {
           <div className="space-y-2">
             {tasks.length === 0 ? (
               <div className="text-center py-12 border rounded-lg bg-muted/20">
-                <p className="text-gray-600">No tasks found matching your filters.</p>
+                <p className="text-gray-600">{t('no_tasks_found')}</p>
               </div>
             ) : (
               <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
@@ -106,6 +106,9 @@ export default function TasksDashboard() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t('create_new_task')}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Form to create a new task.
+            </DialogDescription>
           </DialogHeader>
           <TaskForm
             onSuccess={() => setShowCreateDialog(false)}

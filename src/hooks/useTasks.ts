@@ -47,10 +47,10 @@ export function useTasks(filters?: {
         query = query.eq('created_by_id', filters.createdBy)
       }
 
-      // Auto-filter by current property unless explicitly disabled or overridden
+      // Auto-filter by current property unless explicitly disabled, overridden, or set to 'all' (global view)
       if (!filters?.ignorePropertyFilter) {
         const propertyIdToUse = filters?.propertyId || currentProperty?.id
-        if (propertyIdToUse) {
+        if (propertyIdToUse && propertyIdToUse !== 'all') {
           query = query.eq('property_id', propertyIdToUse)
         }
       }
@@ -87,10 +87,6 @@ export function useTask(taskId: string) {
           comments:task_comments(
             *,
             author:profiles(id, full_name, avatar_url)
-          ),
-          attachments:task_attachments(
-            *,
-            uploaded_by:profiles(id, full_name, avatar_url)
           )
         `)
         .eq('id', taskId)
@@ -122,6 +118,7 @@ export function useTaskStats(userId?: string) {
 export function useCreateTask() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useMutation({
     mutationFn: async (task: Partial<Task>) => {
@@ -130,7 +127,8 @@ export function useCreateTask() {
       const taskData = {
         ...task,
         created_by_id: user.id,
-        status: task.status || 'open',
+        property_id: task.property_id || currentProperty?.id,
+        status: task.status || 'todo',
         priority: task.priority || 'medium'
       }
 

@@ -56,6 +56,7 @@ import {
 import { STATUS_CONFIG } from '@/types/knowledge'
 import { RelatedArticles } from '@/components/knowledge'
 import { useRelatedArticles } from '@/hooks/useKnowledge'
+import { useTrackView } from '@/hooks/useRecentlyViewed'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
@@ -88,6 +89,9 @@ export default function KnowledgeViewer() {
     const { data: comments } = useComments(id)
     const { data: bookmarks } = useBookmarks()
     const { data: relatedArticles } = useRelatedArticles(id)
+
+    // Track view for "Recently Viewed" feature
+    useTrackView(id)
 
     const createComment = useCreateComment()
     const toggleBookmark = useToggleBookmark()
@@ -440,6 +444,17 @@ export default function KnowledgeViewer() {
                                     <span>{t('viewer.updated_at', { date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '' })}</span>
                                 </div>
                             </div>
+
+                            {/* TL;DR Summary Box */}
+                            {(article as any).summary && (
+                                <div className="mt-6 p-4 bg-hotel-navy/5 border-l-4 border-hotel-gold rounded-r-lg">
+                                    <p className="text-sm font-semibold text-hotel-navy mb-1 flex items-center gap-2">
+                                        <Lightbulb className="h-4 w-4 text-hotel-gold" />
+                                        {t('viewer.tldr')}
+                                    </p>
+                                    <p className="text-gray-700">{(article as any).summary}</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Content */}

@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogContent,
@@ -95,7 +96,8 @@ export function PromoteEmployeeDialog({
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user } = useAuth()
+    const { t } = useTranslation('hr');
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -224,7 +226,7 @@ export function PromoteEmployeeDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                {children || <Button>Promote Employee</Button>}
+                {children || <Button>{t('promotion.title')}</Button>}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>

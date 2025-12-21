@@ -7,11 +7,44 @@
         "no_tasks": "No tasks"
     },
     "create_task": "Create Task",
+    "pending_parts": "بانتظار قطع غيار",
     "filter_tasks": "Filter Tasks",
     "my_tasks": "My Tasks",
     "tasks": "Tasks",
+    "description_placeholder": "No description",
     "board": "Board",
+    "list": "List",
+    "page_description": "Manage and track your tasks and projects.",
+    "search_placeholder": "Search tasks...",
+    "no_tasks_found": "No tasks found matching your filters.",
+    "stats": {
+        "total": "Total",
+        "todo": "To Do",
+        "in_progress": "In Progress",
+        "review": "Review",
+        "completed": "Completed"
+    },
+    "priorities": {
+        "all": "All Priorities",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+    },
+    "statuses": {
+        "all": "All Statuses"
+    },
     "create_new_task": "Create New Task",
     "task_not_found": "Task not found",
-    "back_to_tasks": "Back to Tasks"
+    "back_to_tasks": "Back to Tasks",
+    "save_task": "Save Task",
+    "title": "Title",
+    "description": "Description",
+    "department": "Department",
+    "all_departments": "All Departments",
+    "select_department": "Select department (optional)",
+    "status": "Status",
+    "priority": "Priority",
+    "due_date": "Due Date",
+    "est_hours": "Est. Hours"
 }

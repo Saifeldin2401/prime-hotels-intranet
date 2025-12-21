@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,6 +17,7 @@ import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 
 export default function AnnouncementFeed() {
   const { user, profile, primaryRole, roles, properties, departments } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { t, i18n } = useTranslation('announcements')
   const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -182,7 +184,8 @@ export default function AnnouncementFeed() {
                       return (
                         <div
                           key={announcement.id}
-                          className={`p-4 border rounded-lg hover:bg-accent ${priorityColor}`}
+                          className={`p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors ${priorityColor}`}
+                          onClick={() => navigate(`/announcements/${announcement.id}`)}
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">

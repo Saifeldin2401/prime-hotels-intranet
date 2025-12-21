@@ -258,5 +258,20 @@
             "value": "Value",
             "period": "Period"
         }
+    },
+    "my_team": {
+        "title": "My Team",
+        "description": "View and manage your direct reports",
+        "direct_reports": "Direct Reports",
+        "active": "Active",
+        "pending_requests": "Pending Requests",
+        "training_avg": "Avg Training",
+        "search_team": "Search team members...",
+        "no_reports": "No direct reports",
+        "no_results": "No team members found",
+        "no_reports_desc": "You don't have any employees reporting to you yet.",
+        "try_different_search": "Try a different search term",
+        "pending": "pending",
+        "training": "training"
     }
 }

@@ -62,7 +62,7 @@ export interface UserDepartment {
 }
 
 // Task Management Interfaces
-export type TaskStatus = EntityStatus
+export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'completed' | 'cancelled'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 
 export interface Task {

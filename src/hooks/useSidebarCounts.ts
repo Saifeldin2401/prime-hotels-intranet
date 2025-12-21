@@ -83,13 +83,13 @@ export function useSidebarCounts() {
                     queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
                 }
             )
-            // Listen for leave request changes (approvals)
+            // Listen for request changes (approvals)
             .on(
                 'postgres_changes',
                 {
                     event: '*',
                     schema: 'public',
-                    table: 'leave_requests',
+                    table: 'requests',
                 },
                 () => {
                     queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
@@ -124,15 +124,14 @@ export function useSidebarCounts() {
             const propertyIds = properties?.map(p => p.id) || []
             const departmentIds = departments?.map(d => d.id) || []
 
-            // Build approval query based on role (leave_requests table)
+            // Build approval query based on role (unified requests table)
             let approvalsQuery = supabase
-                .from('leave_requests')
+                .from('requests')
                 .select('id', { count: 'exact', head: true })
                 .eq('status', 'pending')
 
             if (isRegionalAccess) {
                 // Regional admin/hr sees ALL pending approvals
-                // Optionally filter by selected property if not "all"
                 if (currentProperty && currentProperty.id !== 'all') {
                     approvalsQuery = approvalsQuery.eq('property_id', currentProperty.id)
                 }
@@ -143,19 +142,18 @@ export function useSidebarCounts() {
                 } else if (propertyIds.length > 0) {
                     approvalsQuery = approvalsQuery.in('property_id', propertyIds)
                 } else {
-                    // No properties assigned, see only direct assignments
-                    approvalsQuery = approvalsQuery.eq('requester_id', user.id)
+                    approvalsQuery = approvalsQuery.eq('current_assignee_id', user.id)
                 }
             } else if (isDepartmentHead) {
                 // Department head sees approvals for their departments
                 if (departmentIds.length > 0) {
                     approvalsQuery = approvalsQuery.in('department_id', departmentIds)
                 } else {
-                    approvalsQuery = approvalsQuery.eq('requester_id', user.id)
+                    approvalsQuery = approvalsQuery.eq('current_assignee_id', user.id)
                 }
             } else {
-                // Regular staff: only see their own requests
-                approvalsQuery = approvalsQuery.eq('requester_id', user.id)
+                // Regular staff: only see requests assigned to them or their own
+                approvalsQuery = approvalsQuery.or(`requester_id.eq.${user.id},current_assignee_id.eq.${user.id}`)
             }
 
             // Build tasks query based on role

@@ -140,6 +140,142 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         console.error('Supabase error creating announcement:', error)
         throw error
       }
+
+      // Send notifications to target audience
+      const audience = data.target_audience
+      const announcementTitle = data.title || 'New Announcement'
+      const targetUserIds: string[] = []
+
+      // Determine target users based on audience type
+      if (!audience || audience.type === 'all') {
+        // For 'all' users - fetch all active users
+        const { data: allUsers } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('is_active', true)
+
+        if (allUsers) {
+          targetUserIds.push(...allUsers.map(u => u.id))
+        }
+      } else {
+        const values = audience.values || []
+
+        switch (audience.type) {
+          case 'role':
+            for (const role of values) {
+              const { data: roleUsers } = await supabase
+                .from('user_roles')
+                .select('user_id')
+                .eq('role', role)
+              if (roleUsers) {
+                targetUserIds.push(...roleUsers.map(u => u.user_id))
+              }
+            }
+            break
+
+          case 'department':
+            for (const deptId of values) {
+              const { data: deptUsers } = await supabase
+                .from('user_departments')
+                .select('user_id')
+                .eq('department_id', deptId)
+              if (deptUsers) {
+                targetUserIds.push(...deptUsers.map(u => u.user_id))
+              }
+            }
+            break
+
+          case 'property':
+            for (const propId of values) {
+              const { data: propUsers } = await supabase
+                .from('user_properties')
+                .select('user_id')
+                .eq('property_id', propId)
+              if (propUsers) {
+                targetUserIds.push(...propUsers.map(u => u.user_id))
+              }
+            }
+            break
+
+          case 'individual':
+            targetUserIds.push(...values)
+            break
+        }
+      }
+
+      // Remove duplicates and exclude the creator
+      const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user?.id)
+      console.log(`Sending notifications to ${uniqueUserIds.length} users`)
+
+      // Create notifications for target users
+      if (uniqueUserIds.length > 0) {
+        if (uniqueUserIds.length > 10) {
+          // Use bulk notification system for > 10 users
+          console.log('Using bulk notification system for large audience')
+          try {
+            const { data: session } = await supabase.auth.getSession()
+            const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`
+
+            const response = await fetch(EDGE_FUNCTION_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.session?.access_token}`
+              },
+              body: JSON.stringify({
+                action: 'create_batch',
+                userIds: uniqueUserIds,
+                notificationType: 'announcement_new',
+                notificationData: {
+                  title: announcementTitle,
+                  message: `A new announcement has been posted: "${announcementTitle}"`,
+                  link: `/announcements/${result.id}`,
+                  announcement_id: result.id,
+                  creator_id: user?.id
+                }
+              })
+            })
+
+            if (!response.ok) {
+              console.error('Bulk notification batch creation failed')
+              // Fallback: try direct insert anyway for critical notifications
+              const notifications = uniqueUserIds.slice(0, 50).map(userId => ({
+                user_id: userId,
+                type: 'announcement_new',
+                title: announcementTitle,
+                message: `A new announcement has been posted: "${announcementTitle}"`,
+                link: `/announcements/${result.id}`,
+                data: { announcement_id: result.id, creator_id: user?.id }
+              }))
+              await supabase.from('notifications').insert(notifications)
+            } else {
+              const batchResult = await response.json()
+              console.log('Bulk notification batch created:', batchResult)
+            }
+          } catch (bulkError) {
+            console.error('Bulk notification error:', bulkError)
+          }
+        } else {
+          // Direct insert for <= 10 users
+          const notifications = uniqueUserIds.map(userId => ({
+            user_id: userId,
+            type: 'announcement_new',
+            title: announcementTitle,
+            message: `A new announcement has been posted: "${announcementTitle}"`,
+            link: `/announcements/${result.id}`,
+            data: { announcement_id: result.id, creator_id: user?.id }
+          }))
+
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .insert(notifications)
+
+          if (notifError) {
+            console.error('Failed to create notifications:', notifError)
+          }
+        }
+      }
+
       return result
     },
     onSuccess: (data) => {

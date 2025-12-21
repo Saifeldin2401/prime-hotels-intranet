@@ -4,6 +4,7 @@
     "documents_tab": "Documents",
     "leaves_tab": "Leave Requests",
     "maintenance_tab": "Maintenance",
+    "unified_tab": "Unified Requests",
     "completed_tab": "History",
     "all_caught_up_documents": "All caught up!",
     "all_caught_up_documents_desc": "No pending document approvals.",
@@ -53,5 +54,11 @@
         "assign_error": "Failed to assign ticket."
     },
     "unknown_user": "Unknown User",
-    "no_reason": "No reason provided"
+    "no_reason": "No reason provided",
+    "all_caught_up": "All caught up",
+    "no_pending_requests": "No pending requests to review",
+    "request_no_label": "Request #{{no}}",
+    "assigned_to": "Assigned to: {{name}}",
+    "unassigned": "Unassigned",
+    "view_details": "View Details"
 }

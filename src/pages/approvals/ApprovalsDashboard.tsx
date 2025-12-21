@@ -179,7 +179,7 @@ export default function ApprovalsDashboard() {
 
             <Tabs defaultValue="unified" className="w-full">
                 <TabsList>
-                    <TabsTrigger value="unified">Unified Requests ({pendingRequests.length})</TabsTrigger>
+                    <TabsTrigger value="unified">{t('unified_tab')} ({pendingRequests.length})</TabsTrigger>
                     <TabsTrigger value="documents">{t('documents_tab')} ({pendingApprovals.length})</TabsTrigger>
                     <TabsTrigger value="leaves">{t('leaves_tab')} ({pendingLeaves.length})</TabsTrigger>
                 </TabsList>
@@ -188,8 +188,8 @@ export default function ApprovalsDashboard() {
                     {pendingRequests.length === 0 ? (
                         <div className="text-center py-12 border rounded-lg bg-muted/20">
                             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium">All caught up</h3>
-                            <p className="text-gray-600">No pending requests to review</p>
+                            <h3 className="text-lg font-medium">{t('all_caught_up')}</h3>
+                            <p className="text-gray-600">{t('no_pending_requests')}</p>
                         </div>
                     ) : (
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -209,7 +209,7 @@ export default function ApprovalsDashboard() {
                                             {request.requester?.full_name || 'Unknown Employee'}
                                         </CardTitle>
                                         <CardDescription className="line-clamp-2">
-                                            Request #{request.request_no} • {request.current_assignee?.full_name ? `Assigned to: ${request.current_assignee.full_name}` : 'Unassigned'}
+                                            {t('request_no_label', { no: request.request_no })} • {request.current_assignee?.full_name ? t('assigned_to', { name: request.current_assignee.full_name }) : t('unassigned')}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
@@ -219,7 +219,7 @@ export default function ApprovalsDashboard() {
                                                 size="sm"
                                                 onClick={() => navigate(`/hr/request/${request.id}`)}
                                             >
-                                                View Details
+                                                {t('view_details')}
                                             </Button>
                                         </div>
                                     </CardContent>

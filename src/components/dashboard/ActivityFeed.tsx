@@ -126,7 +126,7 @@ async function fetchFeedItems({ user, roles, departments, properties }: FetchFee
                 title: a.title,
                 content: a.content?.substring(0, 150),
                 author: a.author ? { id: a.author.id, name: a.author.full_name, avatar: a.author.avatar_url } : undefined,
-                link: `/announcements`,
+                link: `/announcements/${a.id}`,
                 timestamp: new Date(a.created_at)
             })))
         }
@@ -141,7 +141,7 @@ async function fetchFeedItems({ user, roles, departments, properties }: FetchFee
             .limit(10)
 
         if (kbUpdates) {
-            items.push(...kbUpdates.map(k => ({
+            items.push(...kbUpdates.map((k: any) => ({
                 id: `kb-${k.id}`,
                 type: 'kb_update' as FeedItemType,
                 title: `Article updated: ${k.title}`,

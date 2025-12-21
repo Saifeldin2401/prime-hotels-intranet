@@ -10,8 +10,40 @@
     "filter_tasks": "تصفية المهام",
     "my_tasks": "مهامي",
     "tasks": "المهام",
+    "description_placeholder": "لا يوجد وصف",
     "board": "لوحة",
+    "list": "قائمة",
+    "page_description": "إدارة وتتبع مهامك ومشروعاتك.",
+    "search_placeholder": "البحث في المهام...",
+    "no_tasks_found": "لم يتم العثور على مهام تطابق مرشحاتك.",
+    "stats": {
+        "total": "الإجمالي",
+        "todo": "للعمل",
+        "in_progress": "قيد التنفيذ",
+        "review": "مراجعة",
+        "completed": "مكتمل"
+    },
+    "priorities": {
+        "all": "جميع الأولويات",
+        "low": "منخفضة",
+        "medium": "متوسطة",
+        "high": "عالية",
+        "urgent": "عاجلة"
+    },
+    "statuses": {
+        "all": "جميع الحالات"
+    },
     "create_new_task": "إنشاء مهمة جديدة",
     "task_not_found": "المهمة غير موجودة",
-    "back_to_tasks": "العودة إلى المهام"
+    "back_to_tasks": "العودة إلى المهام",
+    "save_task": "حفظ المهمة",
+    "title": "العنوان",
+    "description": "الوصف",
+    "department": "القسم",
+    "all_departments": "جميع الأقسام",
+    "select_department": "اختر القسم (اختياري)",
+    "status": "الحالة",
+    "priority": "الأولوية",
+    "due_date": "تاريخ الاستحقاق",
+    "est_hours": "الساعات المتوقعة"
 }

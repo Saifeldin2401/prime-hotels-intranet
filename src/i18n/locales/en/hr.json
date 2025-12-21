@@ -129,7 +129,7 @@
         "title": "Promotion & Transfer History",
         "promote_button": "Promote",
         "transfer_button": "Transfer",
-        "confirm_cancel": "Yes, Cancel",
+        "confirm_cancel": "Confirm Cancel",
         "keep_request": "Keep Request",
         "cancel_request_title": "Cancel Request?",
         "cancel_action": "Cancel Request",
@@ -150,7 +150,13 @@
         "no_promotions": "No promotions found",
         "no_transfers": "No transfers found",
         "create_first_promo": "Create your first promotion to get started",
-        "create_first_transfer": "Create your first transfer to get started"
+        "create_first_transfer": "Create your first transfer to get started",
+        "no_records": "No records found",
+        "no_search_results": "No results found for your search",
+        "empty_list_desc": "No promotions or transfers found.",
+        "by": "By",
+        "job_title": "Job Title",
+        "no_reason_history": "No reason provided"
     },
     "promotion": {
         "title": "Promote Employee",

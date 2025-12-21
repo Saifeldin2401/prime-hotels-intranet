@@ -24,6 +24,37 @@
     },
     "actions": {
         "markRead": "تحديد كمقروء",
-        "edit": "تعديل"
+        "edit": "تعديل",
+        "back": "رجوع",
+        "acknowledge": "تأكيد الاستلام",
+        "comment": "تعليق"
+    },
+    "detail": {
+        "not_found": "الإعلان غير موجود",
+        "not_found_message": "قد يكون هذا الإعلان قد تم حذفه أو ليس لديك صلاحية الوصول إليه.",
+        "attachments": "المرفقات",
+        "acknowledgment_required": "يتطلب تأكيد الاستلام",
+        "acknowledgment_prompt": "يرجى تأكيد أنك قرأت هذا الإعلان.",
+        "acknowledged": "تم التأكيد",
+        "acknowledge_button": "أنا أقر",
+        "acknowledgments": "التأكيدات",
+        "acknowledgments_count": "{{count}} شخص أكد الاستلام",
+        "comments": "التعليقات",
+        "no_comments": "لا توجد تعليقات بعد. كن أول من يعلق!",
+        "add_comment": "أضف تعليقاً...",
+        "post_comment": "نشر"
+    },
+    "status": {
+        "read": "مقروء",
+        "pinned": "مثبت"
+    },
+    "notifications": {
+        "viewed_title": "تم عرض الإعلان",
+        "viewed_message": "لقد شاهدت: {{title}}"
+    },
+    "toast": {
+        "marked_read": "تم تحديده كمقروء!",
+        "acknowledged": "تم تأكيد الإعلان!",
+        "comment_added": "تمت إضافة التعليق!"
     }
 }

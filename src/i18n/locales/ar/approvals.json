@@ -4,6 +4,7 @@
     "documents_tab": "المستندات",
     "leaves_tab": "طلبات الإجازة",
     "maintenance_tab": "الصيانة",
+    "unified_tab": "الطلبات الموحدة",
     "completed_tab": "السجل",
     "all_caught_up_documents": "انتهيت من كل شيء!",
     "all_caught_up_documents_desc": "لا توجد موافقات مستندات معلقة.",
@@ -53,5 +54,11 @@
         "assign_error": "فشل في تعيين التذكرة."
     },
     "unknown_user": "مستخدم غير معروف",
-    "no_reason": "لم يتم تقديم سبب"
+    "no_reason": "لم يتم تقديم سبب",
+    "all_caught_up": "انتهيت من كل شيء",
+    "no_pending_requests": "لا توجد طلبات معلقة للمراجعة",
+    "request_no_label": "طلب رقم {{no}}",
+    "assigned_to": "مفوض إلى: {{name}}",
+    "unassigned": "غير مفوض",
+    "view_details": "عرض التفاصيل"
 }

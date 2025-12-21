@@ -139,7 +139,7 @@
         "due_date": "مستحق: {{date}}",
         "no_tasks": "لا توجد مهام معينة",
         "weeks_schedule": "جدول هذا الأسبوع",
-        "today": "اليوم",
+        "today": "Today",
         "tomorrow": "غداً",
         "no_schedule": "لا يوجد جدول متاح"
     },
@@ -261,5 +261,20 @@
             "value": "القيمة",
             "period": "الفترة"
         }
+    },
+    "my_team": {
+        "title": "فريقي",
+        "description": "عرض وإدارة مرؤوسيك المباشرين",
+        "direct_reports": "مرؤوسون مباشرون",
+        "active": "نشط",
+        "pending_requests": "طلبات معلقة",
+        "training_avg": "متوسط التدريب",
+        "search_team": "بحث في أعضاء الفريق...",
+        "no_reports": "لا يوجد مرؤوسون مباشرون",
+        "no_results": "لم يتم العثور على أعضاء في الفريق",
+        "no_reports_desc": "ليس لديك أي موظفين يتبعونك حتى الآن.",
+        "try_different_search": "حاول استخدام مصطلح بحث مختلف",
+        "pending": "معلق",
+        "training": "تدريب"
     }
 }

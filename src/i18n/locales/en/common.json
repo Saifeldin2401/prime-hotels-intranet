@@ -13,6 +13,14 @@
     "back": "Back",
     "next": "Next",
     "previous": "Previous",
+    "approveAll": "Approve All",
+    "deleteItems": "Delete {{count}} items",
+    "deleteItems_label": "Delete {{count}} {{entityLabel}}(s)?",
+    "deleteConfirmationDescription": "This action will soft-delete the selected items. They can be recovered by an administrator.",
+    "status": "Status",
+    "assign": "Assign",
+    "unassign": "Unassign",
+    "selected": "selected",
     "search": "Search...",
     "loading": "Loading...",
     "error": "An error occurred",
@@ -21,7 +29,6 @@
     "yes": "Yes",
     "no": "No",
     "actions": "Actions",
-    "status": "Status",
     "created_at": "Created At",
     "updated_at": "Updated At",
     "view_details": "View Details",
@@ -30,9 +37,13 @@
     "filter": "Filter",
     "clear_filters": "Clear Filters",
     "apply": "Apply",
+    "all": "All",
+    "no_records_found": "No records found",
     "true": "True",
     "false": "False",
-    "no_title": "No title"
+    "no_title": "No title",
+    "please_login": "Please log in to view this page",
+    "view_profile": "View Profile"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -191,6 +202,8 @@
     "keep_editing": "Keep Editing"
   },
   "action": {
+    "next": "Next",
+    "back": "Back",
     "try_again": "Try Again",
     "cancel": "Cancel",
     "close": "Close",

@@ -1,0 +1,33 @@
+{
+    "title": "صندوق الطلبات",
+    "description": "عرض وإدارة جميع الطلبات عبر المؤسسة",
+    "search_placeholder": "البحث برقم الطلب أو اسم الموظف...",
+    "filters": "الفلاتر",
+    "clear_all": "مسح الكل",
+    "status_label": "الحالة",
+    "start_date": "تاريخ البدء",
+    "end_date": "تاريخ الانتهاء",
+    "pick_date": "اختر تاريخاً",
+    "requests_found": "تم العثور على {{count}} طلبات",
+    "one_request_found": "تم العثور على طلب واحد",
+    "no_requests": "لم يتم العثور على طلبات",
+    "no_requests_desc": "حاول تعديل الفلاتر أو شروط البحث",
+    "request_no": "طلب رقم {{no}}",
+    "submitted": "تم التقديم: {{date}}",
+    "current_assignee": "المسؤول الحالي: {{name}}",
+    "view_details": "عرض التفاصيل",
+    "error_loading": "خطأ في تحميل الطلبات",
+    "error_loading_desc": "يرجى المحاولة مرة أخرى لاحقاً",
+    "status": {
+        "draft": "مسودة",
+        "pending_supervisor": "في انتظار المدير المباشر",
+        "pending_hr": "في انتظار الموارد البشرية",
+        "approved": "تمت الموافقة",
+        "rejected": "مرفوض",
+        "returned": "معاد للتصحيح",
+        "closed": "مغلق"
+    },
+    "leave_request": "طلب إجازة",
+    "document": "مستند",
+    "transfer": "نقل موظف"
+}

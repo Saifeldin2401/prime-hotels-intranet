@@ -4,6 +4,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { DURATION, EASING } from '@/lib/motion'
 import {
   LayoutDashboard,
@@ -56,41 +57,42 @@ function HRBadge({ path }: { path: string }) {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['all'] },
-  { name: 'My Team', href: '/dashboard/my-team', icon: Users, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
-  { name: 'Documents', href: '/documents', icon: FileText, roles: ['all'] },
-  { name: 'Maintenance', href: '/maintenance', icon: Wrench, roles: ['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin'] },
-  { name: 'Tasks', href: '/tasks', icon: CheckSquare, roles: ['all'] },
-  { name: 'Messages', href: '/messaging', icon: MessageSquare, roles: ['all'] },
-  { name: 'Directory', href: '/directory', icon: Contact, roles: ['all'] },
-  { name: 'Recruitment', href: '/jobs', icon: Briefcase, roles: ['all'] },
-  { name: 'Approvals', href: '/approvals', icon: CheckCircle, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
-  { name: 'Training', href: '/training', icon: GraduationCap, roles: ['all'] },
-  { name: 'Announcements', href: '/announcements', icon: Megaphone, roles: ['all'] },
-  { name: 'Users', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  { name: 'Automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
+  { name: 'dashboard', href: '/', icon: LayoutDashboard, roles: ['all'] },
+  { name: 'my_team', href: '/dashboard/my-team', icon: Users, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
+  { name: 'documents', href: '/documents', icon: FileText, roles: ['all'] },
+  { name: 'maintenance', href: '/maintenance', icon: Wrench, roles: ['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin'] },
+  { name: 'my_tasks', href: '/tasks', icon: CheckSquare, roles: ['all'] },
+  { name: 'messaging', href: '/messaging', icon: MessageSquare, roles: ['all'] },
+  { name: 'directory', href: '/directory', icon: Contact, roles: ['all'] },
+  { name: 'jobs', href: '/jobs', icon: Briefcase, roles: ['all'] },
+  { name: 'approvals', href: '/approvals', icon: CheckCircle, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
+  { name: 'training', href: '/training', icon: GraduationCap, roles: ['all'] },
+  { name: 'announcements', href: '/announcements', icon: Megaphone, roles: ['all'] },
+  { name: 'user_management', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
+  { name: 'reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
+  { name: 'automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
 ]
 
 const hrMenu = [
-  { name: 'Attendance', href: '/hr/attendance', icon: Clock, roles: ['all'] },
-  { name: 'Performance', href: '/hr/performance', icon: Star, roles: ['all'] },
-  { name: 'Career Goals', href: '/hr/goals', icon: Target, roles: ['all'] },
-  { name: 'Payroll', href: '/hr/payslips', icon: Wallet, roles: ['all'] },
+  { name: 'attendance', href: '/hr/attendance', icon: Clock, roles: ['all'] },
+  { name: 'performance', href: '/hr/performance', icon: Star, roles: ['all'] },
+  { name: 'goals', href: '/hr/goals', icon: Target, roles: ['all'] },
+  { name: 'payslips', href: '/hr/payslips', icon: Wallet, roles: ['all'] },
 ]
 
 const trainingMenu = [
-  { name: 'Training Dashboard', href: '/training/dashboard', icon: LayoutDashboard, roles: ['all'] },
-  { name: 'My Learning', href: '/learning/my', icon: Target, roles: ['all'] },
-  { name: 'Training Modules', href: '/training/modules', icon: BookOpen, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  { name: 'Training Builder', href: '/training/builder', icon: Building, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  { name: 'Training Assignments', href: '/training/assignments', icon: Target, roles: ['regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
-  { name: 'Training Paths', href: '/training/paths', icon: BookOpen, roles: ['all'] },
-  { name: 'Training Certificates', href: '/training/certificates', icon: Award, roles: ['all'] },
+  { name: 'training_dashboard', href: '/training/dashboard', icon: LayoutDashboard, roles: ['all'] },
+  { name: 'my_training', href: '/learning/my', icon: Target, roles: ['all'] },
+  { name: 'training_modules', href: '/training/modules', icon: BookOpen, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
+  { name: 'training_builder', href: '/training/builder', icon: Building, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
+  { name: 'training_assignments', href: '/training/assignments', icon: Target, roles: ['regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
+  { name: 'training_paths', href: '/training/paths', icon: BookOpen, roles: ['all'] },
+  { name: 'my_certificates', href: '/training/certificates', icon: Award, roles: ['all'] },
 ]
 
 export function Sidebar() {
   const location = useLocation()
+  const { t } = useTranslation('nav')
   const { primaryRole, signOut } = useAuth()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const [isTrainingMenuOpen, setIsTrainingMenuOpen] = useState(false)
@@ -98,14 +100,14 @@ export function Sidebar() {
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
 
   const adminMenu = [
-    { name: 'Users', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
-    { name: 'Org Structure', href: '/admin/organization', icon: Target, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
-    { name: 'Properties', href: '/admin/properties', icon: Building, roles: ['regional_admin'] },
-    { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-    { name: 'Automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
-    { name: 'Escalation', href: '/admin/escalation', icon: Bell, roles: ['regional_admin'] },
-    { name: 'Audit Logs', href: '/admin/audit', icon: ClipboardList, roles: ['regional_admin'] },
-    { name: 'PII Access', href: '/admin/pii-audit', icon: ShieldAlert, roles: ['regional_admin', 'regional_hr'] },
+    { name: 'user_management', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
+    { name: 'org_structure', href: '/admin/organization', icon: Target, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
+    { name: 'property_management', href: '/admin/properties', icon: Building, roles: ['regional_admin'] },
+    { name: 'reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
+    { name: 'automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
+    { name: 'escalation_rules', href: '/admin/escalation', icon: Bell, roles: ['regional_admin'] },
+    { name: 'audit_logs', href: '/admin/audit', icon: ClipboardList, roles: ['regional_admin'] },
+    { name: 'pii_access_logs', href: '/admin/pii-audit', icon: ShieldAlert, roles: ['regional_admin', 'regional_hr'] },
   ]
 
   console.log('Current User Roles:', primaryRole)
@@ -204,7 +206,7 @@ export function Sidebar() {
               >
                 <Icon className="w-4 h-4" />
               </motion.div>
-              {item.name}
+              {t(item.name)}
             </Link>
           )
         })}
@@ -222,7 +224,7 @@ export function Sidebar() {
               )}
             >
               <GraduationCap className="w-4 h-4" />
-              Training
+              {t('training')}
             </Link>
             <button
               onClick={() => setIsTrainingMenuOpen(!isTrainingMenuOpen)}
@@ -234,7 +236,7 @@ export function Sidebar() {
               )}
             >
               <ChevronRight className={cn("w-4 h-4 transition-transform duration-200", isTrainingMenuOpen && "rotate-90")} />
-              <span className="flex-1 text-start">Training Options</span>
+              <span className="flex-1 text-start">{t('groups.learning')}</span>
             </button>
 
             <AnimatePresence>
@@ -268,7 +270,7 @@ export function Sidebar() {
                           >
                             <Icon className="w-4 h-4" />
                           </motion.div>
-                          {item.name}
+                          {t(item.name)}
                         </Link>
                       )
                     })}
@@ -292,7 +294,7 @@ export function Sidebar() {
               )}
             >
               <Settings className="w-4 h-4" />
-              <span className="flex-1 text-start">Administration</span>
+              <span className="flex-1 text-start">{t('groups.admin')}</span>
               <ChevronRight className={cn("w-4 h-4 transition-transform duration-200", isAdminMenuOpen && "rotate-90")} />
             </button>
 
@@ -327,7 +329,7 @@ export function Sidebar() {
                           >
                             <Icon className="w-4 h-4" />
                           </motion.div>
-                          {item.name}
+                          {t(item.name)}
                         </Link>
                       )
                     })}
@@ -350,7 +352,7 @@ export function Sidebar() {
             )}
           >
             <Users className="w-4 h-4" />
-            <span className="flex-1 text-start">My HR</span>
+            <span className="flex-1 text-start">{t('groups.my_hr')}</span>
             <ChevronRight className={cn("w-4 h-4 transition-transform duration-200", isHRMenuOpen && "rotate-90")} />
           </button>
 
@@ -389,7 +391,7 @@ export function Sidebar() {
                         >
                           <Icon className="w-4 h-4" />
                         </motion.div>
-                        <span className="flex-1">{item.name}</span>
+                        <span className="flex-1">{t(item.name)}</span>
                         <HRBadge path={item.href} />
                       </Link>
                     )
@@ -413,7 +415,7 @@ export function Sidebar() {
               )}
             >
               <Settings className="w-4 h-4" />
-              <span className="flex-1 text-start">Administration</span>
+              <span className="flex-1 text-start">{t('groups.admin')}</span>
               <ChevronRight className={cn("w-4 h-4 transition-transform duration-200", isAdminMenuOpen && "rotate-90")} />
             </button>
 
@@ -448,7 +450,7 @@ export function Sidebar() {
                           >
                             <Icon className="w-4 h-4" />
                           </motion.div>
-                          {item.name}
+                          {t(item.name)}
                         </Link>
                       )
                     })}
@@ -472,11 +474,10 @@ export function Sidebar() {
           >
             <LogOut className="w-4 h-4 me-3" />
           </motion.div>
-          Sign Out
+          {t('logout')}
         </Button>
       </div>
     </div>
   )
 }
-
 

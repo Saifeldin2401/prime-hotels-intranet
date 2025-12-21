@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, X, Trash2, UserPlus, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -52,6 +53,7 @@ export function BulkActionsBar({
     const [isLoading, setIsLoading] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [result, setResult] = useState<BulkOperationResult | null>(null)
+    const { t } = useTranslation()
 
     if (selectedCount === 0) return null
 
@@ -115,7 +117,7 @@ export function BulkActionsBar({
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-md">
                         <Check className="h-4 w-4 text-primary" />
                         <span className="text-sm font-medium">
-                            {selectedCount} selected
+                            {selectedCount} {t('common:common.selected')}
                         </span>
                     </div>
 
@@ -124,7 +126,7 @@ export function BulkActionsBar({
                         <Select onValueChange={handleStatusChange} disabled={isLoading}>
                             <SelectTrigger className="w-[140px]">
                                 <Clock className="h-4 w-4 mr-2" />
-                                <SelectValue placeholder="Status" />
+                                <SelectValue placeholder={t('common:common.status')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {statusOptions.map(opt => (
@@ -141,10 +143,10 @@ export function BulkActionsBar({
                         <Select onValueChange={handleAssign} disabled={isLoading}>
                             <SelectTrigger className="w-[140px]">
                                 <UserPlus className="h-4 w-4 mr-2" />
-                                <SelectValue placeholder="Assign" />
+                                <SelectValue placeholder={t('common:common.assign')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="unassign">Unassign</SelectItem>
+                                <SelectItem value="unassign">{t('common:common.unassign')}</SelectItem>
                                 {assignees.map(user => (
                                     <SelectItem key={user.id} value={user.id}>
                                         {user.name}
@@ -157,28 +159,28 @@ export function BulkActionsBar({
                     {/* Approve (for leave requests) */}
                     {onBulkApprove && (
                         <Button
-                            variant="default"
+                            variant="outline"
                             size="sm"
                             onClick={handleApprove}
                             disabled={isLoading}
-                            className="gap-2 bg-green-600 hover:bg-green-700"
+                            className="h-8"
                         >
-                            <CheckCircle className="h-4 w-4" />
-                            Approve All
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            {t('common:common.approveAll')}
                         </Button>
                     )}
 
                     {/* Delete */}
                     {onBulkDelete && (
                         <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
                             onClick={() => setShowDeleteConfirm(true)}
                             disabled={isLoading}
-                            className="gap-2"
+                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                            <Trash2 className="h-4 w-4" />
-                            Delete
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {t('common:common.delete')}
                         </Button>
                     )}
 
@@ -200,19 +202,19 @@ export function BulkActionsBar({
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-destructive" />
-                            Delete {selectedCount} {entityLabel}(s)?
+                            {t('common:common.deleteItems_label', { count: selectedCount, entityLabel: entityLabel })}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action will soft-delete the selected items. They can be recovered by an administrator.
+                            {t('common:common.deleteConfirmationDescription')}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            Delete {selectedCount} items
+                            {t('common:common.deleteItems', { count: selectedCount })}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
