@@ -255,6 +255,13 @@
         "current_property": "Current Property",
         "requires_ack": "Requires Acknowledgment"
     },
+    "viewer": {
+        "discussion": "Discussion",
+        "leave_comment": "Leave a comment...",
+        "post": "Post Comment",
+        "no_comments": "No comments yet. Be the first to start the discussion!",
+        "on_this_page": "On This Page"
+    },
     "browse": {
         "title": "Browse Knowledge Base",
         "subtitle": "Explore content by type",
