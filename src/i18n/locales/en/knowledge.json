@@ -288,5 +288,45 @@
         "results_count": "{{count}} articles found",
         "no_results": "No articles found",
         "no_results_hint": "Try adjusting your search or filters"
+    },
+    "review_queue": {
+        "title": "Content Review Queue",
+        "description": "Review and approve knowledge base content",
+        "stats": {
+            "drafts": "Drafts",
+            "published": "Published"
+        },
+        "filters": {
+            "drafts": "Drafts",
+            "published": "Published",
+            "all": "All Status",
+            "status_placeholder": "Filter by status"
+        },
+        "empty_state": {
+            "title": "No articles to review",
+            "description": "There are no articles matching your current filter"
+        },
+        "messages": {
+            "approved": "Article approved and published!",
+            "rejected": "Article rejected",
+            "changes_requested": "Changes requested",
+            "failed": "Review action failed:",
+            "no_desc": "No description available",
+            "unknown_author": "Unknown author"
+        },
+        "dialog": {
+            "title": "Review Article",
+            "description": "Review and take action on \"{{title}}\"",
+            "view": "View",
+            "view_full": "View Full Article",
+            "comment_label": "Review Comment",
+            "comment_placeholder": "Add optional feedback for the author...",
+            "publish": "Approve & Publish",
+            "unpublish": "Unpublish"
+        }
+    },
+    "status": {
+        "published": "Published",
+        "draft": "Draft"
     }
 }
