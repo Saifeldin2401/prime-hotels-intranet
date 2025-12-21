@@ -56,5 +56,27 @@
         "marked_read": "تم تحديده كمقروء!",
         "acknowledged": "تم تأكيد الإعلان!",
         "comment_added": "تمت إضافة التعليق!"
+    },
+    "editor": {
+        "uploaded": "تم رفع {{count}} ملف(ات)",
+        "upload_failed": "فشل رفع الملفات"
+    },
+    "analytics": {
+        "title": "التحليلات",
+        "description": "تتبع من قرأ وأكد استلام هذا الإعلان",
+        "back_to_announcement": "العودة للإعلان",
+        "target_audience": "الجمهور المستهدف",
+        "read": "قرأ",
+        "acknowledged": "أكد الاستلام",
+        "not_read": "لم يقرأ",
+        "detailed_report": "تقرير مفصل",
+        "search_users": "البحث عن المستخدمين...",
+        "read_only": "قرأ فقط",
+        "no_users": "لا يوجد مستخدمون في هذه الفئة",
+        "not_viewed": "لم يتم عرضه",
+        "users_acknowledged": "المستخدمون الذين أكدوا استلام هذا الإعلان",
+        "users_read_not_ack": "المستخدمون الذين قرأوا لكن لم يؤكدوا الاستلام",
+        "users_not_read": "المستخدمون الذين لم يقرأوا هذا الإعلان",
+        "view_analytics": "عرض التحليلات"
     }
 }

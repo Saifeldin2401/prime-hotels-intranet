@@ -56,5 +56,27 @@
         "marked_read": "Marked as read!",
         "acknowledged": "Announcement acknowledged!",
         "comment_added": "Comment added!"
+    },
+    "editor": {
+        "uploaded": "Uploaded {{count}} file(s)",
+        "upload_failed": "Failed to upload files"
+    },
+    "analytics": {
+        "title": "Analytics",
+        "description": "Track who has read and acknowledged this announcement",
+        "back_to_announcement": "Back to Announcement",
+        "target_audience": "Target Audience",
+        "read": "Read",
+        "acknowledged": "Acknowledged",
+        "not_read": "Not Read",
+        "detailed_report": "Detailed Report",
+        "search_users": "Search users...",
+        "read_only": "Read Only",
+        "no_users": "No users in this category",
+        "not_viewed": "Not viewed",
+        "users_acknowledged": "Users who acknowledged this announcement",
+        "users_read_not_ack": "Users who read but haven't acknowledged",
+        "users_not_read": "Users who haven't read this announcement",
+        "view_analytics": "View Analytics"
     }
 }
