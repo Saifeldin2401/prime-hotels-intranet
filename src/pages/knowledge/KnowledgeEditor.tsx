@@ -18,7 +18,8 @@ import {
     Wand2,
     RefreshCw,
     Link as LinkIcon,
-    Languages
+    Languages,
+    Clock
 } from 'lucide-react'
 import { marked } from 'marked'
 import { Input } from '@/components/ui/input'
@@ -102,6 +103,73 @@ export default function KnowledgeEditor() {
     const { departments } = useDepartments(currentProperty?.id)
     const { data: categories } = useCategories(formData.department_id || undefined)
     const { data: properties } = useProperties()
+
+    // Helper function to notify reviewers when a document is submitted for review
+    const notifyReviewersOfSubmission = async (documentId: string, documentTitle: string) => {
+        try {
+            // Get reviewers with reviewer roles from user_roles table
+            const reviewerRoles = ['property_manager', 'regional_admin', 'regional_hr']
+
+            // Query user_roles to find users with reviewer roles, then get their profile info
+            const { data: reviewerRolesData, error: rolesError } = await supabase
+                .from('user_roles')
+                .select('user_id, profiles!inner(id, full_name, is_active)')
+                .in('role', reviewerRoles)
+
+            if (rolesError) {
+                console.error('Error fetching reviewer roles:', rolesError)
+                return
+            }
+
+            if (!reviewerRolesData || reviewerRolesData.length === 0) {
+                console.log('No reviewers found to notify')
+                return
+            }
+
+            // Filter active users and exclude the author, get unique user IDs
+            const uniqueReviewerIds = new Set<string>()
+            const reviewers: { id: string; full_name: string }[] = []
+
+            for (const item of reviewerRolesData) {
+                const profile = (item as any).profiles
+                if (profile?.is_active && profile.id !== user?.id && !uniqueReviewerIds.has(profile.id)) {
+                    uniqueReviewerIds.add(profile.id)
+                    reviewers.push({ id: profile.id, full_name: profile.full_name })
+                }
+            }
+
+            if (reviewers.length === 0) {
+                console.log('No active reviewers found to notify')
+                return
+            }
+
+            // Create notifications for all reviewers
+            const notifications = reviewers.map(reviewer => ({
+                user_id: reviewer.id,
+                type: 'document_review_pending',
+                title: '📋 New Document for Review',
+                message: `"${documentTitle}" has been submitted for review by ${profile?.full_name || 'a team member'}.`,
+                link: `/knowledge/review`,
+                data: {
+                    document_id: documentId,
+                    submitted_by: user?.id,
+                    submitted_by_name: profile?.full_name
+                }
+            }))
+
+            const { error: notifError } = await supabase
+                .from('notifications')
+                .insert(notifications)
+
+            if (notifError) {
+                console.error('Error creating review notifications:', notifError)
+            } else {
+                console.log(`Notified ${reviewers.length} reviewers about document submission`)
+            }
+        } catch (error) {
+            console.error('Failed to notify reviewers:', error)
+        }
+    }
 
     const VISIBILITY_OPTIONS: { value: KnowledgeVisibility; label: string; description: string }[] = [
         {
@@ -248,7 +316,7 @@ export default function KnowledgeEditor() {
         }
     }
 
-    const saveArticle = async (status: 'DRAFT' | 'PUBLISHED') => {
+    const saveArticle = async (status: 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED') => {
         if (!formData.title.trim()) {
             toast.error(t('editor.alerts.title_required'))
             return
@@ -290,8 +358,16 @@ export default function KnowledgeEditor() {
                     .update(articleData)
                     .eq('id', id)
                 if (error) throw error
+
+                // Notify reviewers if submitting for review
+                if (status === 'PENDING_REVIEW') {
+                    await notifyReviewersOfSubmission(id, formData.title)
+                }
+
                 const typeLabel = t(`content_types.${formData.content_type}`, formData.content_type.toUpperCase())
-                toast.success(t('editor.alerts.update_success', { type: typeLabel }))
+                toast.success(status === 'PENDING_REVIEW'
+                    ? t('editor.alerts.submitted_for_review')
+                    : t('editor.alerts.update_success', { type: typeLabel }))
             } else {
                 const { data, error } = await supabase
                     .from('documents') // Correct table
@@ -299,8 +375,16 @@ export default function KnowledgeEditor() {
                     .select()
                     .single()
                 if (error) throw error
+
+                // Notify reviewers if submitting for review
+                if (status === 'PENDING_REVIEW') {
+                    await notifyReviewersOfSubmission(data.id, formData.title)
+                }
+
                 const typeLabel = t(`content_types.${formData.content_type}`, formData.content_type.toUpperCase())
-                toast.success(t('editor.alerts.save_success', { type: typeLabel }))
+                toast.success(status === 'PENDING_REVIEW'
+                    ? t('editor.alerts.submitted_for_review')
+                    : t('editor.alerts.save_success', { type: typeLabel }))
                 navigate(`/knowledge/${data.id}`)
             }
             queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
@@ -332,10 +416,26 @@ export default function KnowledgeEditor() {
                         {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4 mr-2" />}
                         {t('editor.draft')}
                     </Button>
-                    <Button onClick={() => saveArticle('PUBLISHED')} disabled={isSaving || isUploading} className="bg-hotel-gold text-hotel-navy">
-                        {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4 mr-2" />}
-                        {t('editor.publish')}
-                    </Button>
+                    {/* Role-based: department_head and property_hr need review, others can publish directly */}
+                    {['department_head', 'property_hr'].includes(primaryRole || '') ? (
+                        <Button
+                            onClick={() => saveArticle('PENDING_REVIEW')}
+                            disabled={isSaving || isUploading}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                        >
+                            {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Clock className="h-4 w-4 mr-2" />}
+                            {t('editor.submit_for_review')}
+                        </Button>
+                    ) : (
+                        <Button
+                            onClick={() => saveArticle('PUBLISHED')}
+                            disabled={isSaving || isUploading}
+                            className="bg-hotel-gold text-hotel-navy"
+                        >
+                            {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4 mr-2" />}
+                            {t('editor.publish')}
+                        </Button>
+                    )}
                 </div>
             </div>
 

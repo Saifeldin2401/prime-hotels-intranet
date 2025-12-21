@@ -95,6 +95,7 @@
         "preview_doc": "Preview Document",
         "download_attachment": "Download / View Attachment",
         "no_content": "No content available.",
+        "tldr": "TL;DR Summary",
         "acknowledge_title": "Document Acknowledgment",
         "acknowledge_desc": "Confirm that you have read and understood this content.",
         "i_acknowledge": "I Acknowledge",
@@ -199,6 +200,7 @@
         "subtitle": "Create new knowledge base content",
         "draft": "Draft",
         "publish": "Publish",
+        "submit_for_review": "Submit for Review",
         "title_label": "Document Title",
         "title_placeholder": "Enter document title...",
         "type_label": "Document Type",
@@ -249,45 +251,12 @@
             "user_error": "User not defined",
             "save_success": "{{type}} created successfully",
             "update_success": "{{type}} updated successfully",
-            "save_error": "Failed to save: "
+            "save_error": "Failed to save: ",
+            "submitted_for_review": "Document submitted for review! Reviewers have been notified."
         },
         "target_property": "Target Property",
         "current_property": "Current Property",
         "requires_ack": "Requires Acknowledgment"
-    },
-    "viewer": {
-        "back": "Back",
-        "edit": "Edit",
-        "delete": "Delete",
-        "delete_title": "Delete Document?",
-        "delete_desc": "This will permanently delete \"{{title}}\". This action cannot be undone.",
-        "delete_confirm": "Delete",
-        "deleting": "Deleting...",
-        "cancel": "Cancel",
-        "delete_success": "Document deleted successfully",
-        "delete_error": "Failed to delete document",
-        "not_found_title": "Document Not Found",
-        "not_found_desc": "The document you are looking for does not exist or you do not have permission to view it.",
-        "back_to_home": "Back to Knowledge Base",
-        "updated_at": "Updated {{date}}",
-        "preview_doc": "Preview Document",
-        "download_attachment": "Download / View Attachment",
-        "no_content": "No content available.",
-        "tldr": "TL;DR Summary",
-        "acknowledge_title": "Acknowledge Document",
-        "acknowledge_desc": "Please confirm you have read and understood this content.",
-        "i_acknowledge": "I Acknowledge",
-        "discussion": "Discussion",
-        "leave_comment": "Leave a comment...",
-        "post": "Post Comment",
-        "no_comments": "No comments yet. Be the first to start the discussion!",
-        "on_this_page": "On This Page",
-        "tags": "Tags",
-        "linked_learning": "Linked Learning",
-        "training_hint": "Practice what you just read with a training module.",
-        "start_training": "Start Training",
-        "quiz_hint": "Test your knowledge with a certification quiz.",
-        "take_quiz": "Take Quiz"
     },
     "browse": {
         "title": "Browse Knowledge Base",
@@ -328,11 +297,22 @@
         "description": "Review and approve knowledge base content",
         "stats": {
             "drafts": "Drafts",
-            "published": "Published"
+            "pending_review": "Pending Review",
+            "published": "Published",
+            "rejected": "Rejected"
+        },
+        "status": {
+            "draft": "Draft",
+            "pending_review": "Pending Review",
+            "approved": "Approved",
+            "published": "Published",
+            "rejected": "Rejected"
         },
         "filters": {
             "drafts": "Drafts",
+            "pending_review": "Pending Review",
             "published": "Published",
+            "rejected": "Rejected",
             "all": "All Status",
             "status_placeholder": "Filter by status"
         },
@@ -356,11 +336,16 @@
             "comment_label": "Review Comment",
             "comment_placeholder": "Add optional feedback for the author...",
             "publish": "Approve & Publish",
+            "reject": "Reject",
+            "request_changes": "Request Changes",
             "unpublish": "Unpublish"
         }
     },
     "status": {
+        "draft": "Draft",
+        "pending_review": "Pending Review",
+        "approved": "Approved",
         "published": "Published",
-        "draft": "Draft"
+        "rejected": "Rejected"
     }
 }

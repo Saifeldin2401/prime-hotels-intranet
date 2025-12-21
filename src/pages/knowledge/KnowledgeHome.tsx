@@ -86,7 +86,7 @@ export default function KnowledgeHome() {
     const { data: typeCounts } = useContentTypeCounts()
     const { data: deptCounts } = useDepartmentContentCounts()
 
-    const canManage = ['regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(primaryRole || '')
+    const canManage = ['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head'].includes(primaryRole || '')
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()

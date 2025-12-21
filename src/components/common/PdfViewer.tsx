@@ -21,26 +21,60 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
     const [rotation, setRotation] = useState(0)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<Error | null>(null)
+    const [canvasKey, setCanvasKey] = useState(0)
 
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null)
     const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null)
+    const isRenderingRef = useRef<boolean>(false)
+    const pendingRenderRef = useRef<{ num: number; pdf: pdfjsLib.PDFDocumentProxy } | null>(null)
 
     const renderPage = useCallback(async (num: number, pdf: pdfjsLib.PDFDocumentProxy) => {
-        if (!canvasRef.current) return
+        // If already rendering, queue this request and exit
+        if (isRenderingRef.current) {
+            pendingRenderRef.current = { num, pdf }
+            return
+        }
 
-        // Cancel pending render
+        isRenderingRef.current = true
+
+        // Cancel any previous render task
         if (renderTaskRef.current) {
-            renderTaskRef.current.cancel()
+            try {
+                renderTaskRef.current.cancel()
+            } catch (error) {
+                // Ignore
+            }
+            renderTaskRef.current = null
+        }
+
+        // Increment canvas key to get fresh canvas
+        setCanvasKey(k => k + 1)
+
+        // Wait for React to process the key change
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        const canvas = canvasRef.current
+        if (!canvas) {
+            isRenderingRef.current = false
+            return
         }
 
         try {
             const page = await pdf.getPage(num)
+
+            if (!canvasRef.current) {
+                isRenderingRef.current = false
+                return
+            }
+
             const viewport = page.getViewport({ scale, rotation })
-            const canvas = canvasRef.current
             const context = canvas.getContext('2d')
 
-            if (!context) return
+            if (!context) {
+                isRenderingRef.current = false
+                return
+            }
 
             canvas.height = viewport.height
             canvas.width = viewport.width
@@ -50,14 +84,23 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                 viewport: viewport,
             }
 
-            // Cast to any to avoid type mismatch
             const renderTask = page.render(renderContext as any)
             renderTaskRef.current = renderTask
 
             await renderTask.promise
+            renderTaskRef.current = null
         } catch (err: any) {
-            if (err.name !== 'RenderingCancelledException') {
+            if (err?.name !== 'RenderingCancelledException') {
                 console.error('Error rendering page:', err)
+            }
+        } finally {
+            isRenderingRef.current = false
+
+            // Process any pending render request
+            if (pendingRenderRef.current) {
+                const pending = pendingRenderRef.current
+                pendingRenderRef.current = null
+                renderPage(pending.num, pending.pdf)
             }
         }
     }, [scale, rotation])
@@ -192,7 +235,7 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-400"></div>
                     </div>
                 )}
-                <canvas ref={canvasRef} className="shadow-lg max-w-full" />
+                <canvas key={canvasKey} ref={canvasRef} className="shadow-lg max-w-full" />
             </div>
         </div>
     )

@@ -291,14 +291,15 @@ export async function getComments(documentId: string): Promise<KnowledgeComment[
             upvotes,
             created_at,
             updated_at,
-            user:profiles!sop_comments_user_id_fkey(id, full_name, avatar_url)
+            created_at,
+            updated_at,
+            user:profiles(id, full_name, avatar_url)
         `)
         .eq('document_id', documentId)
         .order('created_at', { ascending: true })
 
     if (error) {
-        console.error('Error fetching comments:', error)
-        return []
+        throw error
     }
 
     return (data || []).map(comment => ({
@@ -319,30 +320,21 @@ export async function createComment(documentId: string, userId: string, content:
             is_pinned: false,
             upvotes: 0
         })
-        .select(`
-            id,
-            document_id,
-            user_id,
-            content,
-            parent_id,
-            is_question,
-            is_pinned,
-            upvotes,
-            created_at,
-            updated_at,
-            user:profiles!sop_comments_user_id_fkey(id, full_name, avatar_url)
-        `)
+        .select('id')
         .single()
 
     if (error) {
-        console.error('Error creating comment:', error)
-        return null
+        console.error('Create comment failed:', error)
+        throw error
     }
 
+    // Return minimal data, UI refetches anyway
     return {
-        ...data,
-        author: data.user as any
-    } as unknown as KnowledgeComment
+        id: data.id,
+        content,
+        created_at: new Date().toISOString(),
+        user_id: userId
+    } as any
 }
 export async function voteComment(commentId: string, userId: string, voteType: 'up' | 'down'): Promise<void> { }
 export async function getBookmarks(userId: string): Promise<KnowledgeBookmark[]> { return [] }

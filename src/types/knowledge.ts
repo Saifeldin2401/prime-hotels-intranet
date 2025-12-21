@@ -28,10 +28,11 @@ export type KnowledgeVisibility =
     | 'role'
 
 export type KnowledgeStatus =
-    | 'draft'
-    | 'under_review'
-    | 'approved'
-    | 'obsolete'
+    | 'DRAFT'
+    | 'PENDING_REVIEW'
+    | 'APPROVED'
+    | 'PUBLISHED'
+    | 'REJECTED'
 
 // ============================================================================
 // CORE TYPES
@@ -72,7 +73,8 @@ export interface KnowledgeArticle {
     view_count: number
     estimated_read_time?: number
 
-    // Timestamps
+    // Timestamps and authorship
+    created_by?: string
     created_at: string
     updated_at: string
     published_at?: string
@@ -164,6 +166,11 @@ export interface KnowledgeComment {
         full_name: string
         avatar_url?: string
         job_title?: string
+    }
+    author?: {
+        id: string
+        full_name: string
+        avatar_url?: string
     }
     replies?: KnowledgeComment[]
     user_vote?: 'up' | 'down' | null

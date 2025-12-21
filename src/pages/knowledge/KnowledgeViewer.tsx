@@ -523,7 +523,27 @@ export default function KnowledgeViewer() {
                                     </div>
                                     <Separator />
                                     {comments?.length === 0 && <p className="text-center text-gray-500">{t('viewer.no_comments')}</p>}
-                                    {/* Comments list would go here */}
+                                    <div className="space-y-4">
+                                        {comments?.map((comment) => (
+                                            <div key={comment.id} className="flex gap-3">
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src={comment.author?.avatar_url} />
+                                                    <AvatarFallback>{comment.author?.full_name?.charAt(0) || '?'}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 space-y-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm font-medium">{comment.author?.full_name || t('viewer.unknown_author')}</span>
+                                                        <span className="text-xs text-gray-500">
+                                                            {new Date(comment.created_at).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                                                        {comment.content}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </CardContent>
                             )}
                         </Card>

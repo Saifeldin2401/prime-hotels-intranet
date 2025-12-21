@@ -54,38 +54,32 @@ import type { KnowledgeArticle } from '@/types/knowledge'
 export default function KnowledgeReview() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const navigate = useNavigate()
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
     const queryClient = useQueryClient()
     const locale = i18n.language === 'ar' ? ar : enUS
 
     const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null)
     const [reviewComment, setReviewComment] = useState('')
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'changes' | null>(null)
-    const [statusFilter, setStatusFilter] = useState<string>('DRAFT')
+    const [statusFilter, setStatusFilter] = useState<string>('PENDING_REVIEW')
 
-    // Fetch articles pending review
-    // In new schema, we might assume DRAFT items are pending review?
-    // Or strictly rely on 'status' column.
-    // documents table has status: DRAFT, PUBLISHED.
-    // So 'under_review' is not a valid status in DB usually unless enum supports it.
-    // I will assume DRAFT is the "pending" state for now.
+    // Fetch articles for review - default to PENDING_REVIEW
     const { data: pendingArticles, isLoading } = useQuery({
         queryKey: ['knowledge-review-queue', statusFilter],
         queryFn: async () => {
             let query = supabase
-                .from('documents') // Updated table
+                .from('documents')
                 .select(`
                     *,
                     author:created_by(id, full_name)
                 `)
+                .eq('is_deleted', false)
                 .order('updated_at', { ascending: false })
 
             if (statusFilter !== 'all') {
-                // Strict enum matching - DB only accepts uppercase for enum types
-                const filterUpper = statusFilter.toUpperCase()
-                query = query.eq('status', filterUpper)
+                query = query.eq('status', statusFilter)
             } else {
-                query = query.in('status', ['DRAFT', 'PUBLISHED'])
+                query = query.in('status', ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'PUBLISHED', 'REJECTED'])
             }
 
             const { data, error } = await query.limit(50)
@@ -101,24 +95,73 @@ export default function KnowledgeReview() {
     // Review action mutation
     const reviewMutation = useMutation({
         mutationFn: async (action: 'approve' | 'reject' | 'changes') => {
-            if (!selectedArticle) return
+            if (!selectedArticle || !user) return
 
+            // Determine new status based on action
             let newStatus = 'DRAFT'
             if (action === 'approve') newStatus = 'PUBLISHED'
-            // reject/changes stays DRAFT
+            else if (action === 'reject') newStatus = 'REJECTED'
+            // 'changes' keeps as DRAFT
 
-            // Update article status
+            // Update document status
             const { error: updateError } = await supabase
                 .from('documents')
-                .update({
-                    status: newStatus,
-                })
+                .update({ status: newStatus })
                 .eq('id', selectedArticle.id)
 
             if (updateError) throw updateError
 
-            if (reviewComment.trim()) {
-                console.log('Review comment (not saved to DB):', reviewComment)
+            // Save review record to document_approvals
+            const approvalRecord: any = {
+                document_id: selectedArticle.id,
+                approver_id: user.id,
+                status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'changes_requested',
+                feedback: reviewComment.trim() || null,
+            }
+
+            if (action === 'approve') {
+                approvalRecord.approved_by = user.id
+                approvalRecord.approved_at = new Date().toISOString()
+            } else if (action === 'reject') {
+                approvalRecord.rejected_by = user.id
+                approvalRecord.rejected_at = new Date().toISOString()
+                approvalRecord.rejection_reason = reviewComment.trim() || null
+            }
+
+            const { error: approvalError } = await supabase
+                .from('document_approvals')
+                .insert(approvalRecord)
+
+            if (approvalError) {
+                console.error('Failed to save approval record:', approvalError)
+                // Non-blocking - status was already updated
+            }
+
+            // Notify the document author about the review outcome
+            if (selectedArticle.created_by && selectedArticle.created_by !== user.id) {
+                const actionConfig = {
+                    approve: { type: 'document_approved', emoji: '✅', text: 'approved and published', titleSuffix: 'Published' },
+                    reject: { type: 'document_rejected', emoji: '❌', text: 'rejected', titleSuffix: 'Rejected' },
+                    changes: { type: 'document_changes_requested', emoji: '📝', text: 'returned with requested changes', titleSuffix: 'Needs Changes' }
+                }
+                const config = actionConfig[action]
+
+                await supabase.from('notifications').insert({
+                    user_id: selectedArticle.created_by,
+                    type: config.type,
+                    title: `${config.emoji} Document ${config.titleSuffix}`,
+                    message: `Your document "${selectedArticle.title}" has been ${config.text}${reviewComment.trim() ? `. Feedback: "${reviewComment.trim()}"` : '.'}`,
+                    link: `/knowledge/${selectedArticle.id}`,
+                    data: {
+                        document_id: selectedArticle.id,
+                        action,
+                        reviewer_id: user.id,
+                        reviewer_name: profile?.full_name,
+                        feedback: reviewComment.trim() || null
+                    }
+                }).then(({ error }) => {
+                    if (error) console.error('Failed to notify author:', error)
+                })
             }
         },
         onSuccess: () => {
@@ -130,7 +173,6 @@ export default function KnowledgeReview() {
             toast.success(msgs[reviewAction || 'changes'])
 
             queryClient.invalidateQueries({ queryKey: ['knowledge-review-queue'] })
-            // Also invalidate main list
             queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
 
             setSelectedArticle(null)
@@ -151,18 +193,24 @@ export default function KnowledgeReview() {
         const s = status.toUpperCase()
         switch (s) {
             case 'DRAFT':
-                return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Edit3 className="h-3 w-3 mr-1" />{t('review_queue.stats.drafts')}</Badge>
+                return <Badge className="bg-gray-100 text-gray-700 border-gray-200"><Edit3 className="h-3 w-3 mr-1" />{t('review_queue.status.draft')}</Badge>
+            case 'PENDING_REVIEW':
+                return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Clock className="h-3 w-3 mr-1" />{t('review_queue.status.pending_review')}</Badge>
+            case 'APPROVED':
+                return <Badge className="bg-blue-100 text-blue-700 border-blue-200"><CheckCircle2 className="h-3 w-3 mr-1" />{t('review_queue.status.approved')}</Badge>
             case 'PUBLISHED':
-                return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />{t('review_queue.stats.published')}</Badge>
+                return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />{t('review_queue.status.published')}</Badge>
+            case 'REJECTED':
+                return <Badge className="bg-red-100 text-red-700 border-red-200"><XCircle className="h-3 w-3 mr-1" />{t('review_queue.status.rejected')}</Badge>
             default:
                 return <Badge variant="outline">{status}</Badge>
         }
     }
 
     const stats = {
-        pending: pendingArticles?.filter(a => ['DRAFT', 'draft'].includes(a.status)).length || 0,
-        approved: pendingArticles?.filter(a => ['PUBLISHED', 'published', 'APPROVED', 'approved'].includes(a.status)).length || 0,
-        rejected: 0 // No rejected status
+        pendingReview: pendingArticles?.filter(a => a.status === 'PENDING_REVIEW').length || 0,
+        published: pendingArticles?.filter(a => a.status === 'PUBLISHED').length || 0,
+        rejected: pendingArticles?.filter(a => a.status === 'REJECTED').length || 0
     }
 
     return (
@@ -190,8 +238,8 @@ export default function KnowledgeReview() {
                             <Clock className="h-6 w-6 text-yellow-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-yellow-700">{stats.pending}</p>
-                            <p className="text-sm text-yellow-600">{t('review_queue.stats.drafts')}</p>
+                            <p className="text-2xl font-bold text-yellow-700">{stats.pendingReview}</p>
+                            <p className="text-sm text-yellow-600">{t('review_queue.stats.pending_review')}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -201,8 +249,19 @@ export default function KnowledgeReview() {
                             <CheckCircle2 className="h-6 w-6 text-green-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-green-700">{stats.approved}</p>
+                            <p className="text-2xl font-bold text-green-700">{stats.published}</p>
                             <p className="text-sm text-green-600">{t('review_queue.stats.published')}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-red-50 border-red-200">
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="p-3 rounded-lg bg-red-100">
+                            <XCircle className="h-6 w-6 text-red-600" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-red-700">{stats.rejected}</p>
+                            <p className="text-sm text-red-600">{t('review_queue.stats.rejected')}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -216,8 +275,10 @@ export default function KnowledgeReview() {
                         <SelectValue placeholder={t('review_queue.filters.status_placeholder')} />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="PENDING_REVIEW">{t('review_queue.filters.pending_review')}</SelectItem>
                         <SelectItem value="DRAFT">{t('review_queue.filters.drafts')}</SelectItem>
                         <SelectItem value="PUBLISHED">{t('review_queue.filters.published')}</SelectItem>
+                        <SelectItem value="REJECTED">{t('review_queue.filters.rejected')}</SelectItem>
                         <SelectItem value="all">{t('review_queue.filters.all')}</SelectItem>
                     </SelectContent>
                 </Select>
@@ -332,36 +393,105 @@ export default function KnowledgeReview() {
                         </div>
                     </div>
 
-                    <DialogFooter className="flex gap-2 sm:gap-0">
-                        {selectedArticle?.status as string !== 'PUBLISHED' && (
-                            <Button
-                                onClick={() => handleReview('approve')}
-                                disabled={reviewMutation.isPending}
-                                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
-                            >
-                                {reviewMutation.isPending && reviewAction === 'approve' ? (
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                ) : (
-                                    <ThumbsUp className="h-4 w-4 mr-2" />
-                                )}
-                                {t('review_queue.dialog.publish')}
-                            </Button>
-                        )}
-                        {selectedArticle?.status as string === 'PUBLISHED' && (
-                            <Button
-                                onClick={() => handleReview('reject')}
-                                variant="destructive"
-                                disabled={reviewMutation.isPending}
-                                className="flex-1 sm:flex-none"
-                            >
-                                {reviewMutation.isPending && reviewAction === 'reject' ? (
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                ) : (
-                                    <ThumbsDown className="h-4 w-4 mr-2" />
-                                )}
-                                {t('review_queue.dialog.unpublish')}
-                            </Button>
-                        )}
+                    <DialogFooter className="flex flex-wrap gap-2">
+                        {(() => {
+                            const status = (selectedArticle?.status || '').toString().toUpperCase()
+                            return (
+                                <>
+                                    {/* For PENDING_REVIEW: Show Approve, Reject, Request Changes */}
+                                    {status === 'PENDING_REVIEW' && (
+                                        <>
+                                            <Button
+                                                onClick={() => handleReview('approve')}
+                                                disabled={reviewMutation.isPending}
+                                                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+                                            >
+                                                {reviewMutation.isPending && reviewAction === 'approve' ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                ) : (
+                                                    <ThumbsUp className="h-4 w-4 mr-2" />
+                                                )}
+                                                {t('review_queue.dialog.publish')}
+                                            </Button>
+                                            <Button
+                                                onClick={() => handleReview('reject')}
+                                                disabled={reviewMutation.isPending}
+                                                className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white"
+                                            >
+                                                {reviewMutation.isPending && reviewAction === 'reject' ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                ) : (
+                                                    <ThumbsDown className="h-4 w-4 mr-2" />
+                                                )}
+                                                {t('review_queue.dialog.reject')}
+                                            </Button>
+                                            <Button
+                                                onClick={() => handleReview('changes')}
+                                                variant="outline"
+                                                disabled={reviewMutation.isPending}
+                                                className="flex-1 sm:flex-none"
+                                            >
+                                                {reviewMutation.isPending && reviewAction === 'changes' ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                ) : (
+                                                    <MessageSquare className="h-4 w-4 mr-2" />
+                                                )}
+                                                {t('review_queue.dialog.request_changes')}
+                                            </Button>
+                                        </>
+                                    )}
+
+                                    {/* For DRAFT: Can approve directly */}
+                                    {status === 'DRAFT' && (
+                                        <Button
+                                            onClick={() => handleReview('approve')}
+                                            disabled={reviewMutation.isPending}
+                                            className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+                                        >
+                                            {reviewMutation.isPending && reviewAction === 'approve' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            ) : (
+                                                <ThumbsUp className="h-4 w-4 mr-2" />
+                                            )}
+                                            {t('review_queue.dialog.publish')}
+                                        </Button>
+                                    )}
+
+                                    {/* For PUBLISHED: Can unpublish */}
+                                    {status === 'PUBLISHED' && (
+                                        <Button
+                                            onClick={() => handleReview('reject')}
+                                            variant="destructive"
+                                            disabled={reviewMutation.isPending}
+                                            className="flex-1 sm:flex-none"
+                                        >
+                                            {reviewMutation.isPending && reviewAction === 'reject' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            ) : (
+                                                <ThumbsDown className="h-4 w-4 mr-2" />
+                                            )}
+                                            {t('review_queue.dialog.unpublish')}
+                                        </Button>
+                                    )}
+
+                                    {/* For REJECTED: Can re-publish */}
+                                    {status === 'REJECTED' && (
+                                        <Button
+                                            onClick={() => handleReview('approve')}
+                                            disabled={reviewMutation.isPending}
+                                            className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+                                        >
+                                            {reviewMutation.isPending && reviewAction === 'approve' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            ) : (
+                                                <ThumbsUp className="h-4 w-4 mr-2" />
+                                            )}
+                                            {t('review_queue.dialog.publish')}
+                                        </Button>
+                                    )}
+                                </>
+                            )
+                        })()}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
