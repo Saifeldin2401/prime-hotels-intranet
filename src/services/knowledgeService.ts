@@ -276,8 +276,74 @@ export async function acknowledgeArticle(documentId: string, userId: string): Pr
 // ============================================================================
 
 export async function getContextualHelp(triggerType: string, triggerValue: string): Promise<ContextualHelp[]> { return [] }
-export async function getComments(documentId: string): Promise<KnowledgeComment[]> { return [] }
-export async function createComment(documentId: string, userId: string, content: string, parentId?: string, isQuestion = false): Promise<KnowledgeComment | null> { return null }
+
+export async function getComments(documentId: string): Promise<KnowledgeComment[]> {
+    const { data, error } = await supabase
+        .from('sop_comments')
+        .select(`
+            id,
+            document_id,
+            user_id,
+            content,
+            parent_id,
+            is_question,
+            is_pinned,
+            upvotes,
+            created_at,
+            updated_at,
+            user:profiles!sop_comments_user_id_fkey(id, full_name, avatar_url)
+        `)
+        .eq('document_id', documentId)
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        console.error('Error fetching comments:', error)
+        return []
+    }
+
+    return (data || []).map(comment => ({
+        ...comment,
+        author: comment.user as any
+    })) as unknown as KnowledgeComment[]
+}
+
+export async function createComment(documentId: string, userId: string, content: string, parentId?: string, isQuestion = false): Promise<KnowledgeComment | null> {
+    const { data, error } = await supabase
+        .from('sop_comments')
+        .insert({
+            document_id: documentId,
+            user_id: userId,
+            content,
+            parent_id: parentId || null,
+            is_question: isQuestion,
+            is_pinned: false,
+            upvotes: 0
+        })
+        .select(`
+            id,
+            document_id,
+            user_id,
+            content,
+            parent_id,
+            is_question,
+            is_pinned,
+            upvotes,
+            created_at,
+            updated_at,
+            user:profiles!sop_comments_user_id_fkey(id, full_name, avatar_url)
+        `)
+        .single()
+
+    if (error) {
+        console.error('Error creating comment:', error)
+        return null
+    }
+
+    return {
+        ...data,
+        author: data.user as any
+    } as unknown as KnowledgeComment
+}
 export async function voteComment(commentId: string, userId: string, voteType: 'up' | 'down'): Promise<void> { }
 export async function getBookmarks(userId: string): Promise<KnowledgeBookmark[]> { return [] }
 export async function toggleBookmark(documentId: string, userId: string): Promise<boolean> { return false }
