@@ -101,7 +101,7 @@ async function cacheFirst(request) {
 
     try {
         const response = await fetch(request);
-        if (response.ok) {
+        if (response.status === 200) {
             const cache = await caches.open(STATIC_CACHE);
             cache.put(request, response.clone());
         }
@@ -115,7 +115,7 @@ async function cacheFirst(request) {
 async function networkFirst(request) {
     try {
         const response = await fetch(request);
-        if (response.ok) {
+        if (response.status === 200) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, response.clone());
         }
@@ -131,7 +131,7 @@ async function networkFirst(request) {
 async function networkFirstWithOffline(request) {
     try {
         const response = await fetch(request);
-        if (response.ok) {
+        if (response.status === 200) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, response.clone());
         }
