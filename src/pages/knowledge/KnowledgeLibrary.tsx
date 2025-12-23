@@ -39,6 +39,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useArticles, useBookmarks } from '@/hooks/useKnowledge'
+import { useAuth } from '@/contexts/AuthContext'
 import { KnowledgeSidebar } from '@/components/knowledge'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { CONTENT_TYPE_CONFIG, type KnowledgeContentType } from '@/types/knowledge'
@@ -57,6 +58,7 @@ const ICON_MAP: Record<string, any> = {
 
 export default function KnowledgeLibrary() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
+    const { primaryRole } = useAuth()
     const isRTL = i18n.dir() === 'rtl'
     const [searchParams, setSearchParams] = useSearchParams()
 
@@ -155,12 +157,14 @@ export default function KnowledgeLibrary() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <Link to="/knowledge/create">
-                            <Button className="bg-hotel-navy text-white hover:bg-hotel-navy/90 gap-2 shadow-md">
-                                <Plus className="h-4 w-4" />
-                                <span className="hidden sm:inline">{t('library.create_new', 'New Article')}</span>
-                            </Button>
-                        </Link>
+                        {primaryRole !== 'staff' && (
+                            <Link to="/knowledge/create">
+                                <Button className="bg-hotel-navy text-white hover:bg-hotel-navy/90 gap-2 shadow-md">
+                                    <Plus className="h-4 w-4" />
+                                    <span className="hidden sm:inline">{t('library.create_new', 'New Article')}</span>
+                                </Button>
+                            </Link>
+                        )}
                     </div>
                 </div>
 

@@ -180,27 +180,29 @@ export default function KnowledgeHome() {
                                 </Card>
                             </Link>
 
-                            <Link to="/knowledge/create" className="group">
-                                <Card className="h-full border-none shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-hotel-navy overflow-hidden">
-                                    <CardContent className="p-0 flex h-full">
-                                        <div className="w-2 bg-hotel-gold" />
-                                        <div className="p-8 flex flex-col justify-between flex-1">
-                                            <div className="text-white">
-                                                <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                                    <Plus className="h-7 w-7 text-hotel-gold" />
+                            {primaryRole !== 'staff' && (
+                                <Link to="/knowledge/create" className="group">
+                                    <Card className="h-full border-none shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-hotel-navy overflow-hidden">
+                                        <CardContent className="p-0 flex h-full">
+                                            <div className="w-2 bg-hotel-gold" />
+                                            <div className="p-8 flex flex-col justify-between flex-1">
+                                                <div className="text-white">
+                                                    <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                                        <Plus className="h-7 w-7 text-hotel-gold" />
+                                                    </div>
+                                                    <h3 className="text-2xl font-bold mb-3">{t('create_article')}</h3>
+                                                    <p className="text-white/60 mb-6 leading-relaxed">
+                                                        Contribute to the collective knowledge. Draft new SOPs and operational guides.
+                                                    </p>
                                                 </div>
-                                                <h3 className="text-2xl font-bold mb-3">{t('create_article')}</h3>
-                                                <p className="text-white/60 mb-6 leading-relaxed">
-                                                    Contribute to the collective knowledge. Draft new SOPs and operational guides.
-                                                </p>
+                                                <div className="flex items-center text-hotel-gold font-bold transition-colors">
+                                                    Start Drafting <ArrowRight className="ml-2 h-5 w-5" />
+                                                </div>
                                             </div>
-                                            <div className="flex items-center text-hotel-gold font-bold transition-colors">
-                                                Start Drafting <ArrowRight className="ml-2 h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            )}
                         </div>
 
                         {/* Recent Discoveries */}

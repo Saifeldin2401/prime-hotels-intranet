@@ -65,7 +65,7 @@ function NavItem({ icon: Icon, label, href, active, badge, className }: NavItemP
 
 export function KnowledgeSidebar() {
     const { t } = useTranslation('knowledge')
-    const { user, departments } = useAuth()
+    const { user, departments, primaryRole } = useAuth()
     const [searchParams] = useSearchParams()
 
     // Filters from URL
@@ -193,9 +193,11 @@ export function KnowledgeSidebar() {
                             <p className="text-xs font-bold text-hotel-navy truncate">
                                 {t('library.my_dept', 'My Dept: {{name}}', { name: departments?.[0]?.name || 'N/A' })}
                             </p>
-                            <Link to="/knowledge/create" className="text-[10px] text-hotel-gold font-bold hover:underline">
-                                + {t('library.create_new', 'Create New Article')}
-                            </Link>
+                            {primaryRole !== 'staff' && (
+                                <Link to="/knowledge/create" className="text-[10px] text-hotel-gold font-bold hover:underline">
+                                    + {t('library.create_new', 'Create New Article')}
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>

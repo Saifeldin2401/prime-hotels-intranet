@@ -205,6 +205,20 @@ export default function KnowledgeEditor() {
     const [isUploading, setIsUploading] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const [aiLanguage, setAiLanguage] = useState('English')
+    const [isForbidden, setIsForbidden] = useState(false)
+
+    // Permission check
+    useState(() => {
+        if (primaryRole === 'staff') {
+            setIsForbidden(true)
+            toast.error('You do not have permission to create or edit articles.')
+            navigate('/knowledge/search')
+        }
+    })
+
+    if (isForbidden || primaryRole === 'staff') {
+        return null
+    }
 
     // Load Data Effect
     useState(() => {
@@ -752,6 +766,6 @@ export default function KnowledgeEditor() {
                     </Card>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }
