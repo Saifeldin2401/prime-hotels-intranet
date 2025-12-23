@@ -54,27 +54,33 @@ import type { KnowledgeArticle } from '@/types/knowledge'
 export default function KnowledgeReview() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const navigate = useNavigate()
-    const { user, profile } = useAuth()
-    const queryClient = useQueryClient()
-    const locale = i18n.language === 'ar' ? ar : enUS
-
     const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null)
     const [reviewComment, setReviewComment] = useState('')
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'changes' | null>(null)
     const [statusFilter, setStatusFilter] = useState<string>('PENDING_REVIEW')
 
+    const { user, profile, primaryRole, departments: userDepts } = useAuth()
+    const queryClient = useQueryClient()
+    const locale = i18n.language === 'ar' ? ar : enUS
+
     // Fetch articles for review - default to PENDING_REVIEW
     const { data: pendingArticles, isLoading } = useQuery({
-        queryKey: ['knowledge-review-queue', statusFilter],
+        queryKey: ['knowledge-review-queue', statusFilter, userDepts?.[0]?.id, primaryRole],
         queryFn: async () => {
             let query = supabase
                 .from('documents')
                 .select(`
                     *,
-                    author:created_by(id, full_name)
+                    author:created_by(id, full_name),
+                    department:departments(id, name)
                 `)
                 .eq('is_deleted', false)
                 .order('updated_at', { ascending: false })
+
+            // Role-based filtering: Department heads only see their own department's pending items
+            if (primaryRole === 'department_head' && userDepts?.[0]?.id) {
+                query = query.eq('department_id', userDepts[0].id)
+            }
 
             if (statusFilter !== 'all') {
                 query = query.eq('status', statusFilter)
@@ -85,11 +91,9 @@ export default function KnowledgeReview() {
             const { data, error } = await query.limit(50)
             if (error) throw error
 
-            return data?.map(d => ({
-                ...d,
-                author: d.author
-            })) as KnowledgeArticle[]
-        }
+            return data as KnowledgeArticle[]
+        },
+        enabled: !!profile
     })
 
     // Review action mutation
@@ -329,6 +333,11 @@ export default function KnowledgeReview() {
                                                 <Calendar className="h-3 w-3" />
                                                 {formatDistanceToNow(new Date(article.updated_at), { addSuffix: true, locale })}
                                             </span>
+                                            {article.department?.name && (
+                                                <Badge variant="outline" className="text-[10px] h-4 px-1 bg-hotel-navy/5 text-hotel-navy border-none">
+                                                    {article.department.name}
+                                                </Badge>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">

@@ -347,5 +347,33 @@
         "approved": "Approved",
         "published": "Published",
         "rejected": "Rejected"
+    },
+    "library": {
+        "title": "Knowledge Library",
+        "description": "Access the complete repository of Prime Hotels standards and SOPs.",
+        "search_results": "Search Results: {{q}}",
+        "department": "Department",
+        "featured": "Featured",
+        "enter": "Enter Library",
+        "explore_all": "Explore All Content",
+        "filter_within": "Filter within these results...",
+        "clear_filters": "Clear Filters",
+        "no_results": "No results found",
+        "no_results_desc": "Try adjusting your search or filters to find what you're looking for.",
+        "grid_view": "Grid View",
+        "list_view": "List View",
+        "bookmarks": "My Bookmarks",
+        "browsing_dept": "Browsing Department",
+        "browsing_type": "Browsing {{type}}",
+        "master_library": "Master Knowledge Library",
+        "create_new": "New Article",
+        "no_description": "No description provided",
+        "view": "View",
+        "no_bookmarks": "No bookmarks yet",
+        "no_bookmarks_desc": "Save articles you use frequently for quick access.",
+        "nav_title": "Knowledge Library",
+        "quick_search": "Quick Search...",
+        "types": "Content Types",
+        "my_dept": "My Dept: {{name}}"
     }
 }

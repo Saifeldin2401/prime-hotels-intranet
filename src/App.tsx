@@ -91,6 +91,7 @@ import KnowledgeHome from '@/pages/knowledge/KnowledgeHome'
 import KnowledgeViewer from '@/pages/knowledge/KnowledgeViewer'
 import KnowledgeSearch from '@/pages/knowledge/KnowledgeSearch'
 import KnowledgeBrowse from '@/pages/knowledge/KnowledgeBrowse'
+import KnowledgeLibrary from '@/pages/knowledge/KnowledgeLibrary'
 import KnowledgeEditor from '@/pages/knowledge/KnowledgeEditor'
 import KnowledgeAnalytics from '@/pages/knowledge/KnowledgeAnalytics'
 import KnowledgeReview from '@/pages/knowledge/KnowledgeReview'
@@ -652,7 +653,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <KnowledgeSearch />
+              <KnowledgeLibrary />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -662,7 +663,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <KnowledgeBrowse />
+              <KnowledgeLibrary />
             </AppLayout>
           </ProtectedRoute>
         }

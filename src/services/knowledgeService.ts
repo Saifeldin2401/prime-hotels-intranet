@@ -337,10 +337,81 @@ export async function createComment(documentId: string, userId: string, content:
     } as any
 }
 export async function voteComment(commentId: string, userId: string, voteType: 'up' | 'down'): Promise<void> { }
-export async function getBookmarks(userId: string): Promise<KnowledgeBookmark[]> { return [] }
-export async function toggleBookmark(documentId: string, userId: string): Promise<boolean> { return false }
-export async function submitFeedback(documentId: string, userId: string, helpful: boolean, feedbackText?: string): Promise<void> { }
-export async function getCategories(departmentId?: string) { return [] }
+export async function getBookmarks(userId: string): Promise<KnowledgeBookmark[]> {
+    const { data, error } = await supabase
+        .from('document_bookmarks')
+        .select(`
+            *,
+            article:documents(*)
+        `)
+        .eq('user_id', userId)
+
+    if (error) {
+        console.warn('getBookmarks error:', error.message)
+        return []
+    }
+
+    return (data || []).map(b => ({
+        ...b,
+        article: formatArticle(b.article)
+    })) as KnowledgeBookmark[]
+}
+
+export async function toggleBookmark(documentId: string, userId: string): Promise<boolean> {
+    // 1. Check if already bookmarked
+    const { data: existing } = await supabase
+        .from('document_bookmarks')
+        .select('id')
+        .eq('document_id', documentId)
+        .eq('user_id', userId)
+        .single()
+
+    if (existing) {
+        // Remove
+        await supabase
+            .from('document_bookmarks')
+            .delete()
+            .eq('id', existing.id)
+        return false
+    } else {
+        // Add
+        await supabase
+            .from('document_bookmarks')
+            .insert({
+                document_id: documentId,
+                user_id: userId
+            })
+        return true
+    }
+}
+
+export async function submitFeedback(documentId: string, userId: string, helpful: boolean, feedbackText?: string): Promise<void> {
+    const { error } = await supabase
+        .from('document_feedback')
+        .insert({
+            document_id: documentId,
+            user_id: userId,
+            helpful,
+            feedback_text: feedbackText
+        })
+
+    if (error) throw error
+}
+
+export async function getCategories(departmentId?: string) {
+    let query = supabase
+        .from('document_categories')
+        .select('*')
+        .order('name')
+
+    if (departmentId) {
+        query = query.eq('department_id', departmentId)
+    }
+
+    const { data, error } = await query
+    if (error) return []
+    return data
+}
 
 export async function getContentTypeCounts(): Promise<Record<string, number>> {
     try {

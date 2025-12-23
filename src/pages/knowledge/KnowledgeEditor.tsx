@@ -268,11 +268,16 @@ export default function KnowledgeEditor() {
     }
 
     // AI
-    const generateWithAI = async (action: 'outline' | 'expand' | 'improve') => {
-        if (!formData.title && action !== 'improve') {
+    const generateWithAI = async (action: 'outline' | 'expand' | 'improve' | 'summarize') => {
+        if (!formData.title && action !== 'improve' && action !== 'summarize') {
             toast.error(t('editor.alerts.title_required'))
             return
         }
+        if (action === 'summarize' && !formData.content) {
+            toast.error(t('editor.write_placeholder'))
+            return
+        }
+
         setIsGenerating(true)
         try {
             let result: string | null = null
@@ -284,12 +289,22 @@ export default function KnowledgeEditor() {
                 result = await aiService.improveContent(formData.content, 'expand', aiLanguage)
             } else if (action === 'improve') {
                 result = await aiService.improveContent(formData.content, 'professional', aiLanguage)
+            } else if (action === 'summarize') {
+                result = await aiService.improveContent(
+                    `Generate a concise 2-sentence TL;DR summary for this SOP: ${formData.content.substring(0, 5000)}`,
+                    'shorten',
+                    aiLanguage
+                )
             }
 
             if (result) {
-                // Parse AI markdown response to HTML
-                const htmlContent = await marked(result)
-                updateField('content', htmlContent)
+                if (action === 'summarize') {
+                    updateField('summary', result)
+                } else {
+                    // Parse AI markdown response to HTML
+                    const htmlContent = await marked(result)
+                    updateField('content', htmlContent)
+                }
 
                 // Auto-generate description if missing
                 if (!formData.description) {
@@ -579,6 +594,15 @@ export default function KnowledgeEditor() {
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={() => generateWithAI('improve')} disabled={isGenerating || !formData.content}>
                                     <Sparkles className="h-4 w-4" /> {t('editor.improve')}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => generateWithAI('summarize')}
+                                    disabled={isGenerating || !formData.content}
+                                    className="border-hotel-navy/20 hover:border-hotel-navy text-hotel-navy"
+                                >
+                                    <Clock className="h-4 w-4" /> {t('editor.summarize', 'AI TL;DR')}
                                 </Button>
                             </div>
                         </CardContent>

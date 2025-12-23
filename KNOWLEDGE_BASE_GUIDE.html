@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRIME Hotels - The Complete Knowledge Base Master Guide</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary-navy: #002147;
+            --hotel-gold: #C5A059;
+            --hotel-gold-light: #fdfaf3;
+            --text-gray: #374151;
+            --text-light: #6b7280;
+            --bg-light: #f9fafb;
+            --border-color: #e5e7eb;
+            --success-green: #059669;
+            --status-draft: #9ca3af;
+            --status-pending: #d97706;
+            --status-published: #059669;
+            --accent-blue: #2563eb;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.7;
+            color: var(--text-gray);
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-light);
+            scroll-behavior: smooth;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            padding: 60px 80px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+        }
+
+        header {
+            border-bottom: 5px solid var(--hotel-gold);
+            margin-bottom: 50px;
+            padding-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .logo-text {
+            font-weight: 800;
+            font-size: 32px;
+            color: var(--primary-navy);
+            letter-spacing: -1px;
+            text-transform: uppercase;
+        }
+
+        .logo-text span {
+            color: var(--hotel-gold);
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--primary-navy);
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        h2 {
+            font-size: 28px;
+            color: var(--primary-navy);
+            margin-top: 60px;
+            border-bottom: 2px solid var(--hotel-gold-light);
+            padding-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        h3 {
+            font-size: 22px;
+            color: var(--primary-navy);
+            margin-top: 35px;
+            font-weight: 600;
+        }
+
+        .toc {
+            background: var(--hotel-gold-light);
+            padding: 35px;
+            border-radius: 10px;
+            margin-bottom: 50px;
+            border: 1px solid #f0e6d2;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--hotel-gold);
+        }
+
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .toc a {
+            text-decoration: none;
+            color: var(--text-gray);
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .toc a:hover {
+            color: var(--hotel-gold);
+        }
+
+        .explainer-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 24px;
+            border-radius: 10px;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .explainer-box::before {
+            content: "💡 TECHNICAL INSIGHT";
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: var(--primary-navy);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .editor-guide {
+            background: #fff;
+            border: 2px solid #f1f5f9;
+            padding: 0;
+            border-radius: 12px;
+            margin: 30px 0;
+            overflow: hidden;
+        }
+
+        .editor-header {
+            background: #f1f5f9;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 14px;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .editor-body {
+            padding: 30px;
+        }
+
+        .toolbar-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            margin: 0 4px;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .step-list {
+            counter-reset: my-counter;
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .step-list li {
+            counter-increment: my-counter;
+            margin-bottom: 30px;
+            padding-left: 60px;
+            position: relative;
+        }
+
+        .step-list li::before {
+            content: counter(my-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            background: var(--hotel-gold);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-draft {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .badge-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-published {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 200px;
+            background: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            margin: 15px 0;
+        }
+
+        .arabic-section {
+            direction: rtl;
+            font-family: 'Noto Sans Arabic', sans-serif;
+            margin-top: 100px;
+            border-top: 4px double var(--border-color);
+            padding-top: 80px;
+        }
+
+        .btn-print {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: var(--primary-navy);
+            color: white;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .btn-print:hover {
+            background: var(--hotel-gold);
+            transform: scale(1.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th {
+            background: #f8fafc;
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--primary-navy);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        @media print {
+            .btn-print {
+                display: none !important;
+            }
+
+            .container {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
+            }
+
+            body {
+                background: white;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            .explainer-box {
+                border: 1px solid #ccc;
+                background: white !important;
+            }
+
+            .editor-guide {
+                border: 1px solid #ccc;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <button class="btn-print" onclick="window.print()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        PRINT MASTER GUIDE
+    </button>
+
+    <div class="container">
+        <!-- ENGLISH VERSION -->
+        <section id="english-master">
+            <header>
+                <div class="logo-text">PRIME <span>CONNECT</span></div>
+                <div style="font-weight: 700; color: var(--hotel-gold);">KNOWLEDGE BASE MASTER GUIDE</div>
+            </header>
+
+            <h1>The Complete Knowledge Base Master Manual</h1>
+            <p>A comprehensive, end-to-end guide for every feature of the PRIME Hotels Knowledge Base. From basic
+                content entry to advanced data governance and editor mastery.</p>
+
+            <div class="toc">
+                <h3>The Master Index</h3>
+                <ul>
+                    <li><a href="#en-arch">1. System Architecture</a></li>
+                    <li><a href="#en-editor">2. Professional Editor Mastery</a></li>
+                    <li><a href="#en-multimedia">3. Multimedia & Tables</a></li>
+                    <li><a href="#en-ai">4. AI Assistant Workflow</a></li>
+                    <li><a href="#en-visibility">5. Governance & Visibility</a></li>
+                    <li><a href="#en-review">6. Approval Lifecycle</a></li>
+                    <li><a href="#en-compliance">7. Compliance Tracking</a></li>
+                </ul>
+            </div>
+
+            <h2 id="en-arch">1. System Architecture & Strategy</h2>
+            <p>Every article in PRIME Connect is treated as an <strong>"Asset."</strong> This means articles are
+                searchable, trackable, and version-controlled. When you create an article, you are contributing to our
+                institutional memory.</p>
+            <div class="explainer-box">
+                <strong>Logic:</strong> The system automatically indexes your content words. If you use keywords in your
+                title like "Fire Alarm" or "VIP Check-in," they will appear at the top of search results globally.
+            </div>
+
+            <h2 id="en-editor">2. Professional Editor Mastery</h2>
+            <p>The Knowledge Editor is a powerful tool. Here is how to use the specific controls:</p>
+
+            <div class="editor-guide">
+                <div class="editor-header">EDITOR CONTROLS REFERENCE</div>
+                <div class="editor-body">
+                    <ul>
+                        <li><strong>Headings:</strong> Always use <strong>H1</strong> or <strong>H2</strong> for main
+                            sections. This allows the system to generate a table of contents automatically.</li>
+                        <li><strong>Lists:</strong> Use <span class="toolbar-icon">1.</span> for steps that must be
+                            followed in order, and <span class="toolbar-icon">•</span> for unordered facts.</li>
+                        <li><strong>Text Formatting:</strong> Use <strong>Bold</strong> for button names (e.g., Click
+                            <strong>Save</strong>) and <em>Italics</em> for emphasizing notes.</li>
+                        <li><strong>TL;DR Summary:</strong> Located at the top. This is the <em>only</em> part many
+                            users will read. Make it hit the key points.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2 id="en-multimedia">3. Handling Multimedia & Tables</h2>
+
+            <h3>📸 Uploading Images</h3>
+            <p>Visual aids are 3x more effective than text for SOPs.</p>
+            <ol class="step-list">
+                <li><strong>Insertion:</strong> Click the Image icon in the toolbar.</li>
+                <li><strong>Upload:</strong> Choose your image. Once uploaded, the image is stored in our secure
+                    <strong>CDN (Content Delivery Network)</strong>.</li>
+                <li><strong>Alignment:</strong> Click the image to resize it or align it to the center. For hotel rooms,
+                    use clear, high-resolution photos.</li>
+            </ol>
+
+            <h3>📊 Creating Data Tables</h3>
+            <p>Use tables for comparisons, price lists, or contact directories.</p>
+            <div class="explainer-box">
+                <strong>How to:</strong> Use the Table icon <span class="toolbar-icon">⊞</span>. You can add rows and
+                columns dynamically. If you are documenting "Minibar Pricing," a table is the standard format required.
+            </div>
+
+            <h3>📎 PDF Documents</h3>
+            <p>For official legal policies, use the <strong>file upload</strong> area below the editor. The system
+                converts the PDF into an interactive viewer directly inside the article page.</p>
+
+            <h2 id="en-ai">4. The AI Assistant Workflow (Gemini)</h2>
+            <p>The AI is your personal content strategist. It is trained on hotel industry standards.</p>
+            <ul>
+                <li><strong>The Outline Strategy:</strong> Before you write, generate an outline to ensure you haven't
+                    missed standard compliance points.</li>
+                <li><strong>The Tone Improver:</strong> If your draft is too casual, the "Improve Writing" feature will
+                    adjust it to the corporate PRIME tone.</li>
+                <li><strong>Bilingual Consistency:</strong> Use the AI to check that the Arabic translation matches the
+                    English procedural intent exactly.</li>
+            </ul>
+
+            <h2 id="en-visibility">5. Advanced Visibility & Governance</h2>
+            <p>This determines who gets "Need to Know" access.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Access Level</th>
+                        <th>Technical Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Departmental</strong></td>
+                        <td>Article is hidden from everyone except members of that department.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Property-Level</strong></td>
+                        <td>Only staff logged into that specific Property ID can view it.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Role-Based</strong></td>
+                        <td>Locked to high-level employees (Head of Dept, GM, etc.).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="en-review">6. The Review Queue Lifecycle</h2>
+            <p>All articles go through <strong>Peer Review</strong> to ensure accuracy.</p>
+            <ul class="step-list">
+                <li><strong>Draft:</strong> <span class="badge badge-draft">Draft</span> status. Only you see it. No
+                    notifications are sent.</li>
+                <li><strong>Submission:</strong> Status changes to <span class="badge badge-pending">Pending
+                        Review</span>. An email notification goes to the GM.</li>
+                <li><strong>Decision:</strong> Managers use the "Review Queue" dashboard to check for technical
+                    accuracy. <strong>Feedback</strong> entered by the manager is sent back to the author via a system
+                    notification.</li>
+                <li><strong>Published:</strong> Status becomes <span class="badge badge-published">Published</span>. The
+                    article is now searchable by the target audience.</li>
+            </ul>
+
+            <h2 id="en-compliance">7. Mandatory Acknowledgment & Auditing</h2>
+            <p>For safety protocols, the <strong>Acknowledge</strong> feature is mandatory.</p>
+            <div class="explainer-box">
+                <strong>Auditor's Note:</strong> When an employee clicks "I Acknowledge," the system generates a
+                non-editable record containing the <strong>User Name, Department, Date, Time, and IP Address</strong>.
+                This record is used as proof of training during official property audits.
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- ARABIC MASTER VERSION -->
+        <section id="arabic-master" class="arabic-section">
+            <header>
+                <div class="logo-text">برايم <span>كونكت</span></div>
+                <div style="font-weight: 700; color: var(--hotel-gold);">الدليل الشامل لقاعدة المعرفة</div>
+            </header>
+
+            <h1>دليل المعلم الشامل لقاعدة المعرفة</h1>
+            <p>دليل كامل وتفصيلي يغطي كل ميزة في قاعدة معرفة فنادق برايم. من إدخال المحتوى البسيط إلى الإدارة المتقدمة
+                للبيانات والتحكم في المحرر.</p>
+
+            <div class="toc">
+                <h3>الفهرس العام</h3>
+                <ul>
+                    <li><a href="#ar-arch">1. بنية النظام الاستراتيجية</a></li>
+                    <li><a href="#ar-editor">2. إتقان المحرر الاحترافي</a></li>
+                    <li><a href="#ar-multimedia">3. الوسائط المتعددة والجداول</a></li>
+                    <li><a href="#ar-ai">4. نظام عمل مساعد الذكاء الاصطناعي</a></li>
+                    <li><a href="#ar-visibility">5. الحوكمة ونطاق الرؤية</a></li>
+                    <li><a href="#ar-review">6. دورة المراجعة والاعتماد</a></li>
+                    <li><a href="#ar-compliance">7. تتبع الامتثال والتدقيق</a></li>
+                </ul>
+            </div>
+
+            <h2 id="ar-arch">1. بنية النظام واستراتيجية المحتوى</h2>
+            <p>يتم التعامل مع كل مقال في "برايم كونكت" كمنجز مؤسسي، مما يعني أنه قابل للبحث، والتتبع، وإدارة الإصدارات.
+            </p>
+
+            <h2 id="ar-editor">2. إتقان المحرر الاحترافي</h2>
+            <p>محرر قاعدة المعرفة أداة قوية. إليك كيفية التحكم في الخيارات المختلفة:</p>
+            <div class="editor-guide">
+                <div class="editor-header">مرجع أدوات المحرر</div>
+                <div class="editor-body">
+                    <ul>
+                        <li><strong>العناوين:</strong> استخدم دائماً <strong>العنوان 1</strong> أو <strong>العنوان
+                                2</strong> للأقسام الرئيسية لتمكين النظام من إنشاء فهرس تلقائي.</li>
+                        <li><strong>القوائم:</strong> استخدم القوائم الرقمية للخطوات المتسلسلة، والنقطية للمعلومات
+                            العامة.</li>
+                        <li><strong>تنسيق النص:</strong> استخدم الخط <strong>العريض</strong> لأسماء الأزرار (مثل: اضغط
+                            على <strong>حفظ</strong>).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2 id="ar-multimedia">3. التعامل مع الوسائط والجداول</h2>
+            <h3>📸 رفع الصور</h3>
+            <p>الصور التوضيحية أكثر فعالية بـثلاث مرات من النصوص في إجراءات التشغيل (SOPs).</p>
+            <ul class="step-list">
+                <li><strong>الإدراج:</strong> اضغط على أيقونة الصورة في شريط الأدوات.</li>
+                <li><strong>الرفع:</strong> اختر الصورة من جهازك، وسيتم تخزينها في شبكة توصيل المحتوى الآمنة الخاصة بنا.
+                </li>
+                <li><strong>التنسيق:</strong> يمكنك تغيير حجم الصورة أو توسيطها. تأكد من استخدام صور عالية الجودة.</li>
+            </ul>
+
+            <h3>📊 إنشاء جداول البيانات</h3>
+            <p>تستخدم الجداول لمقارنة الأسعار، أو قوائم الاتصال، أو جداول المهام.</p>
+            <div class="explainer-box">
+                <strong>الطريقة:</strong> استخدم أيقونة الجدول <span class="toolbar-icon">⊞</span>. يمكنك إضافة صفوف
+                وأعمدة ديناميكياً لتنظيم المعلومات المعقدة بشكل مريح للعين.
+            </div>
+
+            <h2 id="ar-ai">4. مساعد الذكاء الاصطناعي (Gemini)</h2>
+            <p>الذكاء الاصطناعي هو مدققك الخاص ومستشارك في صياغة المحتوى.</p>
+            <ul>
+                <li><strong>استراتيجية الهيكل:</strong> قبل الكتابة، اطلب إنشاء هيكل لضمان عدم نسيان أي نقطة فنية.</li>
+                <li><strong>تحسين الأسلوب:</strong> إذا كانت مسودتك غير رسمية، استخدم "تحسين الكتابة" لتحويلها لأسلوب
+                    شركة "برايم" الرسمي.</li>
+            </ul>
+
+            <h2 id="ar-visibility">5. الحوكمة وصلاحيات الرؤية المتقدمة</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>مستوى الوصول</th>
+                        <th>النتيجة التقنية</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>على مستوى القسم</strong></td>
+                        <td>يتم إخفاء المقال عن الجميع باستثناء أعضاء هذا القسم فقط.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>على مستوى الفندق</strong></td>
+                        <td>لا يمكن رؤيته إلا من قبل الموظفين المسجلين في هذا الفرع المحدد.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="ar-review">6. دورة المراجعة والاعتماد</h2>
+            <ul class="step-list">
+                <li><strong>مسودة:</strong> تظهر لك وحدك <span class="badge badge-draft">مسودة</span>.</li>
+                <li><strong>التقديم:</strong> تتحول الحالة إلى <span class="badge badge-pending">قيد المراجعة</span>،
+                    ويصل إشعار للمدير العام.</li>
+                <li><strong>القرار:</strong> يقوم المدير بمراجعة الدقة الفنية. أي ملاحظات يكتبها المدير تصل للكاتب فوراً
+                    لإجراء التعديلات اللازمة.</li>
+            </ul>
+
+            <h2 id="ar-compliance">7. الإقرار والتدقيق الإلزامي</h2>
+            <div class="explainer-box">
+                <strong>ملاحظة للمدققين:</strong> عندما يضغط الموظف على "أقر بالقراءة"، ينشئ النظام سجلاً غير قابل
+                للتعديل يحتوي على: <strong>اسم المستخدم، القسم، التاريخ، الوقت، وعنوان الـ IP</strong>. يستخدم هذا السجل
+                كدليل رسمي على التدريب أثناء عمليات التفتيش.
+            </div>
+        </section>
+    </div>
+
+</body>
+
+</html>

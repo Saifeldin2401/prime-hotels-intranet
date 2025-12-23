@@ -24,23 +24,27 @@ import {
     ThumbsUp,
     ThumbsDown,
     MessageSquare,
-    Clock,
     User,
     Calendar,
     CheckCircle,
+    CheckCircle2,
     AlertTriangle,
     ChevronRight,
+    ChevronDown,
     ChevronUp,
-    Send,
+    Clock,
+    Download,
     Eye,
     FileText,
-    Loader2,
-    Download,
-    GraduationCap,
-    Lightbulb,
-    PlayCircle,
+    MoreVertical,
     Pencil,
-    Trash2
+    Sparkles,
+    Trash2,
+    Lightbulb,
+    Loader2,
+    Send,
+    GraduationCap,
+    PlayCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -61,6 +65,7 @@ import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 interface TOCItem {
     id: string
@@ -379,14 +384,25 @@ export default function KnowledgeViewer() {
                                     <Separator orientation="vertical" className="h-6" />
                                 </>
                             )}
-                            <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)}>
+                            <div className="h-4 w-px bg-gray-200 hidden sm:block" />
+                            <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)} className="hover:text-hotel-gold">
                                 {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-hotel-gold" /> : <Bookmark className="h-4 w-4" />}
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => window.print()}>
+                            <Button variant="ghost" size="sm" onClick={() => window.print()} className="hover:text-hotel-navy">
                                 <Printer className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div className="bg-white border-b border-gray-100">
+                <div className="container mx-auto px-4 py-3">
+                    <Breadcrumbs items={[
+                        { label: t('viewer.library', 'Library'), href: '/knowledge/search' },
+                        { label: article.department?.name || t('viewer.no_dept', 'General'), href: `/knowledge/search?department=${article.department_id}` },
+                        { label: article.title }
+                    ]} />
                 </div>
             </div>
 
@@ -399,6 +415,22 @@ export default function KnowledgeViewer() {
                             <h1 className="text-3xl font-bold mb-4">{article.title}</h1>
                             {article.description && (
                                 <p className="text-lg text-gray-600 mb-4">{article.description}</p>
+                            )}
+
+                            {/* TL;DR Quick Summary */}
+                            {article.summary && (
+                                <div className="mb-6 bg-hotel-gold/5 border border-hotel-gold/20 rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-2 opacity-10">
+                                        <Sparkles className="h-12 w-12 text-hotel-gold" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-hotel-gold uppercase tracking-wider mb-2 flex items-center gap-2">
+                                        <Clock className="h-4 w-4" />
+                                        {t('viewer.tldr', 'Quick Summary')}
+                                    </h3>
+                                    <p className="text-hotel-navy/80 font-medium leading-relaxed italic">
+                                        "{(article as any).summary}"
+                                    </p>
+                                </div>
                             )}
                             {/* File Attachment */}
                             {article.file_url ? (

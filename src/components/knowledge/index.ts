@@ -8,3 +8,4 @@ export { VideoPlayer, ChecklistRenderer, FAQAccordion, RelatedArticles, ImageGal
 export { VideoContentBuilder, ChecklistBuilder, FAQBuilder, VisualContentBuilder } from './ContentTypeBuilders'
 export { LinkedResourceSelector } from './LinkedResourceSelector'
 export { RelatedArticlesEditor } from './RelatedArticlesEditor'
+export { KnowledgeSidebar } from './KnowledgeSidebar'

@@ -1,452 +1,325 @@
 /**
- * KnowledgeHome - Main Knowledge Base Landing Page
- * 
- * Features:
- * - Hero search bar
- * - Featured articles
- * - Browse by category/type
- * - Required reading section
- * - Recently updated
+ * KnowledgeHome - Main Knowledge Base Landing Page (Redesigned)
+ * Acts as a personalized gateway to the Knowledge Library.
  */
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
+import { motion } from 'framer-motion'
 import {
     Search,
     BookOpen,
-    FileText,
-    CheckSquare,
-    Video,
-    HelpCircle,
-    ArrowRight,
-    Star,
     Clock,
+    Star,
     AlertCircle,
-    Bookmark,
-    TrendingUp,
+    ArrowRight,
+    Library,
     Plus,
-    Filter,
-    ClipboardList,
-    Image,
-    FileSearch
+    LayoutGrid,
+    ChevronRight,
+    ShieldCheck,
+    MessageCircle
 } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import {
     useFeaturedArticles,
     useRecentArticles,
     useRequiredReading,
-    useCategories,
-    useContentTypeCounts,
-    useDepartmentContentCounts,
     useArticles
 } from '@/hooks/useKnowledge'
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
-import { CONTENT_TYPE_CONFIG, type KnowledgeContentType } from '@/types/knowledge'
-
-const CONTENT_TYPE_ICONS: Record<KnowledgeContentType, any> = {
-    sop: ClipboardList,
-    policy: FileText,
-    guide: BookOpen,
-    checklist: CheckSquare,
-    reference: FileSearch,
-    faq: HelpCircle,
-    video: Video,
-    visual: Image,
-    document: FileText
-}
 
 export default function KnowledgeHome() {
     const { t } = useTranslation('knowledge')
     const navigate = useNavigate()
-    const { primaryRole } = useAuth()
+    const { user, primaryRole, departments } = useAuth()
     const [searchQuery, setSearchQuery] = useState('')
 
-    const { data: featured, isLoading: featuredLoading } = useFeaturedArticles(6)
-    const { data: recent, isLoading: recentLoading } = useRecentArticles(8)
-    const { data: required, isLoading: requiredLoading } = useRequiredReading()
-    const { documents: recentlyViewed, isLoading: recentlyViewedLoading } = useRecentlyViewed(5)
-
-    // Department Quick Access
-    const { departments } = useAuth()
     const primaryDept = departments?.[0]
-    const { data: deptArticles, isLoading: deptLoading } = useArticles({
+
+    const { data: featured } = useFeaturedArticles(4)
+    const { data: required } = useRequiredReading()
+    const { documents: recentlyViewed } = useRecentlyViewed(4)
+    const { data: deptArticles } = useArticles({
         departmentId: primaryDept?.id,
-        limit: 6
+        limit: 4
     })
-
-    const { data: categories } = useCategories()
-    const { data: typeCounts } = useContentTypeCounts()
-    const { data: deptCounts } = useDepartmentContentCounts()
-
-    const canManage = ['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head'].includes(primaryRole || '')
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
         if (searchQuery.trim()) {
-            navigate(`/knowledge/search?q=${encodeURIComponent(searchQuery)}`)
+            navigate(`/knowledge/search?q=${encodeURIComponent(searchQuery.trim())}`)
         }
     }
 
     const pendingRequired = required?.filter(r => !r.is_acknowledged) || []
 
     return (
-        <div className="min-h-screen bg-gray-50/50">
-            {/* Hero Section */}
-            <div className="bg-hotel-navy relative overflow-hidden text-white py-16 md:py-20 px-4">
-                {/* Background Pattern */}
-                <div className="absolute inset-0 opacity-10 pointer-events-none">
-                    <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-hotel-gold blur-3xl" />
-                    <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-blue-500 blur-3xl" />
-                </div>
+        <div className="min-h-[calc(100vh-80px)] bg-gray-50/50 pb-12">
+            {/* Premium Hero Section */}
+            <div className="bg-hotel-navy relative py-20 overflow-hidden">
+                {/* Decorative Elements */}
+                <div className="absolute top-0 right-0 w-1/3 h-full bg-hotel-gold/5 -skew-x-12 transform translate-x-1/2" />
+                <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-hotel-gold/10 blur-3xl" />
 
-                <div className="container mx-auto max-w-4xl text-center relative z-10">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-6 font-serif tracking-tight text-white drop-shadow-sm">
-                        {t('title')}
-                    </h1>
-                    <p className="text-white/90 mb-3 text-xl font-medium">
-                        {t('subtitle')}
-                    </p>
-                    <p className="text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-                        {t('hero_description')}
-                    </p>
+                <div className="container mx-auto px-6 relative z-10 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <Badge className="bg-hotel-gold text-hotel-navy mb-4 hover:bg-hotel-gold border-none font-semibold px-4 py-1">
+                            PRIME KNOWLEDGE HUB
+                        </Badge>
+                        <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 font-serif">
+                            {t('title')}
+                        </h1>
+                        <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+                            {t('subtitle', 'Your centralized hub for operational knowledge')}
+                        </p>
+                    </motion.div>
 
-                    {/* Search Bar */}
-                    <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto mb-8">
-                        <div className="relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-hotel-gold to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                            <div className="relative bg-white rounded-xl shadow-2xl flex items-center p-2">
+                    {/* Integrated Search Bar */}
+                    <motion.form
+                        onSubmit={handleSearch}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        className="max-w-3xl mx-auto relative"
+                    >
+                        <div className="relative group shadow-2xl rounded-2xl">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-hotel-gold/50 to-blue-500/50 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-1000"></div>
+                            <div className="relative bg-white flex items-center p-2 rounded-xl border border-white/20">
                                 <Search className="ml-4 h-6 w-6 text-gray-400" />
                                 <Input
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder={t('search_placeholder')}
-                                    className="border-0 shadow-none focus-visible:ring-0 text-lg py-6 text-gray-900 placeholder:text-gray-400 bg-transparent flex-1"
+                                    className="border-0 shadow-none focus-visible:ring-0 text-lg py-8 text-gray-900 placeholder:text-gray-400 bg-transparent flex-1"
                                 />
                                 <Button
                                     type="submit"
-                                    className="bg-hotel-navy hover:bg-hotel-navy/90 text-white rounded-lg px-8 py-6 text-base font-medium transition-all duration-300 shadow-md hover:shadow-lg"
+                                    className="bg-hotel-navy hover:bg-hotel-navy/90 text-white rounded-lg px-8 py-7 text-base font-semibold transition-all shadow-xl"
                                 >
                                     {t('search_button')}
                                 </Button>
                             </div>
                         </div>
-                    </form>
-
-                    {/* Quick Filters */}
-                    <div className="flex flex-wrap justify-center gap-3">
-                        {CONTENT_TYPE_CONFIG.slice(0, 6).map(config => {
-                            const Icon = CONTENT_TYPE_ICONS[config.type]
-                            return (
-                                <Link
-                                    key={config.type}
-                                    to={`/knowledge/browse?type=${config.type}`}
-                                    className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 backdrop-blur-sm border border-white/10 transition-all duration-300 flex items-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
-                                >
-                                    <Icon className="h-4 w-4 text-hotel-gold" />
-                                    {t(`content_types.${config.type}`, config.label)}
-                                </Link>
-                            )
-                        })}
-                    </div>
+                    </motion.form>
                 </div>
             </div>
 
-            <div className="container mx-auto py-8 px-4 space-y-8">
-                {/* Required Reading Alert */}
+            <div className="container mx-auto px-6 -mt-8 relative z-20">
+                {/* Required Reading Banner (Floating) */}
                 {pendingRequired.length > 0 && (
-                    <Card className="border-orange-200 bg-orange-50">
-                        <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-orange-700">
-                                    <AlertCircle className="h-5 w-5" />
-                                    <CardTitle className="text-lg">{t('required_reading')}</CardTitle>
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-12"
+                    >
+                        <Card className="border-none shadow-xl bg-gradient-to-r from-orange-500 to-red-600 text-white overflow-hidden">
+                            <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6 relative">
+                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                    <AlertCircle size={100} />
                                 </div>
-                                <Badge variant="secondary" className="bg-orange-200 text-orange-800">
-                                    {t('pending_count', { count: pendingRequired.length })}
-                                </Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-wrap gap-2">
-                                {pendingRequired.slice(0, 3).map(item => (
-                                    <Link
-                                        key={item.document_id}
-                                        to={`/knowledge/${item.document_id}`}
-                                        className="px-3 py-1.5 bg-white rounded-lg border border-orange-200 text-sm hover:bg-orange-100 transition-colors"
-                                    >
-                                        {item.title}
-                                    </Link>
-                                ))}
-                                {pendingRequired.length > 3 && (
-                                    <Link
-                                        to="/knowledge/required"
-                                        className="px-3 py-1.5 text-orange-700 text-sm hover:underline"
-                                    >
-                                        {t('more_count', { count: pendingRequired.length - 3 })}
-                                    </Link>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <div className="flex items-center gap-6">
+                                    <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                                        <ShieldCheck className="h-8 w-8 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-bold mb-1">{t('required_reading')}</h2>
+                                        <p className="text-white/80">{t('required_reading_desc')}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Badge variant="outline" className="text-white border-white/50 text-sm py-1.5 px-4 mb-2 md:mb-0">
+                                        {pendingRequired.length} {t('library.pending', 'Pending')}
+                                    </Badge>
+                                    <Button asChild className="bg-white text-orange-600 hover:bg-white/90 font-bold shadow-lg">
+                                        <Link to="/knowledge/search?f=required">
+                                            {t('view_all')} <ArrowRight className="ml-2 h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
                 )}
 
-                {/* Your Recently Viewed */}
-                {recentlyViewed.length > 0 && (
-                    <section>
-                        <div className="flex items-center gap-2 mb-4">
-                            <Clock className="h-5 w-5 text-blue-600" />
-                            <h2 className="text-xl font-bold">{t('your_recently_viewed')}</h2>
-                        </div>
-                        <div className="flex gap-4 overflow-x-auto pb-2">
-                            {recentlyViewed.map(article => {
-                                const Icon = CONTENT_TYPE_ICONS[article.content_type as KnowledgeContentType] || FileText
-                                return (
-                                    <Link
-                                        key={article.id}
-                                        to={`/knowledge/${article.id}`}
-                                        className="flex-shrink-0 w-64 p-4 rounded-lg border bg-white hover:shadow-md transition-shadow"
-                                    >
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Icon className="h-4 w-4 text-gray-500" />
-                                            <span className="text-xs text-gray-500 uppercase">
-                                                {t(`content_types.${article.content_type}`, article.content_type).toString()}
-                                            </span>
-                                        </div>
-                                        <h4 className="font-medium line-clamp-2">{article.title}</h4>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    </section>
-                )}
-
-                {/* Department Quick Access */}
-                {primaryDept && deptArticles && deptArticles.length > 0 && (
-                    <section>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                                <ClipboardList className="h-5 w-5 text-hotel-navy" />
-                                <h2 className="text-xl font-bold">{t('quick_access_dept', { dept: primaryDept.name }).toString()}</h2>
-                            </div>
-                            <Link
-                                to={`/knowledge/browse?department=${primaryDept.id}`}
-                                className="text-sm text-hotel-navy hover:underline flex items-center gap-1"
-                            >
-                                {t('view_all')} <ArrowRight className="h-4 w-4" />
-                            </Link>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {deptArticles.map(article => {
-                                const Icon = CONTENT_TYPE_ICONS[article.content_type as KnowledgeContentType] || FileText
-                                return (
-                                    <Link key={article.id} to={`/knowledge/${article.id}`}>
-                                        <Card className="h-full hover:shadow-md transition-shadow border-hotel-navy/10">
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Icon className="h-4 w-4 text-hotel-navy" />
-                                                    <span className="text-xs font-medium text-hotel-navy/70 uppercase">
-                                                        {t(`content_types.${article.content_type}`, article.content_type)}
-                                                    </span>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column: Primary Gateways */}
+                    <div className="lg:col-span-2 space-y-8">
+                        {/* Master Library Gateway */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Link to="/knowledge/search" className="group">
+                                <Card className="h-full border-none shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-white overflow-hidden">
+                                    <CardContent className="p-0 flex h-full">
+                                        <div className="w-2 bg-hotel-navy group-hover:bg-hotel-gold transition-colors" />
+                                        <div className="p-8 flex flex-col justify-between flex-1">
+                                            <div>
+                                                <div className="w-14 h-14 rounded-2xl bg-hotel-navy/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                                    <Library className="h-7 w-7 text-hotel-navy" />
                                                 </div>
-                                                <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">{article.title}</h4>
-                                                {article.description && (
-                                                    <p className="text-sm text-gray-500 line-clamp-2">{article.description}</p>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    </section>
-                )}
-
-                {/* Featured Articles */}
-                <section>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <Star className="h-5 w-5 text-hotel-gold" />
-                            <h2 className="text-xl font-bold">{t('featured')}</h2>
-                        </div>
-                        <Link to="/knowledge/browse?featured=true" className="text-sm text-hotel-gold hover:underline flex items-center gap-1">
-                            {t('view_all')} <ArrowRight className="h-4 w-4" />
-                        </Link>
-                    </div>
-
-                    {featuredLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[1, 2, 3].map(i => (
-                                <Card key={i}>
-                                    <CardContent className="p-4">
-                                        <Skeleton className="h-4 w-20 mb-2" />
-                                        <Skeleton className="h-6 w-full mb-2" />
-                                        <Skeleton className="h-4 w-3/4" />
+                                                <h3 className="text-2xl font-bold text-hotel-navy mb-3">{t('library.title')}</h3>
+                                                <p className="text-gray-500 mb-6 leading-relaxed">
+                                                    {t('library.description')}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center text-hotel-navy font-bold group-hover:text-hotel-gold transition-colors">
+                                                {t('library.enter')} <ArrowRight className="ml-2 h-5 w-5" />
+                                            </div>
+                                        </div>
                                     </CardContent>
                                 </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {featured?.map(article => {
-                                const Icon = CONTENT_TYPE_ICONS[article.content_type as KnowledgeContentType] || FileText
-                                return (
-                                    <Link key={article.id} to={`/knowledge/${article.id}`}>
-                                        <Card className="h-full hover:shadow-lg transition-shadow border-l-4 border-l-hotel-gold">
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Icon className="h-4 w-4 text-hotel-gold" />
-                                                    <span className="text-xs uppercase text-gray-500 font-medium">
-                                                        {t(`content_types.${article.content_type}`, article.content_type).toString()}
-                                                    </span>
-                                                    {article.department?.name && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {article.department.name}
-                                                        </Badge>
-                                                    )}
+                            </Link>
+
+                            <Link to="/knowledge/create" className="group">
+                                <Card className="h-full border-none shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-hotel-navy overflow-hidden">
+                                    <CardContent className="p-0 flex h-full">
+                                        <div className="w-2 bg-hotel-gold" />
+                                        <div className="p-8 flex flex-col justify-between flex-1">
+                                            <div className="text-white">
+                                                <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                                    <Plus className="h-7 w-7 text-hotel-gold" />
                                                 </div>
-                                                <h3 className="font-semibold mb-1 line-clamp-2">{article.title}</h3>
-                                                <p className="text-sm text-gray-600 line-clamp-2">{article.description}</p>
-                                            </CardContent>
-                                        </Card>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    )}
-                </section>
-
-                {/* Browse by Department */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <BookOpen className="h-5 w-5 text-gray-600" />
-                        <h2 className="text-xl font-bold">{t('browse_by_dept')}</h2>
-                        <Badge variant="outline" className="text-xs">{t('personalized')}</Badge>
-                    </div>
-
-                    {Object.keys(deptCounts || {}).length === 0 ? (
-                        <Card className="p-8 text-center">
-                            <p className="text-gray-500">{t('no_dept_content')}</p>
-                            <p className="text-sm text-gray-400 mt-2">{t('no_dept_content_desc')}</p>
-                        </Card>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {Object.entries(deptCounts || {}).map(([deptId, dept]: [string, any]) => (
-                                <Link
-                                    key={deptId}
-                                    to={`/knowledge/browse?department=${deptId}`}
-                                    className="p-6 rounded-xl border bg-white hover:shadow-lg transition-all group"
-                                >
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="w-12 h-12 rounded-lg bg-hotel-navy/10 flex items-center justify-center">
-                                            <BookOpen className="h-6 w-6 text-hotel-navy" />
+                                                <h3 className="text-2xl font-bold mb-3">{t('create_article')}</h3>
+                                                <p className="text-white/60 mb-6 leading-relaxed">
+                                                    Contribute to the collective knowledge. Draft new SOPs and operational guides.
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center text-hotel-gold font-bold transition-colors">
+                                                Start Drafting <ArrowRight className="ml-2 h-5 w-5" />
+                                            </div>
                                         </div>
-                                        <Badge variant="secondary" className="text-xs">
-                                            {t(dept.total === 1 ? 'article_count' : 'article_count_plural', { count: dept.total })}
-                                        </Badge>
-                                    </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        </div>
 
-                                    <h3 className="font-semibold text-lg mb-2 group-hover:text-hotel-gold transition-colors">
-                                        {dept.name}
-                                    </h3>
-
-                                    {/* Top 3 content types in this department */}
-                                    <div className="flex flex-wrap gap-1">
-                                        {Object.entries(dept.counts)
-                                            .sort(([, a]: [string, any], [, b]: [string, any]) => b - a)
-                                            .slice(0, 3)
-                                            .map(([type, count]: [string, any]) => (
-                                                <Badge key={type} variant="outline" className="text-xs capitalize">
-                                                    {t(`content_types.${type}`, type)}: {count}
-                                                </Badge>
-                                            ))}
-                                    </div>
+                        {/* Recent Discoveries */}
+                        <section>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold text-hotel-navy flex items-center gap-3">
+                                    <Clock className="h-6 w-6 text-hotel-gold" />
+                                    {t('recent')}
+                                </h2>
+                                <Link to="/knowledge/search?sort=updated" className="text-hotel-navy hover:text-hotel-gold font-semibold flex items-center text-sm">
+                                    {t('view_all')} <ChevronRight className="h-4 w-4" />
                                 </Link>
-                            ))}
-                        </div>
-                    )}
-                </section>
+                            </div>
 
-                {/* Recently Updated */}
-                <section>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-gray-600" />
-                            <h2 className="text-xl font-bold">{t('recent')}</h2>
-                        </div>
-                        <Link to="/knowledge/browse?sort=updated" className="text-sm text-hotel-gold hover:underline flex items-center gap-1">
-                            {t('view_all')} <ArrowRight className="h-4 w-4" />
-                        </Link>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {featured?.map((article, idx) => (
+                                    <motion.div
+                                        key={article.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.1 }}
+                                    >
+                                        <Link to={`/knowledge/${article.id}`}>
+                                            <Card className="hover:shadow-md transition-all border-none bg-white p-4 group">
+                                                <div className="flex gap-4">
+                                                    <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-hotel-navy/5 group-hover:text-hotel-navy transition-colors">
+                                                        <BookOpen size={20} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <Badge variant="outline" className="mb-2 text-[10px] uppercase tracking-wider text-gray-400">
+                                                            {t(`content_types.${article.content_type}`)}
+                                                        </Badge>
+                                                        <h4 className="font-bold text-hotel-navy line-clamp-1 group-hover:text-hotel-gold transition-colors">{article.title}</h4>
+                                                        <p className="text-xs text-gray-400 mt-1">{article.department?.name}</p>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        </Link>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </section>
                     </div>
 
-                    {recentLoading ? (
-                        <div className="space-y-2">
-                            {[1, 2, 3, 4].map(i => (
-                                <Skeleton key={i} className="h-16 w-full" />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {recent?.map(article => {
-                                const Icon = CONTENT_TYPE_ICONS[article.content_type as KnowledgeContentType] || FileText
-                                return (
-                                    <Link
-                                        key={article.id}
-                                        to={`/knowledge/${article.id}`}
-                                        className="flex items-center gap-4 p-4 rounded-lg border bg-white hover:shadow-sm transition-shadow"
-                                    >
-                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                            <Icon className="h-5 w-5 text-gray-600" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-medium truncate">{article.title}</h4>
-                                            <p className="text-sm text-gray-500 truncate">{article.description}</p>
-                                        </div>
-                                        <div className="text-xs text-gray-400 flex-shrink-0">
-                                            {article.updated_at && new Date(article.updated_at).toLocaleDateString()}
-                                        </div>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    )}
-                </section>
+                    {/* Right Column: Personalized & High-Level Info */}
+                    <div className="space-y-8">
+                        {/* Department Hub */}
+                        <Card className="border-none shadow-lg bg-white overflow-hidden">
+                            <CardContent className="p-0">
+                                <div className="bg-hotel-navy p-6 text-white text-center">
+                                    <div className="w-16 h-16 rounded-full bg-white/10 mx-auto flex items-center justify-center mb-4">
+                                        <LayoutGrid className="h-8 w-8 text-hotel-gold" />
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-1">{primaryDept?.name || 'Your Department'}</h3>
+                                    <p className="text-white/60 text-sm">Specialized Knowledge Hub</p>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {deptArticles?.slice(0, 4).map(art => (
+                                        <Link
+                                            key={art.id}
+                                            to={`/knowledge/${art.id}`}
+                                            className="flex items-center justify-between group py-2 border-b border-gray-50 last:border-0"
+                                        >
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-hotel-gold transition-colors">{art.title}</p>
+                                                <p className="text-[10px] text-gray-500 mt-1">{new Date(art.updated_at).toLocaleDateString()}</p>
+                                            </div>
+                                            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-hotel-gold transform group-hover:translate-x-1 transition-all" />
+                                        </Link>
+                                    ))}
+                                    <Button asChild variant="outline" className="w-full mt-4 border-hotel-navy/20 hover:bg-hotel-navy hover:text-white transition-all">
+                                        <Link to={`/knowledge/search?department=${primaryDept?.id}`}>
+                                            Explore Department <ArrowRight className="ml-2 h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                {/* Admin Quick Actions */}
-                {canManage && (
-                    <section className="border-t pt-8">
-                        <div className="flex items-center gap-2 mb-4">
-                            <TrendingUp className="h-5 w-5 text-gray-600" />
-                            <h2 className="text-xl font-bold">{t('manage')}</h2>
-                        </div>
+                        {/* Quick Help / AI Assistant Card */}
+                        <Card className="border-none shadow-lg bg-gradient-to-br from-hotel-navy to-blue-900 text-white overflow-hidden">
+                            <CardContent className="p-8 text-center relative">
+                                <div className="absolute top-0 right-0 p-4 opacity-5">
+                                    <MessageCircle size={80} />
+                                </div>
+                                <div className="w-14 h-14 rounded-full bg-hotel-gold/20 mx-auto flex items-center justify-center mb-6 text-hotel-gold">
+                                    <Star className="h-7 w-7" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-3">AI Knowledge Pro</h3>
+                                <p className="text-white/70 text-sm mb-6 leading-relaxed">
+                                    Need quick answers? Our AI assistant can help you find protocols and SOP details instantly.
+                                </p>
+                                <Button className="bg-hotel-gold text-hotel-navy hover:bg-hotel-gold/90 font-bold w-full shadow-lg border-none">
+                                    Ask Assistant
+                                </Button>
+                            </CardContent>
+                        </Card>
 
-                        <div className="flex flex-wrap gap-4">
-                            <Link to="/knowledge/create">
-                                <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy">
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    {t('create_article')}
-                                </Button>
-                            </Link>
-                            <Link to="/knowledge/review">
-                                <Button variant="outline">
-                                    {t('review_pending')}
-                                </Button>
-                            </Link>
-                            <Link to="/knowledge/analytics">
-                                <Button variant="outline">
-                                    {t('analytics_action')}
-                                </Button>
-                            </Link>
-                        </div>
-                    </section>
-                )}
+                        {/* Recently Viewed List */}
+                        {recentlyViewed && recentlyViewed.length > 0 && (
+                            <section>
+                                <h3 className="text-lg font-bold text-hotel-navy mb-4 flex items-center gap-2">
+                                    <Clock size={18} className="text-hotel-gold" />
+                                    {t('your_recently_viewed')}
+                                </h3>
+                                <div className="space-y-3">
+                                    {recentlyViewed.map(article => (
+                                        <Link key={article.id} to={`/knowledge/${article.id}`}>
+                                            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 hover:border-hotel-gold/30 transition-all">
+                                                <p className="text-sm font-medium text-gray-700 truncate">{article.title}</p>
+                                                <p className="text-[10px] text-gray-500 mt-1">{new Date(article.updated_at).toLocaleDateString()}</p>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     )
