@@ -42,29 +42,49 @@ export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
     const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')
     const isVimeo = videoUrl.includes('vimeo.com')
 
-    // Convert YouTube URLs to embed format
     const getEmbedUrl = (url: string) => {
+        if (!url) return ''
+
         if (isYouTube) {
-            const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]
-            return `https://www.youtube.com/embed/${videoId}?rel=0`
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+            const match = url.match(regExp)
+            const videoId = (match && match[2].length === 11) ? match[2] : null
+            if (videoId) return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`
         }
+
         if (isVimeo) {
-            const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1]
-            return `https://player.vimeo.com/video/${videoId}`
+            const regExp = /vimeo\.com\/(\d+)/
+            const match = url.match(regExp)
+            if (match && match[1]) return `https://player.vimeo.com/video/${match[1]}`
         }
+
         return url
     }
 
     if (isYouTube || isVimeo) {
         return (
-            <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                <iframe
-                    src={getEmbedUrl(videoUrl)}
-                    title={title || 'Video'}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                />
+            <div className="space-y-4">
+                <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                    <iframe
+                        src={getEmbedUrl(videoUrl)}
+                        title={title || 'Video'}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                </div>
+                <div className="flex justify-center">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-gray-500 hover:text-hotel-navy"
+                        onClick={() => window.open(videoUrl, '_blank')}
+                    >
+                        <ExternalLink className="h-3 w-3 mr-2" />
+                        Having trouble? Watch directly on YouTube
+                    </Button>
+                </div>
             </div>
         )
     }

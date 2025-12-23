@@ -4,7 +4,7 @@
  * Specialized editor components for different knowledge article content types.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,8 +22,10 @@ import {
     HelpCircle,
     CheckSquare,
     Play,
-    Eye
+    Eye,
+    EyeOff
 } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem } from '@/types/knowledge'
 
@@ -37,73 +39,139 @@ interface VideoContentBuilderProps {
 }
 
 export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProps) {
-    const [showPreview, setShowPreview] = useState(false)
+    const [showPreview, setShowPreview] = useState(true)
 
-    const isValidUrl = value && (
-        value.includes('youtube.com') ||
-        value.includes('youtu.be') ||
-        value.includes('vimeo.com') ||
-        value.match(/\.(mp4|webm|ogg)$/i)
-    )
+    const isValidUrl = useMemo(() => {
+        try {
+            new URL(value)
+            return true
+        } catch {
+            return false
+        }
+    }, [value])
 
-    const getEmbedUrl = (url: string) => {
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]
-            return `https://www.youtube.com/embed/${videoId}?rel=0`
-        }
-        if (url.includes('vimeo.com')) {
-            const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1]
-            return `https://player.vimeo.com/video/${videoId}`
-        }
-        return url
+    // Extract YouTube video ID
+    const getYouTubeId = (url: string): string | null => {
+        if (!url) return null
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+        const match = url.match(regExp)
+        return (match && match[2].length === 11) ? match[2] : null
     }
 
+    // Extract Vimeo video ID
+    const getVimeoId = (url: string): string | null => {
+        if (!url) return null
+        const regExp = /vimeo\.com\/(\d+)/
+        const match = url.match(regExp)
+        return match ? match[1] : null
+    }
+
+    const isYouTube = value.includes('youtube.com') || value.includes('youtu.be')
+    const isVimeo = value.includes('vimeo.com')
+    const isDirectVideo = value.match(/\.(mp4|webm|ogg)$/i)
+    const youtubeId = getYouTubeId(value)
+    const vimeoId = getVimeoId(value)
+
+    // YouTube thumbnail URL
+    const thumbnailUrl = youtubeId
+        ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`
+        : null
+
     return (
-        <Card>
+        <Card className="border-dashed">
             <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
+                <div className="flex items-center gap-2">
                     <Video className="h-5 w-5 text-red-500" />
-                    Video Content
-                </CardTitle>
+                    <CardTitle className="text-base">Video Content</CardTitle>
+                </div>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="video-url">Video URL</Label>
+                    <Label>Video URL</Label>
                     <div className="flex gap-2">
                         <Input
-                            id="video-url"
-                            placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                            placeholder="https://www.youtube.com/watch?v=..."
                             value={value}
-                            onChange={(e) => onChange(e.target.value)}
+                            onChange={e => onChange(e.target.value)}
                             className="flex-1"
                         />
                         <Button
                             type="button"
                             variant="outline"
+                            size="icon"
                             onClick={() => setShowPreview(!showPreview)}
-                            disabled={!isValidUrl}
+                            title={showPreview ? 'Hide preview' : 'Show preview'}
                         >
-                            <Eye className="h-4 w-4 mr-1" />
-                            {showPreview ? 'Hide' : 'Preview'}
+                            {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                         Supports YouTube, Vimeo, or direct video file URLs (.mp4, .webm)
                     </p>
                 </div>
 
                 {showPreview && isValidUrl && (
-                    <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                        {value.match(/\.(mp4|webm|ogg)$/i) ? (
-                            <video src={value} controls className="w-full h-full" />
-                        ) : (
-                            <iframe
-                                src={getEmbedUrl(value)}
-                                title="Video Preview"
-                                className="w-full h-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                            />
+                    <div className="space-y-2">
+                        {/* Direct video files - use native player */}
+                        {isDirectVideo && (
+                            <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                                <video src={value} controls className="w-full h-full" />
+                            </div>
+                        )}
+
+                        {/* YouTube - show thumbnail with play button */}
+                        {isYouTube && youtubeId && (
+                            <div
+                                className="aspect-video rounded-lg overflow-hidden bg-black relative cursor-pointer group"
+                                onClick={() => window.open(value, '_blank')}
+                            >
+                                <img
+                                    src={thumbnailUrl!}
+                                    alt="Video thumbnail"
+                                    className="w-full h-full object-cover"
+                                />
+                                {/* Play button overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                                    <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <Play className="h-8 w-8 text-white fill-white ml-1" />
+                                    </div>
+                                </div>
+                                <div className="absolute bottom-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                    Click to watch on YouTube
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Vimeo - show placeholder with link */}
+                        {isVimeo && vimeoId && (
+                            <div
+                                className="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-[#1ab7ea] to-[#0d92c8] relative cursor-pointer group"
+                                onClick={() => window.open(value, '_blank')}
+                            >
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                                    <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                        <Play className="h-8 w-8 text-white fill-white ml-1" />
+                                    </div>
+                                    <p className="text-sm font-medium">Vimeo Video</p>
+                                    <p className="text-xs opacity-80 mt-1">Click to watch</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Fallback for other URLs */}
+                        {!isDirectVideo && !isYouTube && !isVimeo && (
+                            <div className="aspect-video rounded-lg overflow-hidden bg-muted flex flex-col items-center justify-center">
+                                <Video className="h-12 w-12 text-muted-foreground mb-3" />
+                                <p className="text-sm text-muted-foreground">Video URL detected</p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-3"
+                                    onClick={() => window.open(value, '_blank')}
+                                >
+                                    Open Video
+                                </Button>
+                            </div>
                         )}
                     </div>
                 )}

@@ -38,7 +38,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { useArticles, useBookmarks } from '@/hooks/useKnowledge'
+import { useArticles, useBookmarks, useRequiredReading } from '@/hooks/useKnowledge'
 import { useAuth } from '@/contexts/AuthContext'
 import { KnowledgeSidebar } from '@/components/knowledge'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
@@ -67,6 +67,7 @@ export default function KnowledgeLibrary() {
     const activeDept = searchParams.get('department')
     const activeFeatured = searchParams.get('featured') === 'true'
     const activeBookmarks = searchParams.get('bookmarks') === 'true'
+    const activeRequired = searchParams.get('f') === 'required'
     const searchQuery = searchParams.get('q') || ''
 
     const [sortBy, setSortBy] = useState('updated')
@@ -79,13 +80,17 @@ export default function KnowledgeLibrary() {
         { value: 'title', label: t('search_page.sort.az') },
     ]
 
-    const { data: articles, isLoading } = useArticles({
+    const { data: articles, isLoading: articlesLoading } = useArticles({
         search: searchQuery || undefined,
         type: activeType || undefined,
         departmentId: activeDept || undefined,
+        required: activeRequired || undefined,
         limit: 100
     })
     const { data: bookmarks } = useBookmarks()
+    const { data: requiredReading, isLoading: requiredLoading } = useRequiredReading()
+
+    const isLoading = articlesLoading || (activeRequired && requiredLoading)
 
     const filteredArticles = useMemo(() => {
         if (!articles) return []
@@ -98,6 +103,11 @@ export default function KnowledgeLibrary() {
         if (activeBookmarks && bookmarks) {
             const bookmarkedIds = new Set(bookmarks.map(b => b.document_id))
             filtered = filtered.filter(a => bookmarkedIds.has(a.id))
+        }
+
+        if (activeRequired && requiredReading) {
+            const pendingIds = new Set(requiredReading.filter(r => !r.is_acknowledged).map(r => r.document_id))
+            filtered = filtered.filter(a => pendingIds.has(a.id))
         }
 
         // Sort
@@ -133,6 +143,7 @@ export default function KnowledgeLibrary() {
         if (activeType) items.push({ label: t(`content_types.${activeType}`, activeType), href: undefined })
         if (activeFeatured) items.push({ label: t('library.featured', 'Featured'), href: undefined })
         if (activeBookmarks) items.push({ label: t('library.bookmarks', 'My Bookmarks'), href: undefined })
+        if (activeRequired) items.push({ label: t('library.required_reading', 'Required Reading'), href: undefined })
         if (searchQuery) items.push({ label: t('library.search_results', 'Search: {{q}}', { q: searchQuery }), href: undefined })
         return items
     }, [activeDept, activeType, activeFeatured, activeBookmarks, searchQuery, t])
@@ -151,8 +162,9 @@ export default function KnowledgeLibrary() {
                         <h1 className="text-xl font-bold text-hotel-navy truncate">
                             {activeDept ? t('library.browsing_dept', 'Browsing Department') :
                                 activeType ? t('library.browsing_type', 'Browsing {{type}}', { type: t(`content_types.${activeType}`) }) :
-                                    searchQuery ? t('library.search_results_title', 'Search Results') :
-                                        t('library.master_library', 'Master Knowledge Library')}
+                                    activeRequired ? t('library.required_reading', 'Required Reading') :
+                                        searchQuery ? t('library.search_results_title', 'Search Results') :
+                                            t('library.master_library', 'Master Knowledge Library')}
                         </h1>
                     </div>
 
@@ -243,6 +255,8 @@ export default function KnowledgeLibrary() {
                                     const typeConfig = CONTENT_TYPE_CONFIG.find(c => c.type === article.content_type)
                                     const Icon = typeConfig ? ICON_MAP[typeConfig.icon] : FileText
                                     const isBookmarked = bookmarks?.some(b => b.document_id === article.id)
+                                    const requiredItem = requiredReading?.find(r => r.document_id === article.id)
+                                    const isPendingAck = requiredItem && !requiredItem.is_acknowledged
 
                                     return (
                                         <Link key={article.id} to={`/knowledge/${article.id}`} className="group">
@@ -270,6 +284,11 @@ export default function KnowledgeLibrary() {
                                                                 {article.title}
                                                             </h3>
                                                             {article.featured && <Star className="h-4 w-4 text-hotel-gold fill-hotel-gold flex-shrink-0" />}
+                                                            {isPendingAck && (
+                                                                <Badge className="bg-orange-100 text-orange-600 border-orange-200 text-[10px] h-5 py-0 flex-shrink-0">
+                                                                    {t('library.required', 'Required')}
+                                                                </Badge>
+                                                            )}
                                                             {isBookmarked && <Star className="h-4 w-4 text-hotel-gold fill-hotel-gold invisible group-hover:visible" />}
                                                         </div>
 
@@ -318,7 +337,9 @@ export default function KnowledgeLibrary() {
                                     <Search className="h-8 w-8 text-gray-300" />
                                 </div>
                                 <h3 className="text-lg font-bold text-hotel-navy">
-                                    {activeBookmarks ? t('library.no_bookmarks', 'No bookmarks yet') : t('library.no_results', 'No results found')}
+                                    {activeBookmarks ? t('library.no_bookmarks', 'No bookmarks yet') :
+                                        activeRequired ? t('library.no_required', 'No pending required reading') :
+                                            t('library.no_results', 'No results found')}
                                 </h3>
                                 <p className="text-gray-500 max-w-xs mx-auto mt-1">
                                     {activeBookmarks ? t('library.no_bookmarks_desc', 'Save articles you use frequently for quick access.') : t('library.no_results_desc', 'Try adjusting your search or filters.')}

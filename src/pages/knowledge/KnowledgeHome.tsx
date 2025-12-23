@@ -35,12 +35,15 @@ import {
     useArticles
 } from '@/hooks/useKnowledge'
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
+import { KnowledgeAIAssistant } from '@/components/knowledge/KnowledgeAIAssistant'
 
 export default function KnowledgeHome() {
     const { t } = useTranslation('knowledge')
     const navigate = useNavigate()
     const { user, primaryRole, departments } = useAuth()
     const [searchQuery, setSearchQuery] = useState('')
+    const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false)
+
 
     const primaryDept = departments?.[0]
 
@@ -192,11 +195,11 @@ export default function KnowledgeHome() {
                                                     </div>
                                                     <h3 className="text-2xl font-bold mb-3">{t('create_article')}</h3>
                                                     <p className="text-white/60 mb-6 leading-relaxed">
-                                                        Contribute to the collective knowledge. Draft new SOPs and operational guides.
+                                                        {t('create_article_desc')}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center text-hotel-gold font-bold transition-colors">
-                                                    Start Drafting <ArrowRight className="ml-2 h-5 w-5" />
+                                                    {t('start_drafting')} <ArrowRight className="ml-2 h-5 w-5" />
                                                 </div>
                                             </div>
                                         </CardContent>
@@ -256,8 +259,8 @@ export default function KnowledgeHome() {
                                     <div className="w-16 h-16 rounded-full bg-white/10 mx-auto flex items-center justify-center mb-4">
                                         <LayoutGrid className="h-8 w-8 text-hotel-gold" />
                                     </div>
-                                    <h3 className="text-xl font-bold mb-1">{primaryDept?.name || 'Your Department'}</h3>
-                                    <p className="text-white/60 text-sm">Specialized Knowledge Hub</p>
+                                    <h3 className="text-xl font-bold mb-1">{primaryDept?.name || t('dept_hub_title')}</h3>
+                                    <p className="text-white/60 text-sm">{t('dept_hub_desc')}</p>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     {deptArticles?.slice(0, 4).map(art => (
@@ -275,7 +278,7 @@ export default function KnowledgeHome() {
                                     ))}
                                     <Button asChild variant="outline" className="w-full mt-4 border-hotel-navy/20 hover:bg-hotel-navy hover:text-white transition-all">
                                         <Link to={`/knowledge/search?department=${primaryDept?.id}`}>
-                                            Explore Department <ArrowRight className="ml-2 h-4 w-4" />
+                                            {t('explore_dept')} <ArrowRight className="ml-2 h-4 w-4" />
                                         </Link>
                                     </Button>
                                 </div>
@@ -291,13 +294,16 @@ export default function KnowledgeHome() {
                                 <div className="w-14 h-14 rounded-full bg-hotel-gold/20 mx-auto flex items-center justify-center mb-6 text-hotel-gold">
                                     <Star className="h-7 w-7" />
                                 </div>
-                                <h3 className="text-xl font-bold mb-3">AI Knowledge Pro</h3>
+                                <h3 className="text-xl font-bold mb-3">{t('ai_assistant_title')}</h3>
                                 <p className="text-white/70 text-sm mb-6 leading-relaxed">
-                                    Need quick answers? Our AI assistant can help you find protocols and SOP details instantly.
+                                    {t('ai_assistant_desc')}
                                 </p>
-                                <Button className="bg-hotel-gold text-hotel-navy hover:bg-hotel-gold/90 font-bold w-full shadow-lg border-none">
-                                    Ask Assistant
-                                </Button>
+                                <button
+                                    className="bg-hotel-gold text-hotel-navy hover:bg-hotel-gold/90 font-bold w-full shadow-lg border-none py-2 px-4 rounded-md transition-colors"
+                                    onClick={() => setIsAIAssistantOpen(true)}
+                                >
+                                    {t('ask_assistant')}
+                                </button>
                             </CardContent>
                         </Card>
 
@@ -323,6 +329,12 @@ export default function KnowledgeHome() {
                     </div>
                 </div>
             </div>
+
+            {/* AI Knowledge Assistant Modal */}
+            <KnowledgeAIAssistant
+                isOpen={isAIAssistantOpen}
+                onClose={() => setIsAIAssistantOpen(false)}
+            />
         </div>
     )
 }

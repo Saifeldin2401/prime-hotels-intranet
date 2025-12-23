@@ -111,6 +111,25 @@
   h6 {
     @apply font-serif font-bold tracking-tight text-hotel-navy dark:text-hotel-gold;
   }
+
+  /* Hide Radix UI checkbox internal input */
+  button[role="checkbox"]>input,
+  button[role="checkbox"] input,
+  [data-state]>input[type="checkbox"],
+  [data-state="checked"] input,
+  [data-state="unchecked"] input {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 }
 
 /* Smooth scrolling and responsive typography */
@@ -1187,4 +1206,66 @@ select:focus-visible {
 
 .dark .touch-feedback:active {
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================
+   GLOBAL PRINT STYLES
+   ======================================== */
+@media print {
+
+  /* Hide sidebar and header navigation */
+  aside[data-sidebar],
+  nav.sidebar-navigation,
+  header,
+  .sidebar,
+  [data-sidebar] {
+    display: none !important;
+  }
+
+  /* Reset main content to full width */
+  main,
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Clean background */
+  body {
+    background: white !important;
+  }
+
+  /* Hide interactive elements */
+  button:not(.print-visible),
+  .btn:not(.print-visible) {
+    display: none !important;
+  }
+
+  /* Optimize typography for print */
+  body {
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+    color: black !important;
+  }
+
+  /* Prevent page breaks inside important elements */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    page-break-after: avoid;
+  }
+
+  img,
+  table,
+  figure {
+    page-break-inside: avoid;
+  }
+
+  /* Page margins */
+  @page {
+    margin: 2cm;
+  }
 }

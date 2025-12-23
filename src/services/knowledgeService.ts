@@ -87,7 +87,9 @@ export async function getArticles(
           property_id, department_id,
           requires_acknowledgment,
           created_at, updated_at,
-          view_count
+          view_count,
+          department:departments(id, name),
+          category:categories(id, name)
         `, { count: 'exact' })
 
         // Filter out deleted items
@@ -114,6 +116,9 @@ export async function getArticles(
         // category_id not available
         if (filters.property_id) {
             query = query.eq('property_id', filters.property_id)
+        }
+        if (filters.requires_acknowledgment !== undefined) {
+            query = query.eq('requires_acknowledgment', filters.requires_acknowledgment)
         }
         // visibility not accessible by scope name directly if enum matches, assuming simple match
         if (filters.visibility_scope) {
@@ -144,7 +149,7 @@ export async function getArticles(
     }
 }
 
-export async function getArticleById(id: string): Promise<KnowledgeArticle | null> {
+export async function getArticleById(id: string, userId?: string): Promise<KnowledgeArticle | null> {
     try {
         const { data, error } = await supabase
             .from('documents')
@@ -153,19 +158,40 @@ export async function getArticleById(id: string): Promise<KnowledgeArticle | nul
             .eq('is_deleted', false)
             .single()
 
-        if (error) {
-            console.warn('Article fetch error:', error.message)
-            return null
-        }
-        if (!data) {
+        if (error || !data) {
+            if (error) console.warn('Article fetch error:', error.message)
             return null
         }
 
-        return formatArticle(data)
+        const article = formatArticle(data)
+
+        // If userId provided, check for acknowledgment 
+        if (userId && data.requires_acknowledgment) {
+            const { data: ack } = await supabase
+                .from('document_acknowledgments')
+                .select('acknowledged_at')
+                .eq('document_id', id)
+                .eq('user_id', userId)
+                .maybeSingle()
+
+            if (ack) {
+                article.is_acknowledged = true
+                article.acknowledged_at = ack.acknowledged_at
+            } else {
+                article.is_acknowledged = false
+            }
+        }
+
+        return article
     } catch (e) {
         console.error('Article fetch exception:', e)
         return null
     }
+}
+
+export async function incrementViewCount(id: string): Promise<void> {
+    const { error } = await supabase.rpc('increment_article_view_count', { doc_id: id })
+    if (error) console.warn('Failed to increment view count:', error)
 }
 
 export async function getFeaturedArticles(limit = 5): Promise<KnowledgeArticle[]> {
@@ -481,14 +507,16 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
 function formatArticle(data: any): KnowledgeArticle {
     // Handle polymorphic/linked SOP data if present from join
     const sopData = Array.isArray(data.sop) ? data.sop[0] : data.sop
+    const department = Array.isArray(data.department) ? data.department[0] : data.department
+    const category = Array.isArray(data.category) ? data.category[0] : data.category
 
     return {
         ...data,
         content_type: (data.content_type?.toLowerCase() as any) || 'document',
         linked_training_id: data.linked_training_id || sopData?.linked_training_id,
         linked_quiz_id: data.linked_quiz_id || sopData?.linked_quiz_id,
-        department: data.department_id ? { id: data.department_id, name: 'Department' } : undefined,
-        category: undefined,
+        department: department || (data.department_id ? { id: data.department_id, name: 'Department' } : undefined),
+        category: category || (data.category_id ? { id: data.category_id, name: 'Category' } : undefined),
         author: undefined,
         tags: []
     }

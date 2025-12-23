@@ -34,6 +34,7 @@ function toProfile(emp: OrgEmployee) {
         email: emp.email,
         phone: emp.phone,
         avatar_url: emp.avatar_url,
+        staff_id: emp.staff_id,
         roles: emp.roles,
         user_roles: emp.roles.map(r => ({ role: r }))
     }

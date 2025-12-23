@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import type { KnowledgeArticle } from '@/types/knowledge'
+import * as KnowledgeService from '@/services/knowledgeService'
 
 const STORAGE_KEY = 'kb_recently_viewed'
 const MAX_ITEMS = 10
@@ -58,6 +59,8 @@ export function useTrackView(documentId: string | undefined) {
     useEffect(() => {
         if (user?.id && documentId) {
             saveView(user.id, documentId)
+            // Increment global view count
+            KnowledgeService.incrementViewCount(documentId)
         }
     }, [user?.id, documentId])
 }

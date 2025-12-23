@@ -9,3 +9,5 @@ export { VideoContentBuilder, ChecklistBuilder, FAQBuilder, VisualContentBuilder
 export { LinkedResourceSelector } from './LinkedResourceSelector'
 export { RelatedArticlesEditor } from './RelatedArticlesEditor'
 export { KnowledgeSidebar } from './KnowledgeSidebar'
+export { KnowledgeAIAssistant } from './KnowledgeAIAssistant'
+

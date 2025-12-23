@@ -37,9 +37,16 @@ export function EmployeeCard({ profile, isRTL }: EmployeeCardProps) {
             </CardHeader>
             <CardContent className="pt-12 px-6 pb-6">
                 <div className="space-y-1 mb-4">
-                    <h3 className="font-bold text-lg leading-tight truncate" title={profile.full_name}>
-                        {profile.full_name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg leading-tight truncate" title={profile.full_name}>
+                            {profile.full_name}
+                        </h3>
+                        {profile.staff_id && (
+                            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono border">
+                                {profile.staff_id}
+                            </span>
+                        )}
+                    </div>
                     {profile.job_title && (
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
                             <Briefcase className="h-3.5 w-3.5" />

@@ -99,6 +99,8 @@ export interface KnowledgeArticle {
     }
     tags?: KnowledgeTag[]
     related_articles?: RelatedArticle[]
+    is_acknowledged?: boolean
+    acknowledged_at?: string
 }
 
 // Checklist item for interactive checklists

@@ -314,6 +314,11 @@ export default function MyLeaveRequests() {
                 <div key={request.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
+                      {request.workflow?.request_no && (
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono bg-slate-50 border-slate-300">
+                          #{request.workflow.request_no}
+                        </Badge>
+                      )}
                       <h4 className="font-medium capitalize text-sm sm:text-base">
                         {t(`leave_requests.types.${request.type}`)} - {calculateDays(new Date(request.start_date), new Date(request.end_date))} {t('leave_requests.list.days')}
                       </h4>

@@ -43,12 +43,23 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useProperty } from '@/contexts/PropertyContext'
 import { supabase } from '@/lib/supabase'
 import { aiService } from '@/lib/gemini'
-import type { KnowledgeVisibility } from '@/types/knowledge'
+import {
+    type KnowledgeVisibility,
+    type KnowledgeStatus,
+    type ChecklistItem,
+    type FAQItem,
+    CONTENT_TYPE_CONFIG
+} from '@/types/knowledge'
 import { RelatedArticlesEditor } from '@/components/knowledge'
 import { useRelatedArticles, useCategories } from '@/hooks/useKnowledge'
-import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProperties } from '@/hooks/useProperties'
+import {
+    VideoContentBuilder,
+    ChecklistBuilder,
+    FAQBuilder,
+    VisualContentBuilder
+} from '@/components/knowledge/ContentTypeBuilders'
 
 interface ArticleFormData {
     title: string
@@ -63,6 +74,11 @@ interface ArticleFormData {
     department_id: string | null
     category_id: string | null
     target_property_id: string | null
+    // Content Type Specific
+    checklist_items: ChecklistItem[]
+    faq_items: FAQItem[]
+    video_url: string
+    images: any[]
 }
 
 export default function KnowledgeEditor() {
@@ -86,7 +102,11 @@ export default function KnowledgeEditor() {
         featured: false,
         department_id: null,
         category_id: null,
-        target_property_id: null
+        target_property_id: null,
+        checklist_items: [],
+        faq_items: [],
+        video_url: '',
+        images: []
     })
 
     // Fetch existing data if editing
@@ -242,7 +262,11 @@ export default function KnowledgeEditor() {
                             featured: false,
                             department_id: data.department_id || null,
                             category_id: data.category_id || null,
-                            target_property_id: data.property_id || null
+                            target_property_id: data.property_id || null,
+                            checklist_items: data.checklist_items || [],
+                            faq_items: data.faq_items || [],
+                            video_url: data.video_url || '',
+                            images: data.images || []
                         })
                     }
                 })
@@ -378,7 +402,11 @@ export default function KnowledgeEditor() {
                 department_id: formData.department_id,
                 category_id: formData.category_id,
                 created_by: user?.id,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
+                checklist_items: formData.checklist_items,
+                faq_items: formData.faq_items,
+                video_url: formData.video_url,
+                images: formData.images
             }
 
             if (isEditing && id) {
@@ -633,16 +661,67 @@ export default function KnowledgeEditor() {
                         </CardHeader>
                         <CardContent>
                             {activeTab === 'edit' ? (
-                                <RichTextEditor
-                                    value={formData.content}
-                                    onChange={v => updateField('content', v)}
-                                    placeholder={t('editor.write_placeholder')}
-                                    minHeight={400}
-                                    direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
-                                />
+                                <div className="space-y-6">
+                                    <RichTextEditor
+                                        value={formData.content}
+                                        onChange={v => updateField('content', v)}
+                                        placeholder={t('editor.write_placeholder')}
+                                        minHeight={200}
+                                        direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
+                                    />
+
+                                    {/* Content Type Specific Builders */}
+                                    {formData.content_type === 'video' && (
+                                        <VideoContentBuilder
+                                            value={formData.video_url}
+                                            onChange={v => updateField('video_url', v)}
+                                        />
+                                    )}
+
+                                    {formData.content_type === 'checklist' && (
+                                        <ChecklistBuilder
+                                            items={formData.checklist_items}
+                                            onChange={v => updateField('checklist_items', v)}
+                                        />
+                                    )}
+
+                                    {formData.content_type === 'faq' && (
+                                        <FAQBuilder
+                                            items={formData.faq_items}
+                                            onChange={v => updateField('faq_items', v)}
+                                        />
+                                    )}
+
+                                    {formData.content_type === 'visual' && (
+                                        <VisualContentBuilder
+                                            images={formData.images}
+                                            onChange={v => updateField('images', v)}
+                                        />
+                                    )}
+                                </div>
                             ) : (
                                 <div className="prose max-w-none min-h-[400px] p-4 border rounded bg-white">
                                     <div dangerouslySetInnerHTML={{ __html: formData.content || `<p class="text-gray-400">${t('editor.empty_preview')}</p>` }} />
+
+                                    {/* Preview content type specific blocks */}
+                                    <div className="mt-8 space-y-6">
+                                        {formData.content_type === 'video' && formData.video_url && (
+                                            <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                                                <p className="text-white p-4">Video Preview: {formData.video_url}</p>
+                                            </div>
+                                        )}
+                                        {formData.content_type === 'checklist' && formData.checklist_items.length > 0 && (
+                                            <div className="space-y-2">
+                                                <h4 className="font-bold">Checklist Preview:</h4>
+                                                {formData.checklist_items.map((item: any) => (
+                                                    <div key={item.id} className="flex items-center gap-2">
+                                                        <div className="w-4 h-4 border rounded" />
+                                                        <span>{item.text}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </CardContent>

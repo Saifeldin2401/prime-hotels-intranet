@@ -26,14 +26,21 @@ export function useKnowledgeArticles(filters: KnowledgeSearchFilters, page = 1, 
 }
 
 // Simplified alias for common usage
-export function useArticles(options?: { search?: string; type?: string; limit?: number; departmentId?: string }) {
+export function useArticles(options?: {
+    search?: string
+    type?: string
+    limit?: number
+    departmentId?: string
+    required?: boolean
+}) {
     return useQuery({
         queryKey: ['knowledge-articles', options],
         queryFn: async () => {
             const filters: KnowledgeSearchFilters = {
                 query: options?.search,
                 content_type: options?.type as KnowledgeContentType | undefined,
-                department_id: options?.departmentId
+                department_id: options?.departmentId,
+                requires_acknowledgment: options?.required
             }
             const result = await KnowledgeService.getArticles(filters, 1, options?.limit || 50)
             return result.articles
@@ -42,9 +49,10 @@ export function useArticles(options?: { search?: string; type?: string; limit?: 
 }
 
 export function useKnowledgeArticle(id: string | undefined) {
+    const { user } = useAuth()
     return useQuery({
-        queryKey: ['knowledge-article', id],
-        queryFn: () => KnowledgeService.getArticleById(id!),
+        queryKey: ['knowledge-article', id, user?.id],
+        queryFn: () => KnowledgeService.getArticleById(id!, user?.id),
         enabled: !!id
     })
 }
@@ -84,8 +92,9 @@ export function useAcknowledgeArticle() {
     return useMutation({
         mutationFn: (documentId: string) =>
             KnowledgeService.acknowledgeArticle(documentId, user!.id),
-        onSuccess: () => {
+        onSuccess: (_data, documentId) => {
             queryClient.invalidateQueries({ queryKey: ['knowledge-required'] })
+            queryClient.invalidateQueries({ queryKey: ['knowledge-article', documentId] })
             toast.success('Article acknowledged')
         },
         onError: () => {

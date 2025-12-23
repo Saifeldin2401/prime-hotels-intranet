@@ -35,7 +35,8 @@ export function useMyLeaveRequests() {
           property:properties(id, name),
           department:departments(id, name),
           approved_by:profiles!approved_by_id(id, full_name, email),
-          rejected_by:profiles!rejected_by_id(id, full_name, email)
+          rejected_by:profiles!rejected_by_id(id, full_name, email),
+          workflow:requests!workflow_request_id(id, request_no)
         `)
         .eq('requester_id', user.id)
         .eq('is_deleted', false)
@@ -77,7 +78,8 @@ export function useTeamLeaveRequests() {
           property:properties(id, name),
           department:departments(id, name),
           approved_by:profiles!approved_by_id(id, full_name, email),
-          rejected_by:profiles!rejected_by_id(id, full_name, email)
+          rejected_by:profiles!rejected_by_id(id, full_name, email),
+          workflow:requests!workflow_request_id(id, request_no)
         `)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
@@ -162,7 +164,8 @@ export function usePendingLeaveRequests() {
           *,
           requester:profiles!requester_id(id, full_name, email),
           property:properties(id, name),
-          department:departments(id, name)
+          department:departments(id, name),
+          workflow:requests!workflow_request_id(id, request_no)
         `)
         .eq('status', 'pending')
         .eq('is_deleted', false)

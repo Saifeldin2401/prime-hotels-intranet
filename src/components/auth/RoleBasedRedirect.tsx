@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import type { AppRole } from '@/lib/constants'
+import { useState, useEffect } from 'react'
 
 /**
  * Smart Role-Based Dashboard Routing
@@ -13,7 +14,7 @@ import type { AppRole } from '@/lib/constants'
  * - regional_hr → /dashboard/regional-hr
  * - regional_admin → /dashboard/corporate-admin
  * 
- * Falls back to /dashboard for unknown roles
+ * Falls back to /staff-dashboard for unknown roles or timeout
  */
 
 const roleToDashboardPath: Record<AppRole, string> = {
@@ -27,6 +28,19 @@ const roleToDashboardPath: Record<AppRole, string> = {
 
 export function RoleBasedRedirect() {
     const { user, primaryRole, roles, loading } = useAuth()
+    const [timedOut, setTimedOut] = useState(false)
+
+    // Timeout after 3 seconds to prevent infinite loading
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (roles.length === 0) {
+                console.warn('RoleBasedRedirect: Timeout waiting for roles, using fallback')
+                setTimedOut(true)
+            }
+        }, 3000)
+
+        return () => clearTimeout(timer)
+    }, [roles.length])
 
     // Show loading while auth is loading
     if (loading) {
@@ -44,9 +58,8 @@ export function RoleBasedRedirect() {
         return <Navigate to="/login" replace />
     }
 
-    // Wait for roles to load (they load async after user is available)
-    // Show loading spinner while waiting for roles
-    if (roles.length === 0) {
+    // Wait for roles to load, but not forever
+    if (roles.length === 0 && !timedOut) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
@@ -58,9 +71,10 @@ export function RoleBasedRedirect() {
     }
 
     // Get the dashboard path for the user's primary role
+    // Default to staff-dashboard if no roles (after timeout or genuinely no roles)
     const dashboardPath = primaryRole
-        ? (roleToDashboardPath[primaryRole as AppRole] || '/dashboard')
-        : '/dashboard'
+        ? (roleToDashboardPath[primaryRole as AppRole] || '/staff-dashboard')
+        : '/staff-dashboard'
 
     console.log('RoleBasedRedirect: primaryRole =', primaryRole, '-> redirecting to', dashboardPath)
 

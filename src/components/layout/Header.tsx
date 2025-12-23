@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProperty } from '@/contexts/PropertyContext'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
 import {
@@ -89,11 +88,6 @@ export function Header({
             {/* Notification Bell - Light Variant for Navy Header */}
             <div id="notifications-button" className="text-white">
               <NotificationBell />
-            </div>
-
-            {/* Theme Toggle - Adapted for Dark/Navy header */}
-            <div className="text-gray-200 hover:text-white">
-              <ThemeToggle />
             </div>
 
             {/* Divider */}

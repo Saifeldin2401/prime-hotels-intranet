@@ -55,11 +55,17 @@ import {
     useToggleBookmark,
     useBookmarks,
     useAcknowledgeArticle,
-    useSubmitFeedback
+    useSubmitFeedback,
+    useRelatedArticles
 } from '@/hooks/useKnowledge'
+import {
+    VideoPlayer,
+    ChecklistRenderer,
+    FAQAccordion,
+    ImageGalleryRenderer
+} from '@/components/knowledge/ContentRenderers'
 import { STATUS_CONFIG } from '@/types/knowledge'
 import { RelatedArticles } from '@/components/knowledge'
-import { useRelatedArticles } from '@/hooks/useKnowledge'
 import { useTrackView } from '@/hooks/useRecentlyViewed'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
@@ -132,6 +138,32 @@ export default function KnowledgeViewer() {
         }
     }
 
+    // Share function - copy article link to clipboard
+    const handleShare = async () => {
+        const articleUrl = `${window.location.origin}/knowledge/${id}`
+
+        try {
+            await navigator.clipboard.writeText(articleUrl)
+            toast.success(t('viewer.link_copied', 'Article link copied to clipboard'))
+        } catch (err) {
+            // Fallback for browsers that don't support clipboard API
+            const textarea = document.createElement('textarea')
+            textarea.value = articleUrl
+            textarea.style.position = 'fixed'
+            textarea.style.opacity = '0'
+            document.body.appendChild(textarea)
+            textarea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textarea)
+            toast.success(t('viewer.link_copied', 'Article link copied to clipboard'))
+        }
+    }
+
+    // Print function - opens print dialog with clean article content only
+    const handlePrint = () => {
+        window.print()
+    }
+
     // Parse TOC from content
     useEffect(() => {
         if (contentRef.current) {
@@ -186,6 +218,8 @@ export default function KnowledgeViewer() {
             }
         })
     }
+
+    if (!id) return null
 
     if (isLoading) {
         return (
@@ -315,9 +349,134 @@ export default function KnowledgeViewer() {
                     color: #475569;
                     text-align: left;
                 }
+
+                /* ========================================
+                   PRINT STYLES - Clean Article Output
+                   ======================================== */
+                @media print {
+                    /* Hide all navigation, sidebar, and UI elements */
+                    header, nav, aside, footer,
+                    .sidebar, .sidebar-navigation,
+                    [data-sidebar], [data-header],
+                    .no-print, .print\\:hidden,
+                    button, .btn,
+                    [role="navigation"],
+                    .breadcrumb, .breadcrumbs,
+                    .sticky, .fixed,
+                    .comments-section,
+                    .related-articles,
+                    .feedback-section,
+                    .acknowledgment-section,
+                    .table-of-contents,
+                    .toc-sidebar,
+                    .space-y-6.print\\:hidden {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+
+                    /* Reset page styling */
+                    body, html {
+                        background: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 100% !important;
+                    }
+
+                    /* Force container to be full width */
+                    .container, .container-fluid, 
+                    [class*="container"] {
+                        max-width: 100% !important;
+                        width: 100% !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+
+                    /* Make grid single column full width */
+                    .grid {
+                        display: block !important;
+                        width: 100% !important;
+                    }
+
+                    /* Force main content to full width */
+                    .lg\\:col-span-3,
+                    [class*="col-span"] {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        grid-column: 1 / -1 !important;
+                        flex: none !important;
+                    }
+
+                    /* Main print container */
+                    .print-content, .article-content, .prose {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        font-size: 11pt !important;
+                        line-height: 1.6 !important;
+                        color: black !important;
+                    }
+
+                    /* Cards should be borderless in print */
+                    .card, [class*="Card"] {
+                        border: none !important;
+                        box-shadow: none !important;
+                        background: white !important;
+                        padding: 0 !important;
+                    }
+
+                    /* Article header for print */
+                    .print-header {
+                        display: block !important;
+                        text-align: center;
+                        margin-bottom: 1.5rem;
+                        padding-bottom: 1rem;
+                        border-bottom: 2px solid #333;
+                    }
+
+                    .print-header h1 {
+                        font-size: 20pt !important;
+                        margin-bottom: 0.5rem !important;
+                        color: black !important;
+                    }
+
+                    /* Ensure content is visible and readable */
+                    .prose h1, .prose h2, .prose h3, .prose h4 {
+                        page-break-after: avoid;
+                        color: black !important;
+                        margin-top: 1rem !important;
+                    }
+
+                    .prose p, .prose li {
+                        orphans: 3;
+                        widows: 3;
+                    }
+
+                    .prose img {
+                        max-width: 100% !important;
+                        page-break-inside: avoid;
+                    }
+
+                    .prose table {
+                        page-break-inside: avoid;
+                        width: 100% !important;
+                    }
+
+                    /* PDF viewer styling for print */
+                    iframe, embed, object {
+                        max-width: 100% !important;
+                        page-break-inside: avoid;
+                    }
+
+                    /* Page setup */
+                    @page {
+                        margin: 1.5cm;
+                        size: A4;
+                    }
+                }
             `}</style>
-            {/* Header */}
-            <div className="bg-white border-b sticky top-0 z-10">
+            {/* Header - hidden when printing */}
+            <div className="bg-white border-b sticky top-0 z-10 print:hidden">
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -384,11 +543,14 @@ export default function KnowledgeViewer() {
                                     <Separator orientation="vertical" className="h-6" />
                                 </>
                             )}
-                            <div className="h-4 w-px bg-gray-200 hidden sm:block" />
-                            <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)} className="hover:text-hotel-gold">
+                            <div className="h-4 w-px bg-gray-200 hidden sm:block print:hidden" />
+                            <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)} className="hover:text-hotel-gold print:hidden">
                                 {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-hotel-gold" /> : <Bookmark className="h-4 w-4" />}
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => window.print()} className="hover:text-hotel-navy">
+                            <Button variant="ghost" size="sm" onClick={handleShare} className="hover:text-blue-600 print:hidden" title={t('viewer.share', 'Share article')}>
+                                <Share2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handlePrint} className="hover:text-hotel-navy print:hidden" title={t('viewer.print', 'Print article')}>
                                 <Printer className="h-4 w-4" />
                             </Button>
                         </div>
@@ -396,7 +558,7 @@ export default function KnowledgeViewer() {
                 </div>
             </div>
 
-            <div className="bg-white border-b border-gray-100">
+            <div className="bg-white border-b border-gray-100 print:hidden">
                 <div className="container mx-auto px-4 py-3">
                     <Breadcrumbs items={[
                         { label: t('viewer.library', 'Library'), href: '/knowledge/search' },
@@ -406,88 +568,98 @@ export default function KnowledgeViewer() {
                 </div>
             </div>
 
-            <div className="container mx-auto py-8 px-4">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="container mx-auto py-8 px-4 print:py-0 print:px-0">
+                {/* Print Header - only visible when printing */}
+                <div className="hidden print:block print-header mb-8 pb-4 border-b-2 border-gray-300">
+                    <div className="text-center">
+                        <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
+                        <p className="text-sm text-gray-600">
+                            PHG Connect - Knowledge Base | {article.department?.name || 'General'} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 print:block">
                     {/* Main Content */}
-                    <div className="lg:col-span-3 space-y-6">
-                        {/* Title Section */}
-                        <div>
+                    <div className="lg:col-span-3 space-y-6 print-content">
+                        {/* Title Section - hidden in print (already shown in print header) */}
+                        <div className="print:hidden">
                             <h1 className="text-3xl font-bold mb-4">{article.title}</h1>
                             {article.description && (
                                 <p className="text-lg text-gray-600 mb-4">{article.description}</p>
                             )}
-
-                            {/* TL;DR Quick Summary */}
-                            {article.summary && (
-                                <div className="mb-6 bg-hotel-gold/5 border border-hotel-gold/20 rounded-xl p-5 shadow-sm relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-2 opacity-10">
-                                        <Sparkles className="h-12 w-12 text-hotel-gold" />
-                                    </div>
-                                    <h3 className="text-sm font-bold text-hotel-gold uppercase tracking-wider mb-2 flex items-center gap-2">
-                                        <Clock className="h-4 w-4" />
-                                        {t('viewer.tldr', 'Quick Summary')}
-                                    </h3>
-                                    <p className="text-hotel-navy/80 font-medium leading-relaxed italic">
-                                        "{(article as any).summary}"
-                                    </p>
-                                </div>
-                            )}
-                            {/* File Attachment */}
-                            {article.file_url ? (
-                                <div className="mb-8">
-                                    {article.file_url.toLowerCase().endsWith('.pdf') ? (
-                                        <div className="space-y-2">
-                                            <h3 className="text-lg font-semibold flex items-center gap-2">
-                                                <FileText className="h-5 w-5 text-red-500" />
-                                                {t('viewer.preview_doc')}
-                                            </h3>
-                                            <PdfViewer url={article.file_url} />
-                                        </div>
-                                    ) : (
-                                        <Button variant="outline" className="gap-2" onClick={() => window.open(article.file_url, '_blank')}>
-                                            <Download className="h-4 w-4" />
-                                            {t('viewer.download_attachment')}
-                                        </Button>
-                                    )}
-                                </div>
-                            ) : null}
-
-                            {/* Meta */}
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                                {article.department && (
-                                    <Badge variant="outline" className="text-xs font-normal border-gray-300 text-gray-600">
-                                        {article.department.name}
-                                    </Badge>
-                                )}
-                                {article.category && (
-                                    <Badge variant="outline" className="text-xs font-normal border-gray-300 text-gray-600">
-                                        {article.category.name}
-                                    </Badge>
-                                )}
-                                <Separator orientation="vertical" className="h-4" />
-                                {article.author && (
-                                    <div className="flex items-center gap-2">
-                                        <User className="h-4 w-4" />
-                                        <span>{article.author.full_name}</span>
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" />
-                                    <span>{t('viewer.updated_at', { date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '' })}</span>
-                                </div>
-                            </div>
-
-                            {/* TL;DR Summary Box */}
-                            {(article as any).summary && (
-                                <div className="mt-6 p-4 bg-hotel-navy/5 border-l-4 border-hotel-gold rounded-r-lg">
-                                    <p className="text-sm font-semibold text-hotel-navy mb-1 flex items-center gap-2">
-                                        <Lightbulb className="h-4 w-4 text-hotel-gold" />
-                                        {t('viewer.tldr')}
-                                    </p>
-                                    <p className="text-gray-700">{(article as any).summary}</p>
-                                </div>
-                            )}
                         </div>
+
+                        {/* TL;DR Quick Summary */}
+                        {article.summary && (
+                            <div className="mb-6 bg-hotel-gold/5 border border-hotel-gold/20 rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-2 opacity-10">
+                                    <Sparkles className="h-12 w-12 text-hotel-gold" />
+                                </div>
+                                <h3 className="text-sm font-bold text-hotel-gold uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <Clock className="h-4 w-4" />
+                                    {t('viewer.tldr', 'Quick Summary')}
+                                </h3>
+                                <p className="text-hotel-navy/80 font-medium leading-relaxed italic">
+                                    "{(article as any).summary}"
+                                </p>
+                            </div>
+                        )}
+                        {/* File Attachment */}
+                        {article.file_url ? (
+                            <div className="mb-8">
+                                {article.file_url.toLowerCase().endsWith('.pdf') ? (
+                                    <div className="space-y-2">
+                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                            <FileText className="h-5 w-5 text-red-500" />
+                                            {t('viewer.preview_doc')}
+                                        </h3>
+                                        <PdfViewer url={article.file_url} />
+                                    </div>
+                                ) : (
+                                    <Button variant="outline" className="gap-2" onClick={() => window.open(article.file_url, '_blank')}>
+                                        <Download className="h-4 w-4" />
+                                        {t('viewer.download_attachment')}
+                                    </Button>
+                                )}
+                            </div>
+                        ) : null}
+
+                        {/* Meta */}
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                            {article.department && (
+                                <Badge variant="outline" className="text-xs font-normal border-gray-300 text-gray-600">
+                                    {article.department.name}
+                                </Badge>
+                            )}
+                            {article.category && (
+                                <Badge variant="outline" className="text-xs font-normal border-gray-300 text-gray-600">
+                                    {article.category.name}
+                                </Badge>
+                            )}
+                            <Separator orientation="vertical" className="h-4" />
+                            {article.author && (
+                                <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4" />
+                                    <span>{article.author.full_name}</span>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span>{t('viewer.updated_at', { date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '' })}</span>
+                            </div>
+                        </div>
+
+                        {/* TL;DR Summary Box */}
+                        {(article as any).summary && (
+                            <div className="mt-6 p-4 bg-hotel-navy/5 border-l-4 border-hotel-gold rounded-r-lg">
+                                <p className="text-sm font-semibold text-hotel-navy mb-1 flex items-center gap-2">
+                                    <Lightbulb className="h-4 w-4 text-hotel-gold" />
+                                    {t('viewer.tldr')}
+                                </p>
+                                <p className="text-gray-700">{(article as any).summary}</p>
+                            </div>
+                        )}
 
                         {/* Content */}
                         <Card>
@@ -499,30 +671,72 @@ export default function KnowledgeViewer() {
                                         dangerouslySetInnerHTML={{ __html: article.content }}
                                     />
                                 ) : (
-                                    !article.file_url && <p className="text-gray-500 italic">{t('viewer.no_content')}</p>
+                                    !article.file_url && !article.video_url && !article.checklist_items?.length && !article.faq_items?.length && !article.images?.length && (
+                                        <p className="text-gray-500 italic">{t('viewer.no_content')}</p>
+                                    )
                                 )}
+
+                                {/* Content Type Specific Renderers */}
+                                <div className="mt-8 space-y-8">
+                                    {article.content_type === 'video' && article.video_url && (
+                                        <VideoPlayer videoUrl={article.video_url} title={article.title} />
+                                    )}
+
+                                    {article.content_type === 'checklist' && article.checklist_items && article.checklist_items.length > 0 && (
+                                        <ChecklistRenderer items={article.checklist_items} />
+                                    )}
+
+                                    {article.content_type === 'faq' && article.faq_items && article.faq_items.length > 0 && (
+                                        <FAQAccordion items={article.faq_items} />
+                                    )}
+
+                                    {article.content_type === 'visual' && article.images && article.images.length > 0 && (
+                                        <ImageGalleryRenderer images={article.images} />
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
 
                         {/* Acknowledgment */}
                         {article.requires_acknowledgment && (
-                            <Card className="border-blue-200 bg-blue-50">
-                                <CardContent className="p-6 flex items-center justify-between">
+                            <Card className={cn(
+                                "border-blue-200",
+                                article.is_acknowledged ? "bg-green-50 border-green-200" : "bg-blue-50"
+                            )}>
+                                <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                                     <div className="flex items-center gap-3">
-                                        <CheckCircle className="h-6 w-6 text-blue-600" />
+                                        {article.is_acknowledged ? (
+                                            <CheckCircle2 className="h-6 w-6 text-green-600" />
+                                        ) : (
+                                            <CheckCircle className="h-6 w-6 text-blue-600" />
+                                        )}
                                         <div>
-                                            <p className="font-semibold text-blue-900">{t('viewer.acknowledge_title')}</p>
-                                            <p className="text-sm text-blue-700">{t('viewer.acknowledge_desc')}</p>
+                                            <p className={cn(
+                                                "font-semibold",
+                                                article.is_acknowledged ? "text-green-900" : "text-blue-900"
+                                            )}>
+                                                {article.is_acknowledged ? t('viewer.already_acknowledged', 'Article Acknowledged') : t('viewer.acknowledge_title')}
+                                            </p>
+                                            <p className={cn(
+                                                "text-sm",
+                                                article.is_acknowledged ? "text-green-700" : "text-blue-700"
+                                            )}>
+                                                {article.is_acknowledged
+                                                    ? t('viewer.acknowledged_on', 'You acknowledged this on {{date}}', { date: new Date(article.acknowledged_at!).toLocaleDateString() })
+                                                    : t('viewer.acknowledge_desc')}
+                                            </p>
                                         </div>
                                     </div>
-                                    <Button
-                                        className="bg-blue-600 hover:bg-blue-700"
-                                        onClick={() => acknowledgeArticle.mutate(id!)}
-                                        disabled={acknowledgeArticle.isPending}
-                                    >
-                                        {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                                        {t('viewer.i_acknowledge')}
-                                    </Button>
+                                    {!article.is_acknowledged && (
+                                        <Button
+                                            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                                            onClick={() => acknowledgeArticle.mutate(id!)}
+                                            disabled={acknowledgeArticle.isPending}
+                                        >
+                                            {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                                            {t('viewer.i_acknowledge')}
+                                        </Button>
+                                    )}
                                 </CardContent>
                             </Card>
                         )}
@@ -581,8 +795,8 @@ export default function KnowledgeViewer() {
                         </Card>
                     </div>
 
-                    {/* Sidebar */}
-                    <div className="space-y-6">
+                    {/* Sidebar - hidden when printing */}
+                    <div className="space-y-6 print:hidden">
                         {tocItems.length > 0 && (
                             <Card className="sticky top-20">
                                 <CardHeader className="pb-2">

@@ -95,7 +95,8 @@ export function StaffDashboard() {
   } : null
 
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
-  const loading = feedLoading || statsLoading || tasksLoading || scheduleLoading
+  // Show loading skeleton only for initial auth loading, not data loading
+  const isInitialLoading = !user
 
   useEffect(() => {
     if (realFeedItems) {
@@ -145,7 +146,7 @@ export function StaffDashboard() {
     // Share functionality placeholder - to be implemented
   }
 
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -191,12 +192,6 @@ export function StaffDashboard() {
                   {currentProperty.name}
                 </EnhancedBadge>
               )}
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="bg-white dark:bg-hotel-navy border border-gray-300 dark:border-hotel-navy-light text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-hotel-navy-light transition-colors flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                {t('staff.notifications')}
-              </button>
             </div>
           </div>
         </div>

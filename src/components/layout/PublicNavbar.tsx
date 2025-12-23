@@ -19,13 +19,17 @@ export function PublicNavbar() {
         <header className="bg-hotel-navy text-white shadow-lg sticky top-0 z-50">
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between h-20 px-4 lg:px-8">
-                    {/* Logo */}
-                    <Link to="/" className="flex items-center gap-3">
+                    {/* Logo with PHG Connect branding */}
+                    <Link to="/" className="flex items-center gap-4">
                         <img
                             src="/prime-logo-light.png"
-                            alt="PRIME Hotels"
+                            alt="Prime Hotels Group"
                             className="h-14 w-auto"
                         />
+                        <div className="hidden sm:block border-l border-white/20 pl-4">
+                            <div className="text-lg font-bold text-hotel-gold tracking-wide">PHG Connect</div>
+                            <div className="text-xs text-white/60 tracking-wider uppercase">Official Intranet</div>
+                        </div>
                     </Link>
 
                     {/* Desktop Navigation */}

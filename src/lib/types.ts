@@ -11,6 +11,7 @@ export interface Profile {
   avatar_url: string | null
   hire_date: string | null
   job_title: string | null // Actual hotel job title (e.g., "Front Office Manager", "Room Attendant")
+  staff_id: string | null // Human-readable unique employee identifier (e.g., "PH-1001")
   reporting_to: string | null // UUID of supervisor/manager
   is_active: boolean
   created_at: string
@@ -607,6 +608,7 @@ export interface LeaveRequest {
   approved_by_id: string | null
   rejected_by_id: string | null
   rejection_reason: string | null
+  workflow_request_id: string | null
   created_at: string
   updated_at: string
   requester?: Profile
@@ -614,6 +616,10 @@ export interface LeaveRequest {
   department?: Department
   approved_by?: Profile
   rejected_by?: Profile
+  workflow?: {
+    id: string
+    request_no: number
+  }
 }
 
 export interface MaintenanceTicket {

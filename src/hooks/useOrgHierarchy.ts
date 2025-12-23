@@ -14,6 +14,7 @@ export interface OrgEmployee {
     email: string
     phone: string | null
     avatar_url: string | null
+    staff_id: string | null
     roles: string[]
     propertyId: string | null
     departmentId: string | null
@@ -275,6 +276,7 @@ export function useOrgHierarchy(searchTerm?: string) {
           phone,
           job_title,
           avatar_url,
+          staff_id,
           reporting_to,
           user_roles(role),
           user_properties(property:properties(id, name)),
@@ -284,7 +286,7 @@ export function useOrgHierarchy(searchTerm?: string) {
             // Sorting is now done in memory by job title hierarchy
 
             if (searchTerm) {
-                query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,job_title.ilike.%${searchTerm}%`)
+                query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,job_title.ilike.%${searchTerm}%,staff_id.ilike.%${searchTerm}%`)
             }
 
             const { data, error } = await query
@@ -340,6 +342,7 @@ export function useOrgHierarchy(searchTerm?: string) {
             email: p.email,
             phone: p.phone,
             avatar_url: p.avatar_url,
+            staff_id: p.staff_id,
             roles: p.user_roles?.map((r: any) => r.role) || [],
             propertyId: p.user_properties?.[0]?.property?.id || null,
             departmentId: p.user_departments?.[0]?.department?.id || null,

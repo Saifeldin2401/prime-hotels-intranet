@@ -43,7 +43,8 @@
     "false": "False",
     "no_title": "No title",
     "please_login": "Please log in to view this page",
-    "view_profile": "View Profile"
+    "view_profile": "View Profile",
+    "total": "Total"
   },
   "nav": {
     "dashboard": "Dashboard",

@@ -64,17 +64,28 @@ export default function PublicHome() {
                         variants={staggerContainer}
                         className="max-w-3xl text-left"
                     >
-                        <motion.div variants={fadeInUp} className="inline-block px-3 py-1 mb-6 border border-hotel-gold/30 rounded-full bg-hotel-navy/50 backdrop-blur-sm">
-                            <span className="text-hotel-gold text-sm font-medium tracking-wider uppercase">
-                                {t('prime_connect')}
+                        {/* Brand Badge */}
+                        <motion.div variants={fadeInUp} className="inline-block px-4 py-1.5 mb-6 border border-hotel-gold/40 rounded-full bg-hotel-navy/60 backdrop-blur-sm">
+                            <span className="text-hotel-gold text-sm font-semibold tracking-wider uppercase">
+                                Prime Hotels Group • Official Intranet
                             </span>
                         </motion.div>
-                        <motion.h1 variants={fadeInUp} className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 text-white leading-tight font-serif tracking-tight drop-shadow-sm">
-                            {t('welcome_title')} <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-hotel-gold via-yellow-200 to-hotel-gold">
+
+                        {/* Main Title */}
+                        <motion.h1 variants={fadeInUp} className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-4 text-white leading-tight font-serif tracking-tight drop-shadow-sm">
+                            {t('welcome_title')}
+                        </motion.h1>
+
+                        {/* PHG Connect Logo Text */}
+                        <motion.div variants={fadeInUp} className="mb-8">
+                            <span className="text-5xl sm:text-6xl lg:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-hotel-gold via-yellow-200 to-hotel-gold font-serif">
                                 {t('prime_connect')}
                             </span>
-                        </motion.h1>
+                            <div className="mt-2 text-white/70 text-lg tracking-wide">
+                                {t('brand_tagline', 'Your Official Digital Gateway')}
+                            </div>
+                        </motion.div>
+
                         <motion.p variants={fadeInUp} className="text-xl sm:text-2xl text-gray-200 mb-10 font-light leading-relaxed max-w-2xl drop-shadow-sm">
                             {t('subtitle')}
                         </motion.p>

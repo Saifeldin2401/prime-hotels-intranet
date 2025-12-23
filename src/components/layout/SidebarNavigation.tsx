@@ -23,7 +23,6 @@ import {
   LogOut
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { useTranslation } from 'react-i18next'
 import { useNavigation } from '@/hooks/useNavigation'
@@ -317,7 +316,6 @@ export function SidebarNavigation({
                   collapsed ? "w-9 justify-center px-0" : "justify-start px-2"
                 )}
               />
-              <ThemeToggle />
             </div>
 
             <Button

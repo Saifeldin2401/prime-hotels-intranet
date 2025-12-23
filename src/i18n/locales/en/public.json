@@ -1,27 +1,31 @@
 {
-    "welcome_title": "Excellence in Hospitality,",
-    "prime_connect": "Empowered by You.",
-    "subtitle": "Prime Connect: Your gateway to career growth, operational excellence, and community at Prime Hotels.",
-    "login_button": "Log In to Portal",
-    "footer": " {{year}} Prime Hotels. All Rights Reserved.",
+    "brand_name": "PHG Connect",
+    "brand_full": "Prime Hotels Group",
+    "brand_tagline": "Your Official Digital Gateway",
+    "welcome_title": "Welcome to",
+    "prime_connect": "PHG Connect",
+    "subtitle": "The official digital intranet of Prime Hotels Group (PHG). Your centralized hub for career growth, operational excellence, and team collaboration.",
+    "login_button": "Access Portal",
+    "footer": "© {{year}} Prime Hotels Group (PHG). All Rights Reserved. | Internal Use Only",
     "who_we_are": {
-        "title": "Who We Are",
-        "mission": "At Prime Hotels, we believe that true hospitality starts from within. We are dedicated to creating an environment where every team member feels valued, supported, and inspired to deliver their best."
+        "title": "About PHG Connect",
+        "mission": "PHG Connect is the official intranet platform of Prime Hotels Group, designed to empower every team member with the tools, resources, and information needed to deliver exceptional hospitality. From onboarding to career advancement, everything you need is here."
     },
     "growing_together": {
-        "title": "Growing Together",
-        "subtitle": "Investing in Your Potential",
+        "title": "Your Digital Workplace",
+        "subtitle": "One Platform, Endless Possibilities",
+        "tagline": "Everything you need to excel in your role, all in one place.",
         "learning": {
-            "title": "Continuous Learning",
-            "desc": "Access world-class training modules and resources to sharpen your skills every day."
+            "title": "Learning & Development",
+            "desc": "Access training modules, certifications, and skill-building resources tailored to your role and career aspirations."
         },
         "leadership": {
-            "title": "Leadership Pathways",
-            "desc": "Clear career progression and mentorship programs to help you become the leader of tomorrow."
+            "title": "HR & Self-Service",
+            "desc": "Manage leave requests, view payslips, track performance reviews, and access all HR services seamlessly."
         },
         "community": {
-            "title": "Knowledge Community",
-            "desc": "Share insights, collaborate across departments, and build lasting professional relationships."
+            "title": "Knowledge Base",
+            "desc": "Explore company policies, SOPs, best practices, and department-specific resources in our centralized knowledge hub."
         }
     }
 }

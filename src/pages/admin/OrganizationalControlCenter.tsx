@@ -300,7 +300,7 @@ function AssignmentsTable({
             // Fetch profiles without self-join (simpler, avoids FK issues)
             let query = supabase
                 .from('profiles')
-                .select('id, full_name, email, job_title, reporting_to, is_active')
+                .select('id, full_name, email, job_title, staff_id, reporting_to, is_active')
                 .eq('is_active', true)
                 .order('full_name')
 
@@ -323,7 +323,7 @@ function AssignmentsTable({
             const { data: managers } = managerIds.length > 0
                 ? await supabase
                     .from('profiles')
-                    .select('id, full_name, job_title')
+                    .select('id, full_name, job_title, staff_id')
                     .in('id', managerIds)
                 : { data: [] }
 
@@ -351,6 +351,7 @@ function AssignmentsTable({
                 return {
                     ...profile,
                     manager: manager || null,
+                    staff_id: profile.staff_id,
                     user_properties: userProps?.filter(up => up.user_id === profile.id) || [],
                     user_departments: userDepts?.filter(ud => ud.user_id === profile.id) || [],
                     user_roles: userRoles?.filter(ur => ur.user_id === profile.id) || []
@@ -383,6 +384,7 @@ function AssignmentsTable({
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>{t('organization.staff_id', 'ID')}</TableHead>
                                 <TableHead>{t('organization.employee', 'Employee')}</TableHead>
                                 <TableHead>{t('organization.job_title', 'Job Title')}</TableHead>
                                 <TableHead>{t('organization.reports_to', 'Reports To')}</TableHead>
@@ -395,10 +397,16 @@ function AssignmentsTable({
                         <TableBody>
                             {employees?.map((emp: any) => (
                                 <TableRow key={emp.id}>
+                                    <TableCell className="font-mono text-xs text-gray-400">{emp.staff_id || '—'}</TableCell>
                                     <TableCell className="font-medium">{emp.full_name}</TableCell>
                                     <TableCell className="text-gray-500">{emp.job_title || '—'}</TableCell>
                                     <TableCell>
-                                        {emp.manager?.full_name || (
+                                        {emp.manager?.full_name ? (
+                                            <div className="flex flex-col">
+                                                <span>{emp.manager.full_name}</span>
+                                                <span className="text-[10px] text-gray-400 font-mono">{emp.manager.staff_id}</span>
+                                            </div>
+                                        ) : (
                                             <span className="text-gray-400 italic">{t('organization.no_manager', 'No Manager')}</span>
                                         )}
                                     </TableCell>
