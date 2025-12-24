@@ -24,13 +24,13 @@ export function EnhancedBadge({
 
   const variantClasses = {
     default: 'bg-primary text-primary-foreground hover:bg-hotel-navy',
-    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary-foreground hover:text-secondary',
-    success: 'bg-success text-success-foreground hover:bg-emerald-600',
-    warning: 'bg-warning text-warning-foreground hover:bg-amber-600',
-    destructive: 'bg-destructive text-destructive-foreground hover:bg-red-700',
-    gold: 'bg-hotel-gold text-white hover:bg-hotel-gold-dark',
-    navy: 'bg-hotel-navy text-white hover:bg-hotel-navy-dark',
-    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
+    secondary: 'bg-secondary text-secondary-foreground hover:opacity-90',
+    success: 'bg-success text-success-foreground border border-success/20',
+    warning: 'bg-warning text-warning-foreground border border-warning/20',
+    destructive: 'bg-destructive text-destructive-foreground border border-destructive/20',
+    gold: 'bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm',
+    navy: 'bg-hotel-navy text-white hover:bg-hotel-navy-dark shadow-sm',
+    outline: 'border border-input bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground'
   }
 
   const sizeClasses = {

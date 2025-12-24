@@ -1,4 +1,4 @@
-import { type Transition, type Variants } from 'framer-motion'
+import { type Transition, type Variants, type Easing } from 'framer-motion'
 
 // ==========================================
 // MOTION PHILOSOPHY & CONSTANTS
@@ -21,9 +21,9 @@ export const DURATION = {
 
 export const EASING = {
     // easeOut for most entrances
-    DEFAULT: [0, 0, 0.2, 1],
+    DEFAULT: [0, 0, 0.2, 1] as Easing,
     // Linear for color/opacity changes
-    LINEAR: 'linear',
+    LINEAR: 'linear' as Easing,
 }
 
 // Standard transition preset

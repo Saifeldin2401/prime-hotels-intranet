@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
 import type { NotificationPreference } from '@/lib/types'
+import { toast } from 'sonner'
 
 export function useNotificationPreferences() {
     const { user } = useAuth()
@@ -55,6 +56,7 @@ export function useNotificationPreferences() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notification-preferences', user?.id] })
+            toast.success('Preferences updated')
         }
     })
 

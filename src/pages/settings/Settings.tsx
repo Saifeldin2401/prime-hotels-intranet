@@ -6,13 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Globe } from 'lucide-react'
-import { useToast } from '@/components/ui/use-toast'
+import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { NotificationSettings } from './NotificationSettings'
 
 export default function Settings() {
     const { user } = useAuth()
-    const { toast } = useToast()
     const { t, i18n } = useTranslation('settings')
     const [loading, setLoading] = useState(false)
     const [language, setLanguage] = useState('en')
@@ -63,17 +62,12 @@ export default function Settings() {
 
             if (error) throw error
 
-            toast({
-                title: "Language updated",
-                description: "Your language preference has been saved.",
+            toast.success(t('messages.language_updated', 'Language updated'), {
+                description: t('messages.language_updated_desc', 'Your language preference has been saved.')
             })
         } catch (error) {
             console.error('Error saving language:', error)
-            toast({
-                title: "Error",
-                description: "Failed to save language preference.",
-                variant: "destructive"
-            })
+            toast.error(t('common:messages.error_action_failed', 'Failed to save language preference'))
         }
     }
 

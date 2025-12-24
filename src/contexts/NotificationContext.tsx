@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Notification } from '@/lib/types'
-import { useToast } from '@/components/ui/use-toast'
+import { toast } from 'sonner'
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences'
 
 interface NotificationContextType {
@@ -19,7 +19,6 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth()
     const queryClient = useQueryClient()
-    const { toast } = useToast()
     const { preferences } = useNotificationPreferences()
 
     // Ref for accessing latest preferences in realtime callback
@@ -79,8 +78,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
                     // 2. Show Toast
                     const newNotification = payload.new as any
-                    toast({
-                        title: newNotification.title || 'New Notification',
+                    toast.info(newNotification.title || 'New Notification', {
                         description: newNotification.message,
                     })
 
@@ -103,7 +101,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
             supabase.removeChannel(channel)
         }
-    }, [user, queryClient, toast])
+    }, [user, queryClient])
 
     // 3. Mutations
     const markAsRead = useMutation({
@@ -131,6 +129,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] })
+            toast.success('All notifications marked as read')
         }
     })
 

@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { Loader2, Building2, MapPin, User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 const taskSchema = z.object({
     title: z.string().min(1, 'Title is required').max(200),
@@ -188,6 +189,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
 
             if (task) {
                 await updateTask.mutateAsync({ id: task.id, ...submitData, property_id: selectedPropertyId } as any)
+                toast.success(t('messages.task_updated', 'Task updated successfully'))
             } else {
                 if (!user) return
                 await createTask.mutateAsync({
@@ -195,11 +197,12 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                     created_by_id: user.id,
                     property_id: selectedPropertyId
                 } as any)
+                toast.success(t('messages.task_created', 'Task created successfully'))
             }
             onSuccess?.()
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving task:', error)
-            alert('Failed to save task')
+            toast.error(error.message || t('messages.save_failed', 'Failed to save task'))
         }
     }
 

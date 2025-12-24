@@ -27,7 +27,7 @@ import { useNavigate } from 'react-router-dom'
 import type { MaintenanceTicket } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import emptyStateImage from '@/assets/maintenance-empty.png'
-import { TableSkeleton } from '@/components/loading/TableSkeleton'
+import { LoadingTransition, TableSkeleton, CardSkeleton, StatSkeleton } from '@/components/ui/loading-system'
 import { useTranslation } from 'react-i18next'
 
 const priorityColors: Record<string, string> = {
@@ -176,15 +176,8 @@ export default function MaintenanceDashboard() {
     )
   }
 
-  // Only show full loading state if initial load and no error
-  if ((myLoading || assignedLoading) && !myError && !assignedError) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <PageHeader title={t('dashboard.title')} description={t('dashboard.loading')} />
-        <TableSkeleton rows={4} columns={4} showHeaders={false} />
-      </div>
-    )
-  }
+  // No longer returning early with full page skeleton, using LoadingTransition instead
+  const isLoading = (myLoading || assignedLoading) && !myError && !assignedError;
 
   const HomeIcon = ({ className }: { className?: string }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
@@ -210,55 +203,60 @@ export default function MaintenanceDashboard() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
-          <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
-            <Wrench className="w-24 h-24" />
+      <LoadingTransition
+        isLoading={isLoading}
+        skeleton={<StatSkeleton count={4} />}
+      >
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
+            <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+              <Wrench className="w-24 h-24" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">{t('dashboard.my_active_tickets')}</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-foreground">{myTickets?.length || 0}</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('dashboard.total_submitted')}</span>
+            </div>
           </div>
-          <p className="text-sm font-medium text-gray-600">{t('dashboard.my_active_tickets')}</p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-foreground">{myTickets?.length || 0}</span>
-            <span className="text-xs text-gray-600 font-medium">{t('dashboard.total_submitted')}</span>
-          </div>
+
+          {canManageTickets && (
+            <>
+              <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
+                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                  <User className="w-24 h-24" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">{t('dashboard.assigned_me')}</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-foreground">{assignedTickets?.length || 0}</span>
+                  <span className="text-xs text-orange-600 font-medium">{stats?.inProgress || 0} {t('dashboard.in_progress')}</span>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
+                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                  <AlertTriangle className="w-24 h-24" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">{t('dashboard.critical_issues')}</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-destructive">{(stats?.critical || 0) + (stats?.urgent || 0)}</span>
+                  <span className="text-xs text-destructive font-medium">{t('dashboard.requires_attention')}</span>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
+                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                  <Clock className="w-24 h-24" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">{t('dashboard.avg_resolution')}</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-foreground">{stats?.avgResolutionTime || 0}</span>
+                  <span className="text-xs text-muted-foreground font-medium">{t('dashboard.days')}</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
-
-        {canManageTickets && (
-          <>
-            <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
-              <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
-                <User className="w-24 h-24" />
-              </div>
-              <p className="text-sm font-medium text-gray-600">{t('dashboard.assigned_me')}</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">{assignedTickets?.length || 0}</span>
-                <span className="text-xs text-orange-600 font-medium">{stats?.inProgress || 0} {t('dashboard.in_progress')}</span>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
-              <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
-                <AlertTriangle className="w-24 h-24" />
-              </div>
-              <p className="text-sm font-medium text-gray-600">{t('dashboard.critical_issues')}</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-destructive">{(stats?.critical || 0) + (stats?.urgent || 0)}</span>
-                <span className="text-xs text-destructive font-medium">{t('dashboard.requires_attention')}</span>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
-              <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
-                <Clock className="w-24 h-24" />
-              </div>
-              <p className="text-sm font-medium text-gray-600">{t('dashboard.avg_resolution')}</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">{stats?.avgResolutionTime || 0}</span>
-                <span className="text-xs text-gray-600 font-medium">{t('dashboard.days')}</span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      </LoadingTransition>
 
       {/* Filters & Content */}
       <div className="space-y-4">

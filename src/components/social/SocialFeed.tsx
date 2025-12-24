@@ -29,6 +29,7 @@ import {
   Star
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 export interface FeedItem {
   id: string
@@ -134,6 +135,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
     if (comment && comment.trim()) {
       onComment(itemId, comment)
       setNewComment(prev => ({ ...prev, [itemId]: '' }))
+      toast.success(t('messages.comment_posted', 'Comment posted'))
     }
   }
 
@@ -247,7 +249,10 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                   </button>
 
                   <button
-                    onClick={() => onShare(item.id)}
+                    onClick={() => {
+                      onShare(item.id)
+                      toast.success(t('messages.link_copied', 'Link copied to clipboard'))
+                    }}
                     className="social-reaction-btn"
                   >
                     <Icons.Share2 className="h-4 w-4" />
@@ -334,7 +339,8 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
             </div>
           </CardContent>
         </Card>
-      ))}
-    </div>
+      ))
+      }
+    </div >
   )
 }

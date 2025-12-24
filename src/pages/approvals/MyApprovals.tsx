@@ -61,9 +61,9 @@ export default function MyApprovals() {
 
   // Fetch pending document approvals for the current user
   const { data: pendingApprovals, isLoading } = useQuery({
-    queryKey: ['pending-approvals', primaryRole],
+    queryKey: ['pending-approvals', user?.id],
     queryFn: async () => {
-      if (!primaryRole) return []
+      if (!user) return []
 
       const { data, error } = await supabase
         .from('document_approvals')
@@ -72,8 +72,8 @@ export default function MyApprovals() {
           documents(
             id,
             title,
-            content,
-            version,
+            description,
+            file_url,
             status,
             visibility,
             created_at,
@@ -85,9 +85,8 @@ export default function MyApprovals() {
             )
           )
         `)
-        .eq('approver_role', primaryRole)
+        .eq('approver_id', user.id)
         .eq('status', 'pending')
-        .eq('is_active', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -99,10 +98,10 @@ export default function MyApprovals() {
 
   // Fetch completed approvals (approved/rejected) for the current user
   const { data: completedApprovals, isLoading: completedLoading } = useQuery({
-    queryKey: ['document-approvals-completed', user?.id, primaryRole],
-    enabled: !!user && !!primaryRole,
+    queryKey: ['document-approvals-completed', user?.id],
+    enabled: !!user,
     queryFn: async () => {
-      if (!user || !primaryRole) return []
+      if (!user) return []
 
       const { data, error } = await supabase
         .from('document_approvals')
@@ -118,8 +117,6 @@ export default function MyApprovals() {
             department_id,
             created_by,
             file_url,
-            file_name,
-            file_size,
             created_at,
             updated_at,
             requires_acknowledgment,
@@ -129,9 +126,8 @@ export default function MyApprovals() {
             )
           )
         `)
-        .eq('approver_role', primaryRole)
+        .eq('approver_id', user.id)
         .in('status', ['approved', 'rejected'])
-        .eq('is_active', true)
         .order('updated_at', { ascending: false })
 
       if (error) throw error
@@ -276,10 +272,9 @@ export default function MyApprovals() {
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
-          approved_by: user.id,
         })
         .eq('document_id', documentId)
-        .eq('approver_role', primaryRole)
+        .eq('approver_id', user.id)
         .eq('status', 'pending')
 
       if (approvalError) throw approvalError
@@ -290,13 +285,12 @@ export default function MyApprovals() {
         .select('status')
         .eq('document_id', documentId)
         .eq('status', 'pending')
-        .eq('is_active', true)
 
-      // If no more pending approvals, update document status to published
+      // If no more pending approvals, update document status to PUBLISHED
       if (!remainingApprovals || remainingApprovals.length === 0) {
         const { error: docError } = await supabase
           .from('documents')
-          .update({ status: 'published' })
+          .update({ status: 'PUBLISHED' })
           .eq('id', documentId)
 
         if (docError) throw docError
@@ -334,25 +328,24 @@ export default function MyApprovals() {
         .eq('id', documentId)
         .single()
 
-      // Update the approval record
+      // Update the approval record with feedback
       const { error: approvalError } = await supabase
         .from('document_approvals')
         .update({
           status: 'rejected',
-          rejected_at: new Date().toISOString(),
-          rejected_by: user.id,
-          rejection_reason: reason,
+          approved_at: new Date().toISOString(),
+          feedback: reason,
         })
         .eq('document_id', documentId)
-        .eq('approver_role', primaryRole)
+        .eq('approver_id', user.id)
         .eq('status', 'pending')
 
       if (approvalError) throw approvalError
 
-      // Update document status to rejected
+      // Update document status to REJECTED
       const { error: docError } = await supabase
         .from('documents')
-        .update({ status: 'rejected' })
+        .update({ status: 'REJECTED' })
         .eq('id', documentId)
 
       if (docError) throw docError

@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -95,7 +95,6 @@ export function PromoteEmployeeDialog({
     const [employees, setEmployees] = useState<Profile[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
-    const { toast } = useToast();
     const { user } = useAuth()
     const { t } = useTranslation('hr');
 
@@ -175,15 +174,11 @@ export function PromoteEmployeeDialog({
             setDepartments(depts || []);
         } catch (error) {
             console.error("Error loading data:", error);
-            toast({
-                title: "Error",
-                description: "Failed to load employees or departments",
-                variant: "destructive",
-            });
+            toast.error("Failed to load employees or departments");
         } finally {
             setLoadingUsers(false);
         }
-    }, [user?.id, toast]);
+    }, [user?.id]);
 
     useEffect(() => {
         if (open) {
@@ -206,20 +201,13 @@ export function PromoteEmployeeDialog({
 
             if (error) throw error;
 
-            toast({
-                title: "Request Submitted",
-                description: "Promotion request has been submitted for approval",
-            });
+            toast.success("Promotion request has been submitted for approval");
             setOpen(false);
             form.reset();
             if (onSuccess) onSuccess();
         } catch (error: any) {
             console.error("Promotion error:", error);
-            toast({
-                title: "Error",
-                description: error.message || "Failed to process promotion",
-                variant: "destructive",
-            });
+            toast.error(error.message || "Failed to process promotion");
         }
     };
 

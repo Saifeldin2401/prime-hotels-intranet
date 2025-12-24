@@ -38,6 +38,8 @@ import {
   type RequestStatus,
 } from '@/hooks/useRequests'
 import type { LeaveRequest, Profile } from '@/lib/types'
+import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 function statusBadge(status: RequestStatus) {
   const map: Record<RequestStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -58,6 +60,7 @@ export default function RequestDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user, primaryRole } = useAuth()
+  const { t } = useTranslation(['hr', 'common'])
 
   const [comment, setComment] = useState('')
   const [visibility, setVisibility] = useState<'all' | 'internal'>('all')
@@ -180,17 +183,33 @@ export default function RequestDetail() {
   const onSubmitAction = async (action: 'approve' | 'reject' | 'return' | 'forward' | 'close' | 'add_comment') => {
     if (!request?.id) return
 
-    await actionMutation.mutateAsync({
-      requestId: request.id,
-      action,
-      comment: comment || undefined,
-      forwardTo: action === 'forward' ? forwardTo : undefined,
-      visibility,
-    })
+    try {
+      await actionMutation.mutateAsync({
+        requestId: request.id,
+        action,
+        comment: comment || undefined,
+        forwardTo: action === 'forward' ? forwardTo : undefined,
+        visibility,
+      })
 
-    setComment('')
-    setForwardTo('')
-    setActionDialog(null)
+      const messages: Record<string, string> = {
+        approve: t('requests.messages.approved', 'Request approved successfully'),
+        reject: t('requests.messages.rejected', 'Request rejected'),
+        return: t('requests.messages.returned', 'Request returned for correction'),
+        forward: t('requests.messages.forwarded', 'Request forwarded'),
+        close: t('requests.messages.closed', 'Request closed'),
+        add_comment: t('requests.messages.comment_added', 'Comment added'),
+      }
+
+      toast.success(messages[action] || t('common:messages.success_action', 'Action completed successfully'))
+
+      setComment('')
+      setForwardTo('')
+      setActionDialog(null)
+    } catch (error) {
+      toast.error(t('common:messages.error_action_failed', 'Failed to perform action'))
+      console.error('Request action failed:', error)
+    }
   }
 
   const onUpload = async (file: File) => {

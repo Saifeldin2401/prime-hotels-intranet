@@ -13,12 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import EmployeeDocuments from './EmployeeDocuments'
 import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
 import { getReportingLineDisplay } from '@/lib/displayHelpers'
-import { useToast } from '@/components/ui/use-toast'
+import { toast } from 'sonner'
 
 export default function MyProfile() {
     const { user, profile: authProfile, refreshSession } = useAuth()
     const { t, i18n } = useTranslation('profile')
-    const { toast } = useToast()
     const navigate = useNavigate()
     const isRTL = i18n.dir() === 'rtl'
     const [loading, setLoading] = useState(false)
@@ -57,17 +56,12 @@ export default function MyProfile() {
             if (error) throw error
 
             await refreshSession()
-            toast({
-                title: 'Profile Updated',
-                description: 'Your profile has been updated successfully.'
+            toast.success(t('messages.profile_updated', 'Profile Updated'), {
+                description: t('messages.profile_updated_desc', 'Your profile has been updated successfully.')
             })
         } catch (error) {
             console.error('Error updating profile:', error)
-            toast({
-                title: 'Error',
-                description: 'Failed to update profile. Please try again.',
-                variant: 'destructive'
-            })
+            toast.error(t('common:messages.error_action_failed', 'Failed to update profile'))
         } finally {
             setLoading(false)
         }
@@ -130,17 +124,12 @@ export default function MyProfile() {
             console.log('Profile updated successfully')
             setAvatarUrl(urlData.publicUrl)
             await refreshSession()
-            toast({
-                title: 'Avatar Updated',
-                description: 'Your avatar has been updated successfully.'
+            toast.success(t('messages.avatar_updated', 'Avatar Updated'), {
+                description: t('messages.avatar_updated_desc', 'Your avatar has been updated successfully.')
             })
         } catch (error: any) {
             console.error('Error uploading avatar:', error)
-            toast({
-                title: 'Error',
-                description: error.message || 'Failed to upload avatar. Please try again.',
-                variant: 'destructive'
-            })
+            toast.error(error.message || t('common:messages.error_action_failed', 'Failed to upload avatar'))
         } finally {
             setUploading(false)
         }

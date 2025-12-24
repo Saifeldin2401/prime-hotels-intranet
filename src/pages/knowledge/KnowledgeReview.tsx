@@ -119,17 +119,9 @@ export default function KnowledgeReview() {
             const approvalRecord: any = {
                 document_id: selectedArticle.id,
                 approver_id: user.id,
-                status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'changes_requested',
+                status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'pending',
                 feedback: reviewComment.trim() || null,
-            }
-
-            if (action === 'approve') {
-                approvalRecord.approved_by = user.id
-                approvalRecord.approved_at = new Date().toISOString()
-            } else if (action === 'reject') {
-                approvalRecord.rejected_by = user.id
-                approvalRecord.rejected_at = new Date().toISOString()
-                approvalRecord.rejection_reason = reviewComment.trim() || null
+                approved_at: action === 'approve' ? new Date().toISOString() : null,
             }
 
             const { error: approvalError } = await supabase

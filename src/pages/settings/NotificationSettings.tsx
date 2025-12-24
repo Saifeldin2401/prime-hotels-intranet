@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Mail, CheckCircle, BookOpen, AlertCircle, Wrench, Bell } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function NotificationSettings() {
     const { preferences, isLoading, updatePreferences } = useNotificationPreferences()
@@ -46,7 +47,7 @@ export function NotificationSettings() {
                                 if (permission === 'granted') {
                                     handleToggle('browser_push_enabled')
                                 } else {
-                                    alert('Please enable notifications in your browser settings.')
+                                    toast.error('Please enable notifications in your browser settings.')
                                 }
                             } else {
                                 handleToggle('browser_push_enabled')

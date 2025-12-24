@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -89,7 +89,6 @@ export function TransferEmployeeDialog({
     const [properties, setProperties] = useState<Property[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loadingData, setLoadingData] = useState(false);
-    const { toast } = useToast();
     const { user } = useAuth()
     const { t } = useTranslation('hr');
 
@@ -154,15 +153,10 @@ export function TransferEmployeeDialog({
             setDepartments(depts || []);
         } catch (error) {
             console.error("Error loading data:", error);
-            toast({
-                title: "Error",
-                description: "Failed to load form data",
-                variant: "destructive",
-            });
         } finally {
             setLoadingData(false);
         }
-    }, [user?.id, toast]);
+    }, [user?.id]);
 
     useEffect(() => {
         if (open) {
@@ -184,22 +178,15 @@ export function TransferEmployeeDialog({
 
             if (error) throw error;
 
-            toast({
-                title: "Request Submitted",
-                description: "Transfer request has been submitted for approval.",
-            });
+            toast.success("Transfer request has been submitted for approval");
             setOpen(false);
             form.reset();
             if (onSuccess) onSuccess();
         } catch (error: any) {
             console.error("Transfer error:", error);
-            toast({
-                title: "Error",
-                description: typeof error === 'object' && error !== null && 'message' in error
-                    ? String(error.message)
-                    : "Failed to submit transfer request",
-                variant: "destructive",
-            });
+            toast.error(typeof error === 'object' && error !== null && 'message' in error
+                ? String(error.message)
+                : "Failed to submit transfer request");
         }
     };
 

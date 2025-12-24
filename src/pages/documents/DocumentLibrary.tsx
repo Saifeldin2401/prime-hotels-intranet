@@ -31,7 +31,7 @@ import {
 import { formatRelativeTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Document } from '@/lib/types'
-import { TableSkeleton } from '@/components/loading/TableSkeleton'
+import { LoadingTransition, TableSkeleton, ListSkeleton } from '@/components/ui/loading-system'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useTranslation } from 'react-i18next'
 
@@ -140,112 +140,113 @@ export default function DocumentLibrary() {
   }
 
   const renderDocumentList = (docs: Document[]) => {
-    if (isLoading) return <TableSkeleton rows={5} columns={4} showHeaders={false} />
-
-    if (docs.length === 0) {
-      return (
-        <EmptyState
-          icon={FileText}
-          title={t('empty.title')}
-          description={t('empty.description')}
-          action={{
-            label: t('upload_document'),
-            onClick: () => setUploadDialogOpen(true),
-            icon: Plus
-          }}
-        />
-      )
-    }
-
     return (
-      <div className="space-y-2 sm:space-y-3">
-        {docs.map((doc, index) => {
-          const isFavorite = favorites.has(doc.id)
-          return (
-            <div
-              key={doc.id}
-              onClick={() => navigate('/documents/' + doc.id)}
-              className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50/50 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md animate-slide-up border border-transparent hover:border-hotel-navy/10 gap-3 group cursor-pointer"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10 flex-shrink-0">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-hotel-navy" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      to={`/documents/${doc.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="font-semibold text-hotel-navy text-sm sm:text-base truncate hover:underline focus:outline-none"
-                    >
-                      {doc.title}
-                    </Link>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleFavorite.mutate({ documentId: doc.id, isFavorite })
-                      }}
-                      className={cn(
-                        "opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100",
-                        isFavorite && "opacity-100"
-                      )}
-                    >
-                      <Heart className={cn("w-4 h-4 transition-colors", isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-red-500")} />
-                    </button>
+      <LoadingTransition
+        isLoading={isLoading}
+        skeleton={<TableSkeleton rows={5} cols={4} />}
+      >
+        {docs.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title={t('empty.title')}
+            description={t('empty.description')}
+            action={{
+              label: t('upload_document'),
+              onClick: () => setUploadDialogOpen(true),
+              icon: Plus
+            }}
+          />
+        ) : (
+          <div className="space-y-2 sm:space-y-3">
+            {docs.map((doc, index) => {
+              const isFavorite = favorites.has(doc.id)
+              return (
+                <div
+                  key={doc.id}
+                  onClick={() => navigate('/documents/' + doc.id)}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50/50 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md animate-slide-up border border-transparent hover:border-hotel-navy/10 gap-3 group cursor-pointer"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10 flex-shrink-0">
+                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-hotel-navy" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/documents/${doc.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-semibold text-hotel-navy text-sm sm:text-base truncate hover:underline focus:outline-none"
+                        >
+                          {doc.title}
+                        </Link>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleFavorite.mutate({ documentId: doc.id, isFavorite })
+                          }}
+                          className={cn(
+                            "opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100",
+                            isFavorite && "opacity-100"
+                          )}
+                        >
+                          <Heart className={cn("w-4 h-4 transition-colors", isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-red-500")} />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <EnhancedBadge variant="outline" className="text-xs">
+                          {doc.visibility === 'all_properties' && t('document.all_properties')}
+                          {doc.visibility === 'property' && t('document.property_specific')}
+                          {doc.visibility === 'department' && t('document.department_specific')}
+                          {doc.visibility === 'role' && t('document.role_specific')}
+                        </EnhancedBadge>
+                        <span className="text-xs text-gray-500">
+                          {formatRelativeTime(doc.created_at)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <EnhancedBadge variant="outline" className="text-xs">
-                      {doc.visibility === 'all_properties' && t('document.all_properties')}
-                      {doc.visibility === 'property' && t('document.property_specific')}
-                      {doc.visibility === 'department' && t('document.department_specific')}
-                      {doc.visibility === 'role' && t('document.role_specific')}
-                    </EnhancedBadge>
-                    <span className="text-xs text-gray-500">
-                      {formatRelativeTime(doc.created_at)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={doc.status} />
-                {user?.id === doc.created_by && doc.status !== 'PUBLISHED' && (
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs"
-                    disabled={updateDocument.isPending}
-                    onClick={(e) => handlePublish(doc.id, e)}
-                  >
-                    Publish
-                  </Button>
-                )}
-                {doc.requires_acknowledgment && (
-                  acknowledgedDocumentIds.has(doc.id) ? (
-                    <EnhancedBadge variant="success" className="text-xs">
-                      {t('document.acknowledged')}
-                    </EnhancedBadge>
-                  ) : (
-                    <Button
-                      className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-8 text-xs"
-                      size="sm"
-                      disabled={acknowledgeMutation.isPending}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        acknowledgeMutation.mutate(doc.id)
-                      }}
-                    >
-                      {t('document.acknowledge')}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge status={doc.status} />
+                    {user?.id === doc.created_by && doc.status !== 'PUBLISHED' && (
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs"
+                        disabled={updateDocument.isPending}
+                        onClick={(e) => handlePublish(doc.id, e)}
+                      >
+                        Publish
+                      </Button>
+                    )}
+                    {doc.requires_acknowledgment && (
+                      acknowledgedDocumentIds.has(doc.id) ? (
+                        <EnhancedBadge variant="success" className="text-xs">
+                          {t('document.acknowledged')}
+                        </EnhancedBadge>
+                      ) : (
+                        <Button
+                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-8 text-xs"
+                          size="sm"
+                          disabled={acknowledgeMutation.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            acknowledgeMutation.mutate(doc.id)
+                          }}
+                        >
+                          {t('document.acknowledge')}
+                        </Button>
+                      )
+                    )}
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate('/documents/' + doc.id); }} className="text-gray-500 hover:text-hotel-navy h-8 w-8 p-0">
+                      <Eye className="w-4 h-4" />
                     </Button>
-                  )
-                )}
-                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate('/documents/' + doc.id); }} className="text-gray-500 hover:text-hotel-navy h-8 w-8 p-0">
-                  <Eye className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </LoadingTransition>
     )
   }
 

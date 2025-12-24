@@ -10,54 +10,61 @@
     /* Primary Navy: #0B1C3E (Approximate HSL: 220 70% 15%) */
     /* Primary Gold: #C5A065 (Approximate HSL: 37 45% 58%) */
 
-    --background: 210 20% 98%;
-    --foreground: 220 70% 15%;
-    /* Navy Text */
+    --background: 220 33% 98%;
+    /* Slightly cooler gray background */
+    --foreground: 220 70% 12%;
+    /* Deeper Navy for better contrast */
 
     --card: 0 0% 100%;
-    --card-foreground: 220 70% 15%;
+    --card-foreground: 220 70% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 70% 15%;
+    --popover-foreground: 220 70% 12%;
 
     --primary: 220 70% 15%;
-    /* Deep Navy */
     --primary-foreground: 37 45% 95%;
-    /* Light Gold/Cream text on Navy */
 
     --secondary: 37 45% 58%;
-    /* Gold */
-    --secondary-foreground: 220 70% 15%;
-    /* Navy text on Gold */
+    --secondary-foreground: 220 70% 12%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 220 20% 45%;
+    --muted: 220 20% 94%;
+    --muted-foreground: 220 15% 40%;
 
     --accent: 37 45% 95%;
-    /* Light Cream/Gold tint */
     --accent-foreground: 220 70% 15%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 45%;
+    /* Slightly deeper red */
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
     --ring: 37 45% 58%;
-    /* Gold Ring */
 
-    --radius: 0.3rem;
-    /* Slightly tighter radius for professional look */
+    --radius: 0.5rem;
+    /* Standardized radius */
+
+    /* Semantic Status Palette (HSL values) */
+    --success: 142 76% 36%;
+    --success-foreground: 142 76% 95%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 95%;
+    --error: 0 84% 45%;
+    --error-foreground: 0 84% 95%;
+    --info: 199 89% 48%;
+    --info-foreground: 199 89% 95%;
 
     /* Extended Hotel Palette */
     --hotel-gold: 37 45% 58%;
-    --hotel-gold-light: 37 45% 68%;
-    --hotel-gold-dark: 37 45% 48%;
+    --hotel-gold-light: 37 45% 85%;
+    --hotel-gold-dark: 37 45% 42%;
 
     --hotel-navy: 220 70% 15%;
-    --hotel-navy-light: 220 60% 25%;
-    --hotel-navy-dark: 220 80% 10%;
+    --hotel-navy-light: 220 50% 25%;
+    --hotel-navy-dark: 220 80% 8%;
 
-    --hotel-cream: 37 30% 97%;
+    --hotel-cream: 37 40% 98%;
+    --hotel-mist: 220 20% 96%;
 
     /* Typography */
     --font-heading: 'Playfair Display', serif;
@@ -109,7 +116,20 @@
   h4,
   h5,
   h6 {
-    @apply font-serif font-bold tracking-tight text-hotel-navy dark:text-hotel-gold;
+    @apply font-serif font-bold text-hotel-navy dark:text-hotel-gold;
+    letter-spacing: -0.01em;
+    /* Subtle architectural compression */
+  }
+
+  h1,
+  h2 {
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .uppercase {
+    letter-spacing: 0.1em;
+    /* Professional look for uppercase text */
   }
 
   /* Hide Radix UI checkbox internal input */
@@ -332,25 +352,27 @@ select:focus-visible {
     @apply bg-gray-50 px-4 py-3 rounded-b-lg border-t border-gray-200;
   }
 
-  /* Redefining glass classes to be solid corporate style - NO TRANSPARENCY */
+  /* Glass/Specialized classes */
   .glass {
-    @apply bg-background border border-border shadow-sm;
-    /* Solid background */
+    @apply bg-background/60 backdrop-blur-md border border-white/20 shadow-sm relative overflow-hidden;
+
+    &::after {
+      content: '';
+      @apply absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none;
+    }
   }
 
   .glass-card {
-    @apply bg-card border border-border rounded-lg shadow-sm;
-    /* Solid card */
+    @apply bg-white/70 dark:bg-hotel-navy/70 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-xl shadow-xl transition-all duration-300;
   }
 
   .glass-sidebar {
-    @apply bg-card border-r border-border shadow-sm;
-    /* Solid sidebar */
+    @apply bg-hotel-navy/95 backdrop-blur-xl border-r border-white/10 shadow-2xl;
   }
 
   .card-gold {
-    @apply bg-[#FDF8F0] border border-[#E5D5BC] rounded-lg shadow-sm;
-    /* Solid Cream */
+    @apply bg-[#FDF8F0] border border-hotel-gold-light/30 rounded-xl shadow-sm;
+    /* Soft Cream */
   }
 
   /* Button styles - Corporate */

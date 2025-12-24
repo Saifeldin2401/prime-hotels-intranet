@@ -1,18 +1,16 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { motion, type HTMLMotionProps } from 'framer-motion'
+import { DURATION, EASING } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
-interface EnhancedCardProps extends HTMLAttributes<HTMLDivElement> {
+interface EnhancedCardProps extends HTMLMotionProps<'div'> {
   children: ReactNode
   className?: string
-  variant?: 'default' | 'glass' | 'gold' | 'navy' | 'elevated'
+  variant?: 'default' | 'glass' | 'gold' | 'navy' | 'elevated' | 'premium'
   padding?: 'none' | 'sm' | 'md' | 'lg'
   hover?: boolean
   clickable?: boolean
-  onClick?: () => void
 }
-
-import { motion } from 'framer-motion'
-import { DURATION, EASING } from '@/lib/motion'
 
 export function EnhancedCard({
   children,
@@ -28,10 +26,11 @@ export function EnhancedCard({
 
   const variantClasses = {
     default: 'bg-card border border-border shadow-md',
-    glass: 'bg-card border border-border shadow-md',
-    gold: 'bg-[#FDF8F0] border border-[#E5D5BC] shadow-sm',
+    glass: 'glass-card', // Use the utility class from index.css
+    gold: 'card-gold',   // Use the utility class from index.css
     navy: 'bg-hotel-navy text-white border border-hotel-navy-light shadow-lg',
-    elevated: 'bg-card border border-border shadow-lg'
+    elevated: 'bg-card border border-border shadow-xl ring-1 ring-black/5',
+    premium: 'bg-hotel-cream border border-hotel-gold/30 shadow-2xl relative overflow-hidden after:absolute after:inset-0 after:bg-gradient-to-br after:from-hotel-gold/5 after:to-transparent after:pointer-events-none'
   }
 
   const paddingClasses = {

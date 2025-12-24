@@ -9,6 +9,7 @@ import { Loader2, Calendar, CheckCircle2, Circle, PlayCircle, FileText, External
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 export default function OnboardingDashboard() {
     const { t } = useTranslation('onboarding')
@@ -45,7 +46,17 @@ export default function OnboardingDashboard() {
     const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
     const handleTaskToggle = (taskId: string, currentStatus: boolean) => {
-        updateTask({ taskId, isCompleted: !currentStatus })
+        updateTask({ taskId, isCompleted: !currentStatus }, {
+            onSuccess: () => {
+                toast.success(!currentStatus
+                    ? t('dashboard.task_completed', 'Task marked as completed')
+                    : t('dashboard.task_reopened', 'Task reopened')
+                )
+            },
+            onError: () => {
+                toast.error(t('common:messages.error_action_failed', 'Failed to update task'))
+            }
+        })
     }
 
     const handleLinkClick = (task: any) => {

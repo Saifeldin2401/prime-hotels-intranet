@@ -387,25 +387,42 @@ export function UserForm({ user, onClose }: UserFormProps) {
       // Update role
       if (role) {
         // Delete existing roles
-        await supabase.from('user_roles').delete().eq('user_id', user.id)
+        const { error: delRoleErr } = await supabase.from('user_roles').delete().eq('user_id', user.id)
+        if (delRoleErr) console.error('Delete roles error:', delRoleErr)
         // Insert new role
-        await supabase.from('user_roles').insert({ user_id: user.id, role })
+        const { error: insRoleErr } = await supabase.from('user_roles').insert({ user_id: user.id, role })
+        if (insRoleErr) {
+          console.error('Insert role error:', insRoleErr)
+          throw insRoleErr
+        }
       }
 
       // Update properties
-      await supabase.from('user_properties').delete().eq('user_id', user.id)
+      const { error: delPropErr } = await supabase.from('user_properties').delete().eq('user_id', user.id)
+      if (delPropErr) console.error('Delete properties error:', delPropErr)
+
       if (selectedProperties.length > 0) {
-        await supabase
+        const { error: insPropErr } = await supabase
           .from('user_properties')
           .insert(selectedProperties.map((propertyId) => ({ user_id: user.id, property_id: propertyId })))
+        if (insPropErr) {
+          console.error('Insert properties error:', insPropErr)
+          throw insPropErr
+        }
       }
 
       // Update departments
-      await supabase.from('user_departments').delete().eq('user_id', user.id)
+      const { error: delDeptErr } = await supabase.from('user_departments').delete().eq('user_id', user.id)
+      if (delDeptErr) console.error('Delete departments error:', delDeptErr)
+
       if (selectedDepartments.length > 0) {
-        await supabase
+        const { error: insDeptErr } = await supabase
           .from('user_departments')
           .insert(selectedDepartments.map((departmentId) => ({ user_id: user.id, department_id: departmentId })))
+        if (insDeptErr) {
+          console.error('Insert departments error:', insDeptErr)
+          throw insDeptErr
+        }
       }
     },
     onSuccess: () => {
