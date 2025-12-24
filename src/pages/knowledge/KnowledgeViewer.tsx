@@ -44,7 +44,8 @@ import {
     Loader2,
     Send,
     GraduationCap,
-    PlayCircle
+    PlayCircle,
+    List
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -497,16 +498,17 @@ export default function KnowledgeViewer() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
                             {canEdit && (
-                                <>
+                                <div className="flex items-center gap-1 sm:gap-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => navigate(`/knowledge/${id}/edit`)}
+                                        className="h-8 px-2 sm:h-9 sm:px-3"
                                     >
-                                        <Pencil className="h-4 w-4 mr-2" />
-                                        {t('viewer.edit')}
+                                        <Pencil className="h-3.5 w-3.5 sm:mr-2" />
+                                        <span className="hidden sm:inline">{t('viewer.edit')}</span>
                                     </Button>
 
                                     <AlertDialog>
@@ -514,10 +516,10 @@ export default function KnowledgeViewer() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="h-8 px-2 sm:h-9 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50"
                                             >
-                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                {t('viewer.delete')}
+                                                <Trash2 className="h-3.5 w-3.5 sm:mr-2" />
+                                                <span className="hidden sm:inline">{t('viewer.delete')}</span>
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
@@ -540,17 +542,17 @@ export default function KnowledgeViewer() {
                                         </AlertDialogContent>
                                     </AlertDialog>
 
-                                    <Separator orientation="vertical" className="h-6" />
-                                </>
+                                    <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
+                                </div>
                             )}
-                            <div className="h-4 w-px bg-gray-200 hidden sm:block print:hidden" />
-                            <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)} className="hover:text-hotel-gold print:hidden">
+                            <div className="h-4 w-px bg-gray-200 hidden xs:block print:hidden mx-1" />
+                            <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)} className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:text-hotel-gold print:hidden">
                                 {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-hotel-gold" /> : <Bookmark className="h-4 w-4" />}
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={handleShare} className="hover:text-blue-600 print:hidden" title={t('viewer.share', 'Share article')}>
+                            <Button variant="ghost" size="sm" onClick={handleShare} className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:text-blue-600 print:hidden" title={t('viewer.share', 'Share article')}>
                                 <Share2 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={handlePrint} className="hover:text-hotel-navy print:hidden" title={t('viewer.print', 'Print article')}>
+                            <Button variant="ghost" size="sm" onClick={handlePrint} className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:text-hotel-navy print:hidden" title={t('viewer.print', 'Print article')}>
                                 <Printer className="h-4 w-4" />
                             </Button>
                         </div>
@@ -596,13 +598,57 @@ export default function KnowledgeViewer() {
                                 <div className="absolute top-0 right-0 p-2 opacity-10">
                                     <Sparkles className="h-12 w-12 text-hotel-gold" />
                                 </div>
-                                <h3 className="text-sm font-bold text-hotel-gold uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
+                                <h3 className="text-xs md:text-sm font-bold text-hotel-gold uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <Clock className="h-3.5 w-3.5" />
                                     {t('viewer.tldr', 'Quick Summary')}
                                 </h3>
-                                <p className="text-hotel-navy/80 font-medium leading-relaxed italic">
+                                <p className="text-hotel-navy/80 text-sm md:text-base font-medium leading-relaxed italic">
                                     "{(article as any).summary}"
                                 </p>
+                            </div>
+                        )}
+
+                        {/* Mobile Table of Contents */}
+                        {tocItems.length > 0 && (
+                            <div className="lg:hidden">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-between bg-white shadow-sm border-gray-200">
+                                            <span className="flex items-center gap-2">
+                                                <List className="h-4 w-4 text-hotel-gold" />
+                                                {t('viewer.on_this_page')}
+                                            </span>
+                                            <ChevronDown className="h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="sm:max-w-md">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>{t('viewer.on_this_page')}</AlertDialogTitle>
+                                        </AlertDialogHeader>
+                                        <div className="max-h-[60vh] overflow-y-auto py-2">
+                                            {tocItems.map(item => (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => {
+                                                        scrollToSection(item.id)
+                                                        // Close dialog (handled by AlertDialogAction or custom closer)
+                                                    }}
+                                                    className={cn(
+                                                        "block w-full text-left py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors text-sm border-b border-gray-50 last:border-0",
+                                                        activeSection === item.id && "bg-hotel-gold/5 text-hotel-gold font-bold"
+                                                    )}
+                                                >
+                                                    <AlertDialogAction asChild className="bg-transparent text-inherit hover:bg-transparent border-0 p-0 shadow-none block w-full text-left font-normal uppercase">
+                                                        <span>{item.text}</span>
+                                                    </AlertDialogAction>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>{t('viewer.close', 'Close')}</AlertDialogCancel>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </div>
                         )}
                         {/* File Attachment */}
@@ -667,7 +713,7 @@ export default function KnowledgeViewer() {
                                 {article.content ? (
                                     <div
                                         ref={contentRef}
-                                        className="prose prose-lg max-w-none text-gray-900"
+                                        className="prose md:prose-lg max-w-none text-gray-900"
                                         dangerouslySetInnerHTML={{ __html: article.content }}
                                     />
                                 ) : (

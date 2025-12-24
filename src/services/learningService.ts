@@ -253,8 +253,6 @@ export const learningService = {
                             duration: q.time_limit_minutes,
                             // question_count not available in direct fetch
                         }
-                    } else {
-                        console.warn(`Quiz not found for ID: ${a.content_id}`)
                     }
                 }
             })

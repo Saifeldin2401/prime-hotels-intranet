@@ -301,6 +301,7 @@
         "view": "View",
         "no_payslips": "No payslips found in your record.",
         "downloading": "Generating PDF download...",
+        "initiating_secure_download": "Contacting payroll secure server...",
         "download_success": "Payslip downloaded successfully"
     }
 }

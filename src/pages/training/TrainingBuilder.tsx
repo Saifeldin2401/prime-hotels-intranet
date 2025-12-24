@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/ui/use-toast'
@@ -83,6 +83,7 @@ export default function TrainingBuilder() {
   const { profile } = useAuth()
   const { t, i18n } = useTranslation('training')
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const isRTL = i18n.dir() === 'rtl'
 
   // Fetch available quizzes for the Quiz Block
@@ -124,6 +125,8 @@ export default function TrainingBuilder() {
   const [passingScore, setPassingScore] = useState('80')
   const [maxAttempts, setMaxAttempts] = useState('3')
   const [allowRetake, setAllowRetake] = useState(true)
+  const [category, setCategory] = useState('')
+  const [certificateEnabled, setCertificateEnabled] = useState(true)
   const [isPublished] = useState(false)
 
   // Load module data if editing (moved up and assigned)
@@ -149,7 +152,9 @@ export default function TrainingBuilder() {
       setDescription(moduleData.description || '')
       setEstimatedDuration(moduleData.estimated_duration_minutes?.toString() || '')
       setValidityPeriod(moduleData.validity_period_days?.toString() || '')
-      // Sync other fields if needed
+      setCategory(moduleData.category || '')
+      setCertificateEnabled(moduleData.certificate_enabled ?? true)
+      setPassingScore(moduleData.passing_score_percentage?.toString() || '80')
     }
   }, [moduleData])
 
@@ -169,9 +174,11 @@ export default function TrainingBuilder() {
     enabled: !!moduleId
   })
 
+  const isLoadedRef = useRef(false)
+
   // Populate sections when content blocks are loaded
   useEffect(() => {
-    if (contentBlocksData && contentBlocksData.length > 0) {
+    if (contentBlocksData && contentBlocksData.length > 0 && !isLoadedRef.current) {
       // Convert flat content blocks into sections
       // For now, create a single "Main Content" section with all blocks
       const blocks: ContentBlockForm[] = contentBlocksData.map((block, index) => ({
@@ -196,6 +203,7 @@ export default function TrainingBuilder() {
       }])
 
       setContentBlocks(blocks)
+      isLoadedRef.current = true
     }
   }, [contentBlocksData])
 
@@ -450,8 +458,11 @@ export default function TrainingBuilder() {
       const payload = {
         title: title.trim(),
         description: description.trim() || null,
-        estimated_duration_minutes: totalDuration || null,
+        estimated_duration_minutes: estimatedDuration ? Number(estimatedDuration) : (totalDuration || null),
         validity_period_days: validityPeriod ? Number(validityPeriod) : null,
+        category: category || null,
+        certificate_enabled: certificateEnabled,
+        passing_score_percentage: passingScore ? Number(passingScore) : 80,
         created_by: profile?.id
       }
 
@@ -478,10 +489,6 @@ export default function TrainingBuilder() {
       if (currentModuleId) {
         // Delete existing blocks
         await supabase
-          .from('training_content_blocks')
-          .delete()
-          .eq('training_module_id', currentModuleId)
-
         // Flatten sections into content blocks
         const allBlocks: any[] = []
         let orderIndex = 0
@@ -519,12 +526,23 @@ export default function TrainingBuilder() {
             .insert(allBlocks)
           if (blocksError) {
             console.error('Error saving blocks:', blocksError)
+            alert(`Error saving blocks: ${blocksError.message}`)
             throw blocksError
           }
         }
-      }
 
-      alert(t('moduleSaved'))
+        // VERIFY PERSISTENCE
+        const { count, error: verifyError } = await supabase
+          .from('training_content_blocks')
+          .select('*', { count: 'exact', head: true })
+          .eq('training_module_id', currentModuleId)
+
+        if (verifyError) console.error('Verification failed:', verifyError)
+        console.log('VERIFIED SAVED BLOCKS COUNT:', count)
+        alert(t('moduleSaved') + ` (${count} items saved)`)
+      } else {
+        alert(t('moduleSaved'))
+      }
     } catch (error: any) {
       console.error('Error saving training:', error)
       alert(t('error'))
@@ -556,10 +574,10 @@ export default function TrainingBuilder() {
   // Save module mutation
   const saveModuleMutation = useMutation({
     mutationFn: async () => {
-      if (!title.trim()) throw new Error('Title is required')
+      const safeTitle = title.trim() || t('builder.untitledModule') || 'Untitled Module'
 
       const payload = {
-        title: title.trim(),
+        title: safeTitle,
         description: description.trim() || null,
         estimated_duration_minutes: estimatedDuration ? Number(estimatedDuration) : null,
         validity_period_days: validityPeriod ? Number(validityPeriod) : null,
@@ -590,27 +608,38 @@ export default function TrainingBuilder() {
 
   // Save content blocks mutation
   const saveContentBlocksMutation = useMutation({
-    mutationFn: async () => {
-      if (!moduleId) return
+    mutationFn: async (idToUse?: string) => {
+      const targetId = idToUse || moduleId
+      if (!targetId) return
 
       // Delete existing blocks
       await supabase
         .from('training_content_blocks')
         .delete()
-        .eq('training_module_id', moduleId)
+        .eq('training_module_id', targetId)
 
       // Insert new blocks
-      if (contentBlocks.length > 0) {
-        const blocksToInsert = contentBlocks.map((block, index) => ({
-          training_module_id: moduleId,
-          type: block.type,
-          content: block.content,
-          content_url: block.content_url || null,
-          content_data: block.content_data,
-          order: index,
-          is_mandatory: block.is_mandatory
-        }))
+      // Use sections to build the blocks list to ensure we capture the current UI state
+      const blocksToInsert: any[] = []
+      let orderIndex = 0
 
+      for (const section of sections) {
+        for (const item of section.items) {
+          blocksToInsert.push({
+            training_module_id: targetId,
+            type: item.type,
+            content: item.content || item.title || '',
+            content_url: item.content_url || null,
+            content_data: item.content_data || {},
+            order: orderIndex++,
+            is_mandatory: item.is_mandatory ?? true,
+            duration_seconds: item.duration,
+            points: item.points
+          })
+        }
+      }
+
+      if (blocksToInsert.length > 0) {
         const { error } = await supabase
           .from('training_content_blocks')
           .insert(blocksToInsert)
@@ -619,21 +648,22 @@ export default function TrainingBuilder() {
     }
   })
 
-  // Save quiz questions mutation
+  // Save quiz questions mutation (legacy/manual questions)
   const saveQuestionsMutation = useMutation({
-    mutationFn: async () => {
-      if (!moduleId) return
+    mutationFn: async (idToUse?: string) => {
+      const targetId = idToUse || moduleId
+      if (!targetId) return
 
       // Delete existing questions
       await supabase
         .from('training_quizzes')
         .delete()
-        .eq('training_module_id', moduleId)
+        .eq('training_module_id', targetId)
 
       // Insert new questions
       if (questions.length > 0) {
         const questionsToInsert = questions.map((question, index) => ({
-          training_module_id: moduleId,
+          training_module_id: targetId,
           question: question.question,
           type: question.type,
           options: question.type === 'mcq' ? question.options : null,
@@ -651,17 +681,22 @@ export default function TrainingBuilder() {
 
   const handleSave = async () => {
     try {
+      console.log('Starting save process...')
       // First save the module
-      await saveModuleMutation.mutateAsync()
+      const savedModuleId = await saveModuleMutation.mutateAsync()
 
-      // Then save content blocks
-      // NOTE: saveQuestionsMutation is deprecated. Questions should now be added via Quiz blocks referencing the Knowledge Bank.
-      await saveContentBlocksMutation.mutateAsync()
+      console.log('Module saved:', savedModuleId)
+
+      // Then save content blocks using the NEW ID
+      await saveContentBlocksMutation.mutateAsync(savedModuleId)
+
+      // Then save questions using the NEW ID
+      await saveQuestionsMutation.mutateAsync(savedModuleId)
 
       alert(t('moduleSaved'))
     } catch (error: any) {
       console.error('Save failed:', error)
-      alert(t('error'))
+      alert(t('error') + ': ' + error.message)
     }
   }
 
@@ -807,10 +842,11 @@ export default function TrainingBuilder() {
       <BuilderHeader
         title={title}
         isSaving={saveModuleMutation.isPending || saveContentBlocksMutation.isPending}
-        hasUnsavedChanges={saveModuleMutation.isPending || saveContentBlocksMutation.isPending} // Simplified mechanism for now
+        hasUnsavedChanges={saveModuleMutation.isPending || saveContentBlocksMutation.isPending}
         onSave={handleSave}
         onPreview={() => setViewMode('preview')}
         onMagic={() => setShowSmartWizard(true)}
+        onTitleChange={setTitle}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -861,59 +897,99 @@ export default function TrainingBuilder() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('title')}</Label>
+                  <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block w-full" : "")}>{t('title')}</Label>
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder={t('title')}
-                    className={cn("bg-white", isRTL ? "text-right" : "")}
+                    className={cn("bg-white border-slate-200 focus:ring-hotel-gold focus:border-hotel-gold", isRTL ? "text-right" : "")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('description')}</Label>
+                  <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block w-full" : "")}>{t('description')}</Label>
                   <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={t('description')}
-                    rows={3}
-                    className={cn("bg-white resize-none", isRTL ? "text-right" : "")}
+                    rows={2}
+                    className={cn("bg-white border-slate-200 focus:ring-hotel-gold focus:border-hotel-gold resize-none", isRTL ? "text-right" : "")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('category')}</Label>
-                  <Select>
-                    <SelectTrigger className={cn("bg-white", isRTL ? "flex-row-reverse" : "")}>
+                  <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block w-full" : "")}>{t('category')}</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "flex-row-reverse" : "")}>
                       <SelectValue placeholder={t('builder.selectCategory')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="onboarding" className={isRTL ? "flex-row-reverse" : ""}>{t('builder.onboarding')}</SelectItem>
                       <SelectItem value="compliance" className={isRTL ? "flex-row-reverse" : ""}>{t('builder.compliance')}</SelectItem>
                       <SelectItem value="skills" className={isRTL ? "flex-row-reverse" : ""}>{t('builder.skills')}</SelectItem>
+                      <SelectItem value="operations" className={isRTL ? "flex-row-reverse" : ""}>{t('operations')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('duration')} (min)</Label>
+                    <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block w-full" : "")}>{t('duration')} (min)</Label>
                     <Input
                       type="number"
                       value={estimatedDuration}
                       onChange={(e) => setEstimatedDuration(e.target.value)}
-                      placeholder={t('duration')}
-                      className={cn("bg-white", isRTL ? "text-right" : "")}
+                      placeholder="30"
+                      className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className={cn("text-xs", isRTL ? "text-right block w-full" : "")}>{t('builder.validity')} (days)</Label>
+                    <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block w-full" : "")}>{t('builder.validity')} (days)</Label>
                     <Input
                       type="number"
                       value={validityPeriod}
                       onChange={(e) => setValidityPeriod(e.target.value)}
-                      placeholder={t('validity')}
-                      className={cn("bg-white", isRTL ? "text-right" : "")}
+                      placeholder="365"
+                      className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
                     />
                   </div>
                 </div>
+
+                <div className={`flex items-center justify-between pt-2 border-t border-slate-100 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold text-slate-700">{t('certificateEnabled')}</Label>
+                    <p className="text-[10px] text-muted-foreground">{t('builder.issueCertDesc')}</p>
+                  </div>
+                  <Button
+                    variant={certificateEnabled ? "default" : "outline"}
+                    size="sm"
+                    className={cn(
+                      "h-7 px-3 text-[10px] uppercase tracking-wider font-bold",
+                      certificateEnabled ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "text-slate-500"
+                    )}
+                    onClick={() => setCertificateEnabled(!certificateEnabled)}
+                  >
+                    {certificateEnabled ? t('common:status.enabled') : t('common:status.disabled')}
+                  </Button>
+                </div>
+
+                {/* Passing Score - shown when certificate is enabled */}
+                {certificateEnabled && (
+                  <div className={`flex items-center justify-between pt-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <div className="space-y-0.5">
+                      <Label className="text-xs font-semibold text-slate-700">{t('builder.passingScore')}</Label>
+                      <p className="text-[10px] text-muted-foreground">{t('builder.passingScoreDesc')}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={passingScore}
+                        onChange={(e) => setPassingScore(e.target.value)}
+                        className="w-16 h-8 text-center text-sm font-medium"
+                      />
+                      <span className="text-sm text-slate-500">%</span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1218,10 +1294,110 @@ export default function TrainingBuilder() {
               sopId="general"
               sopTitle={title || t('builder.untitledModule')}
               sopContent=""
-              onQuestionsCreated={(count) => {
+              onQuestionsCreated={async (count, ids) => {
                 setShowAIDialog(false)
-                // Show toast or feedback
-                alert(t('questionsSaved', { count }))
+
+                // Add quiz block to the active section (or first section) with the generated question IDs
+                if (ids && ids.length > 0) {
+                  // Check if module is saved (has ID)
+                  if (!moduleId) {
+                    toast({
+                      title: t('common:error'),
+                      description: 'Please save the module first before generating a quiz.',
+                      variant: 'destructive'
+                    })
+                    return
+                  }
+
+                  try {
+                    // First, create a quiz entity in learning_quizzes
+                    const { data: quizData, error: quizError } = await supabase
+                      .from('learning_quizzes')
+                      .insert({
+                        title: `${title || t('builder.untitledModule')} - Quiz`,
+                        description: `Auto-generated quiz with ${count} questions`,
+                        status: 'published',
+                        training_module_id: moduleId,
+                        passing_score_percentage: Number(passingScore) || 80,
+                        time_limit_minutes: null,
+                        created_by: profile?.id
+                      })
+                      .select()
+                      .single()
+
+                    if (quizError) {
+                      console.error('Error creating quiz:', quizError)
+                      throw quizError
+                    }
+
+                    // Link the questions to this quiz via the junction table
+                    for (let i = 0; i < ids.length; i++) {
+                      const questionId = ids[i]
+                      await supabase
+                        .from('learning_quiz_questions')
+                        .insert({
+                          quiz_id: quizData.id,
+                          question_id: questionId,
+                          display_order: i + 1,
+                          points_override: 2
+                        })
+                    }
+
+                    // Create the quiz content block with the proper quiz_id reference
+                    const quizBlock: ContentBlockForm = {
+                      id: `quiz-${Date.now()}`,
+                      type: 'quiz' as ContentType,
+                      title: t('builder.aiGeneratedQuiz'),
+                      content: '',
+                      content_url: '',
+                      content_data: { quiz_id: quizData.id, question_ids: ids },
+                      is_mandatory: true,
+                      order: 0
+                    }
+
+                    // Determine target section: activeSection, or first section, or create a new one
+                    const targetSectionId = activeSection || sections[0]?.id
+
+                    if (targetSectionId) {
+                      // Add to existing section
+                      setSections(prevSections => prevSections.map(section => {
+                        if (section.id === targetSectionId) {
+                          return {
+                            ...section,
+                            items: [...section.items, { ...quizBlock, order: section.items.length }]
+                          }
+                        }
+                        return section
+                      }))
+                    } else {
+                      // Create a new section with the quiz block
+                      const newSection: TrainingSection = {
+                        id: `section-${Date.now()}`,
+                        title: t('mainContent'),
+                        description: '',
+                        items: [quizBlock],
+                        order: 0
+                      }
+                      setSections([newSection])
+                      setActiveSection(newSection.id)
+                    }
+
+                    // Invalidate the quizzes cache so the new quiz appears in the dropdown
+                    await queryClient.invalidateQueries({ queryKey: ['available-quizzes'] })
+
+                    toast({
+                      title: t('builder.questionsGenerated'),
+                      description: t('builder.questionsAdded', { count })
+                    })
+                  } catch (error) {
+                    console.error('Error creating quiz block:', error)
+                    toast({
+                      title: t('common:error'),
+                      description: 'Failed to create quiz block',
+                      variant: 'destructive'
+                    })
+                  }
+                }
               }}
             />
           </div>

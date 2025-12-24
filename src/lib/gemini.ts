@@ -21,10 +21,13 @@ interface SOPAnalysis {
 
 interface QuizQuestion {
   question_text: string
-  question_type: 'mcq' | 'true_false' | 'fill_blank'
-  options: string[]
+  question_type: string
+  options?: string[]
   correct_answer: string
   points: number
+  explanation?: string
+  hint?: string
+  difficulty_level?: string
 }
 
 const cleanText = (text: string): string => {
@@ -142,24 +145,47 @@ export const aiService = {
     return heuristicAnalysis(text)
   },
 
-  async generateQuiz(sopContent: string): Promise<QuizQuestion[]> {
-    const context = sopContent.replace(/<[^>]*>/g, '').substring(0, 1000)
+  async generateQuiz(request: {
+    sopContent: string,
+    count?: number,
+    types?: string[],
+    difficulty?: string,
+    includeHints?: boolean,
+    includeExplanations?: boolean
+  }): Promise<QuizQuestion[]> {
+    const context = request.sopContent.replace(/<[^>]*>/g, '').substring(0, 3000)
+    const count = request.count || 5
+    const types = request.types?.join(', ') || 'mcq, true_false, fill_blank'
+    const difficulty = request.difficulty || 'medium'
 
-    const prompt = `Create 5 MCQ quiz questions for this SOP context. 
-    Target Audience: Hotel Staff. Tone: Professional and Educational.
+    const prompt = `You are a Senior Hotel Training Manager. Create ${count} quiz questions based on the SOP content below.
+    
+    Target Audience: Hotel Staff.
+    Tone: Professional, Clear, and Educational.
+    
+    REQUIREMENTS:
+    - Number of questions: ${count}
+    - Question types: ${types}
+    - Difficulty level: ${difficulty}
+    - ${request.includeHints ? 'Include a helpful "hint" for each question' : 'Do NOT include hints'}
+    - ${request.includeExplanations ? 'Include a clear "explanation" for why the answer is correct' : 'Do NOT include explanations'}
     
     Return ONLY a JSON Array of objects with this structure:
     [
       {
-        "question_text": "Question?",
-        "question_type": "mcq",
-        "options": ["A", "B", "C", "D"],
-        "correct_answer": "A",
-        "points": 10
+        "question_text": "The question content",
+        "question_type": "mcq | true_false | fill_blank | scenario | mcq_multi",
+        "options": ["Option 1", "Option 2", "Option 3", "Option 4"], 
+        "correct_answer": "For mcq/true_false/mcq_multi: match the string in options. For fill_blank: the word.",
+        "points": 10,
+        "explanation": "Detailed explanation",
+        "hint": "Brief hint"
       }
     ]
 
-    Context:
+    Important: For true_false, options MUST be exactly ["True", "False"].
+    
+    Context Content:
     ${context}`
 
     for (const model of FALLBACK_MODELS) {
@@ -169,7 +195,10 @@ export const aiService = {
         const jsonMatch = cleanJson.match(/\[[\s\S]*\]/)
 
         if (jsonMatch) {
-          return JSON.parse(jsonMatch[0])
+          const parsed = JSON.parse(jsonMatch[0])
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed
+          }
         }
       } catch (e) {
         console.warn(`Quiz generation model ${model} failed:`, e)

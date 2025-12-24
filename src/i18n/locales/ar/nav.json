@@ -80,7 +80,7 @@
     "onboarding_tracker": "متتبع التأهيل",
     "onboarding_templates": "قوالب التأهيل",
     "promotion_history": "سجل الترقيات والنقل",
-    "automations": "الأتمتة",
+    "automations": "سير العمل المؤتمت",
     "notifications": {
         "welcome_back": "مرحباً بعودتك!",
         "new_notifications": "لديك {{count}} إشعارات جديدة.",

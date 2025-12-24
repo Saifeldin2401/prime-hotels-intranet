@@ -17,7 +17,13 @@
     "deleteItems": "حذف {{count}} عناصر",
     "deleteItems_label": "حذف {{count}} من {{entityLabel}}؟",
     "deleteConfirmationDescription": "سيؤدي هذا الإجراء إلى الحذف المؤقت للعناصر المحددة. يمكن استعادتها من قبل المسؤول.",
-    "status": "الحالة",
+    "status": {
+      "label": "الحالة",
+      "enabled": "مفعّل",
+      "disabled": "معطّل",
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
     "assign": "تعيين",
     "unassign": "إلغاء التعيين",
     "selected": "محدد",
@@ -170,7 +176,6 @@
     "created": "تم الإنشاء",
     "updated": "تم التحديث",
     "download_history": "سيظهر سجل التنزيل هنا",
-    "training_builder_test": "اختبار منشئ التدريب",
     "assigned": "معين",
     "in_progress": "قيد التنفيذ",
     "completed": "مكتمل",

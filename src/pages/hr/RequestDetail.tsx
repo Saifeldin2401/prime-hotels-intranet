@@ -247,37 +247,41 @@ export default function RequestDetail() {
   const requester = request.requester
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={`Request #${request.request_no}`}
-        description={`${request.entity_type.replace('_', ' ')} • Submitted ${request.submitted_at ? format(new Date(request.submitted_at), 'MMM dd, yyyy') : '—'}`}
-      />
-
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          {statusBadge(request.status)}
-          {request.current_assignee && (
-            <Badge variant="outline">
-              Assigned to: {request.current_assignee.full_name || request.current_assignee.email}
-            </Badge>
-          )}
+    <div className="space-y-6 md:space-y-8 py-4 px-4 sm:py-6 sm:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div>
+          <PageHeader
+            title={`Request #${request.request_no}`}
+            description={`${request.entity_type.replace('_', ' ')} • Submitted ${request.submitted_at ? format(new Date(request.submitted_at), 'MMM dd, yyyy') : '—'}`}
+            className="pb-0"
+          />
         </div>
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => navigate(-1)} className="w-full sm:w-auto order-first sm:order-last">
+          <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {statusBadge(request.status)}
+        {request.current_assignee && (
+          <Badge variant="outline" className="text-[10px] xs:text-xs">
+            Assigned to: {request.current_assignee.full_name || request.current_assignee.email}
+          </Badge>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="details" className="space-y-4">
-            <TabsList className="w-full">
-              <TabsTrigger value="details" className="flex-1">
+            <TabsList className="w-full h-11 bg-muted/30 p-1">
+              <TabsTrigger value="details" className="flex-1 text-xs sm:text-sm">
                 Details
               </TabsTrigger>
-              <TabsTrigger value="timeline" className="flex-1">
+              <TabsTrigger value="timeline" className="flex-1 text-xs sm:text-sm">
                 Timeline
               </TabsTrigger>
-              <TabsTrigger value="attachments" className="flex-1">
+              <TabsTrigger value="attachments" className="flex-1 text-xs sm:text-sm">
                 Attachments
               </TabsTrigger>
             </TabsList>
@@ -379,14 +383,15 @@ export default function RequestDetail() {
                   </div>
 
                   {canAct && (
-                    <div className="pt-4 border-t flex flex-wrap gap-2">
-                      <Button onClick={() => setActionDialog('approve')} disabled={actionMutation.isPending}>
+                    <div className="pt-4 border-t grid grid-cols-2 xs:grid-cols-3 gap-2">
+                      <Button onClick={() => setActionDialog('approve')} disabled={actionMutation.isPending} className="w-full">
                         Approve
                       </Button>
                       <Button
                         variant="destructive"
                         onClick={() => setActionDialog('reject')}
                         disabled={actionMutation.isPending}
+                        className="w-full"
                       >
                         Reject
                       </Button>
@@ -394,6 +399,7 @@ export default function RequestDetail() {
                         variant="outline"
                         onClick={() => setActionDialog('return')}
                         disabled={actionMutation.isPending}
+                        className="w-full text-[10px] xs:text-xs leading-tight"
                       >
                         Return for Correction
                       </Button>
@@ -401,6 +407,7 @@ export default function RequestDetail() {
                         variant="outline"
                         onClick={() => setActionDialog('forward')}
                         disabled={actionMutation.isPending}
+                        className="w-full"
                       >
                         Forward
                       </Button>
@@ -409,6 +416,7 @@ export default function RequestDetail() {
                           variant="secondary"
                           onClick={() => setActionDialog('close')}
                           disabled={actionMutation.isPending}
+                          className="w-full"
                         >
                           Close
                         </Button>
@@ -417,6 +425,7 @@ export default function RequestDetail() {
                         variant="outline"
                         onClick={() => setActionDialog('comment')}
                         disabled={actionMutation.isPending}
+                        className="w-full text-xs"
                       >
                         Add Comment
                       </Button>

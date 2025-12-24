@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Add a timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('User data loading timeout')), 3000) // 3 second timeout
+        setTimeout(() => reject(new Error('User data loading timeout')), 10000) // 10 second timeout
       })
 
       // Load profile with timeout
@@ -57,19 +57,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           // Set basic profile from auth user
-          setProfile({
+          const fullProfile: Profile = {
             id: user.id,
             email: user.email || '',
             full_name: user.user_metadata?.full_name || null,
-            phone: null,
-            avatar_url: null,
+            phone: user.user_metadata?.phone || null,
+            avatar_url: user.user_metadata?.avatar_url || null,
             hire_date: null,
             job_title: null,
+            staff_id: null,
             reporting_to: null,
             is_active: true,
             created_at: user.created_at,
-            updated_at: user.updated_at || user.created_at,
-          })
+            updated_at: new Date().toISOString()
+          }
+          setProfile(fullProfile)
         }
       } else if (profileData) {
         setProfile(profileData)
@@ -244,40 +246,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
-
-      // Mock authentication for local development
-      if (import.meta.env.DEV && import.meta.env.VITE_MOCK_AUTH === 'true') {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        // Mock user data matching the Supabase User interface
-        const mockUser = {
-          id: 'mock-user-id',
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
-          email: email,
-          phone: '',
-          email_confirmed_at: new Date().toISOString(),
-          phone_confirmed_at: undefined,
-          last_sign_in_at: new Date().toISOString(),
-          app_metadata: {
-            provider: 'email',
-            role: 'staff'
-          },
-          user_metadata: {
-            name: email.split('@')[0],
-            department: 'Housekeeping',
-            property: 'Prime Hotel Downtown'
-          },
-          identities: [],
-          factors: undefined,
-          is_anonymous: false
-        }
-
-        setUser(mockUser)
-        setLoading(false)
-        return { data: { user: mockUser }, error: null }
-      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,

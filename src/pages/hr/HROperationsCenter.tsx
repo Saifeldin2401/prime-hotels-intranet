@@ -155,18 +155,19 @@ export default function HROperationsCenter() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-4 px-4 sm:py-6 sm:px-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('operations_center.title')}</h1>
-          <p className="text-gray-600">{t('operations_center.description')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('operations_center.title')}</h1>
+          <p className="text-sm sm:text-base text-gray-600">{t('operations_center.description')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full sm:w-auto gap-2">
           <Button
             variant="outline"
             onClick={() => markAllAsRead.mutate()}
             disabled={unreadCount === 0 || markAllAsRead.isPending}
+            className="flex-1 sm:flex-none h-11"
           >
             {markAllAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             {t('operations_center.mark_all_read')}
@@ -175,95 +176,101 @@ export default function HROperationsCenter() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('operations_center.total_notifications')}</CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-[10px] xs:text-xs md:text-sm font-medium">{t('operations_center.total_notifications')}</CardTitle>
+            <Bell className="h-3 w-3 xs:h-4 xs:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+          <CardContent className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <div className="text-xl md:text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('operations_center.unread')}</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-[10px] xs:text-xs md:text-sm font-medium">{t('operations_center.unread')}</CardTitle>
+            <AlertCircle className="h-3 w-3 xs:h-4 xs:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.unread}</div>
+          <CardContent className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <div className="text-xl md:text-2xl font-bold text-yellow-600">{stats.unread}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('operations_center.approval_required')}</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-[10px] xs:text-xs md:text-sm font-medium">{t('operations_center.approval_required')}</CardTitle>
+            <Settings className="h-3 w-3 xs:h-4 xs:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byType.approval_required || 0}</div>
+          <CardContent className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <div className="text-xl md:text-2xl font-bold">{stats.byType.approval_required || 0}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('operations_center.escalations')}</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-[10px] xs:text-xs md:text-sm font-medium">{t('operations_center.escalations')}</CardTitle>
+            <AlertCircle className="h-3 w-3 xs:h-4 xs:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.byType.escalation_alert || 0}</div>
+          <CardContent className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <div className="text-xl md:text-2xl font-bold text-red-600">{stats.byType.escalation_alert || 0}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Search and Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Search className="w-4 h-4 text-gray-500" />
+      <Card className="bg-muted/10 border-none shadow-none">
+        <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-0">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="relative w-full lg:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder={t('operations_center.search_notifications', 'Search notifications...')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
+                className="pl-10 h-11 w-full bg-white"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Select value={sortBy} onValueChange={(value: 'created_at' | 'read_at') => setSortBy(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="created_at">{t('operations_center.sort.created', 'Created')}</SelectItem>
-                  <SelectItem value="read_at">{t('operations_center.sort.read', 'Read')}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">{t('operations_center.sort.newest', 'Newest')}</SelectItem>
-                  <SelectItem value="asc">{t('operations_center.sort.oldest', 'Oldest')}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter className="w-4 h-4" />
-                {t('operations_center.filters')}
-                {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
-                  <Badge variant="secondary" className="ml-1">
-                    {selectedTypes.length + (readStatus !== 'all' ? 1 : 0) + (dateRange ? 1 : 0)}
-                  </Badge>
-                )}
-              </Button>
-              {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
-                <Button variant="ghost" onClick={clearFilters}>
-                  {t('operations_center.filters_clear', 'Clear all')}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex gap-2 w-full xs:w-auto">
+                <Select value={sortBy} onValueChange={(value: 'created_at' | 'read_at') => setSortBy(value)}>
+                  <SelectTrigger className="flex-1 xs:w-32 h-11 bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created_at">{t('operations_center.sort.created', 'Created')}</SelectItem>
+                    <SelectItem value="read_at">{t('operations_center.sort.read', 'Read')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+                  <SelectTrigger className="flex-1 xs:w-32 h-11 bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">{t('operations_center.sort.newest', 'Newest')}</SelectItem>
+                    <SelectItem value="asc">{t('operations_center.sort.oldest', 'Oldest')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2 w-full xs:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={cn("flex-1 xs:flex-none items-center gap-2 h-11 bg-white", showFilters && "bg-slate-50 border-hotel-gold")}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span className="hidden xs:inline">{t('operations_center.filters')}</span>
+                  {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
+                    <Badge variant="secondary" className="ml-1 bg-hotel-navy text-white">
+                      {selectedTypes.length + (readStatus !== 'all' ? 1 : 0) + (dateRange ? 1 : 0)}
+                    </Badge>
+                  )}
                 </Button>
-              )}
+                {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
+                  <Button variant="ghost" onClick={clearFilters} className="flex-1 xs:flex-none h-11">
+                    {t('operations_center.filters_clear', 'Clear')}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>

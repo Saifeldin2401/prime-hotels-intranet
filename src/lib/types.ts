@@ -351,12 +351,15 @@ export interface TrainingModule {
   property_id: string | null
   updated_by: string | null
   validity_period_days: number | null
+  certificate_enabled: boolean
+  passing_score_percentage: number | null
 }
 
 export interface TrainingContentBlock {
   id: string
   training_module_id: string
   type: 'text' | 'image' | 'video' | 'document_link' | 'quiz' | 'sop_reference'
+  title: string | null
   content: string
   content_url: string | null
   content_data: Record<string, unknown> | null

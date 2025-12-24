@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
+import { triggerService } from '@/services/triggerService'
+
 
 import type { Profile, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
@@ -115,11 +117,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
         duration: 30000,
       })
 
-      // Also log to console for backup
-      console.log('==== NEW USER CREDENTIALS ====')
-      console.log(`Email: ${email}`)
-      console.log(`Password: ${tempPwd}`)
-      console.log('==============================')
+      // Trigger new hire automation (onboarding, etc)
+      if (response.userId) {
+        triggerService.onNewHire(response.userId, selectedDepartments[0] || '')
+      }
 
       onClose()
     },

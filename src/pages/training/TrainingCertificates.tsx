@@ -24,6 +24,7 @@ import {
 import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import { useTranslation } from 'react-i18next'
+import { useToast } from "@/components/ui/use-toast"
 import type {
   TrainingCertificate,
   TrainingProgress,
@@ -51,6 +52,7 @@ interface VerificationResult {
 export default function TrainingCertificates() {
   const { profile } = useAuth()
   const { t, i18n } = useTranslation('training')
+  const { toast } = useToast()
   const isRTL = i18n.language === 'ar'
   const dateLocale = i18n.language === 'ar' ? ar : enUS
 
@@ -108,13 +110,42 @@ export default function TrainingCertificates() {
   // Verify certificate mutation
   const verifyCertificateMutation = useMutation({
     mutationFn: async (code: string) => {
-      // For now, we'll simulate verification since verification_code column doesn't exist
-      // In a real implementation, you'd need to add verification_code to the table
+      if (!code) return { valid: false, certificate: null, message: t('enterVerificationCode') }
+
+      const { data, error } = await supabase
+        .from('training_certificates')
+        .select(`
+          *,
+          training_progress!inner(
+            *,
+            training_modules(id, title, description),
+            profiles!inner(id, full_name, email)
+          )
+        `)
+        .eq('verification_code', code)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Verification error:', error)
+        return {
+          valid: false,
+          certificate: null,
+          message: t('verificationError')
+        }
+      }
+
+      if (!data) {
+        return {
+          valid: false,
+          certificate: null,
+          message: t('certificateNotFound')
+        }
+      }
 
       return {
-        valid: false,
-        certificate: null,
-        message: t('verificationNotImplemented', 'Certificate verification not yet implemented')
+        valid: true,
+        certificate: data as CertificateWithDetails,
+        message: t('certificateVerified')
       }
     },
     onSuccess: (result) => {
@@ -122,11 +153,8 @@ export default function TrainingCertificates() {
     }
   })
 
-  // Download certificate mutation
   const downloadCertificateMutation = useMutation({
     mutationFn: async (certificateId: string) => {
-      // This would generate and return a PDF certificate
-      // For now, we'll just simulate the download
       const { data, error } = await supabase
         .from('training_certificates')
         .select('certificate_url')
@@ -134,14 +162,25 @@ export default function TrainingCertificates() {
         .single()
 
       if (error) throw error
-
-      // Log download (would integrate with download tracking)
-      console.log('Certificate downloaded:', certificateId)
+      if (!data?.certificate_url) throw new Error(t('errors.certificate_not_available', 'Certificate file not yet generated. Please contact support.'))
 
       return data
     },
-    onSuccess: () => {
-      alert(t('certificateDownloaded'))
+    onSuccess: (data) => {
+      if (data?.certificate_url) {
+        window.open(data.certificate_url, '_blank')
+        toast({
+          title: t('success.download_started', 'Download Started'),
+          description: t('success.download_desc', 'Your certificate should open in a new tab.')
+        })
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t('common:common.error'),
+        description: error.message,
+        variant: 'destructive'
+      })
     }
   })
 

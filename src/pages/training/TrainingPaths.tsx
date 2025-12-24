@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useTrainingProgress } from '@/hooks/useTraining'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -56,6 +57,9 @@ export default function TrainingPaths() {
   const { t, i18n } = useTranslation('training')
   const [activeTab, setActiveTab] = useState('my')
   const isRTL = i18n.dir() === 'rtl'
+
+  // Fetch all user progress to calculate path completion
+  const { data: allUserProgress } = useTrainingProgress(profile?.id)
 
   // State for dialogs
   const [showPathDialog, setShowPathDialog] = useState(false)
@@ -359,13 +363,18 @@ export default function TrainingPaths() {
 
   const calculateProgress = (enrollment: any) => {
     if (!enrollment.training_paths?.training_path_modules) return 0
-    const totalModules = (enrollment.training_paths as any).training_path_modules.length
-    if (totalModules === 0) return 0
+    const modules = enrollment.training_paths.training_path_modules
+    if (modules.length === 0) return 0
 
-    // This would need to be calculated based on actual progress
-    // For now, return a placeholder based on enrollment ID for consistency
-    const hash = enrollment.id.split('-').reduce((acc: number, part: string) => acc + part.charCodeAt(0), 0)
-    return (hash % 100)
+    if (!allUserProgress) return 0
+
+    // Count completed modules that are part of this path
+    const completedCount = modules.filter((m: any) => {
+      const progress = allUserProgress.find(p => p.training_id === m.module_id)
+      return progress?.status === 'completed'
+    }).length
+
+    return Math.round((completedCount / modules.length) * 100)
   }
 
   return (

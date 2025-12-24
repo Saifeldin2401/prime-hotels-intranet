@@ -17,7 +17,13 @@
     "deleteItems": "Delete {{count}} items",
     "deleteItems_label": "Delete {{count}} {{entityLabel}}(s)?",
     "deleteConfirmationDescription": "This action will soft-delete the selected items. They can be recovered by an administrator.",
-    "status": "Status",
+    "status": {
+      "label": "Status",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
     "assign": "Assign",
     "unassign": "Unassign",
     "selected": "selected",
@@ -169,7 +175,6 @@
     "created": "Created",
     "updated": "Updated",
     "download_history": "Download history will appear here",
-    "training_builder_test": "Training Builder Test",
     "assigned": "Assigned",
     "in_progress": "In Progress",
     "completed": "Completed",

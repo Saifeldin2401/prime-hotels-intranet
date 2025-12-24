@@ -4,6 +4,7 @@ import { ChevronLeft, Save, Eye, Wand2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
 
 interface BuilderHeaderProps {
     title: string
@@ -12,6 +13,7 @@ interface BuilderHeaderProps {
     onSave: () => void
     onPreview: () => void
     onMagic: () => void
+    onTitleChange?: (title: string) => void
 }
 
 export const BuilderHeader = ({
@@ -20,7 +22,8 @@ export const BuilderHeader = ({
     hasUnsavedChanges,
     onSave,
     onPreview,
-    onMagic
+    onMagic,
+    onTitleChange
 }: BuilderHeaderProps) => {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
@@ -40,9 +43,14 @@ export const BuilderHeader = ({
                     </Button>
                     <div className={`flex flex-col gap-0.5 ${isRTL ? 'text-right' : 'text-left'}`}>
                         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                            <h1 className="text-lg font-semibold leading-none tracking-tight">
-                                {title || t('builder.untitledModule')}
-                            </h1>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    value={title}
+                                    onChange={(e) => onTitleChange?.(e.target.value)}
+                                    placeholder={t('builder.untitledModule')}
+                                    className="h-8 w-[300px] text-lg font-semibold bg-transparent border-transparent hover:border-input focus:border-input transition-colors px-2"
+                                />
+                            </div>
                             {hasUnsavedChanges && (
                                 <Badge variant="secondary" className="h-5 px-1.5 text-[10px] uppercase font-mono">
                                     {t('builder.unsaved')}

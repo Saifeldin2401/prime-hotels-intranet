@@ -55,6 +55,7 @@ export const moduleFormSchema = z.object({
     category: z.string().min(1, 'Category is required'),
     status: z.enum(['draft', 'published', 'archived']),
     department_id: z.string().optional().nullable(),
+    certificate_enabled: z.boolean(),
 })
 
 export type ModuleFormValues = z.infer<typeof moduleFormSchema>
@@ -66,8 +67,18 @@ interface ModuleFormDialogProps {
     onSubmit: (data: ModuleFormValues) => Promise<void>
     isSubmitting?: boolean
     existingCategories?: string[]
-    existingDurations?: string[]
 }
+
+const MANDATORY_DURATIONS = [
+    '15 min',
+    '30 min',
+    '45 min',
+    '1 hour',
+    '2 hours',
+    '3 hours',
+    '4 hours',
+    'Full Day'
+]
 
 export function ModuleFormDialog({
     open,
@@ -76,7 +87,6 @@ export function ModuleFormDialog({
     onSubmit,
     isSubmitting = false,
     existingCategories = [],
-    existingDurations = [],
 }: ModuleFormDialogProps) {
     const { t, i18n } = useTranslation(['training', 'common'])
     const isRTL = i18n.dir() === 'rtl'
@@ -112,6 +122,7 @@ export function ModuleFormDialog({
             category: '',
             status: 'draft',
             department_id: null,
+            certificate_enabled: true,
         },
     })
 
@@ -128,6 +139,7 @@ export function ModuleFormDialog({
                     category: initialData.category || '',
                     status: initialData.status || 'draft',
                     department_id: (initialData as any).department_id || null,
+                    certificate_enabled: (initialData as any).certificate_enabled !== undefined ? (initialData as any).certificate_enabled : true,
                 })
             } else {
                 form.reset({
@@ -138,6 +150,7 @@ export function ModuleFormDialog({
                     category: '',
                     status: 'draft',
                     department_id: null,
+                    certificate_enabled: true,
                 })
             }
         }
@@ -159,7 +172,7 @@ export function ModuleFormDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form onSubmit={form.handleSubmit(handleSubmit)} className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <Form onSubmit={form.handleSubmit(onSubmit)} className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
@@ -230,7 +243,10 @@ export function ModuleFormDialog({
                             name="estimated_duration"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-hotel-navy font-medium">{t('duration')}</FormLabel>
+                                    <FormLabel className="text-hotel-navy font-medium">
+                                        {t('duration')}
+                                        <span className="text-red-500 ml-1">*</span>
+                                    </FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger className="border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50">
@@ -238,7 +254,7 @@ export function ModuleFormDialog({
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {existingDurations.map((duration) => (
+                                            {MANDATORY_DURATIONS.map((duration) => (
                                                 <SelectItem key={duration} value={duration}>
                                                     {duration}
                                                 </SelectItem>
@@ -280,32 +296,62 @@ export function ModuleFormDialog({
                         />
                     </div>
 
-                    <FormField
-                        control={form.control}
-                        name="status"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-hotel-navy font-medium">{t('status')}</FormLabel>
-                                <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                    value={field.value}
-                                >
-                                    <FormControl>
-                                        <SelectTrigger className={`border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            <SelectValue placeholder={t('training:selectStatus')} />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="draft">{t('draft')}</SelectItem>
-                                        <SelectItem value="published">{t('published')}</SelectItem>
-                                        <SelectItem value="archived">{t('archived')}</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-hotel-navy font-medium">{t('status')}</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value}
+                                        value={field.value}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className={`border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                <SelectValue placeholder={t('training:selectStatus')} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="draft">{t('draft')}</SelectItem>
+                                            <SelectItem value="published">{t('published')}</SelectItem>
+                                            <SelectItem value="archived">{t('archived')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="certificate_enabled"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-hotel-navy font-medium">{t('certificateEnabled')}</FormLabel>
+                                    <Select
+                                        onValueChange={(val) => field.onChange(val === 'yes')}
+                                        value={field.value ? 'yes' : 'no'}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className={`border-gray-200 focus:border-hotel-gold focus:ring-hotel-gold bg-gray-50/50 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="yes">{t('common:yes')}</SelectItem>
+                                            <SelectItem value="no">{t('common:no')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[0.8rem] text-muted-foreground mt-2">
+                                        {field.value ? t('training:certificate_enabled_desc') : t('training:certificate_disabled_desc')}
+                                    </p>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
 
                     <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 mt-6">
                         <Button

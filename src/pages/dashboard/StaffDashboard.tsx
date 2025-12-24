@@ -171,14 +171,14 @@ export function StaffDashboard() {
       initial="hidden"
       animate="show"
       variants={container}
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
       {/* Welcome Header */}
       <motion.div variants={item} className="prime-card">
-        <div className="prime-card-header">
-          <h1 className="text-xl font-semibold">{t('staff.welcome_back', { name: profile?.full_name || user?.email })}</h1>
+        <div className="prime-card-header py-3 sm:py-4">
+          <h1 className="text-lg sm:text-xl font-semibold">{t('staff.welcome_back', { name: profile?.full_name || user?.email })}</h1>
         </div>
-        <div className="prime-card-body">
+        <div className="prime-card-body py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 dark:text-gray-400">{t('staff.subtitle')}</p>
@@ -200,69 +200,69 @@ export function StaffDashboard() {
       {/* Stats Cards */}
       <motion.div variants={item} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
         <div className="prime-card">
-          <div className="prime-card-body p-3 sm:p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('staff.stats.todays_tasks')}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.todaysTasks || 0}</p>
+          <div className="prime-card-body p-3 xs:p-4 md:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] xs:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{t('staff.stats.todays_tasks')}</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{stats?.todaysTasks || 0}</p>
                 <p className={cn(
-                  "text-xs mt-1 font-medium",
+                  "text-[10px] mt-0.5 font-medium flex items-center gap-1",
                   (stats?.tasksChange || 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                 )}>
-                  {(stats?.tasksChange || 0) >= 0 ? '+' : ''}{stats?.tasksChange || 0} {t('staff.stats.from_yesterday')}
+                  {(stats?.tasksChange || 0) >= 0 ? '+' : ''}{stats?.tasksChange || 0} <span className="hidden xs:inline">{t('staff.stats.from_yesterday')}</span>
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="h-9 w-9 xs:h-12 xs:w-12 shrink-0 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Target className="h-5 w-5 xs:h-6 xs:w-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </div>
         </div>
 
         <div className="prime-card">
-          <div className="prime-card-body p-3 sm:p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('staff.stats.training_progress')}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.trainingProgress || 0}%</p>
-                <Progress value={stats?.trainingProgress || 0} className="mt-2 h-1.5" />
+          <div className="prime-card-body p-3 xs:p-4 md:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] xs:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{t('staff.stats.training_progress')}</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{stats?.trainingProgress || 0}%</p>
+                <Progress value={stats?.trainingProgress || 0} className="mt-1.5 h-1" />
               </div>
-              <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Award className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="h-9 w-9 xs:h-12 xs:w-12 shrink-0 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Award className="h-5 w-5 xs:h-6 xs:w-6 text-green-600 dark:text-green-400" />
               </div>
             </div>
           </div>
         </div>
 
         <div className="prime-card">
-          <div className="prime-card-body p-3 sm:p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('staff.stats.upcoming_events')}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.upcomingEvents || 0}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <div className="prime-card-body p-3 xs:p-4 md:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] xs:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{t('staff.stats.upcoming_events')}</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{stats?.upcomingEvents || 0}</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[120px]">
                   {stats?.nextEvent ? t('staff.stats.next_event', { event: stats.nextEvent }) : t('staff.stats.no_upcoming_events')}
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              <div className="h-9 w-9 xs:h-12 xs:w-12 shrink-0 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <Calendar className="h-5 w-5 xs:h-6 xs:w-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </div>
         </div>
 
         <div className="prime-card">
-          <div className="prime-card-body p-3 sm:p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('staff.stats.performance_score')}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.performanceScore || 0}%</p>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+          <div className="prime-card-body p-3 xs:p-4 md:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] xs:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{t('staff.stats.performance_score')}</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{stats?.performanceScore || 0}%</p>
+                <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-0.5 truncate">
                   {(stats?.performanceScore || 0) >= 80 ? t('staff.stats.above_average') : (stats?.performanceScore || 0) >= 60 ? t('staff.stats.average') : t('staff.stats.below_average')}
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                <Activity className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              <div className="h-9 w-9 xs:h-12 xs:w-12 shrink-0 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                <Activity className="h-5 w-5 xs:h-6 xs:w-6 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
           </div>
@@ -281,22 +281,22 @@ export function StaffDashboard() {
           )}
           onClick={handleClockToggle}
         >
-          <div className="prime-card-body p-6">
+          <div className="prime-card-body p-4 xs:p-6">
             <div className="text-center">
               <div className={cn(
-                "h-14 w-14 rounded-full flex items-center justify-center mx-auto mb-3 transition-all duration-300 shadow-md",
+                "h-10 w-10 xs:h-14 xs:w-14 rounded-full flex items-center justify-center mx-auto mb-2 xs:mb-3 transition-all duration-300 shadow-md",
                 todayAttendance?.check_in && !todayAttendance?.check_out
                   ? "bg-red-600 text-white"
                   : "bg-hotel-gold text-white"
               )}>
                 {todayAttendance?.check_in && !todayAttendance?.check_out ? (
-                  <LogOut className="h-7 w-7" />
+                  <LogOut className="h-5 w-5 xs:h-7 xs:w-7" />
                 ) : (
-                  <LogIn className="h-7 w-7" />
+                  <LogIn className="h-5 w-5 xs:h-7 xs:w-7" />
                 )}
               </div>
               <p className={cn(
-                "text-base font-bold mb-0.5 leading-tight",
+                "text-sm xs:text-base font-bold mb-0.5 leading-tight",
                 todayAttendance?.check_in && !todayAttendance?.check_out
                   ? "text-red-700 dark:text-red-400"
                   : "text-gray-900 dark:text-white"
@@ -306,14 +306,14 @@ export function StaffDashboard() {
                   : t('staff.quick_actions.clock_in', 'Clock In')}
               </p>
               <p className={cn(
-                "text-[10px] font-medium leading-none",
+                "text-[9px] xs:text-[10px] font-medium leading-none",
                 todayAttendance?.check_in && !todayAttendance?.check_out
                   ? "text-red-600/80 dark:text-red-400/80"
                   : "text-gray-500 dark:text-gray-400"
               )}>
                 {todayAttendance?.check_in && !todayAttendance?.check_out
-                  ? `${t('staff.quick_actions.on_duty_since', 'On duty since')} ${format(new Date(todayAttendance.check_in), 'p')}`
-                  : t('staff.quick_actions.start_shift', 'Start your shift')}
+                  ? `${t('staff.quick_actions.on_duty_since', 'On duty')} ${format(new Date(todayAttendance.check_in), 'p')}`
+                  : t('staff.quick_actions.start_shift', 'Start shift')}
               </p>
             </div>
           </div>
@@ -324,18 +324,18 @@ export function StaffDashboard() {
           className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer"
           onClick={() => window.location.href = '/knowledge'}
         >
-          <div className="prime-card-body p-6">
+          <div className="prime-card-body p-4 xs:p-6">
             <div className="text-center relative">
               {stats?.requiredReading > 0 && (
-                <Badge className="absolute -top-2 -right-2 bg-red-500 text-white border-0 px-2 min-w-[20px] justify-center">
+                <Badge className="absolute -top-1 -right-1 xs:-top-2 xs:-right-2 bg-red-500 text-white border-0 px-1.5 xs:px-2 min-w-[16px] xs:min-w-[20px] justify-center text-[10px] xs:text-xs">
                   {stats.requiredReading}
                 </Badge>
               )}
-              <div className="h-14 w-14 rounded-full bg-blue-50 dark:bg-blue-900/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center mx-auto mb-3 transition-colors">
-                <BookOpen className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+              <div className="h-10 w-10 xs:h-14 xs:w-14 rounded-full bg-blue-50 dark:bg-blue-900/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center mx-auto mb-2 xs:mb-3 transition-colors">
+                <BookOpen className="h-5 w-5 xs:h-7 xs:w-7 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{t('staff.quick_actions.required_reading', 'Required Reading')}</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('staff.quick_actions.pending_sops', 'Pending policy reviews')}</p>
+              <h3 className="text-xs xs:text-base font-semibold text-gray-900 dark:text-white mb-0.5 xs:mb-1">{t('staff.quick_actions.required_reading', 'Required Reading')}</h3>
+              <p className="text-[10px] xs:text-xs text-gray-500 dark:text-gray-400">{t('staff.quick_actions.pending_sops', 'Policy reviews')}</p>
             </div>
           </div>
         </motion.div>
@@ -345,13 +345,13 @@ export function StaffDashboard() {
           className="prime-card group hover:shadow-lg transition-all duration-200 cursor-pointer"
           onClick={() => window.location.href = '/hr/leave'}
         >
-          <div className="prime-card-body p-6">
+          <div className="prime-card-body p-4 xs:p-6">
             <div className="text-center">
-              <div className="h-14 w-14 rounded-full bg-purple-50 dark:bg-purple-900/20 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 flex items-center justify-center mx-auto mb-3 transition-colors">
-                <Calendar className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+              <div className="h-10 w-10 xs:h-14 xs:w-14 rounded-full bg-purple-50 dark:bg-purple-900/20 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 flex items-center justify-center mx-auto mb-2 xs:mb-3 transition-colors">
+                <Calendar className="h-5 w-5 xs:h-7 xs:w-7 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{t('staff.quick_actions.my_requests')}</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('staff.quick_actions.submit_requests')}</p>
+              <h3 className="text-xs xs:text-base font-semibold text-gray-900 dark:text-white mb-0.5 xs:mb-1">{t('staff.quick_actions.my_requests')}</h3>
+              <p className="text-[10px] xs:text-xs text-gray-500 dark:text-gray-400">{t('staff.quick_actions.submit_requests')}</p>
             </div>
           </div>
         </motion.div>
@@ -417,10 +417,10 @@ export function StaffDashboard() {
       </motion.div>
       <motion.div variants={item}>
         <Tabs defaultValue="feed" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-auto">
-            <TabsTrigger value="feed" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.activity_feed')}</TabsTrigger>
-            <TabsTrigger value="tasks" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.my_tasks')}</TabsTrigger>
-            <TabsTrigger value="schedule" className="text-xs sm:text-sm py-2.5">{t('staff.tabs.schedule')}</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-hotel-navy/5">
+            <TabsTrigger value="feed" className="text-[10px] xs:text-xs sm:text-sm py-2 xs:py-2.5">{t('staff.tabs.activity_feed')}</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-[10px] xs:text-xs sm:text-sm py-2 xs:py-2.5">{t('staff.tabs.my_tasks')}</TabsTrigger>
+            <TabsTrigger value="schedule" className="text-[10px] xs:text-xs sm:text-sm py-2 xs:py-2.5">{t('staff.tabs.schedule')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="feed" className="space-y-4">

@@ -172,19 +172,19 @@ export default function KnowledgeBrowse() {
                                 <CardContent className="p-0">
                                     {/* Gradient Header */}
                                     <div className={cn(
-                                        "h-20 bg-gradient-to-br flex items-center justify-center",
+                                        "h-16 md:h-20 bg-gradient-to-br flex items-center justify-center",
                                         gradient
                                     )}>
-                                        <Icon className="h-10 w-10 text-white opacity-90" />
+                                        <Icon className="h-8 w-8 md:h-10 md:w-10 text-white opacity-90" />
                                     </div>
 
                                     {/* Content */}
-                                    <div className="p-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h3 className="font-semibold text-gray-900 group-hover:text-hotel-gold transition-colors line-clamp-1">
+                                    <div className="p-3 md:p-4">
+                                        <div className="flex items-center justify-between mb-1 md:mb-2">
+                                            <h3 className="text-sm md:text-base font-semibold text-gray-900 group-hover:text-hotel-gold transition-colors line-clamp-1">
                                                 {typeLabel}
                                             </h3>
-                                            <Badge variant="secondary" className="text-xs">
+                                            <Badge variant="secondary" className="text-[10px] md:text-xs px-1.5 py-0">
                                                 {isLoading ? <Skeleton className="h-3 w-4" /> : count}
                                             </Badge>
                                         </div>
@@ -236,26 +236,26 @@ export default function KnowledgeBrowse() {
                                     <Link
                                         key={article.id}
                                         to={`/knowledge/${article.id}`}
-                                        className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                                        className="flex items-center gap-3 md:gap-4 p-2 md:p-3 rounded-lg hover:bg-gray-50 transition-colors"
                                     >
-                                        <div className="flex items-center justify-center w-10 h-10 rounded bg-gray-100 text-gray-600">
-                                            <span className="font-bold text-lg">{index + 1}</span>
+                                        <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded bg-gray-100 text-gray-600">
+                                            <span className="font-bold text-base md:text-lg">{index + 1}</span>
                                         </div>
                                         <div className={cn(
-                                            "w-10 h-10 rounded flex items-center justify-center",
+                                            "w-8 h-8 md:w-10 md:h-10 rounded flex items-center justify-center shrink-0",
                                             `bg-${typeConfig?.color.replace('text-', '')}/10`
                                         )}>
-                                            <Icon className={cn("h-5 w-5", typeConfig?.color)} />
+                                            <Icon className={cn("h-4 w-4 md:h-5 md:w-5", typeConfig?.color)} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="font-medium text-gray-900 truncate">{article.title}</h4>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <h4 className="font-medium text-sm md:text-base text-gray-900 truncate">{article.title}</h4>
+                                            <div className="flex items-center gap-2 text-[10px] md:text-xs text-gray-500">
                                                 <span>{t('viewer.views_count', { count: article.view_count })}</span>
                                                 <span>•</span>
-                                                <span>{article.category?.name || t('general_category')}</span>
+                                                <span className="truncate">{article.category?.name || t('general_category')}</span>
                                             </div>
                                         </div>
-                                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                                        <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                                     </Link>
                                 )
                             })}

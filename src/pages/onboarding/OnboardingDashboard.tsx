@@ -59,10 +59,10 @@ export default function OnboardingDashboard() {
     }
 
     return (
-        <div className="space-y-8 p-8">
+        <div className="space-y-6 md:space-y-8 p-4 sm:p-6 md:p-8">
             <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
-                <p className="text-muted-foreground">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
+                <p className="text-sm sm:text-base text-muted-foreground">
                     {t('dashboard.subtitle')}
                     <span className="font-semibold text-foreground"> {onboarding.template?.title}</span>.
                 </p>
@@ -90,25 +90,25 @@ export default function OnboardingDashboard() {
                 <div className="grid gap-4">
                     {onboarding.tasks?.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).map((task) => (
                         <Card key={task.id} className={cn("transition-all duration-200", task.is_completed ? "bg-muted/50 opacity-70" : "bg-card hover:shadow-md")}>
-                            <CardContent className="flex items-start gap-4 p-6">
+                            <CardContent className="flex items-start gap-3 sm:gap-4 p-4 sm:p-6">
                                 <Checkbox
                                     checked={task.is_completed}
                                     onCheckedChange={() => handleTaskToggle(task.id, task.is_completed)}
-                                    className="mt-1 h-5 w-5"
+                                    className="mt-1 h-5 w-5 shrink-0"
                                 />
-                                <div className="space-y-1 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className={cn("font-medium", task.is_completed && "line-through text-muted-foreground")}>
+                                <div className="space-y-1 flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                        <span className={cn("font-medium text-sm sm:text-base", task.is_completed && "line-through text-muted-foreground")}>
                                             {task.title}
                                         </span>
                                         {task.assigned_to_id !== onboarding.user_id && (
-                                            <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+                                            <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-yellow-800 whitespace-nowrap">
                                                 {t('dashboard.assigned_manager')}
                                             </span>
                                         )}
                                     </div>
                                     {task.description && (
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-none">
                                             {task.description}
                                         </p>
                                     )}

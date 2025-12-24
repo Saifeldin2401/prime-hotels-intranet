@@ -97,10 +97,10 @@ export default function MyCertificates() {
                 </div>
                 <CardTitle className="text-lg mt-2 line-clamp-2">{certificate.title}</CardTitle>
                 <CardDescription>
-                    <div className="flex items-center gap-1 text-sm">
+                    <span className="flex items-center gap-1 text-sm">
                         <Clock className="w-3 h-3" />
                         {t('completedOn', { date: format(new Date(certificate.completionDate), 'MMM d, yyyy') })}
-                    </div>
+                    </span>
                 </CardDescription>
             </CardHeader>
             <CardContent>

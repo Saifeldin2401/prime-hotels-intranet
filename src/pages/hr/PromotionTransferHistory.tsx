@@ -460,11 +460,6 @@ export default function PromotionTransferHistory() {
                             <p className="text-gray-600 mb-4">
                                 {searchTerm ? t('history.no_search_results') : t('history.empty_list_desc')}
                             </p>
-                            {canInitiate && user && isGlobalAdmin && (
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    (As Admin, you should see all records. Use the migrations if list is empty.)
-                                </p>
-                            )}
                         </div>
                     </div>
                 )}

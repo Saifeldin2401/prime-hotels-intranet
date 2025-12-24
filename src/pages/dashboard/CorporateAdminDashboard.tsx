@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SocialFeed, type FeedItem } from '@/components/social/SocialFeed'
 import { Icons } from '@/components/icons'
 import { useProperty } from '@/contexts/PropertyContext'
-import type { User } from '@/lib/rbac'
+import type { Profile } from '@/lib/types'
+import type { AppRole } from '@/lib/constants'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
 import { useAuth } from '@/hooks/useAuth'
 import { useCorporateStats } from '@/hooks/useDashboardStats'
@@ -24,13 +25,12 @@ export function CorporateAdminDashboard() {
   const { data: corporateStats, isLoading: statsLoading } = useCorporateStats()
 
   // Memoize currentUser to prevent unnecessary re-renders
-  const currentUser: User = useMemo(() => ({
+  const currentUser = useMemo(() => ({
     id: user?.id || 'guest',
-    name: profile?.full_name || user?.email || 'Corporate Admin',
+    full_name: profile?.full_name || user?.email || 'Corporate Admin',
     email: user?.email || '',
-    role: (primaryRole as User['role']) || 'corporate_admin',
+    role: (primaryRole as AppRole) || 'regional_admin',
     property: 'Corporate HQ',
-    permissions: []
   }), [user?.id, user?.email, profile?.full_name, primaryRole])
 
   // Memoize feedItems transformation to prevent infinite re-renders
@@ -121,23 +121,7 @@ export function CorporateAdminDashboard() {
                 <div className="text-3xl font-bold text-hotel-navy">{stats.totalStaff}</div>
                 <p className="text-xs text-hotel-gold-dark mt-1 font-medium">{t('cards.headcount')}</p>
               </div>
-              {/* Revenue Placeholder (if needed technically we removed it, but preserving structure/look) 
-                     Actually removing revenue entirely as per request 
-                 */}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-t-4 border-t-hotel-navy shadow-md hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">{t('cards.maintenance_efficiency')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-hotel-navy">{stats.maintenanceEfficiency}%</div>
-            <Progress value={stats.maintenanceEfficiency} className="mt-2 h-2 [&>div]:bg-hotel-navy" />
-            <p className="text-xs text-gray-500 mt-1">
-              {currentProperty?.id === 'all' ? t('cards.system_resolution_rate') : t('cards.ticket_resolution_rate')}
-            </p>
           </CardContent>
         </Card>
 
@@ -168,13 +152,9 @@ export function CorporateAdminDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="feed" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="feed">{t('tabs.feed')}</TabsTrigger>
           <TabsTrigger value="properties">{t('tabs.properties')}</TabsTrigger>
-          <TabsTrigger value="analytics">{t('tabs.analytics')}</TabsTrigger>
-          <TabsTrigger value="compliance">{t('tabs.compliance')}</TabsTrigger>
-          <TabsTrigger value="system">{t('tabs.system')}</TabsTrigger>
-          <TabsTrigger value="reports">{t('tabs.reports')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="feed" className="space-y-6">
@@ -210,46 +190,10 @@ export function CorporateAdminDashboard() {
             ))}
             {availableProperties.length <= 1 && (
               <div className="col-span-full text-center py-8 text-gray-500">
-                <p>No properties found.</p>
+                <p className="text-muted-foreground italic">No properties found in this view.</p>
               </div>
             )}
           </div>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <Card>
-            <CardContent className="py-12 text-center text-gray-500">
-              <Icons.TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>Detailed analytics module coming soon.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="compliance" className="space-y-6">
-          <Card>
-            <CardContent className="py-12 text-center text-gray-500">
-              <Icons.Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>Compliance dashboard coming soon.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="system" className="space-y-6">
-          <Card>
-            <CardContent className="py-12 text-center text-gray-500">
-              <Icons.Server className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>System health monitoring coming soon.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="reports" className="space-y-6">
-          <Card>
-            <CardContent className="py-12 text-center text-gray-500">
-              <Icons.FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>Corporate reports module coming soon.</p>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

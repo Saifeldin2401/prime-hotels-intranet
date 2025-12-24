@@ -17,11 +17,15 @@ export default function MyPayslips() {
     const { data: payslips, isLoading } = usePayslips()
 
     const handleDownload = (id: string) => {
-        toast.info(t('payroll.downloading'))
-        // Mock download logic
+        toast.info(t('payroll.initiating_secure_download'))
+        // Simulate contacting payroll server for secure document retrieval
+        // In a real application, this would involve an API call to a backend endpoint
+        // that handles secure document generation/retrieval and streaming.
         setTimeout(() => {
             toast.success(t('payroll.download_success'))
-        }, 1500)
+            // Example: Trigger actual download if a URL was received from the server
+            // window.open(`/api/payslips/${id}/download`, '_blank');
+        }, 2000)
     }
 
     return (

@@ -67,12 +67,12 @@ export default function KnowledgeHome() {
     return (
         <div className="min-h-[calc(100vh-80px)] bg-gray-50/50 pb-12">
             {/* Premium Hero Section */}
-            <div className="bg-hotel-navy relative py-20 overflow-hidden">
+            <div className="bg-hotel-navy relative py-10 md:py-20 overflow-hidden">
                 {/* Decorative Elements */}
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-hotel-gold/5 -skew-x-12 transform translate-x-1/2" />
                 <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-hotel-gold/10 blur-3xl" />
 
-                <div className="container mx-auto px-6 relative z-10 text-center">
+                <div className="container mx-auto px-4 md:px-6 relative z-10 text-center">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -100,18 +100,19 @@ export default function KnowledgeHome() {
                         <div className="relative group shadow-2xl rounded-2xl">
                             <div className="absolute -inset-1 bg-gradient-to-r from-hotel-gold/50 to-blue-500/50 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-1000"></div>
                             <div className="relative bg-white flex items-center p-2 rounded-xl border border-white/20">
-                                <Search className="ml-4 h-6 w-6 text-gray-400" />
+                                <Search className="ml-3 md:ml-4 h-5 w-5 md:h-6 md:w-6 text-gray-400" />
                                 <Input
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder={t('search_placeholder')}
-                                    className="border-0 shadow-none focus-visible:ring-0 text-lg py-8 text-gray-900 placeholder:text-gray-400 bg-transparent flex-1"
+                                    className="border-0 shadow-none focus-visible:ring-0 text-base md:text-lg py-6 md:py-8 text-gray-900 placeholder:text-gray-400 bg-transparent flex-1"
                                 />
                                 <Button
                                     type="submit"
-                                    className="bg-hotel-navy hover:bg-hotel-navy/90 text-white rounded-lg px-8 py-7 text-base font-semibold transition-all shadow-xl"
+                                    className="bg-hotel-navy hover:bg-hotel-navy/90 text-white rounded-lg px-4 md:px-8 py-6 md:py-7 text-sm md:text-base font-semibold transition-all shadow-xl"
                                 >
-                                    {t('search_button')}
+                                    <span className="hidden xs:inline">{t('search_button')}</span>
+                                    <Search className="xs:hidden h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
@@ -133,12 +134,12 @@ export default function KnowledgeHome() {
                                     <AlertCircle size={100} />
                                 </div>
                                 <div className="flex items-center gap-6">
-                                    <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-                                        <ShieldCheck className="h-8 w-8 text-white" />
+                                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0">
+                                        <ShieldCheck className="h-6 w-6 md:h-8 md:w-8 text-white" />
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-bold mb-1">{t('required_reading')}</h2>
-                                        <p className="text-white/80">{t('required_reading_desc')}</p>
+                                        <h2 className="text-xl md:text-2xl font-bold mb-1">{t('required_reading')}</h2>
+                                        <p className="text-white/80 text-sm md:text-base">{t('required_reading_desc')}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -165,18 +166,18 @@ export default function KnowledgeHome() {
                                 <Card className="h-full border-none shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-white overflow-hidden">
                                     <CardContent className="p-0 flex h-full">
                                         <div className="w-2 bg-hotel-navy group-hover:bg-hotel-gold transition-colors" />
-                                        <div className="p-8 flex flex-col justify-between flex-1">
+                                        <div className="p-6 md:p-8 flex flex-col justify-between flex-1">
                                             <div>
-                                                <div className="w-14 h-14 rounded-2xl bg-hotel-navy/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                                    <Library className="h-7 w-7 text-hotel-navy" />
+                                                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-hotel-navy/5 flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform">
+                                                    <Library className="h-6 w-6 md:h-7 md:w-7 text-hotel-navy" />
                                                 </div>
-                                                <h3 className="text-2xl font-bold text-hotel-navy mb-3">{t('library.title')}</h3>
-                                                <p className="text-gray-500 mb-6 leading-relaxed">
+                                                <h3 className="text-xl md:text-2xl font-bold text-hotel-navy mb-2 md:mb-3">{t('library.title')}</h3>
+                                                <p className="text-sm md:text-base text-gray-500 mb-4 md:mb-6 leading-relaxed">
                                                     {t('library.description')}
                                                 </p>
                                             </div>
-                                            <div className="flex items-center text-hotel-navy font-bold group-hover:text-hotel-gold transition-colors">
-                                                {t('library.enter')} <ArrowRight className="ml-2 h-5 w-5" />
+                                            <div className="flex items-center text-hotel-navy font-bold group-hover:text-hotel-gold transition-colors text-sm md:text-base">
+                                                {t('library.enter')} <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
                                             </div>
                                         </div>
                                     </CardContent>

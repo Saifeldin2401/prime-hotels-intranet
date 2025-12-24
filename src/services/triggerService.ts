@@ -59,55 +59,38 @@ export interface TriggerContext {
 // ============================================================================
 
 /**
- * Process a trigger event and execute matching rules
+ * Process a trigger event and execute matching rules via the backend
  */
 export async function processTrigger(context: TriggerContext): Promise<{
     success: boolean
     actionsExecuted: number
     errors: string[]
 }> {
-    const errors: string[] = []
-    let actionsExecuted = 0
-
     try {
-        // Fetch active rules for this event type
-        const { data: rules, error: rulesError } = await supabase
-            .from('trigger_rules')
-            .select('*')
-            .eq('event_type', context.event)
-            .eq('is_active', true)
-
-        if (rulesError) {
-            return { success: false, actionsExecuted: 0, errors: [rulesError.message] }
-        }
-
-        if (!rules || rules.length === 0) {
-            return { success: true, actionsExecuted: 0, errors: [] }
-        }
-
-        // Process each matching rule
-        for (const rule of rules) {
-            const ruleData = rule as TriggerRule
-
-            // Check conditions
-            if (!matchesConditions(ruleData.conditions, context)) {
-                continue
-            }
-
-            // Execute actions
-            for (const action of ruleData.actions) {
-                try {
-                    await executeAction(action, context)
-                    actionsExecuted++
-                } catch (actionError: any) {
-                    errors.push(`Action failed for rule ${ruleData.name}: ${actionError.message}`)
+        const { data, error } = await supabase.functions.invoke('process-event', {
+            body: {
+                event_type: context.event,
+                payload: {
+                    ...context.metadata,
+                    user_id: context.affected_users?.[0], // Primary user
+                    department_id: context.department_id,
+                    source_id: context.source_id,
+                    source_type: context.source_type,
+                    affected_users: context.affected_users
                 }
             }
-        }
+        })
 
-        return { success: true, actionsExecuted, errors }
+        if (error) throw error
+
+        return {
+            success: data.success,
+            actionsExecuted: data.results?.length || 0,
+            errors: data.results?.filter((r: any) => !r.success).map((r: any) => r.error) || []
+        }
     } catch (error: any) {
-        return { success: false, actionsExecuted, errors: [error.message] }
+        console.error('Trigger service error:', error)
+        return { success: false, actionsExecuted: 0, errors: [error.message] }
     }
 }
 

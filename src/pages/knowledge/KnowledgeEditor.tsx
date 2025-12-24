@@ -42,6 +42,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProperty } from '@/contexts/PropertyContext'
 import { supabase } from '@/lib/supabase'
+import { triggerService } from '@/services/triggerService'
 import { aiService } from '@/lib/gemini'
 import {
     type KnowledgeVisibility,
@@ -213,12 +214,6 @@ export default function KnowledgeEditor() {
             description: t('editor.visibility.role_desc')
         },
     ]
-
-    // Debug: Log departments
-    console.log('🏢 Departments loaded:', departments)
-    console.log('🏨 Current Property:', currentProperty)
-    console.log('👤 Primary Role:', primaryRole)
-    console.log('👤 Roles:', roles)
 
     const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
     const [isSaving, setIsSaving] = useState(false)
@@ -421,6 +416,11 @@ export default function KnowledgeEditor() {
                     await notifyReviewersOfSubmission(id, formData.title)
                 }
 
+                if (status === 'PUBLISHED') {
+                    await triggerService.onSOPPublished(id, formData.department_id || undefined)
+                }
+
+
                 const typeLabel = t(`content_types.${formData.content_type}`, formData.content_type.toUpperCase())
                 toast.success(status === 'PENDING_REVIEW'
                     ? t('editor.alerts.submitted_for_review')
@@ -437,6 +437,11 @@ export default function KnowledgeEditor() {
                 if (status === 'PENDING_REVIEW') {
                     await notifyReviewersOfSubmission(data.id, formData.title)
                 }
+
+                if (status === 'PUBLISHED') {
+                    await triggerService.onSOPPublished(data.id, formData.department_id || undefined)
+                }
+
 
                 const typeLabel = t(`content_types.${formData.content_type}`, formData.content_type.toUpperCase())
                 toast.success(status === 'PENDING_REVIEW'

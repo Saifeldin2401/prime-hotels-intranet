@@ -418,20 +418,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/hr/promotions/history',
-        title: 'promotion_history', // Keeping key same, or should I update key? The logic uses translation. 'Promotions & Transfers' is english.
-        // Wait, title is i18n key. 'nav.promotion_history'.
-        // I should probably not change the key if I don't change the json.
-        // But the previous edit tried to change the TITLE to 'Promotions & Transfers'.
-        // If 'title' is valid key, it's fine. If it's a string literal, it's fine.
-        // The file comment says `title: string // i18n translation key`.
-        // So I should stick to a key, OR check if I need to add a new key.
-        // I will keep the key 'nav.promotion_history' but update the English translation JSON.
-        // Ah, I missed that step.
-        // Let's check common.json or similar.
-        // I will proceed with just changing the comment/description for now or if I can't change the key, I will update the JSON.
-        // Actually, let's just make sure the description is updated.
-        // And I will try to update en/common.json later if needed.
-        // For now, I will just update the description in the config.
+        title: 'promotion_history',
         icon: History,
         description: 'View promotion and transfer history',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
@@ -603,7 +590,7 @@ export const ROUTES: RouteConfig[] = [
     },
     {
         path: '/admin/job-titles',
-        title: 'job_titles', // Using string literal as placeholder until i18n key is added
+        title: 'job_titles',
         icon: Briefcase,
         description: 'Manage master list of job titles',
         allowedRoles: ['regional_admin', 'regional_hr'],
