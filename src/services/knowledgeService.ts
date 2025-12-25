@@ -110,11 +110,13 @@ export async function getArticles(
         if (filters.status) {
             query = query.eq('status', filters.status)
         }
-        if (filters.department_id) {
+        // Validate department_id is a real UUID, not 'undefined' string
+        if (filters.department_id && filters.department_id !== 'undefined' && filters.department_id.length === 36) {
             query = query.eq('department_id', filters.department_id)
         }
         // category_id not available
-        if (filters.property_id) {
+        // Validate property_id is a real UUID, not 'undefined' string
+        if (filters.property_id && filters.property_id !== 'undefined' && filters.property_id.length === 36) {
             query = query.eq('property_id', filters.property_id)
         }
         if (filters.requires_acknowledgment !== undefined) {
@@ -412,16 +414,108 @@ export async function toggleBookmark(documentId: string, userId: string): Promis
 }
 
 export async function submitFeedback(documentId: string, userId: string, helpful: boolean, feedbackText?: string): Promise<void> {
+    // Upsert to handle re-voting (updates existing vote if present)
     const { error } = await supabase
         .from('document_feedback')
-        .insert({
+        .upsert({
             document_id: documentId,
             user_id: userId,
             helpful,
-            feedback_text: feedbackText
-        })
+            feedback_text: feedbackText,
+            created_at: new Date().toISOString() // Ensure timestamp updates on change
+        }, { onConflict: 'document_id,user_id' })
 
     if (error) throw error
+}
+
+/**
+ * Gets global feedback statistics for dashboard
+ */
+export async function getFeedbackStats(): Promise<{ helpful: number, unhelpful: number, total: number }> {
+    const { data, error } = await supabase
+        .from('document_feedback')
+        .select('helpful')
+
+    if (error) {
+        console.error('getFeedbackStats error:', error)
+        return { helpful: 0, unhelpful: 0, total: 0 }
+    }
+
+    const helpful = (data || []).filter(f => f.helpful).length
+    const unhelpful = (data || []).filter(f => !f.helpful).length
+
+    return {
+        helpful,
+        unhelpful,
+        total: (data || []).length
+    }
+}
+
+/**
+ * Gets most recent feedback entries with document titles
+ */
+export async function getRecentFeedback(limit = 10): Promise<any[]> {
+    const { data, error } = await supabase
+        .from('document_feedback')
+        .select(`
+            *,
+            document:documents(id, title)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+    if (error) {
+        console.error('getRecentFeedback error:', error)
+        return []
+    }
+    return data || []
+}
+
+/**
+ * Gets daily feedback trends for charts
+ */
+export async function getFeedbackTrends(days = 30): Promise<{ date: string; helpful: number; unhelpful: number }[]> {
+    const fromDate = new Date()
+    fromDate.setDate(fromDate.getDate() - days)
+
+    const { data, error } = await supabase
+        .from('document_feedback')
+        .select('created_at, helpful')
+        .gte('created_at', fromDate.toISOString())
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        console.error('getFeedbackTrends error:', error)
+        return []
+    }
+
+    // Process data to group by date
+    const trends = new Map<string, { date: string, helpful: number, unhelpful: number }>()
+
+    // Initialize map with all dates in range to show 0s
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const dateStr = d.toISOString().split('T')[0]
+        trends.set(dateStr, { date: dateStr, helpful: 0, unhelpful: 0 })
+    }
+
+    data?.forEach(item => {
+        const dateStr = new Date(item.created_at).toISOString().split('T')[0]
+        if (trends.has(dateStr)) {
+            const entry = trends.get(dateStr)!
+            if (item.helpful) entry.helpful++
+            else entry.unhelpful++
+        } else {
+            // Handle edge case where timezone might shift date slightly outside init range
+            const entry = { date: dateStr, helpful: 0, unhelpful: 0 }
+            if (item.helpful) entry.helpful++
+            else entry.unhelpful++
+            trends.set(dateStr, entry)
+        }
+    })
+
+    return Array.from(trends.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export async function getCategories(departmentId?: string) {
@@ -467,36 +561,68 @@ export async function getContentTypeCounts(): Promise<Record<string, number>> {
 // ============================================================================
 
 export async function getRelatedArticles(documentId: string): Promise<RelatedArticle[]> {
-    // Check if table exists/works with documents
     try {
         const { data, error } = await supabase
-            .from('knowledge_related_articles')
+            .from('related_articles')
             .select(`
-                relation_type,
-                related_document_id
+                relevance_score,
+                related_document_id,
+                related_document:documents!related_document_id(id, title, description, content_type)
             `)
-            .eq('document_id', documentId)
+            .eq('source_document_id', documentId)
+            .order('relevance_score', { ascending: false })
+            .limit(6)
 
-        if (error) return []
-
-        // Fetch related documents details manually
-        if (data && data.length > 0) {
-            const ids = data.map(d => d.related_document_id)
-            const { data: docs } = await supabase
-                .from('documents')
-                .select('id, title, description, status, content_type')
-                .in('id', ids)
-
-            return (docs || []).map(d => ({
-                id: d.id,
-                title: d.title,
-                content_type: (d.content_type?.toLowerCase() as any) || 'document',
-                relation_type: 'see_also'
-            }))
+        if (error) {
+            console.warn('getRelatedArticles error:', error.message)
+            return []
         }
+
+        return (data || []).map(d => {
+            const doc = d.related_document as any
+            return {
+                id: doc.id,
+                title: doc.title,
+                content_type: (doc.content_type?.toLowerCase() as any) || 'document',
+                relation_type: 'automated',
+                score: d.relevance_score
+            }
+        })
+    } catch (e) {
+        console.error('getRelatedArticles exception:', e)
         return []
-    } catch {
-        return []
+    }
+}
+
+/**
+ * Tracks a click on a related article for behavioral scoring
+ */
+export async function trackRelatedClick(sourceId: string, relatedId: string, userId?: string, position?: number): Promise<void> {
+    try {
+        const { error } = await supabase.rpc('track_related_article_click', {
+            p_source_doc_id: sourceId,
+            p_clicked_doc_id: relatedId,
+            p_user_id: userId || null,
+            p_position: position || null
+        })
+        if (error) throw error
+    } catch (e) {
+        console.error('Failed to track related click:', e)
+    }
+}
+
+/**
+ * Tracks impressions for related articles to calculate CTR
+ */
+export async function trackRelatedImpressions(sourceId: string, relatedIds: string[]): Promise<void> {
+    try {
+        const { error } = await supabase.rpc('track_related_article_impression', {
+            p_source_doc_id: sourceId,
+            p_related_doc_ids: relatedIds
+        })
+        if (error) throw error
+    } catch (e) {
+        console.error('Failed to track related impressions:', e)
     }
 }
 

@@ -81,6 +81,10 @@ export interface LearningAssignment {
     assigned_by?: string
     created_at: string
 
+    // Onboarding Links
+    onboarding_process_id?: string
+    onboarding_task_id?: string
+
     // Joined data
     content_title?: string
     content_metadata?: {

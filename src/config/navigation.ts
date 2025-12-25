@@ -42,6 +42,8 @@ import {
     Workflow,
     Target,
     Wallet,
+    Brain,
+    Activity,
     type LucideIcon
 } from 'lucide-react'
 import type { AppRole } from '@/lib/constants'
@@ -198,7 +200,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.admin',
         icon: Shield,
         order: 9,
-        visibleTo: ['regional_admin', 'regional_hr'],
+        visibleTo: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
         collapsible: true
     },
     {
@@ -625,6 +627,15 @@ export const ROUTES: RouteConfig[] = [
         order: 3
     },
     {
+        path: '/admin/analytics',
+        title: 'system_analytics',
+        icon: Activity,
+        description: 'System usage and insights',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        group: 'administration',
+        order: 3.2
+    },
+    {
         path: '/admin/workflows',
         title: 'automations',
         icon: Workflow,
@@ -632,6 +643,15 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['regional_admin', 'property_manager'],
         group: 'administration',
         order: 3.5
+    },
+    {
+        path: '/admin/ai-tools',
+        title: 'ai_tools',
+        icon: Brain,
+        description: 'AI-powered HR tools and analytics',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'administration',
+        order: 3.7
     },
     {
         path: '/admin/notifications',

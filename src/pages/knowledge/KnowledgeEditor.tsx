@@ -5,7 +5,7 @@
  * Uses 'documents' table.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
@@ -51,16 +51,17 @@ import {
     type FAQItem,
     CONTENT_TYPE_CONFIG
 } from '@/types/knowledge'
-import { RelatedArticlesEditor } from '@/components/knowledge'
-import { useRelatedArticles, useCategories } from '@/hooks/useKnowledge'
-import { useDepartments } from '@/hooks/useDepartments'
-import { useProperties } from '@/hooks/useProperties'
 import {
+    RelatedArticlesEditor,
+    AIDocumentSummary,
     VideoContentBuilder,
     ChecklistBuilder,
     FAQBuilder,
     VisualContentBuilder
-} from '@/components/knowledge/ContentTypeBuilders'
+} from '@/components/knowledge'
+import { useRelatedArticles, useCategories } from '@/hooks/useKnowledge'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useProperties } from '@/hooks/useProperties'
 
 interface ArticleFormData {
     title: string
@@ -223,20 +224,20 @@ export default function KnowledgeEditor() {
     const [isForbidden, setIsForbidden] = useState(false)
 
     // Permission check
-    useState(() => {
+    useEffect(() => {
         if (primaryRole === 'staff') {
             setIsForbidden(true)
             toast.error('You do not have permission to create or edit articles.')
             navigate('/knowledge/search')
         }
-    })
+    }, [primaryRole, navigate])
 
     if (isForbidden || primaryRole === 'staff') {
         return null
     }
 
     // Load Data Effect
-    useState(() => {
+    useEffect(() => {
         if (isEditing && id) {
             supabase
                 .from('documents')
@@ -266,7 +267,7 @@ export default function KnowledgeEditor() {
                     }
                 })
         }
-    })
+    }, [isEditing, id])
 
     const updateField = useCallback(<K extends keyof ArticleFormData>(
         field: K,
@@ -315,7 +316,7 @@ export default function KnowledgeEditor() {
         try {
             let result: string | null = null
 
-            // Reusing basic AI service calls
+            // Content generation actions (outline, expand, improve)
             if (action === 'outline') {
                 result = await aiService.improveContent(`Outline for: ${formData.title}`, 'expand', aiLanguage)
             } else if (action === 'expand') {
@@ -323,38 +324,67 @@ export default function KnowledgeEditor() {
             } else if (action === 'improve') {
                 result = await aiService.improveContent(formData.content, 'professional', aiLanguage)
             } else if (action === 'summarize') {
-                result = await aiService.improveContent(
-                    `Generate a concise 2-sentence TL;DR summary for this SOP: ${formData.content.substring(0, 5000)}`,
+                // Build language instruction based on selection
+                const langInstruction = aiLanguage === 'Arabic'
+                    ? 'IMPORTANT: Write your response in ARABIC ONLY. لا تستخدم اللغة الإنجليزية.'
+                    : aiLanguage === 'English and Arabic'
+                        ? 'IMPORTANT: Write your response in BOTH English AND Arabic. First write in English, then provide the Arabic translation below it.'
+                        : 'IMPORTANT: Write your response in ENGLISH ONLY. Do not use any other language.'
+
+                // Generate BOTH summary and description from content
+                // Summary: 2-3 sentence overview of key points
+                const summaryResult = await aiService.improveContent(
+                    `Read this hotel policy/SOP document and write a 2-3 sentence summary that captures: 1) What this document is for, 2) Who it applies to, 3) The key requirement or procedure. Be specific and professional.
+
+${langInstruction}
+
+DOCUMENT:
+${formData.content.substring(0, 4000)}
+
+Write ONLY the summary, no labels or prefixes.`,
                     'shorten',
                     aiLanguage
                 )
+                if (summaryResult) {
+                    updateField('summary', summaryResult)
+                }
+
+                // Description: Short tagline/subtitle style (max 15 words)
+                const descResult = await aiService.improveContent(
+                    `Create a SHORT tagline (maximum 10-15 words) for this document. It should be like a subtitle that appears under the title. Do NOT write a full sentence - just a brief phrase.
+
+${langInstruction}
+
+DOCUMENT TITLE: ${formData.title}
+CONTENT PREVIEW: ${formData.content.substring(0, 1000)}
+
+Write ONLY the tagline, no quotes or labels.
+${aiLanguage === 'English' ? 'Example: "Step-by-step procedures for handling guest complaints"' : ''}
+${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شكاوى النزلاء"' : ''}`,
+                    'shorten',
+                    aiLanguage
+                )
+                if (descResult) {
+                    // Clean up any quotes the AI might add
+                    let cleanDesc = descResult.replace(/^["']|["']$/g, '').trim()
+
+                    // Only filter non-ASCII if English-only mode (to remove Chinese mistakes)
+                    if (aiLanguage === 'English') {
+                        cleanDesc = cleanDesc.replace(/[^\x00-\x7F]/g, '').trim()
+                    }
+                    updateField('description', cleanDesc)
+                }
+
+                toast.success('Summary and description generated!')
+                setIsGenerating(false)
+                return
             }
 
+            // For content actions only - just update content
             if (result) {
-                if (action === 'summarize') {
-                    updateField('summary', result)
-                } else {
-                    // Parse AI markdown response to HTML
-                    const htmlContent = await marked(result)
-                    updateField('content', htmlContent)
-                }
-
-                // Auto-generate description if missing
-                if (!formData.description) {
-                    try {
-                        // Use the raw result (markdown) to generate a summary
-                        const summary = await aiService.improveContent(
-                            `Generate a 1-sentence summary for this SOP: ${result.substring(0, 500)}...`,
-                            'shorten',
-                            aiLanguage
-                        )
-                        if (summary) {
-                            updateField('description', summary)
-                        }
-                    } catch (err) {
-                        console.warn('Failed to auto-generate description:', err)
-                    }
-                }
+                // Parse AI markdown response to HTML
+                const htmlContent = await marked(result)
+                updateField('content', htmlContent)
             }
             toast.success(t('editor.alerts.ai_success'))
         } catch (error) {
@@ -375,18 +405,58 @@ export default function KnowledgeEditor() {
             return
         }
 
-        // Validate department is selected when required
         if (formData.visibility === 'department' && !formData.department_id) {
             toast.error(t('editor.alerts.dept_required'))
             return
         }
 
         setIsSaving(true)
+
+        let finalSummary = formData.summary
+        let finalDescription = formData.description
+
+        if (formData.content && formData.content.length > 100) {
+            const needsSummary = !formData.summary || formData.summary.trim().length < 10
+            const needsDescription = !formData.description || formData.description.trim().length < 5
+
+            if (needsSummary || needsDescription) {
+                toast.info('🤖 Auto-generating summary...', { duration: 2000 })
+                try {
+                    const cleanContent = formData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+                    if (needsSummary) {
+                        const summaryResult = await aiService.improveContent(
+                            `Write a 2-3 sentence professional summary of this hotel document.\n\nDOCUMENT:\n${cleanContent.substring(0, 3000)}\n\nWrite ONLY the summary in English.`,
+                            'shorten',
+                            'English'
+                        )
+                        if (summaryResult) {
+                            finalSummary = summaryResult
+                            updateField('summary', summaryResult)
+                        }
+                    }
+                    if (needsDescription) {
+                        const descResult = await aiService.improveContent(
+                            `Create a 10-15 word tagline for this document.\n\nTITLE: ${formData.title}\nCONTENT: ${cleanContent.substring(0, 1000)}\n\nWrite ONLY the tagline in English.`,
+                            'shorten',
+                            'English'
+                        )
+                        if (descResult) {
+                            const cleanDesc = descResult.replace(/^["']|["']$/g, '').replace(/[^\x00-\x7F]/g, '').trim()
+                            finalDescription = cleanDesc
+                            updateField('description', cleanDesc)
+                        }
+                    }
+                } catch (aiErr) {
+                    console.warn('Auto-summarization failed:', aiErr)
+                }
+            }
+        }
+
         try {
             const articleData = {
                 title: formData.title,
-                description: formData.description || null,
-                summary: formData.summary || null,
+                description: finalDescription || null,
+                summary: finalSummary || null,
                 content: formData.content || null,
                 file_url: formData.file_url || null,
                 content_type: formData.content_type,
@@ -406,44 +476,38 @@ export default function KnowledgeEditor() {
 
             if (isEditing && id) {
                 const { error } = await supabase
-                    .from('documents') // Correct table
+                    .from('documents')
                     .update(articleData)
                     .eq('id', id)
                 if (error) throw error
 
-                // Notify reviewers if submitting for review
                 if (status === 'PENDING_REVIEW') {
                     await notifyReviewersOfSubmission(id, formData.title)
                 }
-
                 if (status === 'PUBLISHED') {
                     await triggerService.onSOPPublished(id, formData.department_id || undefined)
                 }
 
-
-                const typeLabel = t(`content_types.${formData.content_type}`, formData.content_type.toUpperCase())
+                const typeLabel = t(`content_types.${formData.content_type}`, { defaultValue: formData.content_type.toUpperCase() })
                 toast.success(status === 'PENDING_REVIEW'
                     ? t('editor.alerts.submitted_for_review')
                     : t('editor.alerts.update_success', { type: typeLabel }))
             } else {
                 const { data, error } = await supabase
-                    .from('documents') // Correct table
+                    .from('documents')
                     .insert(articleData)
                     .select()
                     .single()
                 if (error) throw error
 
-                // Notify reviewers if submitting for review
                 if (status === 'PENDING_REVIEW') {
                     await notifyReviewersOfSubmission(data.id, formData.title)
                 }
-
                 if (status === 'PUBLISHED') {
                     await triggerService.onSOPPublished(data.id, formData.department_id || undefined)
                 }
 
-
-                const typeLabel = t(`content_types.${formData.content_type}`, formData.content_type.toUpperCase())
+                const typeLabel = t(`content_types.${formData.content_type}`, { defaultValue: formData.content_type.toUpperCase() })
                 toast.success(status === 'PENDING_REVIEW'
                     ? t('editor.alerts.submitted_for_review')
                     : t('editor.alerts.save_success', { type: typeLabel }))
@@ -451,7 +515,7 @@ export default function KnowledgeEditor() {
             }
             queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
         } catch (error: any) {
-            console.error(error)
+            console.error('Save error:', error)
             toast.error(`${t('editor.alerts.save_error')} ${error.message}`)
         } finally {
             setIsSaving(false)
@@ -649,7 +713,7 @@ export default function KnowledgeEditor() {
                                     disabled={isGenerating || !formData.content}
                                     className="border-hotel-navy/20 hover:border-hotel-navy text-hotel-navy"
                                 >
-                                    <Clock className="h-4 w-4" /> {t('editor.summarize', 'AI TL;DR')}
+                                    <Sparkles className="h-4 w-4" /> Auto-Summarize
                                 </Button>
                             </div>
                         </CardContent>
@@ -734,6 +798,14 @@ export default function KnowledgeEditor() {
 
                     {isEditing && id && (
                         <RelatedArticlesEditor documentId={id} relatedArticles={relatedArticles} onUpdate={refetchRelated} />
+                    )}
+
+                    {/* AI Document Summary - For detailed analysis */}
+                    {formData.content && formData.content.length > 100 && (
+                        <AIDocumentSummary
+                            content={formData.content}
+                            title={formData.title}
+                        />
                     )}
                 </div>
 

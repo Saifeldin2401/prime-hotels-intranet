@@ -15,7 +15,8 @@ export function useMyOnboarding() {
                 .from('onboarding_process')
                 .select(`
           *,
-          template:onboarding_templates(title)
+          template:onboarding_templates(title),
+          tasks:onboarding_tasks(*)
         `)
                 .eq('user_id', user.id)
                 .neq('status', 'completed')
@@ -46,10 +47,14 @@ export function useUpdateOnboardingTask() {
                 })
                 .eq('id', taskId)
                 .select()
-                .single()
 
             if (error) throw error
-            return data
+
+            if (!data || data.length === 0) {
+                throw new Error('Permission denied or task not found (RLS)')
+            }
+
+            return data[0]
         },
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['onboarding'] })
@@ -148,6 +153,24 @@ export function useUpdateOnboardingTemplate() {
             queryClient.invalidateQueries({ queryKey: ['onboarding', 'templates'] })
             queryClient.invalidateQueries({ queryKey: ['onboarding', 'template'] })
         }
+    })
+}
+
+export function useOnboardingTasks(processId: string | undefined) {
+    return useQuery({
+        queryKey: ['onboarding', 'tasks', processId],
+        queryFn: async () => {
+            if (!processId) return []
+            const { data, error } = await supabase
+                .from('onboarding_tasks')
+                .select('*')
+                .eq('process_id', processId)
+                .order('created_at', { ascending: true })
+
+            if (error) throw error
+            return data as OnboardingTask[]
+        },
+        enabled: !!processId
     })
 }
 

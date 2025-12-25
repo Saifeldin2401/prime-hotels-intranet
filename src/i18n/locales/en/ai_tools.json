@@ -1,0 +1,15 @@
+{
+    "title": "AI Tools",
+    "description": "AI-powered tools to streamline HR and management tasks",
+    "powered_by_ai": "Powered by AI",
+    "feedback_analyzer": "Feedback Analyzer",
+    "feedback": "Feedback",
+    "onboarding_path": "Onboarding Path",
+    "onboarding": "Onboarding",
+    "document_summary": "Document Summary",
+    "documents": "Documents",
+    "document_summarizer": "Document Summarizer",
+    "document_summary_feature": "Document Summary Feature",
+    "document_summary_desc": "The AI Document Summarizer is integrated into the Knowledge Base editor.",
+    "go_to_kb": "Go to Knowledge Base → Edit a Document to use this feature."
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/form'
 
 import { useAuth } from '@/hooks/useAuth'
+import { useAITicketTriage } from '@/hooks/useAITicketTriage'
 import { useCreateMaintenanceTicket, useUploadMaintenanceAttachment } from '@/hooks/useMaintenanceTickets'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,6 +27,7 @@ import { useNavigate } from 'react-router-dom'
 import type { MaintenanceTicket } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 import { crudToasts } from '@/lib/toastHelpers'
+import { AITriageSuggestions } from '@/components/maintenance/AITriageSuggestions'
 
 const categories = [
   { value: 'plumbing', label: 'Plumbing' },
@@ -69,7 +71,7 @@ export default function SubmitTicket() {
     defaultValues: {
       title: '',
       description: '',
-      // category is undefined by default to force selection
+      category: '' as any, // Empty string keeps it controlled; AI or user will set it
       priority: 'medium',
       room_number: '',
       property_id: properties.length === 1 ? properties[0].id : '',
@@ -78,6 +80,66 @@ export default function SubmitTicket() {
 
   const createMutation = useCreateMaintenanceTicket()
   const uploadMutation = useUploadMaintenanceAttachment()
+
+  // AI Triage Hook
+  const { suggestion, loading: triageLoading, analyzeTicketDebounced, clearSuggestion } = useAITicketTriage()
+
+  // Watch for description changes to trigger AI analysis
+  const descriptionValue = form.watch('description')
+  const roomValue = form.watch('room_number')
+
+  useEffect(() => {
+    if (descriptionValue && descriptionValue.length > 15) {
+      analyzeTicketDebounced(descriptionValue, roomValue)
+    }
+  }, [descriptionValue, roomValue, analyzeTicketDebounced])
+
+  // Apply AI suggestions to form
+  const handleApplySuggestion = (s: typeof suggestion) => {
+    if (!s) return
+    console.log('Applying AI suggestion:', s)
+
+    // Map AI category to form category values
+    const categoryMap: Record<string, string> = {
+      'hvac': 'hvac',
+      'plumbing': 'plumbing',
+      'electrical': 'electrical',
+      'it/technology': 'appliance',
+      'housekeeping': 'cosmetic',
+      'carpentry': 'structural',
+      'safety': 'safety',
+      'general maintenance': 'other',
+      'exterior/grounds': 'structural'
+    }
+    const mappedCategory = categoryMap[s.category.toLowerCase()] || 'other'
+
+    // Map AI priority to form priority (handle 'urgent' vs 'critical')
+    const priorityMap: Record<string, string> = {
+      'low': 'low',
+      'medium': 'medium',
+      'high': 'high',
+      'critical': 'critical'
+    }
+    const mappedPriority = priorityMap[s.priority] || 'medium'
+
+    console.log('Setting category to:', mappedCategory, 'priority to:', mappedPriority)
+
+    // Set category and priority
+    form.setValue('category', mappedCategory as any, { shouldValidate: true, shouldDirty: true })
+    form.setValue('priority', mappedPriority as any, { shouldValidate: true, shouldDirty: true })
+
+    // Set title if suggested and current title is empty
+    if (s.suggestedTitle && !form.getValues('title')) {
+      form.setValue('title', s.suggestedTitle, { shouldValidate: true, shouldDirty: true })
+    }
+
+    // Set room number if extracted and current room is empty
+    if (s.roomNumber && !form.getValues('room_number')) {
+      form.setValue('room_number', s.roomNumber, { shouldValidate: true, shouldDirty: true })
+    }
+
+    clearSuggestion()
+  }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -172,7 +234,7 @@ export default function SubmitTicket() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t('submit_ticket.category')} *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder={t('submit_ticket.select_category')} />
@@ -208,6 +270,14 @@ export default function SubmitTicket() {
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+
+                {/* AI Triage Suggestions */}
+                <AITriageSuggestions
+                  suggestion={suggestion}
+                  loading={triageLoading}
+                  onApply={handleApplySuggestion}
+                  onDismiss={clearSuggestion}
                 />
 
                 <div className="space-y-4">
@@ -270,7 +340,7 @@ export default function SubmitTicket() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t('priority')}</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder={t('priority')} />

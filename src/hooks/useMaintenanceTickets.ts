@@ -168,6 +168,28 @@ export function useCreateMaintenanceTicket() {
         .single()
 
       if (error) throw error
+
+      // AUTO AI TRIAGE: Trigger AI analysis in background
+      // Only if priority is default (medium) and description is substantial
+      if (result && data.description && data.description.length > 20) {
+        try {
+          // Call auto-triage edge function asynchronously (don't await)
+          supabase.functions.invoke('auto-triage-ticket', {
+            body: { ticket_id: result.id }
+          }).then(({ data: triageResult, error: triageError }) => {
+            if (triageError) {
+              console.warn('Auto-triage failed:', triageError)
+            } else if (triageResult?.triage) {
+              console.log('✅ AI auto-triaged ticket:', triageResult.triage)
+              // Invalidate to refresh with AI suggestions
+              queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+            }
+          })
+        } catch (aiErr) {
+          console.warn('Auto-triage call failed:', aiErr)
+        }
+      }
+
       return result as MaintenanceTicket
     },
     onSuccess: () => {

@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, FileText, CheckSquare, User, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
+import { useAnalytics } from '@/hooks/useAnalytics'
+import { AnalyticsEvents } from '@/types/analytics'
+import { useEffect } from 'react'
 
 export default function GlobalSearch() {
     const [searchParams] = useSearchParams()
@@ -20,6 +23,22 @@ export default function GlobalSearch() {
     const { data: profiles = [], isLoading: profilesLoading } = useProfiles({ search: query })
 
     const isLoading = tasksLoading || docsLoading || profilesLoading
+
+
+    const { track } = useAnalytics()
+
+    useEffect(() => {
+        if (query && !isLoading) {
+            track(AnalyticsEvents.SEARCH, {
+                query,
+                results_count: tasks.length + documents.length + profiles.length
+            }, 'search')
+        }
+    }, [query, isLoading, tasks.length, documents.length, profiles.length, track])
+
+    const handleResultClick = (type: string, id: string) => {
+        track(AnalyticsEvents.SEARCH_CLICK, { query, result_type: type, result_id: id }, 'search')
+    }
 
     const hasResults = tasks.length > 0 || documents.length > 0 || profiles.length > 0
 
@@ -64,7 +83,7 @@ export default function GlobalSearch() {
                                 </h2>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     {tasks.slice(0, 3).map(task => (
-                                        <TaskCard key={task.id} task={task} navigate={navigate} />
+                                        <TaskCard key={task.id} task={task} navigate={navigate} onClick={() => handleResultClick('task', task.id)} />
                                     ))}
                                 </div>
                             </div>
@@ -76,7 +95,7 @@ export default function GlobalSearch() {
                                 </h2>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     {documents.slice(0, 3).map(doc => (
-                                        <DocumentCard key={doc.id} doc={doc} navigate={navigate} />
+                                        <DocumentCard key={doc.id} doc={doc} navigate={navigate} onClick={() => handleResultClick('document', doc.id)} />
                                     ))}
                                 </div>
                             </div>
@@ -98,7 +117,7 @@ export default function GlobalSearch() {
                     <TabsContent value="tasks" className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                             {tasks.map(task => (
-                                <TaskCard key={task.id} task={task} navigate={navigate} />
+                                <TaskCard key={task.id} task={task} navigate={navigate} onClick={() => handleResultClick('task', task.id)} />
                             ))}
                         </div>
                     </TabsContent>
@@ -106,7 +125,7 @@ export default function GlobalSearch() {
                     <TabsContent value="documents" className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                             {documents.map(doc => (
-                                <DocumentCard key={doc.id} doc={doc} navigate={navigate} />
+                                <DocumentCard key={doc.id} doc={doc} navigate={navigate} onClick={() => handleResultClick('document', doc.id)} />
                             ))}
                         </div>
                     </TabsContent>
@@ -124,9 +143,12 @@ export default function GlobalSearch() {
     )
 }
 
-function TaskCard({ task, navigate }: { task: any, navigate: any }) {
+function TaskCard({ task, navigate, onClick }: { task: any, navigate: any, onClick?: () => void }) {
     return (
-        <Card className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => navigate(`/tasks/${task.id}`)}>
+        <Card className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => {
+            onClick?.()
+            navigate(`/tasks/${task.id}`)
+        }}>
             <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                     <Badge variant={task.priority === 'urgent' ? 'destructive' : 'secondary'}>
@@ -143,9 +165,12 @@ function TaskCard({ task, navigate }: { task: any, navigate: any }) {
     )
 }
 
-function DocumentCard({ doc, navigate }: { doc: any, navigate: any }) {
+function DocumentCard({ doc, navigate, onClick }: { doc: any, navigate: any, onClick?: () => void }) {
     return (
-        <Card className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => navigate(`/documents/${doc.id}`)}>
+        <Card className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => {
+            onClick?.()
+            navigate(`/documents/${doc.id}`)
+        }}>
             <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                     <Badge variant="outline">

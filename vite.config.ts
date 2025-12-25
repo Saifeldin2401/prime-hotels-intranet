@@ -10,7 +10,7 @@ const securityHeaders = {
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:;",
-    "connect-src 'self' https://api.supabase.co https://htsvjfrofcpkfzvjpwvx.supabase.co wss://htsvjfrofcpkfzvjpwvx.supabase.co ws://htsvjfrofcpkfzvjpwvx.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com",
+    "connect-src 'self' https://api.supabase.co https://htsvjfrofcpkfzvjpwvx.supabase.co wss://htsvjfrofcpkfzvjpwvx.supabase.co ws://htsvjfrofcpkfzvjpwvx.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net",
     "frame-ancestors 'none'"
   ].join('; '),
   'X-Content-Type-Options': 'nosniff',

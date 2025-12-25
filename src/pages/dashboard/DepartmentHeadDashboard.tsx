@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useDepartmentHeadStats } from '@/hooks/useDashboardStats'
 
 import { DepartmentTeamList } from '@/components/dashboard/DepartmentTeamList'
+import { AIDigestWidget } from '@/components/dashboard/AIDigestWidget'
 import { useTranslation } from 'react-i18next'
 
 export function DepartmentHeadDashboard() {
@@ -219,6 +220,9 @@ export function DepartmentHeadDashboard() {
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
+          {/* AI Manager Insights */}
+          <AIDigestWidget />
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">

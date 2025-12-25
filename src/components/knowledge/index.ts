@@ -10,4 +10,5 @@ export { LinkedResourceSelector } from './LinkedResourceSelector'
 export { RelatedArticlesEditor } from './RelatedArticlesEditor'
 export { KnowledgeSidebar } from './KnowledgeSidebar'
 export { KnowledgeAIAssistant } from './KnowledgeAIAssistant'
+export { AIDocumentSummary } from './AIDocumentSummary'
 

@@ -479,13 +479,20 @@ export async function generateQuestionsWithAI(
     request: AIQuestionGenerationRequest
 ): Promise<GeneratedQuestion[]> {
     try {
+        const languageMap: Record<string, string> = {
+            'en': 'English',
+            'ar': 'Arabic',
+            'both': 'English and Arabic'
+        }
+
         const aiQuestions = await aiService.generateQuiz({
             sopContent: request.sop_content,
             count: request.count,
             types: request.types,
             difficulty: request.difficulty,
             includeHints: request.include_hints,
-            includeExplanations: request.include_explanations
+            includeExplanations: request.include_explanations,
+            language: languageMap[request.language || 'en'] || 'English'
         })
 
         // Map to GeneratedQuestion format

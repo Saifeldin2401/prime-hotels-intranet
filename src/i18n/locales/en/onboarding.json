@@ -44,7 +44,11 @@
         "placeholders": {
             "template_title": "e.g., Sales Team Onboarding",
             "task_title": "e.g., Sign NDA",
-            "task_description": "Instructions for the user..."
+            "task_description": "Instructions for the user...",
+            "mandatory_training_title": "Mandatory Training Modules",
+            "mandatory_training_desc": "Modules selected here will be automatically assigned to the user and tracked as onboarding tasks.",
+            "no_training_selected": "No mandatory training modules selected.",
+            "add_module": "Add training module..."
         }
     },
     "templates": {

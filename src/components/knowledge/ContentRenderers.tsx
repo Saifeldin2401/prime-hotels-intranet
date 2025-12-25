@@ -4,11 +4,12 @@
  * Specialized components for rendering different knowledge article content types.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { useTranslation } from 'react-i18next'
 import {
     Accordion,
     AccordionContent,
@@ -23,11 +24,14 @@ import {
     Circle,
     HelpCircle,
     ExternalLink,
-    PlayCircle
+    PlayCircle,
+    ArrowRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem, RelatedArticle } from '@/types/knowledge'
 import { Link } from 'react-router-dom'
+import { useTrackRelatedClick, useTrackRelatedImpressions } from '@/hooks/useKnowledge'
+import { useAuth } from '@/hooks/useAuth'
 
 // ============================================================================
 // VIDEO PLAYER
@@ -176,9 +180,9 @@ export function ChecklistRenderer({ items, onCheckChange, readOnly = false }: Ch
                                     "font-medium",
                                     isChecked && "line-through text-gray-400"
                                 )}>
-                                    {item.text}
+                                    {item.text || (item as any).task}
                                 </p>
-                                {item.is_required && !isChecked && (
+                                {(item.is_required || (item as any).required) && !isChecked && (
                                     <Badge variant="outline" className="text-xs mt-1 text-orange-600 border-orange-200">
                                         Required
                                     </Badge>
@@ -240,48 +244,94 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
 
 interface RelatedArticlesProps {
     articles: RelatedArticle[]
+    sourceId?: string
 }
 
-const RELATION_LABELS: Record<string, { label: string; color: string }> = {
-    'see_also': { label: 'Related', color: 'blue' },
-    'prerequisite': { label: 'Read First', color: 'orange' },
-    'supersedes': { label: 'Replaces', color: 'yellow' },
-    'updated_by': { label: 'Updated By', color: 'green' }
+const getRelationLabel = (type: string, t: any) => {
+    switch (type) {
+        case 'see_also': return { label: t('viewer.relation.see_also'), color: 'blue', variant: 'outline' }
+        case 'prerequisite': return { label: t('viewer.relation.prerequisite'), color: 'orange', variant: 'outline' }
+        case 'supersedes': return { label: t('viewer.relation.supersedes'), color: 'yellow', variant: 'outline' }
+        case 'updated_by': return { label: t('viewer.relation.updated_by'), color: 'green', variant: 'outline' }
+        case 'automated': return { label: t('viewer.relation.automated'), color: 'hotel-gold', variant: 'default' }
+        default: return { label: t('viewer.relation.see_also'), color: 'blue', variant: 'outline' }
+    }
 }
 
-export function RelatedArticles({ articles }: RelatedArticlesProps) {
+export function RelatedArticles({ articles, sourceId }: RelatedArticlesProps) {
+    const { t } = useTranslation('knowledge')
+    const { user } = useAuth()
+    const trackClick = useTrackRelatedClick()
+    const trackImpressions = useTrackRelatedImpressions()
+
+    // Track impressions once when component mounts
+    useEffect(() => {
+        if (sourceId && articles.length > 0) {
+            trackImpressions.mutate({
+                sourceId,
+                relatedIds: articles.map(a => a.id)
+            })
+        }
+    }, [sourceId, articles.length]) // Only on mount or if articles change significantly
+
+    const handleArticleClick = (relatedId: string, position: number) => {
+        if (sourceId) {
+            trackClick.mutate({
+                sourceId,
+                relatedId,
+                userId: user?.id,
+                position
+            })
+        }
+    }
+
     if (!articles.length) return null
 
     return (
-        <Card>
-            <CardContent className="p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <ExternalLink className="h-4 w-4" />
-                    Related Articles
-                </h3>
-                <div className="space-y-2">
-                    {articles.map((article) => {
-                        const relation = RELATION_LABELS[article.relation_type] || RELATION_LABELS['see_also']
-                        return (
-                            <Link
-                                key={article.id}
-                                to={`/knowledge/${article.id}`}
-                                className="block p-3 rounded-lg border hover:border-hotel-gold hover:bg-hotel-gold/5 transition-colors"
-                            >
-                                <div className="flex items-center justify-between mb-1">
-                                    <Badge variant="outline" className="text-xs">
-                                        {article.content_type.toUpperCase()}
+        <Card className="overflow-hidden border-hotel-gold/20 shadow-sm">
+            <CardContent className="p-0">
+                <div className="bg-hotel-navy/5 p-4 border-b border-hotel-gold/10">
+                    <h3 className="font-semibold flex items-center gap-2 text-hotel-navy">
+                        <ArrowRight className="h-4 w-4 text-hotel-gold" />
+                        {t('viewer.related_knowledge')}
+                    </h3>
+                </div>
+                <div className="divide-y divide-hotel-gold/10">
+                    {articles.map((article, index) => (
+                        <Link
+                            key={article.id}
+                            to={`/knowledge/${article.id}`}
+                            className="group block p-4 hover:bg-hotel-gold/5 transition-all"
+                            onClick={() => handleArticleClick(article.id, index + 1)}
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex gap-2">
+                                    <Badge variant="outline" className="text-[10px] uppercase font-bold text-gray-400">
+                                        {article.content_type}
                                     </Badge>
-                                    <Badge variant="secondary" className={`text-xs bg-${relation.color}-100 text-${relation.color}-700`}>
-                                        {relation.label}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Badge
+                                            variant={getRelationLabel(article.relation_type || 'see_also', t).variant as any}
+                                            className={cn(
+                                                "text-[10px] uppercase font-bold px-1.5 py-0",
+                                                article.relation_type === 'automated' ? "bg-hotel-gold text-white" : ""
+                                            )}
+                                        >
+                                            {getRelationLabel(article.relation_type || 'see_also', t).label}
+                                        </Badge>
+                                    </div>
+                                    {article.score && (
+                                        <span className="text-[10px] text-gray-400 font-mono">
+                                            {Math.round(article.score)}% {t('viewer.match')}
+                                        </span>
+                                    )}
                                 </div>
-                                <p className="text-sm font-medium text-gray-900 hover:text-hotel-gold">
-                                    {article.title}
-                                </p>
-                            </Link>
-                        )
-                    })}
+                            </div>
+                            <p className="text-sm font-semibold text-gray-900 group-hover:text-hotel-gold leading-snug transition-colors">
+                                {article.title}
+                            </p>
+                        </Link>
+                    ))}
                 </div>
             </CardContent>
         </Card>

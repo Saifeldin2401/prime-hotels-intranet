@@ -35,6 +35,7 @@ import {
   Star,
   Wallet,
   Clock,
+  Brain,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -105,6 +106,7 @@ export function Sidebar() {
     { name: 'property_management', href: '/admin/properties', icon: Building, roles: ['regional_admin'] },
     { name: 'reports', href: '/reports', icon: BarChart3, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
     { name: 'automations', href: '/admin/workflows', icon: Workflow, roles: ['regional_admin', 'property_manager'] },
+    { name: 'ai_tools', href: '/admin/ai-tools', icon: Brain, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
     { name: 'escalation_rules', href: '/admin/escalation', icon: Bell, roles: ['regional_admin'] },
     { name: 'audit_logs', href: '/admin/audit', icon: ClipboardList, roles: ['regional_admin'] },
     { name: 'pii_access_logs', href: '/admin/pii-audit', icon: ShieldAlert, roles: ['regional_admin', 'regional_hr'] },
@@ -401,65 +403,6 @@ export function Sidebar() {
             )}
           </AnimatePresence>
         </div>
-
-        {/* Administration Menu */}
-        {filteredAdminMenu.length > 0 && (
-          <div className="pt-2">
-            <button
-              onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                isAdminRouteActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              )}
-            >
-              <Settings className="w-4 h-4" />
-              <span className="flex-1 text-start">{t('groups.admin')}</span>
-              <ChevronRight className={cn("w-4 h-4 transition-transform duration-200", isAdminMenuOpen && "rotate-90")} />
-            </button>
-
-            <AnimatePresence>
-              {isAdminMenuOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: DURATION.MEDIUM, ease: EASING.DEFAULT as any }}
-                  className="overflow-hidden"
-                >
-                  <div className="ms-4 mt-1 space-y-1 border-l-2 border-muted pl-2">
-                    {filteredAdminMenu.map((item) => {
-                      const Icon = item.icon
-                      const isActive = location.pathname === item.href
-
-                      return (
-                        <Link
-                          key={item.name}
-                          to={item.href}
-                          className={cn(
-                            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                            isActive
-                              ? 'bg-primary/10 text-primary font-semibold'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                          )}
-                        >
-                          <motion.div
-                            whileHover={{ scale: 1.1, x: 2 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Icon className="w-4 h-4" />
-                          </motion.div>
-                          {t(item.name)}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
       </nav>
 
       <div className="p-4 border-t">

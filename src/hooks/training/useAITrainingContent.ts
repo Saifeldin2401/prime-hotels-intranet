@@ -163,7 +163,7 @@ Return a JSON object with:
 
             // Parse result or use fallback
             try {
-                const parsed = JSON.parse(aiResult?.result || '{}')
+                const parsed = JSON.parse(cleanJSON(aiResult?.result || '{}'))
                 return parsed as ModuleOutline
             } catch {
                 // Fallback outline
@@ -369,7 +369,7 @@ IMPORTANT:
 
             // Parse result
             try {
-                const parsed = JSON.parse(aiResult?.result || '{}')
+                const parsed = JSON.parse(cleanJSON(aiResult?.result || '{}'))
                 if (parsed.sections && parsed.sections.length > 0) {
                     return parsed
                 }
@@ -489,6 +489,22 @@ function stripHtml(html: string): string {
         .replace(/&gt;/g, '>')
         .replace(/\s+/g, ' ')
         .trim()
+}
+
+function cleanJSON(text: string): string {
+    if (!text) return '{}'
+    // Remove markdown code blocks if present
+    const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/)
+    if (jsonMatch && jsonMatch[1]) {
+        return jsonMatch[1]
+    }
+    // Also try matching standard code blocks
+    const codeMatch = text.match(/```\n?([\s\S]*?)\n?```/)
+    if (codeMatch && codeMatch[1]) {
+        return codeMatch[1]
+    }
+
+    return text
 }
 
 function buildContentPrompt(title: string, content: string, options: ContentGenerationOptions): string {

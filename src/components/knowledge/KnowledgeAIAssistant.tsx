@@ -52,11 +52,9 @@ interface KnowledgeAIAssistantProps {
     onClose: () => void
 }
 
+// 🛡️ PRIMARY MODEL (Confirmed working on HF Router via 'together' provider)
 const FALLBACK_MODELS = [
-    'Qwen/Qwen2.5-7B-Instruct',
-    'meta-llama/Llama-3.2-3B-Instruct',
-    'HuggingFaceH4/zephyr-7b-beta',
-    'microsoft/Phi-3-mini-4k-instruct'
+    'Qwen/Qwen2.5-7B-Instruct'
 ]
 
 export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantProps) {
@@ -173,7 +171,8 @@ export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantPr
                 if (error) throw error
                 if (data?.success === false) throw new Error(data.error)
 
-                return data.generated_text as string
+                // Support both 'generated_text' (HF style) and 'result' (OpenAI style)
+                return (data.generated_text || data.result) as string
             } catch (e) {
                 console.warn(`Model ${model} failed:`, e)
             }

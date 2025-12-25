@@ -1,0 +1,21 @@
+{
+    "title": "تحليلات النظام",
+    "active_now": "نشط الآن",
+    "active_now_desc": "المستخدمون النشطون في آخر 15 دقيقة",
+    "daily_active_users": "المستخدمون النشطون يومياً",
+    "active_today_desc": "تسجيلات الدخول الفريدة اليوم",
+    "total_sessions": "مجموع الجلسات",
+    "sessions_today_desc": "الجلسات التي بدأت اليوم",
+    "traffic_and_trends": "حركة المرور والاتجاهات",
+    "search_intelligence": "ذكاء البحث",
+    "top_events": "أهم الأحداث",
+    "dau_30_days": "المستخدمون النشطون يومياً (30 يوماً)",
+    "total_searches": "مجموع الفحوصات",
+    "zero_results_rate": "معدل النتائج الصفرية",
+    "avg_results_per_query": "متوسط النتائج / الاستعلام",
+    "top_search_queries": "أهم استعلامات البحث",
+    "top_queries_desc": "المصطلحات الأكثر تكراراً في آخر 30 يوماً",
+    "no_search_data": "لا توجد بيانات بحث بعد.",
+    "top_system_interactions": "أهم تفاعلات النظام",
+    "failed_to_load": "فشل تحميل التحليلات"
+}

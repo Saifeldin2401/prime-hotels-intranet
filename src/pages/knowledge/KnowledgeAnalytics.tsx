@@ -4,6 +4,15 @@
  * Analytics dashboard for Knowledge Base content performance.
  */
 
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer
+} from 'recharts'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -23,7 +32,12 @@ import {
     ChevronRight,
     ArrowUpRight,
     Filter,
-    Download
+    Download,
+    ThumbsUp,
+    ThumbsDown,
+    MessageSquare,
+    Smile,
+    Frown
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +47,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { useArticles } from '@/hooks/useKnowledge'
+import { useArticles, useFeedbackStats, useRecentFeedback, useFeedbackTrends } from '@/hooks/useKnowledge'
 import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
 
 export default function KnowledgeAnalytics() {
@@ -356,6 +370,13 @@ export default function KnowledgeAnalytics() {
                 </Card>
             </div>
 
+            {/* Feedback & Sentiment Section */}
+            <FeedbackTrendsChart />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <FeedbackSentiment />
+                <RecentFeedbackList />
+            </div>
+
             {/* Top Content Table */}
             <Card>
                 <CardHeader>
@@ -415,5 +436,189 @@ export default function KnowledgeAnalytics() {
                 </CardContent>
             </Card>
         </div>
+    )
+}
+
+function FeedbackSentiment() {
+    const { t } = useTranslation(['knowledge', 'common'])
+    const { data: stats, isLoading } = useFeedbackStats()
+
+    if (isLoading || !stats) return <Card className="lg:col-span-1"><CardContent className="pt-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
+
+    const helpfulPercent = stats.total > 0 ? Math.round((stats.helpful / stats.total) * 100) : 0
+
+    return (
+        <Card className="lg:col-span-1">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                    <Smile className="h-4 w-4 text-green-500" />
+                    {t('analytics.feedback_sentiment')}
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="flex flex-col items-center justify-center pt-2 pb-6">
+                    <div className="relative h-32 w-32 flex items-center justify-center">
+                        <svg className="h-full w-full" viewBox="0 0 100 100">
+                            <circle className="text-gray-100 stroke-current" strokeWidth="10" fill="transparent" r="40" cx="50" cy="50" />
+                            <circle
+                                className="text-green-500 stroke-current transition-all duration-1000 ease-out"
+                                strokeWidth="10"
+                                strokeDasharray={`${helpfulPercent * 2.51}, 251.2`}
+                                strokeLinecap="round"
+                                fill="transparent"
+                                r="40"
+                                cx="50"
+                                cy="50"
+                                transform="rotate(-90 50 50)"
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-3xl font-bold text-gray-900">{helpfulPercent}%</span>
+                            <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{t('analytics.helpful')}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-100">
+                        <ThumbsUp className="h-4 w-4 text-green-600" />
+                        <div>
+                            <div className="text-lg font-bold text-green-700">{stats.helpful}</div>
+                            <div className="text-[10px] text-green-600 uppercase font-semibold">{t('analytics.yes')}</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
+                        <ThumbsDown className="h-4 w-4 text-red-600" />
+                        <div>
+                            <div className="text-lg font-bold text-red-700">{stats.unhelpful}</div>
+                            <div className="text-[10px] text-red-600 uppercase font-semibold">{t('analytics.no')}</div>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
+function RecentFeedbackList() {
+    const { t } = useTranslation(['knowledge', 'common'])
+    const { data: feedback, isLoading } = useRecentFeedback(6)
+
+    if (isLoading) return <Card className="lg:col-span-2"><CardContent className="pt-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
+
+    return (
+        <Card className="lg:col-span-2">
+            <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-hotel-gold" />
+                    {t('analytics.recent_feedback')}
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {feedback?.length === 0 ? (
+                        <p className="text-center text-gray-500 py-8 italic">{t('analytics.no_feedback_yet')}</p>
+                    ) : (
+                        feedback?.map((item) => (
+                            <div key={item.id} className="flex gap-4 p-3 rounded-lg border border-gray-50 hover:border-gray-100 transition-colors">
+                                <div className={cn(
+                                    "h-10 w-10 shrink-0 rounded-full flex items-center justify-center",
+                                    item.helpful ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                                )}>
+                                    {item.helpful ? <ThumbsUp className="h-5 w-5" /> : <ThumbsDown className="h-5 w-5" />}
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-semibold text-gray-900 line-clamp-1">{item.document?.title}</span>
+                                        <span className="text-[10px] text-gray-400 whitespace-nowrap">{new Date(item.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600 italic">
+                                        {item.feedback_text ? `"${item.feedback_text}"` : (item.helpful ? t('analytics.voted_helpful') : t('analytics.voted_unhelpful'))}
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
+function FeedbackTrendsChart() {
+    const { t } = useTranslation(['knowledge', 'common'])
+    const { data: trends, isLoading } = useFeedbackTrends(30) // 30 days default
+
+    if (isLoading) return <Card className="col-span-full"><CardContent className="pt-6"><Skeleton className="h-[300px] w-full" /></CardContent></Card>
+    // Show empty state or nothing if no data, but chart is empty friendly
+    if (!trends || trends.length === 0) return null
+
+    return (
+        <Card className="col-span-full">
+            <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                    {t('analytics.feedback_trends', 'Feedback Trends (30 Days)')}
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="h-[300px] w-full min-w-[300px]">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+                        <AreaChart data={trends} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorHelpful" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="colorUnhelpful" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <XAxis
+                                dataKey="date"
+                                tickFormatter={(str) => {
+                                    const d = new Date(str)
+                                    return `${d.getDate()}/${d.getMonth() + 1}`
+                                }}
+                                stroke="#9ca3af"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <YAxis
+                                stroke="#9ca3af"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                                allowDecimals={false}
+                            />
+                            <Tooltip
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="helpful"
+                                stackId="1"
+                                stroke="#22c55e"
+                                fillOpacity={1}
+                                fill="url(#colorHelpful)"
+                                name={t('analytics.helpful', 'Helpful')}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="unhelpful"
+                                stackId="1"
+                                stroke="#ef4444"
+                                fillOpacity={1}
+                                fill="url(#colorUnhelpful)"
+                                name={t('analytics.unhelpful', 'Unhelpful')}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </CardContent>
+        </Card>
     )
 }

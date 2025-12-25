@@ -13,6 +13,7 @@ import type {
     KnowledgeContentType
 } from '@/types/knowledge'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
 // ============================================================================
 // ARTICLES
@@ -204,6 +205,7 @@ export function useToggleBookmark() {
 
 export function useSubmitFeedback() {
     const { user } = useAuth()
+    const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: ({
@@ -216,11 +218,33 @@ export function useSubmitFeedback() {
             feedbackText?: string
         }) => KnowledgeService.submitFeedback(documentId, user!.id, helpful, feedbackText),
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['knowledge-feedback'] })
             toast.success('Thank you for your feedback!')
         },
-        onError: () => {
-            toast.error('Failed to submit feedback')
+        onError: (error: any) => {
+            toast.error(`Failed to submit feedback: ${error.message}`)
         }
+    })
+}
+
+export function useFeedbackStats() {
+    return useQuery({
+        queryKey: ['knowledge-feedback-stats'],
+        queryFn: () => KnowledgeService.getFeedbackStats()
+    })
+}
+
+export function useRecentFeedback(limit = 10) {
+    return useQuery({
+        queryKey: ['knowledge-recent-feedback', limit],
+        queryFn: () => KnowledgeService.getRecentFeedback(limit)
+    })
+}
+
+export function useFeedbackTrends(days = 30) {
+    return useQuery({
+        queryKey: ['knowledge-feedback-trends', days],
+        queryFn: () => KnowledgeService.getFeedbackTrends(days)
     })
 }
 
@@ -313,5 +337,19 @@ export function useRelatedArticles(documentId: string | undefined) {
         queryKey: ['knowledge-related', documentId],
         queryFn: () => KnowledgeService.getRelatedArticles(documentId!),
         enabled: !!documentId
+    })
+}
+
+export function useTrackRelatedClick() {
+    return useMutation({
+        mutationFn: ({ sourceId, relatedId, userId, position }: { sourceId: string, relatedId: string, userId?: string, position?: number }) =>
+            KnowledgeService.trackRelatedClick(sourceId, relatedId, userId, position)
+    })
+}
+
+export function useTrackRelatedImpressions() {
+    return useMutation({
+        mutationFn: ({ sourceId, relatedIds }: { sourceId: string, relatedIds: string[] }) =>
+            KnowledgeService.trackRelatedImpressions(sourceId, relatedIds)
     })
 }

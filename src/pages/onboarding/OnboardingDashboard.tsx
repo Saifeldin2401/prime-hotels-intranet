@@ -53,8 +53,11 @@ export default function OnboardingDashboard() {
                     : t('dashboard.task_reopened', 'Task reopened')
                 )
             },
-            onError: () => {
-                toast.error(t('common:messages.error_action_failed', 'Failed to update task'))
+            onError: (error: any) => {
+                const message = error.message?.includes('RLS')
+                    ? t('dashboard.error_permissions', 'Permission denied: This task must be completed by the assigned owner.')
+                    : t('common:messages.error_action_failed', 'Failed to update task');
+                toast.error(message);
             }
         })
     }

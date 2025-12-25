@@ -127,7 +127,8 @@ export interface RelatedArticle {
     id: string
     title: string
     content_type: KnowledgeContentType
-    relation_type: 'see_also' | 'prerequisite' | 'supersedes' | 'updated_by'
+    relation_type: 'see_also' | 'prerequisite' | 'supersedes' | 'updated_by' | 'automated'
+    score?: number
 }
 
 export interface KnowledgeTag {

@@ -44,7 +44,11 @@
         "placeholders": {
             "template_title": "مثال: تدريب فريق المبيعات",
             "task_title": "مثال: توقيع اتفاقية عدم الإفصاح",
-            "task_description": "تعليمات للمستخدم..."
+            "task_description": "تعليمات للمستخدم...",
+            "mandatory_training_title": "وحدات التدريب الإلزامية",
+            "mandatory_training_desc": "سيتم تعيين الوحدات المحددة هنا تلقائياً للمستخدم وتتبعها كمهام تأهيل.",
+            "no_training_selected": "لم يتم اختيار وحدات تدريب إلزامية.",
+            "add_module": "إضافة وحدة تدريبية..."
         }
     },
     "templates": {

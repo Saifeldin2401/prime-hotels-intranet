@@ -46,6 +46,11 @@ import enKnowledge from './locales/en/knowledge.json';
 import arKnowledge from './locales/ar/knowledge.json';
 import enOnboarding from './locales/en/onboarding.json';
 import arOnboarding from './locales/ar/onboarding.json';
+import enAnalytics from './locales/en/analytics.json';
+import arAnalytics from './locales/ar/analytics.json';
+
+import enAiTools from './locales/en/ai_tools.json';
+import arAiTools from './locales/ar/ai_tools.json';
 
 // Define the resources
 const resources = {
@@ -71,6 +76,8 @@ const resources = {
     public: enPublic,
     knowledge: enKnowledge,
     onboarding: enOnboarding,
+    analytics: enAnalytics,
+    ai_tools: enAiTools,
   },
   ar: {
     common: arCommon,
@@ -94,6 +101,8 @@ const resources = {
     public: arPublic,
     knowledge: arKnowledge,
     onboarding: arOnboarding,
+    analytics: arAnalytics,
+    ai_tools: arAiTools,
   },
 };
 

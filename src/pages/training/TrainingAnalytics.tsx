@@ -44,6 +44,7 @@ interface AnalyticsSummary {
     averageScore: number
     totalModules: number
     totalQuizzes: number
+    onboardingAssignments: number
 }
 
 interface ModulePerformance {
@@ -110,6 +111,12 @@ export default function TrainingAnalytics() {
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'published')
 
+            // Fetch onboarding tasks for correlation
+            const { data: onboardingTasks } = await supabase
+                .from('onboarding_tasks')
+                .select('link_id, process_id')
+                .eq('link_type', 'training')
+
             // Calculate metrics
             const completed = progress?.filter(p => p.status === 'completed') || []
             const inProgress = progress?.filter(p => p.status === 'in_progress') || []
@@ -133,7 +140,8 @@ export default function TrainingAnalytics() {
                     : 0,
                 averageScore: Math.round(averageScore),
                 totalModules: moduleCount || 0,
-                totalQuizzes: quizCount || 0
+                totalQuizzes: quizCount || 0,
+                onboardingAssignments: onboardingTasks?.length || 0
             }
         }
     })
@@ -329,6 +337,13 @@ export default function TrainingAnalytics() {
                     value={summary?.overdueAssignments || 0}
                     icon={AlertTriangle}
                     color="red"
+                />
+                <StatCard
+                    title="Onboarding Sourced"
+                    value={summary?.onboardingAssignments || 0}
+                    icon={Target}
+                    color="orange"
+                    trend="Automated"
                 />
             </div>
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { analytics } from '@/services/analyticsService'
 import type { Profile, UserRole, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
 
@@ -216,6 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user) {
         setUser(session.user)
+        analytics.identify(session.user.id)
         // Set loading to false immediately, load data in background
         loadingState = false
         setLoading(false)
@@ -279,7 +281,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      // Use 'local' scope to avoid 403 errors when session is already invalid
+      // This only clears the local session, not all sessions across devices
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (error) {
+      // Even if server signout fails, clear local state
+      console.warn('Server signout failed, clearing local state:', error)
+    }
+    // Always clear local state regardless of server response
     setUser(null)
     setProfile(null)
     setRoles([])

@@ -32,9 +32,21 @@ function getStoredViews(userId: string): RecentlyViewedItem[] {
 }
 
 /**
+ * Validate if a string is a valid UUID
+ */
+function isValidUUID(str: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidRegex.test(str)
+}
+
+/**
  * Save recently viewed document ID to localStorage
  */
 function saveView(userId: string, documentId: string): void {
+    // Validate UUID to prevent storing route segments like "new", "create", "edit"
+    if (!isValidUUID(documentId)) {
+        return
+    }
     try {
         const existing = getStoredViews(userId)
         // Remove if already exists
@@ -89,7 +101,17 @@ export function useRecentlyViewed(limit = 5) {
                 return
             }
 
-            const ids = recentItems.map(item => item.id)
+            // Filter out any invalid UUIDs that may have been stored previously
+            const ids = recentItems
+                .map(item => item.id)
+                .filter(id => isValidUUID(id))
+
+            if (ids.length === 0) {
+                setDocuments([])
+                setIsLoading(false)
+                return
+            }
+
             const { data, error } = await supabase
                 .from('documents')
                 .select('id, title, description, content_type, updated_at')

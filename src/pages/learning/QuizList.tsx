@@ -45,6 +45,8 @@ export default function QuizList() {
     const [showGenerateDialog, setShowGenerateDialog] = useState(false)
     const [selectedSOP, setSelectedSOP] = useState<string>('')
     const [sops, setSops] = useState<{ id: string, title: string }[]>([])
+    const [questionCount, setQuestionCount] = useState<number>(5)
+    const [targetLanguage, setTargetLanguage] = useState<string>('English')
 
     const { data: quizzes, isLoading, refetch } = useQuery({
         queryKey: ['quizzes', statusFilter],
@@ -84,7 +86,7 @@ export default function QuizList() {
 
         const sop = sops.find(s => s.id === selectedSOP)
         // Pass title to help naming the quiz
-        await generateQuizFromSOP(selectedSOP, sop ? `${t('quizzes.assessment', 'Assessment')}: ${sop.title}` : undefined)
+        await generateQuizFromSOP(selectedSOP, sop ? `${t('quizzes.assessment', 'Assessment')}: ${sop.title}` : undefined, questionCount, targetLanguage)
         setShowGenerateDialog(false)
         refetch()
     }
@@ -233,6 +235,32 @@ export default function QuizList() {
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pb-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Questions</label>
+                            <Input
+                                type="number"
+                                min={1}
+                                max={20}
+                                value={questionCount}
+                                onChange={(e) => setQuestionCount(parseInt(e.target.value) || 5)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Language</label>
+                            <Select value={targetLanguage} onValueChange={setTargetLanguage}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="English">English</SelectItem>
+                                    <SelectItem value="Arabic">Arabic (العربية)</SelectItem>
+                                    <SelectItem value="Bilingual">Bilingual (En/Ar)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>{t('common.cancel', 'Cancel')}</Button>

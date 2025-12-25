@@ -181,7 +181,7 @@ export function useOverdueItemsCount() {
                 .from('maintenance_tickets')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'open')
-                .lt('reported_at', threshold48h)
+                .lt('created_at', threshold48h)
 
             // Count overdue leave requests (48h threshold)
             const { count: overdueLeaves } = await supabase

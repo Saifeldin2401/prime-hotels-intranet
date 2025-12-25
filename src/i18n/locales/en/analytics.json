@@ -1,0 +1,21 @@
+{
+    "title": "System Analytics",
+    "active_now": "Active Now",
+    "active_now_desc": "Users visible in last 15m",
+    "daily_active_users": "Daily Active Users",
+    "active_today_desc": "Unique logins today",
+    "total_sessions": "Total Sessions",
+    "sessions_today_desc": "Sessions started today",
+    "traffic_and_trends": "Traffic & Trends",
+    "search_intelligence": "Search Intelligence",
+    "top_events": "Top Events",
+    "dau_30_days": "Daily Active Users (30 Days)",
+    "total_searches": "Total Searches",
+    "zero_results_rate": "Zero Results Rate",
+    "avg_results_per_query": "Avg Results / Query",
+    "top_search_queries": "Top Search Queries",
+    "top_queries_desc": "Most frequent terms in last 30 days",
+    "no_search_data": "No search data yet.",
+    "top_system_interactions": "Top System Interactions",
+    "failed_to_load": "Failed to load analytics"
+}

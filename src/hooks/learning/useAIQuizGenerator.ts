@@ -10,7 +10,7 @@ export const useAIQuizGenerator = () => {
     const { toast } = useToast()
     const navigate = useNavigate()
 
-    const generateQuizFromSOP = async (sopId: string, title?: string) => {
+    const generateQuizFromSOP = async (sopId: string, title?: string, count: number = 5, language: string = 'English') => {
         try {
             setGenerating(true)
 
@@ -25,7 +25,11 @@ export const useAIQuizGenerator = () => {
 
             // 2. Generate Questions via AI
             // We pass the RAW HTML content to the AI service
-            const generatedQuestions = await aiService.generateQuiz(sop.content)
+            const generatedQuestions = await aiService.generateQuiz({
+                sopContent: sop.content,
+                count,
+                language
+            })
 
             if (!generatedQuestions || generatedQuestions.length === 0) {
                 throw new Error('AI failed to generate valid questions')

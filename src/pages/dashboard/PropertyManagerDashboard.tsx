@@ -20,6 +20,7 @@ import { useAssignedMaintenanceTickets } from '@/hooks/useMaintenanceTickets'
 import { useDepartmentKPIs } from '@/hooks/useDepartmentKPIs'
 import { Users, Building2, CheckSquare } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { AIDigestWidget } from '@/components/dashboard/AIDigestWidget'
 
 export function PropertyManagerDashboard() {
   const { t } = useTranslation('dashboard')
@@ -314,6 +315,9 @@ export function PropertyManagerDashboard() {
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
+          {/* AI Manager Insights */}
+          <AIDigestWidget />
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">

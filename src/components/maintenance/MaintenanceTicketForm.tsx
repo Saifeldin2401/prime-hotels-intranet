@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useAITicketTriage } from '@/hooks/useAITicketTriage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
+import { AITriageSuggestions } from '@/components/maintenance/AITriageSuggestions'
+import {
   Wrench,
   ArrowLeft,
   Upload,
@@ -23,7 +25,7 @@ interface MaintenanceTicketFormProps {
 export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicketFormProps) {
   const { profile, properties, departments } = useAuth()
   const queryClient = useQueryClient()
-  
+
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     description: initialData?.description || '',
@@ -35,10 +37,31 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
     estimated_cost: initialData?.estimated_cost || ''
   })
 
+  // AI Triage Hook
+  const { suggestion, loading: triageLoading, analyzeTicketDebounced, clearSuggestion } = useAITicketTriage()
+
+  // Trigger AI analysis when description changes
+  useEffect(() => {
+    if (formData.description.length > 15) {
+      analyzeTicketDebounced(formData.description, formData.location)
+    }
+  }, [formData.description, formData.location, analyzeTicketDebounced])
+
+  // Apply AI suggestions to form
+  const handleApplySuggestion = (s: typeof suggestion) => {
+    if (!s) return
+    setFormData(prev => ({
+      ...prev,
+      category: s.category.toLowerCase().replace(/[\s\/]/g, '_'),
+      priority: s.priority
+    }))
+    clearSuggestion()
+  }
+
   const createTicketMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!profile) throw new Error('User not authenticated')
-      
+
       const ticketData = {
         title: data.title,
         description: data.description,
@@ -72,11 +95,11 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.title.trim() || !formData.description.trim()) {
       return
     }
-    
+
     createTicketMutation.mutate(formData)
   }
 
@@ -118,11 +141,11 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="priority">Priority</Label>
-                  <Select 
-                    value={formData.priority} 
+                  <Select
+                    value={formData.priority}
                     onValueChange={(value) => updateFormData('priority', value)}
                   >
                     <SelectTrigger>
@@ -141,8 +164,8 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
-                  <Select 
-                    value={formData.category} 
+                  <Select
+                    value={formData.category}
                     onValueChange={(value) => updateFormData('category', value)}
                   >
                     <SelectTrigger>
@@ -182,6 +205,14 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
                   required
                 />
               </div>
+
+              {/* AI Triage Suggestions */}
+              <AITriageSuggestions
+                suggestion={suggestion}
+                loading={triageLoading}
+                onApply={handleApplySuggestion}
+                onDismiss={clearSuggestion}
+              />
             </div>
 
             {/* Assignment */}
@@ -190,8 +221,8 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="property">Property</Label>
-                  <Select 
-                    value={formData.property_id} 
+                  <Select
+                    value={formData.property_id}
                     onValueChange={(value) => updateFormData('property_id', value)}
                   >
                     <SelectTrigger>
@@ -209,8 +240,8 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
 
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
-                  <Select 
-                    value={formData.department_id} 
+                  <Select
+                    value={formData.department_id}
                     onValueChange={(value) => updateFormData('department_id', value)}
                   >
                     <SelectTrigger>
@@ -266,8 +297,8 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={createTicketMutation.isPending}
               >
                 {createTicketMutation.isPending ? 'Creating...' : 'Create Ticket'}

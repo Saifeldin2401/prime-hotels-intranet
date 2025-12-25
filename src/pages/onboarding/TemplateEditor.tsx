@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useTrainingModules } from '@/hooks/useTraining'
 import { useDocuments } from '@/hooks/useDocuments'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +43,7 @@ export default function TemplateEditor() {
     const [role, setRole] = useState<AppRole | 'all'>('all')
     const [jobTitle, setJobTitle] = useState('')
     const [openJobTitle, setOpenJobTitle] = useState(false)
+    const [requiredTrainingIds, setRequiredTrainingIds] = useState<string[]>([])
 
     // Fetch Job Titles
     const { data: jobTitlesList } = useQuery({
@@ -78,6 +80,7 @@ export default function TemplateEditor() {
                 setJobTitle('')
             }
             setTasks(existingTemplate.tasks)
+            setRequiredTrainingIds(existingTemplate.required_training_ids || [])
         }
     }, [existingTemplate])
 
@@ -121,6 +124,7 @@ export default function TemplateEditor() {
             role: targetType === 'role' && role !== 'all' ? role : null,
             job_title: targetType === 'job_title' ? jobTitle : null,
             tasks: validTasks,
+            required_training_ids: requiredTrainingIds,
             is_active: true
         }
 
@@ -276,6 +280,64 @@ export default function TemplateEditor() {
                                 </Popover>
                             </div>
                         )}
+                    </CardContent>
+                </Card>
+
+                {/* Mandatory Training Section */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <LinkIcon className="h-5 w-5" />
+                            {t('editor.mandatory_training_title', 'Mandatory Training Modules')}
+                        </CardTitle>
+                        <CardDescription>
+                            {t('editor.mandatory_training_desc', 'Modules selected here will be automatically assigned to the user and tracked as onboarding tasks.')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                            {requiredTrainingIds.map(id => {
+                                const module = trainingModules?.find(m => m.id === id)
+                                return (
+                                    <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 gap-1">
+                                        {module?.title || id}
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4 p-0 hover:bg-transparent text-muted-foreground hover:text-foreground"
+                                            onClick={() => setRequiredTrainingIds(prev => prev.filter(tid => tid !== id))}
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                    </Badge>
+                                )
+                            })}
+                            {requiredTrainingIds.length === 0 && (
+                                <p className="text-sm text-muted-foreground py-2 italic">
+                                    {t('editor.no_training_selected', 'No mandatory training modules selected.')}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="pt-2">
+                            <Select
+                                onValueChange={(val) => {
+                                    if (val && !requiredTrainingIds.includes(val)) {
+                                        setRequiredTrainingIds(prev => [...prev, val])
+                                    }
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('editor.add_module', 'Add training module...')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {trainingModules?.filter(m => !requiredTrainingIds.includes(m.id)).map(m => (
+                                        <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardContent>
                 </Card>
 

@@ -887,6 +887,7 @@ export interface OnboardingTemplate {
   job_title: string | null
   department_id: string | null
   tasks: OnboardingTaskDefinition[]
+  required_training_ids?: string[]
   is_active: boolean
   created_at: string
   updated_at: string

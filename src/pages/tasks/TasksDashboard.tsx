@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, LayoutGrid, List as ListIcon, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useAnalytics } from '@/hooks/useAnalytics'
+import { AnalyticsEvents } from '@/types/analytics'
 
 function StatCard({ label, value }: { label: string, value: number }) {
   return (
@@ -33,6 +35,7 @@ export default function TasksDashboard() {
   const [view, setView] = useState<'list' | 'kanban'>('kanban')
   const [filters, setFilters] = useState({})
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const { track } = useAnalytics()
 
   const { data: tasks = [], isLoading } = useTasks(filters)
   const { data: stats } = useTaskStats(user?.id)
@@ -50,7 +53,10 @@ export default function TasksDashboard() {
             {t('page_description')}
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto h-11">
+        <Button onClick={() => {
+          setShowCreateDialog(true)
+          track(AnalyticsEvents.FEATURE_USAGE, { feature: 'tasks', action: 'create_start' })
+        }} className="w-full sm:w-auto h-11">
           <Plus className="w-4 h-4 mr-2" />
           {t('create_task')}
         </Button>
@@ -73,7 +79,10 @@ export default function TasksDashboard() {
           <TaskFilters filters={filters} onChange={setFilters} />
         </div>
 
-        <Tabs value={view} onValueChange={(v) => setView(v as any)} className="w-full lg:w-[200px]">
+        <Tabs value={view} onValueChange={(v) => {
+          setView(v as any)
+          track(AnalyticsEvents.FEATURE_USAGE, { feature: 'tasks', action: 'view_toggle', value: v })
+        }} className="w-full lg:w-[200px]">
           <TabsList className="grid w-full grid-cols-2 h-11 bg-background/50">
             <TabsTrigger value="kanban" className="data-[state=active]:bg-white"><LayoutGrid className="w-4 h-4 mr-2" />{t('board')}</TabsTrigger>
             <TabsTrigger value="list" className="data-[state=active]:bg-white"><ListIcon className="w-4 h-4 mr-2" />{t('list')}</TabsTrigger>
@@ -111,7 +120,10 @@ export default function TasksDashboard() {
             </DialogDescription>
           </DialogHeader>
           <TaskForm
-            onSuccess={() => setShowCreateDialog(false)}
+            onSuccess={() => {
+              setShowCreateDialog(false)
+              track(AnalyticsEvents.FEATURE_USAGE, { feature: 'tasks', action: 'create_complete' })
+            }}
             onCancel={() => setShowCreateDialog(false)}
           />
         </DialogContent>

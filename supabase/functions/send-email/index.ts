@@ -4,6 +4,19 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
 serve(async (req) => {
   try {
+    // ===================================
+    // SECURITY CHECK - Internal Only
+    // ===================================
+    const authHeader = req.headers.get('Authorization')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (authHeader !== `Bearer ${serviceRoleKey}`) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     const { to, subject, html } = await req.json()
 
     const response = await fetch('https://api.resend.com/emails', {

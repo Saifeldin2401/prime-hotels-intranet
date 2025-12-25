@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Clock, AlertCircle, CheckCircle, Play, Award, Loader2, FileQuestion } from 'lucide-react'
+import { BookOpen, Clock, AlertCircle, CheckCircle, Play, Award, Loader2, FileQuestion, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -148,6 +148,19 @@ export default function MyLearning() {
                                                     </Badge>
                                                     {item.priority === 'compliance' && (
                                                         <Badge variant="destructive">{t('mandatory')}</Badge>
+                                                    )}
+                                                    {item.onboarding_process_id && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="bg-indigo-50 text-indigo-700 border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigate('/onboarding');
+                                                            }}
+                                                        >
+                                                            <Sparkles className="h-3 w-3 mr-1" />
+                                                            Onboarding Required
+                                                        </Badge>
                                                     )}
                                                     {item.due_date && (
                                                         <span className={`text-xs flex items-center gap-1 ${new Date(item.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>

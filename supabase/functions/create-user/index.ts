@@ -44,7 +44,50 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        console.log(`Creating user: ${email}, jobTitle: ${jobTitle}, role: ${role}, reportingTo: ${reportingTo}`);
+        // =================================================================
+        // SECURITY CHECK: START
+        // =================================================================
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+            return new Response(JSON.stringify({ error: "Unauthorized: Missing Authorization header" }), {
+                status: 401,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+        const userClient = createClient(supabaseUrl, anonKey, {
+            global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await userClient.auth.getUser();
+        if (userError || !user) {
+            return new Response(JSON.stringify({ error: "Unauthorized: Invalid Token" }), {
+                status: 401,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // Check Roles (Must be Regional Admin or HR)
+        const { data: roles } = await userClient
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
+
+        const hasPermission = roles?.some(r => ['regional_admin', 'regional_hr'].includes(r.role));
+
+        if (!hasPermission) {
+            return new Response(JSON.stringify({ error: "Forbidden: Insufficient privileges" }), {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+        // =================================================================
+        // SECURITY CHECK: END
+        // =================================================================
+
+        console.log(`Creating user: ${email}, jobTitle: ${jobTitle}, role: ${role}, reportingTo: ${reportingTo}, by: ${user.email}`);
 
         // 1. Create Auth User
         let authData, authError;

@@ -76,11 +76,13 @@
     "openMenu": "فتح القائمة",
     "knowledge_review": "مراجعة المعرفة",
     "knowledge_analytics": "تحليلات المعرفة",
+    "system_analytics": "تحليلات النظام",
     "onboarding": "التأهيل",
     "onboarding_tracker": "متتبع التأهيل",
     "onboarding_templates": "قوالب التأهيل",
     "promotion_history": "سجل الترقيات والنقل",
     "automations": "سير العمل المؤتمت",
+    "ai_tools": "أدوات الذكاء الاصطناعي",
     "notifications": {
         "welcome_back": "مرحباً بعودتك!",
         "new_notifications": "لديك {{count}} إشعارات جديدة.",

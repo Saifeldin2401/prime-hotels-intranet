@@ -13,6 +13,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 // AnimatePresence removed - unused
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { RoleBasedRedirect } from '@/components/auth/RoleBasedRedirect'
+import { PageTracker } from '@/components/analytics/PageTracker'
 
 // LanguageSwitcher removed - unused
 import { useTranslation } from 'react-i18next'
@@ -59,8 +60,10 @@ import MyLeaveRequests from '@/pages/hr/MyLeaveRequests'
 import AuditLogs from '@/pages/admin/AuditLogs'
 import EscalationRules from '@/pages/admin/EscalationRules'
 import WorkflowDashboard from '@/pages/admin/workflows/WorkflowDashboard'
+import AIToolsPage from '@/pages/admin/AIToolsPage'
 import { PIIAuditViewer } from '@/pages/admin/PIIIAuditViewer'
 import AnalyticsDashboard from '@/pages/dashboard/AnalyticsDashboard'
+import AdminAnalyticsDashboard from '@/pages/admin/AdminAnalyticsDashboard'
 import MyApprovals from '@/pages/approvals/MyApprovals'
 import TasksDashboard from '@/pages/tasks/TasksDashboard'
 import TaskDetail from '@/pages/tasks/TaskDetail'
@@ -442,6 +445,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/analytics"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <AdminAnalyticsDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/audit"
         element={
           <ProtectedRoute allowedRoles={['regional_admin']}>
@@ -508,6 +521,18 @@ function AppRoutes() {
             <AppLayout>
               <MotionWrapper>
                 <OrganizationalControlCenter />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/ai-tools"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+            <AppLayout>
+              <MotionWrapper>
+                <AIToolsPage />
               </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
@@ -1238,6 +1263,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <BrowserRouter>
+            <PageTracker />
             <AuthProvider>
               <PropertyProvider>
                 <NotificationProvider>
