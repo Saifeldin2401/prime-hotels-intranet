@@ -36,6 +36,7 @@ import {
   Wallet,
   Clock,
   Brain,
+  TrendingUp,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -101,6 +102,7 @@ export function Sidebar() {
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
 
   const adminMenu = [
+    { name: 'operations', href: '/operations', icon: TrendingUp, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
     { name: 'user_management', href: '/admin/users', icon: Users, roles: ['regional_admin', 'regional_hr'] },
     { name: 'org_structure', href: '/admin/organization', icon: Target, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
     { name: 'property_management', href: '/admin/properties', icon: Building, roles: ['regional_admin'] },

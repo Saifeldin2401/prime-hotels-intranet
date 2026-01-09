@@ -1,0 +1,45 @@
+{
+    "dashboard": {
+        "title": "لوحة التشغيل",
+        "all_properties": "جميع الفنادق"
+    },
+    "kpis": {
+        "occupancy": "نسبة الإشغال",
+        "adr": "متوسط سعر الغرفة",
+        "average_daily_rate": "متوسط السعر اليومي",
+        "revpar": "إيراد الغرفة المتاحة",
+        "revenue_per_room": "الإيراد لكل غرفة متاحة",
+        "total_revenue": "إجمالي الإيرادات"
+    },
+    "tabs": {
+        "overview": "نظرة عامة",
+        "occupancy": "الإشغال",
+        "revenue": "الإيرادات",
+        "imports": "استيراد البيانات"
+    },
+    "overview": {
+        "recent_occupancy": "الإشغال الأخير",
+        "recent_revenue": "الإيرادات الأخيرة"
+    },
+    "occupancy": {
+        "title": "تفاصيل الإشغال"
+    },
+    "revenue": {
+        "title": "تفاصيل الإيرادات"
+    },
+    "imports": {
+        "title": "سجل استيراد البيانات"
+    },
+    "import": {
+        "upload_data": "رفع البيانات",
+        "csv_upload": "رفع ملف CSV",
+        "select_file": "اختر الملف",
+        "upload": "رفع",
+        "processing": "جاري المعالجة...",
+        "success": "تم الاستيراد بنجاح",
+        "error": "فشل الاستيراد"
+    },
+    "no_data": "لا توجد بيانات متاحة",
+    "no_imports": "لا يوجد سجل استيراد",
+    "coming_soon": "قريباً..."
+}

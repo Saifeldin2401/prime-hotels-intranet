@@ -1,0 +1,45 @@
+{
+    "dashboard": {
+        "title": "Operations Dashboard",
+        "all_properties": "All Properties"
+    },
+    "kpis": {
+        "occupancy": "Occupancy Rate",
+        "adr": "ADR",
+        "average_daily_rate": "Average Daily Rate",
+        "revpar": "RevPAR",
+        "revenue_per_room": "Revenue per Available Room",
+        "total_revenue": "Total Revenue"
+    },
+    "tabs": {
+        "overview": "Overview",
+        "occupancy": "Occupancy",
+        "revenue": "Revenue",
+        "imports": "Data Imports"
+    },
+    "overview": {
+        "recent_occupancy": "Recent Occupancy",
+        "recent_revenue": "Recent Revenue"
+    },
+    "occupancy": {
+        "title": "Occupancy Details"
+    },
+    "revenue": {
+        "title": "Revenue Details"
+    },
+    "imports": {
+        "title": "Data Import History"
+    },
+    "import": {
+        "upload_data": "Upload Data",
+        "csv_upload": "CSV Upload",
+        "select_file": "Select File",
+        "upload": "Upload",
+        "processing": "Processing...",
+        "success": "Import completed successfully",
+        "error": "Import failed"
+    },
+    "no_data": "No data available",
+    "no_imports": "No import history available",
+    "coming_soon": "Coming soon..."
+}

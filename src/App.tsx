@@ -115,6 +115,7 @@ import ForgotPassword from '@/pages/auth/ForgotPassword'
 import ResetPassword from '@/pages/auth/ResetPassword'
 import ChangePassword from '@/pages/auth/ChangePassword'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
+import OperationsDashboard from '@/pages/operations/OperationsDashboard'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -533,6 +534,19 @@ function AppRoutes() {
             <AppLayout>
               <MotionWrapper>
                 <AIToolsPage />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      {/* OPERATIONS MODULE */}
+      <Route
+        path="/operations"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <MotionWrapper>
+                <OperationsDashboard />
               </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
