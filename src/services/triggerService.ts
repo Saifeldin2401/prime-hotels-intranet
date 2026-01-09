@@ -86,11 +86,12 @@ export async function processTrigger(context: TriggerContext): Promise<{
         return {
             success: data.success,
             actionsExecuted: data.results?.length || 0,
-            errors: data.results?.filter((r: any) => !r.success).map((r: any) => r.error) || []
+            errors: data.results?.filter((r: { success: boolean; error?: string }) => !r.success).map((r: { success: boolean; error?: string }) => r.error) || []
         }
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Trigger service error:', error)
-        return { success: false, actionsExecuted: 0, errors: [error.message] }
+        const message = error instanceof Error ? error.message : String(error)
+        return { success: false, actionsExecuted: 0, errors: [message] }
     }
 }
 
@@ -124,6 +125,7 @@ function matchesConditions(conditions: TriggerCondition[], context: TriggerConte
     return true
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getContextValue(field: string, context: TriggerContext): any {
     switch (field) {
         case 'department_id':

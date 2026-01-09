@@ -57,7 +57,7 @@ export const learningService = {
 
         // Sort questions by display_order
         if (data.questions) {
-            data.questions.sort((a: any, b: any) => a.display_order - b.display_order)
+            data.questions.sort((a: LearningQuizQuestion, b: LearningQuizQuestion) => (a.display_order || 0) - (b.display_order || 0))
         }
 
         return data as LearningQuiz

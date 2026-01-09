@@ -68,7 +68,7 @@ serve(async (req) => {
         } else {
             // --- Hugging Face Route ---
             const HF_TOKEN = Deno.env.get('HUGGINGFACE_TOKEN')
-            let currentTask = task || 'chat'
+            const currentTask = task || 'chat'
             // Use a powerful supported LLM for summarization instead of legacy BART
             let targetModelId = model
             if (currentTask === 'summarization') {

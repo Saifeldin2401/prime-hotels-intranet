@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useMessagingPermissions } from './useMessagingPermissions'
@@ -18,7 +18,7 @@ interface CreateNotificationData {
 
 export function useCreateNotification() {
   const queryClient = useQueryClient()
-  const { profile, primaryRole } = useAuth()
+  const { profile } = useAuth()
   const { canManageNotifications } = useMessagingPermissions()
 
   return useMutation({

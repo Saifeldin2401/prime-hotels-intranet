@@ -630,6 +630,7 @@ export async function trackRelatedImpressions(sourceId: string, relatedIds: stri
 // HELPERS
 // ============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatArticle(data: any): KnowledgeArticle {
     // Handle polymorphic/linked SOP data if present from join
     const sopData = Array.isArray(data.sop) ? data.sop[0] : data.sop

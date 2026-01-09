@@ -70,6 +70,90 @@ export function useTasks(filters?: {
   })
 }
 
+// Paginated version of useTasks
+export function useTasksPaginated(
+  filters?: {
+    status?: string
+    priority?: string
+    assignedTo?: string
+    createdBy?: string
+    propertyId?: string
+    departmentId?: string
+    search?: string
+    ignorePropertyFilter?: boolean
+  },
+  pagination?: { from: number; to: number; setTotalCount: (count: number) => void }
+) {
+  const { currentProperty } = useProperty()
+
+  return useQuery({
+    queryKey: ['tasks-paginated', filters, currentProperty?.id, pagination?.from, pagination?.to],
+    queryFn: async () => {
+      // First get total count
+      let countQuery = supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+
+      if (filters?.status) countQuery = countQuery.eq('status', filters.status)
+      if (filters?.priority) countQuery = countQuery.eq('priority', filters.priority)
+      if (filters?.assignedTo) countQuery = countQuery.eq('assigned_to_id', filters.assignedTo)
+      if (filters?.createdBy) countQuery = countQuery.eq('created_by_id', filters.createdBy)
+      if (!filters?.ignorePropertyFilter) {
+        const propertyIdToUse = filters?.propertyId || currentProperty?.id
+        if (propertyIdToUse && propertyIdToUse !== 'all') {
+          countQuery = countQuery.eq('property_id', propertyIdToUse)
+        }
+      }
+      if (filters?.departmentId) countQuery = countQuery.eq('department_id', filters.departmentId)
+      if (filters?.search) {
+        countQuery = countQuery.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+      }
+
+      const { count, error: countError } = await countQuery
+      if (countError) throw countError
+      if (pagination?.setTotalCount && count !== null) {
+        pagination.setTotalCount(count)
+      }
+
+      // Now get paginated data
+      let query = supabase
+        .from('tasks')
+        .select(`
+          *,
+          assigned_to:profiles!assigned_to_id(id, full_name, avatar_url),
+          created_by:profiles!created_by_id(id, full_name, avatar_url),
+          property:properties(id, name),
+          department:departments(id, name)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (filters?.status) query = query.eq('status', filters.status)
+      if (filters?.priority) query = query.eq('priority', filters.priority)
+      if (filters?.assignedTo) query = query.eq('assigned_to_id', filters.assignedTo)
+      if (filters?.createdBy) query = query.eq('created_by_id', filters.createdBy)
+      if (!filters?.ignorePropertyFilter) {
+        const propertyIdToUse = filters?.propertyId || currentProperty?.id
+        if (propertyIdToUse && propertyIdToUse !== 'all') {
+          query = query.eq('property_id', propertyIdToUse)
+        }
+      }
+      if (filters?.departmentId) query = query.eq('department_id', filters.departmentId)
+      if (filters?.search) {
+        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+      }
+
+      // Apply pagination
+      if (pagination) {
+        query = query.range(pagination.from, pagination.to)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      return data as Task[]
+    },
+  })
+}
+
 // Fetch single task
 export function useTask(taskId: string) {
   return useQuery({
@@ -183,7 +267,7 @@ export function useUpdateTask() {
         if (currentTask.status !== updates.status) {
           try {
             validateTransition('task', currentTask.status, updates.status)
-          } catch (error) {
+          } catch (_error) {
             const errorMsg = getTransitionErrorMessage('task', currentTask.status, updates.status)
             throw new Error(errorMsg)
           }

@@ -226,7 +226,7 @@ export interface Notification {
   message: string
   entity_type: string | null
   entity_id: string | null
-  metadata: Record<string, any> | null
+  metadata: Record<string, unknown> | null
   link?: string | null
   is_read: boolean
   read_at: string | null
@@ -255,7 +255,7 @@ export interface PIIAccessLog {
   user?: Profile
   accessed_by_profile?: Profile
   approved_by_profile?: Profile
-  password_history?: Record<string, any>[] // Placeholder for join
+  password_history?: Record<string, unknown>[] // Placeholder for join
 }
 
 export interface PIIAccessSummary {
@@ -531,7 +531,7 @@ export interface AuditLog {
   old_values?: Record<string, unknown> | null
   new_values?: Record<string, unknown> | null
   details?: Record<string, unknown> | null
-  changes?: Record<string, { old: any; new: any }> | null
+  changes?: Record<string, { old: unknown; new: unknown }> | null
   ip_address: string | null
   user_agent: string | null
   created_at: string

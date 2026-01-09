@@ -9,6 +9,10 @@ import type {
   TrainingQuiz,
   TrainingQuizAttempt
 } from '@/lib/types'
+import type {
+  LearningAssignment,
+  LearningProgress
+} from '@/types/learning'
 import { learningService } from '@/services/learningService'
 import type { QuestionStatus } from '@/types/questions'
 import { crudToasts, showSuccessToast, showErrorToast } from '@/lib/toastHelpers'
@@ -312,8 +316,8 @@ export function useTrainingAssignments(filters?: {
       // Manual join for modules
       if (assignments && assignments.length > 0) {
         const moduleIds = assignments
-          .filter((a: any) => a.content_type === 'module')
-          .map((a: any) => a.content_id)
+          .filter((a: LearningAssignment) => a.content_type === 'module')
+          .map((a: LearningAssignment) => a.content_id)
 
         if (moduleIds.length > 0) {
           const { data: modules } = await supabase
@@ -323,10 +327,10 @@ export function useTrainingAssignments(filters?: {
 
           if (modules) {
             const moduleMap = new Map(modules.map(m => [m.id, m]))
-            return assignments.map((a: any) => ({
+            return assignments.map((a: LearningAssignment) => ({
               ...a,
               training_modules: a.content_type === 'module' ? moduleMap.get(a.content_id) : null
-            })) as (TrainingAssignment & {
+            })) as (LearningAssignment & {
               training_modules?: TrainingModule
               profiles?: { full_name: string; email: string }
             })[]
@@ -334,7 +338,7 @@ export function useTrainingAssignments(filters?: {
         }
       }
 
-      return assignments as (TrainingAssignment & {
+      return assignments as (LearningAssignment & {
         training_modules?: TrainingModule
         profiles?: { full_name: string; email: string }
       })[]
@@ -681,11 +685,11 @@ export function useTrainingStats() {
 
       const stats = {
         totalAssigned: assignments?.length || 0,
-        inProgress: progress?.filter(p => p.status === 'in_progress').length || 0,
-        completed: progress?.filter(p => p.status === 'completed').length || 0,
-        overdue: assignments?.filter((a: any) =>
+        inProgress: (progress as any[])?.filter(p => p.status === 'in_progress').length || 0,
+        completed: (progress as any[])?.filter(p => p.status === 'completed').length || 0,
+        overdue: (assignments as any[])?.filter((a) =>
           a.due_date && new Date(a.due_date) < new Date() &&
-          !progress?.find(p => p.training_id === a.content_id && p.status === 'completed')
+          !(progress as any[])?.find(p => p.training_id === a.content_id && p.status === 'completed')
         ).length || 0,
         averageScore: 0, // Could calculate from quiz attempts
       }

@@ -112,7 +112,7 @@ export interface LearningProgress {
     completed_at?: string
     last_accessed_at: string
     last_session_id?: string
-    metadata?: any // flexible for now to store answers/attempt details
+    metadata?: Record<string, unknown> // flexible for now to store answers/attempt details
 
     created_at: string
     updated_at: string
