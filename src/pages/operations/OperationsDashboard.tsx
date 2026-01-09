@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format, subDays } from 'date-fns'
+import { Link } from 'react-router-dom'
 import {
     Building2,
     BedDouble,
@@ -106,9 +107,11 @@ export default function OperationsDashboard() {
                         <RefreshCw className="h-4 w-4 mr-2" />
                         {t('common:refresh', 'Refresh')}
                     </Button>
-                    <Button size="sm">
-                        <Upload className="h-4 w-4 mr-2" />
-                        {t('operations:import.upload_data', 'Upload Data')}
+                    <Button size="sm" asChild>
+                        <Link to="/operations/import">
+                            <Upload className="h-4 w-4 mr-2" />
+                            {t('operations:import.upload_data', 'Upload Data')}
+                        </Link>
                     </Button>
                 </div>
             </div>
