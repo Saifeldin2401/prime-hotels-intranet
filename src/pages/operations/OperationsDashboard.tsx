@@ -9,7 +9,11 @@ import {
     TrendingUp,
     RefreshCw,
     Upload,
-    FileSpreadsheet
+    FileSpreadsheet,
+    BarChart3,
+    FileText,
+    Settings,
+    ChevronRight
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -145,6 +149,82 @@ export default function OperationsDashboard() {
                     subtitle={`Room: ${formatCurrency(kpis?.roomRevenue || 0)} | F&B: ${formatCurrency(kpis?.fbRevenue || 0)}`}
                     icon={Building2}
                 />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid gap-4 md:grid-cols-4">
+                <Link to="/operations/analytics" className="group">
+                    <Card className="hover:shadow-md transition-all hover:border-primary/50">
+                        <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">{t('operations:nav.analytics', 'Analytics')}</p>
+                                        <p className="text-xs text-muted-foreground">Trends & reports</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link to="/operations/flash-report" className="group">
+                    <Card className="hover:shadow-md transition-all hover:border-primary/50">
+                        <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">{t('operations:nav.flash_report', 'Flash Report')}</p>
+                                        <p className="text-xs text-muted-foreground">Daily summary</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link to="/operations/import" className="group">
+                    <Card className="hover:shadow-md transition-all hover:border-primary/50">
+                        <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                                        <Upload className="h-5 w-5 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">{t('operations:nav.import', 'Data Import')}</p>
+                                        <p className="text-xs text-muted-foreground">Upload CSV</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link to="/operations/pms-config" className="group">
+                    <Card className="hover:shadow-md transition-all hover:border-primary/50">
+                        <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                                        <Settings className="h-5 w-5 text-orange-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">{t('operations:nav.pms_config', 'PMS Config')}</p>
+                                        <p className="text-xs text-muted-foreground">System settings</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
 
             {/* Tabs for different views */}

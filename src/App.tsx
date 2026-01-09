@@ -117,6 +117,9 @@ import ChangePassword from '@/pages/auth/ChangePassword'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 import OperationsDashboard from '@/pages/operations/OperationsDashboard'
 import DataImport from '@/pages/operations/DataImport'
+import OperationsAnalytics from '@/pages/operations/OperationsAnalytics'
+import DailyFlashReport from '@/pages/operations/DailyFlashReport'
+import PMSConfiguration from '@/pages/operations/PMSConfiguration'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -560,6 +563,42 @@ function AppRoutes() {
             <AppLayout>
               <MotionWrapper>
                 <DataImport />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/analytics"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <MotionWrapper>
+                <OperationsAnalytics />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/flash-report"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+            <AppLayout>
+              <MotionWrapper>
+                <DailyFlashReport />
+              </MotionWrapper>
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/pms-config"
+        element={
+          <ProtectedRoute allowedRoles={['regional_admin']}>
+            <AppLayout>
+              <MotionWrapper>
+                <PMSConfiguration />
               </MotionWrapper>
             </AppLayout>
           </ProtectedRoute>
