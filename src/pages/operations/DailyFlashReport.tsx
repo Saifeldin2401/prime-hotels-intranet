@@ -13,8 +13,27 @@ import {
     TrendingDown,
     Users,
     Calendar,
-    Clock
+    Clock,
+    PieChart as PieChartIcon,
+    BarChart as BarChartIcon,
+    Layers,
+    Target,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react'
+import {
+    PieChart,
+    Pie,
+    Cell,
+    ResponsiveContainer,
+    Tooltip as RechartTooltip,
+    Legend,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+} from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,8 +46,12 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useDailyOccupancy, useDailyRevenue, useMarketSegments, usePMSSystems } from '@/hooks/useOperations'
 import { cn } from '@/lib/utils'
+import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
+
+import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
 
 interface FlashReportData {
     property: {
@@ -91,27 +114,143 @@ function StatBox({ label, value, subValue, trend, icon: Icon, className }: {
     )
 }
 
+const PropertyRow = ({ report, consolidated, formatCurrency }: {
+    report: FlashReportData,
+    consolidated: any,
+    formatCurrency: (v: number) => string
+}) => {
+    const [isExpanded, setIsExpanded] = useState(false)
+    const contribution = consolidated ? (report.revenue.totalRevenue / consolidated.totalRevenue) * 100 : 0
+
+    return (
+        <>
+            <tr className="hover:bg-slate-50/30 transition-colors group cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+                <td className="p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                            <Building2 className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900">{report.property.name}</div>
+                            <div className="text-[10px] text-muted-foreground uppercase tracking-tighter">
+                                {contribution.toFixed(1)}% portfolio contribution
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td className="text-center p-4">
+                    <div className="font-medium">{report.occupancy.roomsSold}</div>
+                    <div className="text-[10px] text-muted-foreground">of {report.occupancy.roomsAvailable} rms</div>
+                </td>
+                <td className="text-center p-4">
+                    <div className="flex flex-col items-center gap-1">
+                        <div className="font-bold">{report.occupancy.occupancyRate.toFixed(1)}%</div>
+                        <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                                className={cn(
+                                    "h-full rounded-full transition-all duration-500",
+                                    report.occupancy.occupancyRate >= 80 ? "bg-emerald-500" :
+                                        report.occupancy.occupancyRate >= 60 ? "bg-blue-500" :
+                                            "bg-amber-500"
+                                )}
+                                style={{ width: `${Math.min(100, report.occupancy.occupancyRate)}%` }}
+                            />
+                        </div>
+                    </div>
+                </td>
+                <td className="text-right p-4 font-medium text-slate-600">{formatCurrency(report.revenue.roomRevenue)}</td>
+                <td className="text-right p-4 text-slate-600">{formatCurrency(report.revenue.fbRevenue)}</td>
+                <td className="text-right p-4 text-slate-600">{formatCurrency(report.revenue.otherRevenue)}</td>
+                <td className="text-right p-4 font-medium text-emerald-600">{formatCurrency(report.collections.total)}</td>
+                <td className="text-right p-4 font-bold text-slate-900">{formatCurrency(report.revenue.totalRevenue)}</td>
+                <td className="p-4 text-center">
+                    <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded && "rotate-180")} />
+                </td>
+            </tr>
+            {isExpanded && (
+                <tr className="bg-slate-50/50">
+                    <td colSpan={9} className="p-6">
+                        <div className="grid grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="space-y-4">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Yield Analysis</div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white p-3 rounded-xl border border-slate-100">
+                                        <div className="text-[10px] text-muted-foreground mb-1">ADR</div>
+                                        <div className="text-sm font-bold text-slate-900">{formatCurrency(report.revenue.adr)}</div>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-slate-100">
+                                        <div className="text-[10px] text-muted-foreground mb-1">RevPAR</div>
+                                        <div className="text-sm font-bold text-slate-900">{formatCurrency(report.revenue.revpar)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-4 border-l pl-6">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Guest Mix</div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white p-3 rounded-xl border border-slate-100">
+                                        <div className="text-[10px] text-muted-foreground mb-1">Adults</div>
+                                        <div className="text-sm font-bold text-slate-900">{report.occupancy.adults}</div>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-slate-100">
+                                        <div className="text-[10px] text-muted-foreground mb-1">Children</div>
+                                        <div className="text-sm font-bold text-slate-900">{report.occupancy.children}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-4 border-l pl-6">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Payment Health</div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                                        <div className="text-[9px] text-muted-foreground">Cash</div>
+                                        <div className="text-[10px] font-bold">{formatCurrency(report.collections.cash)}</div>
+                                    </div>
+                                    <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                                        <div className="text-[9px] text-muted-foreground">CC</div>
+                                        <div className="text-[10px] font-bold">{formatCurrency(report.collections.credit)}</div>
+                                    </div>
+                                    <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                                        <div className="text-[9px] text-muted-foreground">AR</div>
+                                        <div className="text-[10px] font-bold">{formatCurrency(report.collections.ar)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-4 border-l pl-6">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Ancillary</div>
+                                <div className="bg-white p-3 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] text-muted-foreground mb-1">Spa Revenue</div>
+                                    <div className="text-sm font-bold text-blue-600">{formatCurrency(report.revenue.spaRevenue)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            )}
+        </>
+    )
+}
+
 export default function DailyFlashReport() {
     const { t } = useTranslation(['operations', 'common'])
     const { currentProperty, availableProperties } = useProperty()
+    const { user, profile } = useAuth()
     const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all')
 
     // Fetch data
     const { data: occupancyData } = useDailyOccupancy({
-        propertyId: selectedPropertyId !== 'all' ? selectedPropertyId : undefined,
+        propertyId: selectedPropertyId,
         startDate: selectedDate,
         endDate: selectedDate
     })
 
     const { data: revenueData } = useDailyRevenue({
-        propertyId: selectedPropertyId !== 'all' ? selectedPropertyId : undefined,
+        propertyId: selectedPropertyId,
         startDate: selectedDate,
         endDate: selectedDate
     })
 
     const { data: segmentData } = useMarketSegments({
-        propertyId: selectedPropertyId !== 'all' ? selectedPropertyId : undefined,
+        propertyId: selectedPropertyId,
         businessDate: selectedDate
     })
 
@@ -218,7 +357,105 @@ export default function DailyFlashReport() {
         }).format(value)
     }
 
-    const handlePrint = () => window.print()
+    const handlePrint = async () => {
+        if (!consolidated) return
+
+        const logo = await loadLogoAsDataUrl()
+        const selectedProp = availableProperties.find(p => p.id === selectedPropertyId)
+        const hotelName = selectedPropertyId === 'all'
+            ? 'All Properties (Consolidated)'
+            : selectedProp?.name || 'Unknown'
+
+        await downloadReport(
+            {
+                reportType: 'flash_report',
+                title: 'Daily Flash Report',
+                hotelName,
+                hotelCode: selectedPropertyId === 'all' ? 'ALL' : undefined,
+                period: { start: selectedDate, end: selectedDate },
+                generatedBy: {
+                    name: profile?.full_name || user?.email || 'System',
+                    role: profile?.job_title || undefined
+                },
+                orientation: 'landscape',
+                confidentialFooter: true,
+            },
+            {
+                kpis: [
+                    {
+                        title: 'Occupancy Summary',
+                        items: [
+                            { label: 'Rooms Available', value: consolidated.roomsAvailable },
+                            { label: 'Rooms Sold', value: consolidated.roomsSold },
+                            { label: 'Occupancy Rate', value: `${consolidated.occupancyRate.toFixed(1)}`, unit: '%' },
+                            { label: 'Adults', value: consolidated.adults },
+                            { label: 'Children', value: consolidated.children },
+                        ],
+                    },
+                    {
+                        title: 'Revenue Summary',
+                        items: [
+                            { label: 'Room Revenue', value: formatCurrency(consolidated.roomRevenue) },
+                            { label: 'F&B Revenue', value: formatCurrency(consolidated.fbRevenue) },
+                            { label: 'Total Revenue', value: formatCurrency(consolidated.totalRevenue) },
+                            { label: 'ADR', value: formatCurrency(consolidated.adr) },
+                            { label: 'RevPAR', value: formatCurrency(consolidated.revpar) },
+                        ],
+                    },
+                ],
+                tables: [
+                    ...(reportData.length > 1 ? [{
+                        title: 'Property Performance Overview',
+                        headers: ['Property', 'Rooms', 'Occ %', 'Room Rev', 'F&B Rev', 'Other Rev', 'Total Rev', 'ADR', 'Collections'],
+                        rows: reportData.map(r => [
+                            r.property.name,
+                            r.occupancy.roomsSold,
+                            `${r.occupancy.occupancyRate.toFixed(1)}%`,
+                            formatCurrency(r.revenue.roomRevenue),
+                            formatCurrency(r.revenue.fbRevenue),
+                            formatCurrency(r.revenue.otherRevenue),
+                            formatCurrency(r.revenue.totalRevenue),
+                            formatCurrency(r.revenue.adr),
+                            formatCurrency(r.collections.total),
+                        ]),
+                        totals: [
+                            'TOTAL',
+                            consolidated.roomsSold,
+                            `${consolidated.occupancyRate.toFixed(1)}%`,
+                            formatCurrency(consolidated.roomRevenue),
+                            formatCurrency(consolidated.fbRevenue),
+                            formatCurrency(consolidated.otherRevenue),
+                            formatCurrency(consolidated.totalRevenue),
+                            formatCurrency(consolidated.adr),
+                            formatCurrency(consolidated.totalCollections),
+                        ],
+                    }] : []),
+                    {
+                        title: 'Revenue Breakdown & Attribution',
+                        headers: ['Category', 'Total Amount', 'Property Breakdown'],
+                        rows: [
+                            ['Room Revenue', formatCurrency(consolidated.roomRevenue), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.roomRevenue)}`).join(' | ') : ''],
+                            ['F&B Revenue', formatCurrency(consolidated.fbRevenue), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.fbRevenue)}`).join(' | ') : ''],
+                            ['Spa Revenue', formatCurrency(consolidated.spaRevenue), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.spaRevenue)}`).join(' | ') : ''],
+                            ['Other Revenue', formatCurrency(consolidated.otherRevenue), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.otherRevenue)}`).join(' | ') : ''],
+                            ['TOTAL REVENUE', formatCurrency(consolidated.totalRevenue), ''],
+                        ]
+                    },
+                    {
+                        title: 'Collections & Payments Attribution',
+                        headers: ['Method', 'Total Amount', 'Property Breakdown'],
+                        rows: [
+                            ['Cash', formatCurrency(consolidated.cashCollections), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.cash)}`).join('\n') : ''],
+                            ['Credit Card', formatCurrency(consolidated.creditCollections), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.credit)}`).join('\n') : ''],
+                            ['Accounts Receivable', formatCurrency(consolidated.arCollections), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.ar)}`).join('\n') : ''],
+                            ['TOTAL COLLECTIONS', formatCurrency(consolidated.totalCollections), ''],
+                        ]
+                    },
+                ],
+            },
+            logo || undefined
+        )
+    }
 
     const handleExport = () => {
         if (!consolidated) return
@@ -280,14 +517,17 @@ export default function DailyFlashReport() {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
-                        <SelectTrigger className="w-48">
-                            <SelectValue placeholder="All Properties" />
+                        <SelectTrigger className="w-64 bg-background">
+                            <SelectValue placeholder="Select Property" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Properties</SelectItem>
-                            {availableProperties.map(prop => (
-                                <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
-                            ))}
+                            <SelectItem value="all">Consolidated (All Properties)</SelectItem>
+                            {availableProperties
+                                .filter(p => p.id !== 'all')
+                                .map(prop => (
+                                    <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
+                                ))
+                            }
                         </SelectContent>
                     </Select>
                     <input
@@ -314,6 +554,19 @@ export default function DailyFlashReport() {
                 <p className="text-sm text-muted-foreground">Generated: {format(new Date(), 'PPpp')}</p>
             </div>
 
+            {consolidated && (
+                <div className="print:hidden">
+                    <AIInsightsCard
+                        data={{
+                            occupancyRate: consolidated.occupancyRate,
+                            adr: consolidated.adr,
+                            revpar: consolidated.revpar,
+                            totalRevenue: consolidated.totalRevenue
+                        }}
+                    />
+                </div>
+            )}
+
             {consolidated ? (
                 <>
                     {/* Consolidated Summary */}
@@ -332,19 +585,16 @@ export default function DailyFlashReport() {
                                     value={`${consolidated.occupancyRate.toFixed(1)}%`}
                                     subValue={`${consolidated.roomsSold} / ${consolidated.roomsAvailable} rooms`}
                                     icon={BedDouble}
-                                    trend={{ value: 3.2, positive: true }}
                                 />
                                 <StatBox
                                     label="ADR"
                                     value={formatCurrency(consolidated.adr)}
                                     icon={DollarSign}
-                                    trend={{ value: 2.1, positive: true }}
                                 />
                                 <StatBox
                                     label="RevPAR"
                                     value={formatCurrency(consolidated.revpar)}
                                     icon={TrendingUp}
-                                    trend={{ value: 5.4, positive: true }}
                                 />
                                 <StatBox
                                     label="Total Revenue"
@@ -366,63 +616,188 @@ export default function DailyFlashReport() {
                         </CardContent>
                     </Card>
 
-                    {/* Revenue & Collections Grid */}
+                    {/* Charts Row */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {/* Revenue Mix Chart */}
+                        <Card className="lg:col-span-1">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                    <PieChartIcon className="h-4 w-4 text-primary" />
+                                    Revenue Composition
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[240px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={[
+                                                    { name: 'Room', value: consolidated.roomRevenue, color: '#2563eb' },
+                                                    { name: 'F&B', value: consolidated.fbRevenue, color: '#10b981' },
+                                                    { name: 'Spa', value: consolidated.spaRevenue, color: '#8b5cf6' },
+                                                    { name: 'Other', value: consolidated.otherRevenue, color: '#f59e0b' },
+                                                ].filter(d => d.value > 0)}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={80}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                            >
+                                                {[
+                                                    { color: '#2563eb' },
+                                                    { color: '#10b981' },
+                                                    { color: '#8b5cf6' },
+                                                    { color: '#f59e0b' },
+                                                ].map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <RechartTooltip
+                                                formatter={(value: number) => formatCurrency(value)}
+                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                            />
+                                            <Legend verticalAlign="bottom" height={36} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Market Segments Chart */}
+                        <Card className="lg:col-span-2">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                    <Target className="h-4 w-4 text-primary" />
+                                    Market Segment Distribution
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[240px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            data={segmentData?.slice(0, 8) || []}
+                                            layout="vertical"
+                                            margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                                            <XAxis type="number" hide />
+                                            <YAxis
+                                                type="category"
+                                                dataKey="segment_name"
+                                                fontSize={10}
+                                                width={100}
+                                                tickLine={false}
+                                                axisLine={false}
+                                            />
+                                            <RechartTooltip
+                                                cursor={{ fill: '#f8fafc' }}
+                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                            />
+                                            <Bar
+                                                dataKey="room_nights"
+                                                name="Room Nights"
+                                                fill="#3b82f6"
+                                                radius={[0, 4, 4, 0]}
+                                                barSize={20}
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Financial Summary Grid */}
                     <div className="grid gap-4 md:grid-cols-2">
                         {/* Revenue Breakdown */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Revenue Breakdown</CardTitle>
+                        <Card className="border-none shadow-sm bg-slate-50/50">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="text-lg font-bold">Revenue Breakdown</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
-                                    <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                                        <span className="font-medium">Room Revenue</span>
-                                        <span className="font-bold text-blue-600">{formatCurrency(consolidated.roomRevenue)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                                        <span className="font-medium">F&B Revenue</span>
-                                        <span className="font-bold text-green-600">{formatCurrency(consolidated.fbRevenue)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-                                        <span className="font-medium">Spa Revenue</span>
-                                        <span className="font-bold text-purple-600">{formatCurrency(consolidated.spaRevenue)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                                        <span className="font-medium">Other Revenue</span>
-                                        <span className="font-bold text-orange-600">{formatCurrency(consolidated.otherRevenue)}</span>
-                                    </div>
-                                    <Separator />
-                                    <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                                        <span className="font-bold">Total Revenue</span>
-                                        <span className="font-bold text-lg">{formatCurrency(consolidated.totalRevenue)}</span>
+                                    {[
+                                        { label: 'Room Revenue', key: 'roomRevenue', color: 'blue' },
+                                        { label: 'F&B Revenue', key: 'fbRevenue', color: 'emerald' },
+                                        { label: 'Spa Revenue', key: 'spaRevenue', color: 'violet' },
+                                        { label: 'Other Revenue', key: 'otherRevenue', color: 'amber' },
+                                    ].map((item) => (
+                                        <div key={item.label} className="space-y-1">
+                                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-100">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn("w-2 h-2 rounded-full", `bg-${item.color}-500`)} />
+                                                    <span className="text-sm font-medium text-slate-600">{item.label}</span>
+                                                </div>
+                                                <span className="font-bold text-slate-900">{formatCurrency((consolidated as any)[item.key])}</span>
+                                            </div>
+
+                                            {/* Property Attribution (Consolidated Mode Only) */}
+                                            {selectedPropertyId === 'all' && reportData.length > 1 && (
+                                                <div className="pl-8 space-y-1">
+                                                    {reportData.map((report) => {
+                                                        const val = (report.revenue as any)[item.key]
+                                                        if (val === 0) return null
+                                                        return (
+                                                            <div key={report.property.id} className="flex justify-between items-center px-3 py-1 text-[11px] text-muted-foreground border-l-2 border-slate-100 ml-1">
+                                                                <span>{report.property.name}</span>
+                                                                <span className="font-medium">{formatCurrency(val)}</span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-between items-center p-4 bg-slate-900 text-white rounded-lg mt-4">
+                                        <span className="font-bold">Total Daily Revenue</span>
+                                        <span className="font-bold text-xl">{formatCurrency(consolidated.totalRevenue)}</span>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
 
                         {/* Collections */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Collections</CardTitle>
+                        <Card className="border-none shadow-sm bg-slate-50/50">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="text-lg font-bold">Collections & Payments</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
-                                    <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                                        <span className="font-medium">Cash</span>
-                                        <span className="font-bold text-green-600">{formatCurrency(consolidated.cashCollections)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                                        <span className="font-medium">Credit Card</span>
-                                        <span className="font-bold text-blue-600">{formatCurrency(consolidated.creditCollections)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                                        <span className="font-medium">Accounts Receivable</span>
-                                        <span className="font-bold text-yellow-600">{formatCurrency(consolidated.arCollections)}</span>
-                                    </div>
-                                    <Separator />
-                                    <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                                    {[
+                                        { label: 'Cash', key: 'cashCollections', color: 'emerald' },
+                                        { label: 'Credit Card', key: 'creditCollections', color: 'blue' },
+                                        { label: 'Accounts Receivable', key: 'arCollections', color: 'yellow' },
+                                    ].map((item) => (
+                                        <div key={item.label} className="space-y-1">
+                                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-100">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn("w-2 h-2 rounded-full", `bg-${item.color}-500`)} />
+                                                    <span className="text-sm font-medium text-slate-600">{item.label}</span>
+                                                </div>
+                                                <span className="font-bold text-slate-900">{formatCurrency((consolidated as any)[item.key])}</span>
+                                            </div>
+
+                                            {/* Property Attribution (Consolidated Mode Only) */}
+                                            {selectedPropertyId === 'all' && reportData.length > 1 && (
+                                                <div className="pl-8 space-y-1">
+                                                    {reportData.map((report) => {
+                                                        const val = (report.collections as any)[item.key]
+                                                        if (val === 0) return null
+                                                        return (
+                                                            <div key={report.property.id} className="flex justify-between items-center px-3 py-1 text-[11px] text-muted-foreground border-l-2 border-slate-100 ml-1">
+                                                                <span>{report.property.name}</span>
+                                                                <span className="font-medium">{formatCurrency(val)}</span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-between items-center p-4 bg-emerald-600 text-white rounded-lg mt-4 shadow-lg shadow-emerald-200 dark:shadow-none">
                                         <span className="font-bold">Total Collections</span>
-                                        <span className="font-bold text-lg">{formatCurrency(consolidated.totalCollections)}</span>
+                                        <span className="font-bold text-xl">{formatCurrency(consolidated.totalCollections)}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -430,53 +805,42 @@ export default function DailyFlashReport() {
                     </div>
 
                     {/* Per-Property Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Property Details</CardTitle>
+                    <Card className="border-none shadow-sm overflow-hidden">
+                        <CardHeader className="bg-slate-50/50 border-b">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle>Individual Property Performance</CardTitle>
+                                    <CardDescription>Detailed metrics across the portfolio for {selectedDate}</CardDescription>
+                                </div>
+                                <Badge variant="outline" className="bg-white">
+                                    {reportData.length} active sites
+                                </Badge>
+                            </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-0">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="border-b bg-muted/50">
-                                            <th className="text-left p-3 font-medium">Property</th>
-                                            <th className="text-center p-3 font-medium">PMS</th>
-                                            <th className="text-center p-3 font-medium">Rooms</th>
-                                            <th className="text-center p-3 font-medium">Occ %</th>
-                                            <th className="text-right p-3 font-medium">ADR</th>
-                                            <th className="text-right p-3 font-medium">RevPAR</th>
-                                            <th className="text-right p-3 font-medium">Total Revenue</th>
+                                        <tr className="bg-slate-50/50">
+                                            <th className="text-left p-4 font-semibold text-slate-600 border-b">Property</th>
+                                            <th className="text-center p-4 font-semibold text-slate-600 border-b">Inventory</th>
+                                            <th className="text-center p-4 font-semibold text-slate-600 border-b">Occupancy %</th>
+                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">Room Rev</th>
+                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">F&B Rev</th>
+                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">Other</th>
+                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">Collections</th>
+                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">Total Rev</th>
+                                            <th className="p-4 border-b w-10"></th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-slate-100">
                                         {reportData.map((report) => (
-                                            <tr key={report.property.id} className="border-b hover:bg-muted/30">
-                                                <td className="p-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="font-medium">{report.property.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="text-center p-3">
-                                                    <Badge variant="outline" className="capitalize">
-                                                        {report.property.pmsType || 'other'}
-                                                    </Badge>
-                                                </td>
-                                                <td className="text-center p-3">
-                                                    {report.occupancy.roomsSold} / {report.occupancy.roomsAvailable}
-                                                </td>
-                                                <td className="text-center p-3">
-                                                    <Badge variant={
-                                                        report.occupancy.occupancyRate >= 80 ? 'default' :
-                                                            report.occupancy.occupancyRate >= 60 ? 'secondary' : 'outline'
-                                                    }>
-                                                        {report.occupancy.occupancyRate.toFixed(1)}%
-                                                    </Badge>
-                                                </td>
-                                                <td className="text-right p-3">{formatCurrency(report.revenue.adr)}</td>
-                                                <td className="text-right p-3">{formatCurrency(report.revenue.revpar)}</td>
-                                                <td className="text-right p-3 font-medium">{formatCurrency(report.revenue.totalRevenue)}</td>
-                                            </tr>
+                                            <PropertyRow
+                                                key={report.property.id}
+                                                report={report}
+                                                consolidated={consolidated}
+                                                formatCurrency={formatCurrency}
+                                            />
                                         ))}
                                     </tbody>
                                 </table>
@@ -484,33 +848,23 @@ export default function DailyFlashReport() {
                         </CardContent>
                     </Card>
 
-                    {/* Market Segments */}
-                    {segmentData && segmentData.length > 0 && (
-                        <Card className="print:break-before-page">
-                            <CardHeader>
-                                <CardTitle>Market Segments</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-6">
-                                    {segmentData.slice(0, 6).map((seg, index) => (
-                                        <div key={index} className="p-3 rounded-lg border text-center">
-                                            <p className="text-xs text-muted-foreground">{seg.segment_name}</p>
-                                            <p className="font-bold text-lg">{seg.room_nights}</p>
-                                            <p className="text-xs text-muted-foreground">room nights</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
                 </>
             ) : (
-                <Card>
-                    <CardContent className="py-12 text-center">
-                        <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">
-                            No data available for {format(new Date(selectedDate), 'MMMM d, yyyy')}
+                <Card className="border-none shadow-sm bg-slate-50/50">
+                    <CardContent className="py-20 text-center">
+                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                            <Calendar className="h-10 w-10 text-slate-300" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">No Report Data Found</h3>
+                        <p className="text-slate-500 max-w-xs mx-auto">
+                            We couldn't find any flash report data for **{format(new Date(selectedDate), 'MMMM d, yyyy')}**.
+                            Please ensure PMS data has been imported for this date.
                         </p>
+                        <Button variant="outline" className="mt-6" asChild>
+                            <Link to="/operations/import">
+                                Import PMS Data
+                            </Link>
+                        </Button>
                     </CardContent>
                 </Card>
             )}

@@ -312,5 +312,53 @@ export const aiService = {
     // If ALL models fail
     console.warn("🔥 All AI models failed to improve content. Engaging Local Fallback.")
     return heuristicImprovement(text, instruction)
+  },
+
+  async suggestImportMapping(rawRows: string[][], targetHeaders: string[]): Promise<{ mapping: Record<string, string>, headerRowIndex: number }> {
+    // We take a snapshot of the first 60 rows to find the header and data structure
+    const snapshot = rawRows.slice(0, 60).map((row, idx) => `[Row ${idx}] ${row.join(' | ')}`).join('\n')
+
+    const prompt = `You are a Senior Hotel Data Architect. Analyze this PMS report snapshot and identify the data structure.
+    
+    TARGET HEADERS WE NEED: ${targetHeaders.join(', ')}
+
+    REPORT SNAPSHOT (Rows with | separator):
+    ${snapshot}
+
+    TASK:
+    1. Identify the "Header Row Index": This is the 0-indexed row number where the table headers actually start. 
+       - Ignore report titles, hotel names, or filter descriptions at the top.
+       - The header row is the one that most closely contains words like "Date", "Rooms", "Revenue", "Occupancy", "ADR", etc.
+    2. Map the columns in that header row to our Target Headers.
+       - We need values for: ${targetHeaders.join(', ')}
+       - If a report column is called "Business Date" or "Date", map it to "business_date".
+       - If a report column is called "Rooms Available" or "Inventory", map it to "rooms_available".
+       - Use your best judgment for abbreviations (e.g., "Occ %" -> "occupancy").
+    
+    Return VALID JSON ONLY:
+    {
+      "headerRowIndex": 12, // Example
+      "mapping": {
+        "Column Name in Report": "Target Header Name"
+      }
+    }
+    
+    Return ONLY the JSON. No Markdown. No explainers.`
+
+    for (const model of FALLBACK_MODELS) {
+      try {
+        const generatedText = await callHuggingFace(model, prompt)
+        const cleanJson = generatedText.replace(/```json\n?|\n?```/g, '').trim()
+        const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
+
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0])
+        }
+      } catch (e) {
+        console.warn(`Mapping suggestion model ${model} failed:`, e)
+      }
+    }
+
+    return { mapping: {}, headerRowIndex: 0 }
   }
 }

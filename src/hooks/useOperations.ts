@@ -13,6 +13,26 @@ import type {
 import { crudToasts } from '@/lib/toastHelpers'
 
 // ============================================================================
+// PROPERTIES
+// ============================================================================
+
+export function useProperties() {
+    return useQuery({
+        queryKey: ['properties'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('properties')
+                .select('*')
+                .eq('is_active', true)
+                .order('name', { ascending: true })
+
+            if (error) throw error
+            return data
+        }
+    })
+}
+
+// ============================================================================
 // PMS SYSTEMS
 // ============================================================================
 
@@ -31,8 +51,9 @@ export function usePMSSystems() {
                 .eq('is_active', true)
                 .order('created_at', { ascending: false })
 
-            if (currentProperty?.id && currentProperty.id !== 'all') {
-                query = query.eq('property_id', currentProperty.id)
+            const propertyId = currentProperty?.id
+            if (propertyId && propertyId !== 'all') {
+                query = query.eq('property_id', propertyId)
             }
 
             const { data, error } = await query
@@ -64,7 +85,7 @@ export function useDailyOccupancy(filters?: {
         `)
                 .order('business_date', { ascending: false })
 
-            const propertyId = filters?.propertyId || currentProperty?.id
+            const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
             if (propertyId && propertyId !== 'all') {
                 query = query.eq('property_id', propertyId)
             }
@@ -128,7 +149,7 @@ export function useDailyRevenue(filters?: {
         `)
                 .order('business_date', { ascending: false })
 
-            const propertyId = filters?.propertyId || currentProperty?.id
+            const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
             if (propertyId && propertyId !== 'all') {
                 query = query.eq('property_id', propertyId)
             }
@@ -188,7 +209,7 @@ export function useMarketSegments(filters?: {
                 .select('*')
                 .order('revenue', { ascending: false })
 
-            const propertyId = filters?.propertyId || currentProperty?.id
+            const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
             if (propertyId && propertyId !== 'all') {
                 query = query.eq('property_id', propertyId)
             }
@@ -258,7 +279,7 @@ export function useDataImportLogs(propertyId?: string) {
                 .order('started_at', { ascending: false })
                 .limit(50)
 
-            const propId = propertyId || currentProperty?.id
+            const propId = propertyId !== undefined ? propertyId : currentProperty?.id
             if (propId && propId !== 'all') {
                 query = query.eq('property_id', propId)
             }
@@ -290,6 +311,33 @@ export function useCreateImportLog() {
     })
 }
 
+export function useDeleteImportLog() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const tables = ['daily_occupancy', 'daily_revenue', 'market_segments', 'room_inventory', 'rate_summary']
+            for (const table of tables) {
+                await supabase.from(table).delete().eq('source_import_id', id)
+            }
+            const { error: logError } = await supabase.from('data_import_logs').delete().eq('id', id)
+            if (logError) throw logError
+            return id
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['data-import-logs'] })
+            queryClient.invalidateQueries({ queryKey: ['daily-occupancy'] })
+            queryClient.invalidateQueries({ queryKey: ['daily-revenue'] })
+            queryClient.invalidateQueries({ queryKey: ['operations-kpis'] })
+            crudToasts.delete.success('Import history and associated data')
+        },
+        onError: (err) => {
+            console.error('Delete mutation error:', err)
+            crudToasts.delete.error('import history')
+        }
+    })
+}
+
 // ============================================================================
 // OPERATIONS KPIs
 // ============================================================================
@@ -303,7 +351,7 @@ export function useOperationsKPIs(filters?: {
     return useQuery({
         queryKey: ['operations-kpis', filters, currentProperty?.id],
         queryFn: async () => {
-            const propertyId = filters?.propertyId || currentProperty?.id
+            const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
             const businessDate = filters?.businessDate || new Date().toISOString().split('T')[0]
 
             // Fetch occupancy

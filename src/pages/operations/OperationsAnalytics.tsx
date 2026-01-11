@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { format, subDays, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { Link } from 'react-router-dom'
 import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, LineChart, Line, PieChart as RechartsPie,
+    Pie, Cell, Legend, AreaChart, Area
+} from 'recharts'
+import {
     TrendingUp,
     TrendingDown,
     Download,
@@ -51,118 +56,233 @@ interface PropertyComparisonData {
     totalRevenue: number
 }
 
-// Simple bar chart component
-function SimpleBarChart({ data, dataKey, color = 'bg-primary' }: {
+// Interactive bar chart using Recharts
+function SimpleBarChart({ data, dataKey, color = 'hsl(var(--primary))' }: {
     data: ChartDataPoint[]
     dataKey: keyof ChartDataPoint
     color?: string
 }) {
-    const maxValue = Math.max(...data.map(d => Number(d[dataKey]) || 0))
+    // Convert CSS class color to actual color value
+    const getColor = (c: string) => {
+        if (c.startsWith('bg-')) {
+            if (c.includes('primary')) return 'hsl(var(--primary))'
+            if (c.includes('blue')) return '#3b82f6'
+            if (c.includes('green')) return '#22c55e'
+            if (c.includes('orange')) return '#f97316'
+            if (c.includes('purple')) return '#a855f7'
+        }
+        return c
+    }
+
+    const chartColor = getColor(color)
 
     return (
-        <div className="flex items-end gap-1 h-40">
-            {data.map((item, index) => {
-                const value = Number(item[dataKey]) || 0
-                const height = maxValue > 0 ? (value / maxValue) * 100 : 0
-
-                return (
-                    <div
-                        key={index}
-                        className="flex-1 flex flex-col items-center gap-1"
-                    >
-                        <div className="w-full flex flex-col items-center">
-                            <span className="text-[10px] text-muted-foreground mb-1 truncate w-full text-center">
-                                {value.toFixed(0)}
-                            </span>
-                            <div
-                                className={cn("w-full rounded-t transition-all duration-300", color)}
-                                style={{ height: `${height}%`, minHeight: value > 0 ? '4px' : '0' }}
-                            />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">{item.label}</span>
-                    </div>
-                )
-            })}
-        </div>
+        <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={50}
+                />
+                <YAxis tick={{ fontSize: 10 }} width={40} />
+                <Tooltip
+                    contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '12px'
+                    }}
+                    labelStyle={{ fontWeight: 'bold' }}
+                />
+                <Bar
+                    dataKey={dataKey as string}
+                    fill={chartColor}
+                    radius={[4, 4, 0, 0]}
+                    animationDuration={500}
+                />
+            </BarChart>
+        </ResponsiveContainer>
     )
 }
 
-// Line chart as area visualization
+// Interactive line/area chart using Recharts
 function SimpleLineChart({ data, lines }: {
     data: ChartDataPoint[]
     lines: { key: keyof ChartDataPoint; color: string; label: string }[]
 }) {
     if (!data.length) return null
 
-    return (
-        <div className="space-y-4">
-            {lines.map(line => {
-                const values = data.map(d => Number(d[line.key]) || 0)
-                const maxValue = Math.max(...values)
-                const minValue = Math.min(...values)
-                const avg = values.reduce((a, b) => a + b, 0) / values.length
+    // Convert CSS class colors to actual colors
+    const getColor = (c: string) => {
+        if (c.includes('blue')) return '#3b82f6'
+        if (c.includes('green')) return '#22c55e'
+        if (c.includes('orange')) return '#f97316'
+        if (c.includes('purple')) return '#a855f7'
+        if (c.includes('primary')) return '#6366f1'
+        if (c.includes('red')) return '#ef4444'
+        return '#6366f1'
+    }
 
-                return (
-                    <div key={line.key} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className={cn("w-3 h-3 rounded", line.color)} />
-                                <span className="text-sm font-medium">{line.label}</span>
-                            </div>
-                            <div className="flex gap-4 text-xs text-muted-foreground">
-                                <span>Min: {minValue.toFixed(2)}</span>
-                                <span>Avg: {avg.toFixed(2)}</span>
-                                <span>Max: {maxValue.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-end gap-0.5 h-16 bg-muted/50 rounded p-1">
-                            {values.map((value, index) => {
-                                const height = maxValue > 0 ? ((value - minValue) / (maxValue - minValue || 1)) * 100 : 0
-                                return (
-                                    <div
-                                        key={index}
-                                        className={cn("flex-1 rounded-t transition-all", line.color)}
-                                        style={{ height: `${Math.max(height, 5)}%` }}
-                                        title={`${data[index]?.label}: ${value.toFixed(2)}`}
-                                    />
-                                )
-                            })}
+    // Calculate stats for each line
+    const stats = lines.map(line => {
+        const values = data.map(d => Number(d[line.key]) || 0)
+        return {
+            ...line,
+            min: Math.min(...values).toFixed(2),
+            max: Math.max(...values).toFixed(2),
+            avg: (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2),
+            color: getColor(line.color)
+        }
+    })
+
+    return (
+        <div className="space-y-3">
+            {/* Stats Summary */}
+            <div className="grid grid-cols-3 gap-2 text-xs">
+                {stats.map(s => (
+                    <div key={s.key} className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                        <span className="text-muted-foreground truncate">{s.label}</span>
+                    </div>
+                ))}
+            </div>
+
+            {/* Chart */}
+            <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                        {stats.map(s => (
+                            <linearGradient key={s.key} id={`gradient-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={s.color} stopOpacity={0.3} />
+                                <stop offset="95%" stopColor={s.color} stopOpacity={0} />
+                            </linearGradient>
+                        ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="label" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} width={50} />
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: 'hsl(var(--background))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '11px'
+                        }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                    {stats.map(s => (
+                        <Area
+                            key={s.key}
+                            type="monotone"
+                            dataKey={s.key as string}
+                            name={s.label}
+                            stroke={s.color}
+                            strokeWidth={2}
+                            fill={`url(#gradient-${s.key})`}
+                            animationDuration={500}
+                        />
+                    ))}
+                </AreaChart>
+            </ResponsiveContainer>
+
+            {/* Stats Table */}
+            <div className="grid grid-cols-3 gap-3 text-xs">
+                {stats.map(s => (
+                    <div key={s.key} className="space-y-1 p-2 bg-muted/30 rounded">
+                        <div className="font-medium" style={{ color: s.color }}>{s.label}</div>
+                        <div className="flex justify-between text-muted-foreground">
+                            <span>Min: {s.min}</span>
+                            <span>Avg: {s.avg}</span>
+                            <span>Max: {s.max}</span>
                         </div>
                     </div>
-                )
-            })}
+                ))}
+            </div>
         </div>
     )
 }
 
-// Pie chart as segments
+// Interactive pie/donut chart using Recharts
 function SimplePieChart({ data }: {
     data: { name: string; value: number; color: string }[]
 }) {
     const total = data.reduce((sum, item) => sum + item.value, 0)
 
+    // Convert CSS class colors to actual colors
+    const getColor = (c: string) => {
+        if (c.includes('blue')) return '#3b82f6'
+        if (c.includes('green')) return '#22c55e'
+        if (c.includes('orange')) return '#f97316'
+        if (c.includes('purple')) return '#a855f7'
+        if (c.includes('primary')) return '#6366f1'
+        if (c.includes('yellow')) return '#eab308'
+        if (c.includes('red')) return '#ef4444'
+        if (c.includes('pink')) return '#ec4899'
+        return '#6366f1'
+    }
+
+    const chartData = data.map(item => ({
+        ...item,
+        actualColor: getColor(item.color),
+        percentage: total > 0 ? ((item.value / total) * 100).toFixed(1) : '0'
+    }))
+
     return (
-        <div className="space-y-3">
-            {data.map((item, index) => {
-                const percentage = total > 0 ? (item.value / total) * 100 : 0
-                return (
-                    <div key={index} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                            <span className="flex items-center gap-2">
-                                <div className={cn("w-3 h-3 rounded", item.color)} />
-                                {item.name}
-                            </span>
-                            <span className="font-medium">{percentage.toFixed(1)}%</span>
-                        </div>
-                        <div className="h-2 bg-muted rounded overflow-hidden">
+        <div className="flex gap-4">
+            {/* Donut Chart */}
+            <div className="flex-1">
+                <ResponsiveContainer width="100%" height={180}>
+                    <RechartsPie>
+                        <Pie
+                            data={chartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={70}
+                            paddingAngle={2}
+                            dataKey="value"
+                            animationDuration={500}
+                        >
+                            {chartData.map((entry, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={entry.actualColor}
+                                    stroke="hsl(var(--background))"
+                                    strokeWidth={2}
+                                />
+                            ))}
+                        </Pie>
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: 'hsl(var(--background))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '8px',
+                                fontSize: '12px'
+                            }}
+                            formatter={(value: number) => [`${value.toLocaleString()} SAR`, 'Amount']}
+                        />
+                    </RechartsPie>
+                </ResponsiveContainer>
+            </div>
+
+            {/* Legend */}
+            <div className="flex-1 space-y-2">
+                {chartData.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
                             <div
-                                className={cn("h-full transition-all", item.color)}
-                                style={{ width: `${percentage}%` }}
+                                className="w-3 h-3 rounded"
+                                style={{ backgroundColor: item.actualColor }}
                             />
-                        </div>
+                            <span className="truncate">{item.name}</span>
+                        </span>
+                        <span className="font-medium">{item.percentage}%</span>
                     </div>
-                )
-            })}
+                ))}
+            </div>
         </div>
     )
 }
@@ -230,6 +350,8 @@ function PropertyComparisonTable({ data }: { data: PropertyComparisonData[] }) {
     )
 }
 
+import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
+
 export default function OperationsAnalytics() {
     const { t } = useTranslation(['operations', 'common'])
     const { currentProperty, availableProperties } = useProperty()
@@ -266,19 +388,19 @@ export default function OperationsAnalytics() {
 
     // Fetch data
     const { data: occupancyData } = useDailyOccupancy({
-        propertyId: selectedPropertyId !== 'all' ? selectedPropertyId : undefined,
+        propertyId: selectedPropertyId,
         startDate,
         endDate
     })
 
     const { data: revenueData } = useDailyRevenue({
-        propertyId: selectedPropertyId !== 'all' ? selectedPropertyId : undefined,
+        propertyId: selectedPropertyId,
         startDate,
         endDate
     })
 
     const { data: segmentData } = useMarketSegments({
-        propertyId: selectedPropertyId !== 'all' ? selectedPropertyId : undefined
+        propertyId: selectedPropertyId
     })
 
     // Prepare chart data
@@ -298,7 +420,7 @@ export default function OperationsAnalytics() {
             const date = rev.business_date
             const existing = dataMap.get(date) || { date, label: format(new Date(date), 'MM/dd') }
             existing.adr = rev.adr
-            existing.revpar = rev.revpar
+            existing.revpar = rev.revpar || (existing.occupancy ? (existing.occupancy * rev.adr / 100) : 0)
             existing.roomRevenue = rev.room_revenue
             existing.fbRevenue = rev.fb_revenue
             existing.totalRevenue = rev.total_revenue
@@ -341,7 +463,8 @@ export default function OperationsAnalytics() {
                 totalRevenue: 0
             }
             existing.adr = rev.adr
-            existing.revpar = rev.revpar
+            // Derive RevPAR if DB field is 0
+            existing.revpar = rev.revpar || (existing.occupancy * rev.adr / 100)
             existing.totalRevenue += rev.total_revenue
             propertyMap.set(propId, existing)
         })
@@ -352,13 +475,7 @@ export default function OperationsAnalytics() {
     // Market segment chart data
     const segmentChartData = useMemo(() => {
         if (!segmentData?.length) {
-            return [
-                { name: 'Corporate', value: 35, color: 'bg-blue-500' },
-                { name: 'Leisure', value: 25, color: 'bg-green-500' },
-                { name: 'OTA', value: 20, color: 'bg-purple-500' },
-                { name: 'Groups', value: 15, color: 'bg-orange-500' },
-                { name: 'Other', value: 5, color: 'bg-gray-400' }
-            ]
+            return []
         }
 
         const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500']
@@ -401,7 +518,8 @@ export default function OperationsAnalytics() {
 
         const avgOccupancy = occupancyData.reduce((sum, o) => sum + o.occupancy_rate, 0) / occupancyData.length
         const avgADR = revenueData.reduce((sum, r) => sum + (r.adr || 0), 0) / revenueData.length
-        const avgRevPAR = revenueData.reduce((sum, r) => sum + (r.revpar || 0), 0) / revenueData.length
+        // RevPAR = Occupancy * ADR
+        const avgRevPAR = (avgOccupancy / 100) * avgADR
         const totalRevenue = revenueData.reduce((sum, r) => sum + (r.total_revenue || 0), 0)
 
         return { avgOccupancy, avgADR, avgRevPAR, totalRevenue }
@@ -466,7 +584,6 @@ export default function OperationsAnalytics() {
                             <SelectValue placeholder="All Properties" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Properties</SelectItem>
                             {availableProperties.map(prop => (
                                 <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
                             ))}
@@ -502,10 +619,6 @@ export default function OperationsAnalytics() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{summaryKPIs.avgOccupancy.toFixed(1)}%</div>
-                            <div className="flex items-center text-xs text-green-600 mt-1">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                +2.3% vs previous period
-                            </div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -517,10 +630,6 @@ export default function OperationsAnalytics() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(summaryKPIs.avgADR)}</div>
-                            <div className="flex items-center text-xs text-green-600 mt-1">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                +5.1% vs previous period
-                            </div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -532,10 +641,6 @@ export default function OperationsAnalytics() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(summaryKPIs.avgRevPAR)}</div>
-                            <div className="flex items-center text-xs text-green-600 mt-1">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                +7.8% vs previous period
-                            </div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -547,13 +652,20 @@ export default function OperationsAnalytics() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(summaryKPIs.totalRevenue)}</div>
-                            <div className="flex items-center text-xs text-green-600 mt-1">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                +12.4% vs previous period
-                            </div>
                         </CardContent>
                     </Card>
                 </div>
+            )}
+
+            {summaryKPIs && (
+                <AIInsightsCard
+                    data={{
+                        occupancyRate: summaryKPIs.avgOccupancy,
+                        adr: summaryKPIs.avgADR,
+                        revpar: summaryKPIs.avgRevPAR,
+                        totalRevenue: summaryKPIs.totalRevenue
+                    }}
+                />
             )}
 
             {/* Main Tabs */}
