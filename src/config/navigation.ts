@@ -322,6 +322,55 @@ export const ROUTES: RouteConfig[] = [
     // OPERATIONS GROUP
     // -------------------------------------------------------------------------
     {
+        path: '/operations',
+        title: 'operations_dashboard',
+        icon: BarChart3,
+        description: 'PMS integration and operational analytics',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        group: 'operations',
+        order: 0
+    },
+    {
+        path: '/operations/analytics',
+        title: 'operations_analytics',
+        icon: Activity,
+        description: 'Trend analysis and multi-property comparison',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        group: 'operations',
+        order: 0.1,
+        hideFromNav: true  // Accessible from dashboard
+    },
+    {
+        path: '/operations/flash-report',
+        title: 'flash_report',
+        icon: FileText,
+        description: 'Daily consolidated flash report',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        group: 'operations',
+        order: 0.2,
+        hideFromNav: true
+    },
+    {
+        path: '/operations/import',
+        title: 'data_import',
+        icon: FileText,
+        description: 'Import PMS data via CSV',
+        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        group: 'operations',
+        order: 0.3,
+        hideFromNav: true
+    },
+    {
+        path: '/operations/pms-config',
+        title: 'pms_configuration',
+        icon: Settings,
+        description: 'Configure PMS integrations',
+        allowedRoles: ['regional_admin'],
+        group: 'operations',
+        order: 0.4,
+        hideFromNav: true
+    },
+    {
         path: '/approvals',
         title: 'approvals',
         icon: CheckSquare,

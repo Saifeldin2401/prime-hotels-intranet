@@ -88,6 +88,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
+import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 
 interface TOCItem {
     id: string
@@ -99,7 +100,7 @@ export default function KnowledgeViewer() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { t } = useTranslation('knowledge')
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
     const contentRef = useRef<HTMLDivElement>(null)
 
     const [tocItems, setTocItems] = useState<TOCItem[]>([])
@@ -197,9 +198,51 @@ export default function KnowledgeViewer() {
         }
     }
 
-    // Print function - opens print dialog with clean article content only
-    const handlePrint = () => {
-        window.print()
+    // Print function - generates professional corporate PDF
+    const handlePrint = async () => {
+        if (!article) return
+
+        const logo = await loadLogoAsDataUrl()
+
+        // Strip HTML/Markdown for clean text output in PDF
+        const cleanContent = (article.content || '')
+            .replace(/<[^>]*>/g, '') // Remove HTML tags
+            .replace(/#+\s/g, '')     // Remove Markdown headers
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove Markdown links
+            .replace(/[*_~`]/g, '')    // Remove formatting characters
+
+        await downloadReport(
+            {
+                reportType: 'knowledge_article',
+                title: article.title,
+                hotelName: 'PRIME Hotels',
+                period: {
+                    start: article.created_at || new Date().toISOString(),
+                    end: article.updated_at || new Date().toISOString()
+                },
+                generatedBy: {
+                    name: profile?.full_name || user?.email || 'System',
+                    role: profile?.job_title || undefined
+                },
+                orientation: 'portrait',
+                confidentialFooter: true,
+            },
+            {
+                content: [
+                    {
+                        title: article.description || undefined,
+                        content: cleanContent
+                    }
+                ],
+                notes: [
+                    `Department: ${article.department?.name || 'General'}`,
+                    `Category: ${article.category?.name || 'Uncategorized'}`,
+                    `Status: ${article.status}`,
+                    `Version: ${article.version || '1.0'}`
+                ]
+            },
+            logo || undefined
+        )
     }
 
     // Parse TOC from content
