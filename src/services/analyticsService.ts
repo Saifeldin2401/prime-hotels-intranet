@@ -10,6 +10,7 @@ class AnalyticsService {
     private sessionId: string | null = null
     private userId: string | null = null
     private sessionPromise: Promise<void> | null = null
+    private isFlushing = false
 
     private constructor() {
         this.setupFlushTimer()
@@ -163,6 +164,8 @@ class AnalyticsService {
      */
     private async flush() {
         if (this.buffer.length === 0) return
+        if (this.isFlushing) return
+        this.isFlushing = true
 
         // Make sure session is ready
         if (this.sessionPromise) {
@@ -175,6 +178,7 @@ class AnalyticsService {
             if (!this.sessionId) {
                 // Still failing? Keep events in buffer and retry later.
                 console.warn('Cannot flush analytics: No valid session ID')
+                this.isFlushing = false
                 return
             }
         }
@@ -184,7 +188,6 @@ class AnalyticsService {
             session_id: this.sessionId,
             user_id: this.userId || e.user_id // Ensure latest user_id
         }))
-
         this.buffer = []
 
         try {
@@ -194,11 +197,16 @@ class AnalyticsService {
 
             if (error) {
                 console.error('Failed to flush analytics events', error)
-                // Put back in buffer? Or just log error. 
-                // For now, let's just log to avoid infinite loops if it's a data issue.
+                // Keep events in buffer for retry to avoid data loss.
+                this.buffer = [...eventsToSend, ...this.buffer]
+                this.isFlushing = false
+                return
             }
         } catch (e) {
             console.error('Analytics flush error', e)
+            this.buffer = [...eventsToSend, ...this.buffer]
+        } finally {
+            this.isFlushing = false
         }
     }
 
