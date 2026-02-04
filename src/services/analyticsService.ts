@@ -10,6 +10,7 @@ class AnalyticsService {
     private sessionId: string | null = null
     private userId: string | null = null
     private sessionPromise: Promise<void> | null = null
+    private isFlushing = false
 
     private constructor() {
         this.setupFlushTimer()
@@ -162,31 +163,32 @@ class AnalyticsService {
      * Flush buffer to Supabase
      */
     private async flush() {
-        if (this.buffer.length === 0) return
-
-        // Make sure session is ready
-        if (this.sessionPromise) {
-            await this.sessionPromise
-        }
-
-        // If still no session (e.g. DB error), try one more time
-        if (!this.sessionId) {
-            await this.startNewSession()
-            if (!this.sessionId) {
-                // Still failing? Keep events in buffer and retry later.
-                console.warn('Cannot flush analytics: No valid session ID')
-                return
-            }
-        }
-
-        const eventsToSend = this.buffer.map(e => ({
-            ...e,
-            session_id: this.sessionId,
-            user_id: this.userId || e.user_id // Ensure latest user_id
-        }))
-        this.buffer = []
-
+        if (this.buffer.length === 0 || this.isFlushing) return
+        this.isFlushing = true
+        let eventsToSend: AnalyticsEvent[] = []
         try {
+            // Make sure session is ready
+            if (this.sessionPromise) {
+                await this.sessionPromise
+            }
+
+            // If still no session (e.g. DB error), try one more time
+            if (!this.sessionId) {
+                await this.startNewSession()
+                if (!this.sessionId) {
+                    // Still failing? Keep events in buffer and retry later.
+                    console.warn('Cannot flush analytics: No valid session ID')
+                    return
+                }
+            }
+
+            eventsToSend = this.buffer.map(e => ({
+                ...e,
+                session_id: this.sessionId,
+                user_id: this.userId || e.user_id // Ensure latest user_id
+            }))
+            this.buffer = []
+
             const { error } = await supabase
                 .from('analytics_events')
                 .insert(eventsToSend)
@@ -199,7 +201,11 @@ class AnalyticsService {
             }
         } catch (e) {
             console.error('Analytics flush error', e)
-            this.buffer = [...eventsToSend, ...this.buffer]
+            if (eventsToSend.length > 0) {
+                this.buffer = [...eventsToSend, ...this.buffer]
+            }
+        } finally {
+            this.isFlushing = false
         }
     }
 
