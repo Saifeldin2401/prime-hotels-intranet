@@ -99,16 +99,16 @@ export default function TaskDetail() {
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold">{task.title}</h1>
-            <Badge className={priorityColors[task.priority]}>{task.priority}</Badge>
-            <Badge className="bg-gray-100 text-gray-800 border border-gray-600 rounded-md">{task.status.replace('_', ' ')}</Badge>
+            <Badge className={priorityColors[task.priority]}>{t(`priorities.${task.priority}`)}</Badge>
+            <Badge className="bg-gray-100 text-gray-800 border border-gray-600 rounded-md">{t(`kanban.${task.status}`)}</Badge>
           </div>
           <p className="text-sm text-gray-600 flex items-center gap-4">
             <span className="flex items-center gap-1">
-              <User className="w-3 h-3" /> {task.assigned_to?.full_name || 'Unassigned'}
+              <User className="w-3 h-3" /> {task.assigned_to?.full_name || t('unassigned')}
             </span>
             {task.due_date && (
               <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> Due {format(new Date(task.due_date), 'MMM d, yyyy')}
+                <Calendar className="w-3 h-3" /> {t('due_date')} {format(new Date(task.due_date), 'MMM d, yyyy')}
               </span>
             )}
           </p>
@@ -120,11 +120,11 @@ export default function TaskDetail() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todo">To Do</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="review">Review</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="todo">{t('kanban.todo')}</SelectItem>
+              <SelectItem value="in_progress">{t('kanban.in_progress')}</SelectItem>
+              <SelectItem value="review">{t('kanban.review')}</SelectItem>
+              <SelectItem value="completed">{t('kanban.completed')}</SelectItem>
+              <SelectItem value="cancelled">{t('actions.cancelled')}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -153,18 +153,18 @@ export default function TaskDetail() {
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Description</CardTitle>
+              <CardTitle>{t('description')}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                {task.description || 'No description provided.'}
+                {task.description || t('description_placeholder')}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Comments</CardTitle>
+              <CardTitle>{t('comments')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {task.comments && task.comments.length > 0 ? (
@@ -186,7 +186,7 @@ export default function TaskDetail() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-600">No comments yet.</p>
+                <p className="text-sm text-gray-600">{t('no_comments')}</p>
               )}
 
               <div className="flex gap-3 pt-4">
@@ -196,7 +196,7 @@ export default function TaskDetail() {
                 </Avatar>
                 <div className="flex-1 gap-2 flex flex-col">
                   <Textarea
-                    placeholder="Write a comment..."
+                    placeholder={t('comment_placeholder')}
                     value={comment}
                     onChange={e => setComment(e.target.value)}
                   />
@@ -208,7 +208,7 @@ export default function TaskDetail() {
                   >
                     {issubmittingComment && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
                     <Send className="w-3 h-3 mr-2" />
-                    Post Comment
+                    {t('post_comment')}
                   </Button>
                 </div>
               </div>
@@ -220,44 +220,44 @@ export default function TaskDetail() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
+              <CardTitle className="text-base">{t('details')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <span className="text-xs text-gray-600 block mb-1">Priority</span>
+                <span className="text-xs text-gray-600 block mb-1">{t('priority_label')}</span>
                 <Select value={task.priority} onValueChange={handlePriorityChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="low">{t('priorities.low')}</SelectItem>
+                    <SelectItem value="medium">{t('priorities.medium')}</SelectItem>
+                    <SelectItem value="high">{t('priorities.high')}</SelectItem>
+                    <SelectItem value="urgent">{t('priorities.urgent')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <span className="text-xs text-gray-600 block mb-1">Assigned To</span>
+                <span className="text-xs text-gray-600 block mb-1">{t('assigned_to')}</span>
                 <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/20">
                   <Avatar className="w-6 h-6">
                     <AvatarImage src={task.assigned_to?.avatar_url || ''} />
                     <AvatarFallback>{task.assigned_to?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm">{task.assigned_to?.full_name || 'Unassigned'}</span>
+                  <span className="text-sm">{task.assigned_to?.full_name || t('unassigned')}</span>
                 </div>
               </div>
 
               <div>
-                <span className="text-xs text-gray-600 block mb-1">Created By</span>
+                <span className="text-xs text-gray-600 block mb-1">{t('created_by')}</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{task.created_by?.full_name}</span>
                 </div>
               </div>
 
               <div>
-                <span className="text-xs text-gray-600 block mb-1">Created At</span>
+                <span className="text-xs text-gray-600 block mb-1">{t('created_at')}</span>
                 <span className="text-sm">{format(new Date(task.created_at), 'PPP p')}</span>
               </div>
             </CardContent>

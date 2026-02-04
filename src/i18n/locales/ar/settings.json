@@ -39,7 +39,11 @@
             "announcements": "الإعلانات",
             "announcements_desc": "أخبار الشركة وتحديثاتها",
             "maintenance": "الصيانة",
-            "maintenance_desc": "تحديثات التذاكر والتعيينات"
+            "maintenance_desc": "تحديثات التذاكر والتعيينات",
+            "enable_all_emails": "تفعيل جميع رسائل البريد",
+            "enable_all_emails_desc": "المفتاح الرئيسي لجميع إشعارات البريد الإلكتروني",
+            "browser_notifications_desc_detailed": "تلقي الإشعارات حتى عند النظر إلى تبويبات أخرى",
+            "permission_error": "يرجى تمكين الإشعارات في إعدادات متصفحك."
         }
     },
     "actions": {

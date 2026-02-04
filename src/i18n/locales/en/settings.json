@@ -39,7 +39,11 @@
             "announcements": "Announcements",
             "announcements_desc": "Company news and updates",
             "maintenance": "Maintenance",
-            "maintenance_desc": "Ticket updates and assignments"
+            "maintenance_desc": "Ticket updates and assignments",
+            "enable_all_emails": "Enable All Emails",
+            "enable_all_emails_desc": "Master switch for all email notifications",
+            "browser_notifications_desc_detailed": "Receive notifications even when looking at other tabs",
+            "permission_error": "Please enable notifications in your browser settings."
         }
     },
     "actions": {

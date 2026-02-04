@@ -4,16 +4,18 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Mail, CheckCircle, BookOpen, AlertCircle, Wrench, Bell } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 export function NotificationSettings() {
     const { preferences, isLoading, updatePreferences } = useNotificationPreferences()
+    const { t } = useTranslation('settings')
 
     if (isLoading) {
         return <div className="flex justify-center p-8"><Loader2 className="animate-spin h-6 w-6 text-primary" /></div>
     }
 
     if (!preferences) {
-        return <div>Error loading preferences.</div>
+        return <div>{t('actions.error')}</div>
     }
 
     const handleToggle = (key: keyof typeof preferences) => {
@@ -23,9 +25,9 @@ export function NotificationSettings() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Email Notifications</CardTitle>
+                <CardTitle>{t('notifications.email_notifications')}</CardTitle>
                 <CardDescription>
-                    Manage which emails you want to receive.
+                    {t('notifications.description')}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -35,8 +37,8 @@ export function NotificationSettings() {
                             <Bell className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                            <Label className="text-base">Browser Notifications</Label>
-                            <p className="text-sm text-gray-500">Receive notifications even when looking at other tabs</p>
+                            <Label className="text-base">{t('notifications.browser_notifications')}</Label>
+                            <p className="text-sm text-gray-500">{t('notifications.types.browser_notifications_desc_detailed')}</p>
                         </div>
                     </div>
                     <Switch
@@ -47,7 +49,7 @@ export function NotificationSettings() {
                                 if (permission === 'granted') {
                                     handleToggle('browser_push_enabled')
                                 } else {
-                                    toast.error('Please enable notifications in your browser settings.')
+                                    toast.error(t('notifications.types.permission_error'))
                                 }
                             } else {
                                 handleToggle('browser_push_enabled')
@@ -62,8 +64,8 @@ export function NotificationSettings() {
                             <Mail className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <Label className="text-base">Enable All Emails</Label>
-                            <p className="text-sm text-gray-500">Master switch for all email notifications</p>
+                            <Label className="text-base">{t('notifications.types.enable_all_emails')}</Label>
+                            <p className="text-sm text-gray-500">{t('notifications.types.enable_all_emails_desc')}</p>
                         </div>
                     </div>
                     <Switch
@@ -79,8 +81,8 @@ export function NotificationSettings() {
                                 <CheckCircle className="h-4 w-4 text-green-600" />
                             </div>
                             <div>
-                                <Label className="text-base">Approvals</Label>
-                                <p className="text-sm text-gray-500">Requests requiring your approval</p>
+                                <Label className="text-base">{t('notifications.types.approvals')}</Label>
+                                <p className="text-sm text-gray-500">{t('notifications.types.approvals_desc')}</p>
                             </div>
                         </div>
                         <Switch
@@ -95,8 +97,8 @@ export function NotificationSettings() {
                                 <BookOpen className="h-4 w-4 text-blue-600" />
                             </div>
                             <div>
-                                <Label className="text-base">Training</Label>
-                                <p className="text-sm text-gray-500">Training assignments and deadlines</p>
+                                <Label className="text-base">{t('notifications.types.training')}</Label>
+                                <p className="text-sm text-gray-500">{t('notifications.types.training_desc')}</p>
                             </div>
                         </div>
                         <Switch
@@ -111,8 +113,8 @@ export function NotificationSettings() {
                                 <AlertCircle className="h-4 w-4 text-purple-600" />
                             </div>
                             <div>
-                                <Label className="text-base">Announcements</Label>
-                                <p className="text-sm text-gray-500">Company-wide announcements</p>
+                                <Label className="text-base">{t('notifications.types.announcements')}</Label>
+                                <p className="text-sm text-gray-500">{t('notifications.types.announcements_desc')}</p>
                             </div>
                         </div>
                         <Switch
@@ -127,8 +129,8 @@ export function NotificationSettings() {
                                 <Wrench className="h-4 w-4 text-orange-600" />
                             </div>
                             <div>
-                                <Label className="text-base">Maintenance</Label>
-                                <p className="text-sm text-gray-500">Maintenance ticket updates</p>
+                                <Label className="text-base">{t('notifications.types.maintenance')}</Label>
+                                <p className="text-sm text-gray-500">{t('notifications.types.maintenance_desc')}</p>
                             </div>
                         </div>
                         <Switch

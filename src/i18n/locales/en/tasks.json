@@ -46,5 +46,20 @@
     "status": "Status",
     "priority": "Priority",
     "due_date": "Due Date",
-    "est_hours": "Est. Hours"
+    "est_hours": "Est. Hours",
+    "comments": "Comments",
+    "details": "Details",
+    "assigned_to": "Assigned To",
+    "created_by": "Created By",
+    "created_at": "Created At",
+    "no_comments": "No comments yet.",
+    "post_comment": "Post Comment",
+    "comment_placeholder": "Write a comment...",
+    "priority_label": "Priority",
+    "unassigned": "Unassigned",
+    "delete": "Delete",
+    "task": "Task",
+    "actions": {
+        "cancelled": "Cancelled"
+    }
 }

@@ -45,5 +45,20 @@
     "status": "الحالة",
     "priority": "الأولوية",
     "due_date": "تاريخ الاستحقاق",
-    "est_hours": "الساعات المتوقعة"
+    "est_hours": "الساعات المتوقعة",
+    "comments": "التعليقات",
+    "details": "التفاصيل",
+    "assigned_to": "مكلف إلى",
+    "created_by": "أنشئت بواسطة",
+    "created_at": "تاريخ الإنشاء",
+    "no_comments": "لا توجد تعليقات بعد.",
+    "post_comment": "نشر تعليق",
+    "comment_placeholder": "اكتب تعليقاً...",
+    "priority_label": "الأولوية",
+    "unassigned": "غير محدد",
+    "delete": "حذف",
+    "task": "مهمة",
+    "actions": {
+        "cancelled": "ملغاة"
+    }
 }
