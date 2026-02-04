@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { escapeSearchQuery } from '@/lib/utils'
 
 
 
@@ -8,6 +9,7 @@ export function useProfiles(filters?: {
     property_id?: string
     department_id?: string
     department_ids?: string[]
+    limit?: number // Max records to fetch, defaults to 200
 }) {
     // const { primaryRole, properties } = useAuth() // unused for now
 
@@ -27,7 +29,8 @@ export function useProfiles(filters?: {
                 .order('full_name')
 
             if (filters?.search) {
-                query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,job_title.ilike.%${filters.search}%`)
+                const escaped = escapeSearchQuery(filters.search)
+                query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
             }
 
             if (filters?.property_id) {
@@ -50,7 +53,9 @@ export function useProfiles(filters?: {
             // e.g. Staff sees only their property coworkers?
             // For now, let everyone see everyone for directory purposes.
 
-            const { data, error } = await query
+            // Apply limit to prevent fetching too many records
+            const maxRecords = filters?.limit || 200
+            const { data, error } = await query.limit(maxRecords)
 
             if (error) throw error
 

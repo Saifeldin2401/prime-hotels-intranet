@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 interface ApiError {
   message: string
   code?: string
-  details?: any
+  details?: Record<string, unknown>
 }
 
 interface ErrorState {
@@ -18,16 +18,24 @@ export function useErrorHandler() {
     isLoading: false
   })
 
-  const handleError = useCallback((error: any, customMessage?: string) => {
+  const handleError = useCallback((error: unknown, customMessage?: string) => {
     console.error('API Error:', error)
-    
+
+    // Type guard for error object
+    const isErrorWithCode = (e: unknown): e is { code: string; message?: string } =>
+      typeof e === 'object' && e !== null && 'code' in e
+    const isErrorWithName = (e: unknown): e is { name: string; message: string; details?: unknown } =>
+      typeof e === 'object' && e !== null && 'name' in e && 'message' in e
+    const isErrorWithMessage = (e: unknown): e is { message: string } =>
+      typeof e === 'object' && e !== null && 'message' in e
+
     let apiError: ApiError = {
       message: customMessage || 'An unexpected error occurred',
       code: 'UNKNOWN_ERROR'
     }
 
     // Handle Supabase errors
-    if (error?.code) {
+    if (isErrorWithCode(error)) {
       switch (error.code) {
         case 'PGRST116':
           apiError = { message: 'Resource not found', code: 'NOT_FOUND' }
@@ -45,40 +53,40 @@ export function useErrorHandler() {
           apiError = { message: 'Invalid data provided', code: 'VALIDATION_ERROR' }
           break
         default:
-          apiError = { 
-            message: error.message || 'Database error occurred', 
-            code: error.code 
+          apiError = {
+            message: error.message || 'Database error occurred',
+            code: error.code
           }
       }
     }
     // Handle network errors
-    else if (error?.name === 'TypeError' && error.message.includes('fetch')) {
-      apiError = { 
-        message: 'Network error. Please check your connection.', 
-        code: 'NETWORK_ERROR' 
+    else if (isErrorWithName(error) && error.name === 'TypeError' && error.message.includes('fetch')) {
+      apiError = {
+        message: 'Network error. Please check your connection.',
+        code: 'NETWORK_ERROR'
       }
     }
     // Handle validation errors
-    else if (error?.name === 'ValidationError') {
-      apiError = { 
-        message: error.message || 'Validation failed', 
+    else if (isErrorWithName(error) && error.name === 'ValidationError') {
+      apiError = {
+        message: error.message || 'Validation failed',
         code: 'VALIDATION_ERROR',
-        details: error.details
+        details: error.details as Record<string, unknown> | undefined
       }
     }
     // Handle generic errors
-    else if (error?.message) {
-      apiError = { 
-        message: error.message, 
-        code: 'GENERIC_ERROR' 
+    else if (isErrorWithMessage(error)) {
+      apiError = {
+        message: error.message,
+        code: 'GENERIC_ERROR'
       }
     }
 
     setErrorState({ error: apiError, isLoading: false })
-    
+
     // Show toast notification
     toast.error(apiError.message)
-    
+
     return apiError
   }, [])
 
@@ -129,11 +137,21 @@ export const ERROR_MESSAGES = {
 }
 
 // Helper function to get user-friendly error messages
-export function getErrorMessage(error: any): string {
+export function getErrorMessage(error: unknown): string {
   if (!error) return ERROR_MESSAGES.UNKNOWN
 
+  // Type guards
+  const hasCode = (e: unknown): e is { code: string; message?: string } =>
+    typeof e === 'object' && e !== null && 'code' in e
+  const hasStatus = (e: unknown): e is { status: number; message?: string } =>
+    typeof e === 'object' && e !== null && 'status' in e
+  const hasNameAndMessage = (e: unknown): e is { name: string; message: string } =>
+    typeof e === 'object' && e !== null && 'name' in e && 'message' in e
+  const hasMessage = (e: unknown): e is { message: string } =>
+    typeof e === 'object' && e !== null && 'message' in e
+
   // Supabase specific errors
-  if (error.code) {
+  if (hasCode(error)) {
     switch (error.code) {
       case 'PGRST116': return 'The requested resource was not found.'
       case 'PGRST301': return 'You are not authorized to access this resource.'
@@ -145,7 +163,7 @@ export function getErrorMessage(error: any): string {
   }
 
   // HTTP status errors
-  if (error.status) {
+  if (hasStatus(error)) {
     switch (error.status) {
       case 401: return ERROR_MESSAGES.UNAUTHORIZED
       case 403: return ERROR_MESSAGES.FORBIDDEN
@@ -157,10 +175,10 @@ export function getErrorMessage(error: any): string {
   }
 
   // Network errors
-  if (error.name === 'TypeError' && error.message.includes('fetch')) {
+  if (hasNameAndMessage(error) && error.name === 'TypeError' && error.message.includes('fetch')) {
     return ERROR_MESSAGES.NETWORK
   }
 
   // Return the error message if available
-  return error.message || ERROR_MESSAGES.UNKNOWN
+  return hasMessage(error) ? error.message : ERROR_MESSAGES.UNKNOWN
 }

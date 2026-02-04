@@ -363,7 +363,7 @@ export default function DailyFlashReport() {
         const logo = await loadLogoAsDataUrl()
         const selectedProp = availableProperties.find(p => p.id === selectedPropertyId)
         const hotelName = selectedPropertyId === 'all'
-            ? 'All Properties (Consolidated)'
+            ? 'Consolidated View (All)'
             : selectedProp?.name || 'Unknown'
 
         await downloadReport(
@@ -521,7 +521,7 @@ export default function DailyFlashReport() {
                             <SelectValue placeholder="Select Property" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Consolidated (All Properties)</SelectItem>
+                            <SelectItem value="all">Consolidated View (All)</SelectItem>
                             {availableProperties
                                 .filter(p => p.id !== 'all')
                                 .map(prop => (

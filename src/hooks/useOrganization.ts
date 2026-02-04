@@ -128,10 +128,11 @@ export function usePotentialManagers(propertyId?: string, excludeUserId?: string
             if (error) throw error
 
             // Filter to managers/supervisors only (not staff)
-            return (data || []).filter((p: any) => {
+            const filtered = (data || []).filter((p: any) => {
                 const role = p.user_roles?.[0]?.role
                 return role && role !== 'staff'
-            }) as (Profile & { user_roles: { role: string }[] })[]
+            })
+            return filtered as unknown as (Profile & { user_roles: { role: string }[] })[]
         }
     })
 }
@@ -180,17 +181,26 @@ export function useBulkUpdateReportingLines() {
 
     return useMutation({
         mutationFn: async (updates: { employeeId: string; newManagerId: string | null }[]) => {
-            // Process updates sequentially to catch circular errors
-            for (const update of updates) {
-                const { error } = await supabase
-                    .from('profiles')
-                    .update({ reporting_to: update.newManagerId })
-                    .eq('id', update.employeeId)
+            // Use atomic RPC function to ensure all updates succeed or none do
+            const updatePayload = updates.map(u => ({
+                employee_id: u.employeeId,
+                new_manager_id: u.newManagerId
+            }))
 
-                if (error) {
-                    throw new Error(`Failed to update ${update.employeeId}: ${error.message}`)
+            const { data, error } = await supabase.rpc('bulk_update_reporting_lines', {
+                p_updates: updatePayload
+            })
+
+            if (error) {
+                // Extract more specific error message from Postgres
+                const circularMatch = error.message.match(/circular reporting chain/i)
+                if (circularMatch) {
+                    throw new Error('Cannot complete update: would create a circular reporting chain.')
                 }
+                throw new Error(`Failed to update reporting lines: ${error.message}`)
             }
+
+            return data
         },
         onSuccess: () => {
             toast.success('Reporting lines updated successfully')

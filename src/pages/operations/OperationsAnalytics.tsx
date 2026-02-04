@@ -581,7 +581,7 @@ export default function OperationsAnalytics() {
                 <div className="flex items-center gap-2 flex-wrap">
                     <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
                         <SelectTrigger className="w-48">
-                            <SelectValue placeholder="All Properties" />
+                            <SelectValue placeholder="Consolidated View (All)" />
                         </SelectTrigger>
                         <SelectContent>
                             {availableProperties.map(prop => (

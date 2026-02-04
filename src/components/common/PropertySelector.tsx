@@ -1,8 +1,8 @@
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Building, Lock } from 'lucide-react'
+import { Building, Lock, LayoutDashboard } from 'lucide-react'
 
 interface PropertySelectorProps {
   value?: string
@@ -12,9 +12,9 @@ interface PropertySelectorProps {
   disabled?: boolean
 }
 
-export function PropertySelector({ 
-  value, 
-  onValueChange, 
+export function PropertySelector({
+  value,
+  onValueChange,
   placeholder = "Select property",
   showAllProperties = false,
   disabled = false
@@ -22,7 +22,7 @@ export function PropertySelector({
   const { properties, primaryRole } = useAuth()
   const { canAccessProperty } = usePermissions()
 
-  const accessibleProperties = showAllProperties && primaryRole === 'regional_admin' 
+  const accessibleProperties = showAllProperties && primaryRole === 'regional_admin'
     ? properties // Admin can see all properties
     : properties // Users can only see their assigned properties
 
@@ -51,22 +51,45 @@ export function PropertySelector({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {accessibleProperties.map((property) => {
-          const hasAccess = canAccessProperty(property.id)
-          return (
-            <SelectItem 
-              key={property.id} 
-              value={property.id}
-              disabled={!hasAccess}
-            >
-              <div className="flex items-center gap-2">
-                <Building className="w-4 h-4" />
-                <span>{property.name}</span>
-                {!hasAccess && <Lock className="w-3 h-3 text-muted-foreground" />}
-              </div>
-            </SelectItem>
-          )
-        })}
+        {accessibleProperties.some(p => p.id === 'all') && (
+          <SelectGroup>
+            <SelectLabel>Views</SelectLabel>
+            {accessibleProperties.filter(p => p.id === 'all').map(property => (
+              <SelectItem key={property.id} value={property.id}>
+                <div className="flex items-center gap-2">
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>{property.name}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        )}
+
+        {accessibleProperties.some(p => p.id === 'all') && accessibleProperties.some(p => p.id !== 'all') && (
+          <SelectSeparator />
+        )}
+
+        {accessibleProperties.some(p => p.id !== 'all') && (
+          <SelectGroup>
+            <SelectLabel>Properties</SelectLabel>
+            {accessibleProperties.filter(p => p.id !== 'all').map((property) => {
+              const hasAccess = canAccessProperty(property.id)
+              return (
+                <SelectItem
+                  key={property.id}
+                  value={property.id}
+                  disabled={!hasAccess}
+                >
+                  <div className="flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    <span>{property.name}</span>
+                    {!hasAccess && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  </div>
+                </SelectItem>
+              )
+            })}
+          </SelectGroup>
+        )}
       </SelectContent>
     </Select>
   )
@@ -81,8 +104,8 @@ export function PropertyAccessBadge({ propertyId, showDetails = false }: Propert
   const { properties } = useAuth()
   const { canAccessProperty } = usePermissions()
 
-  if (!propertyId) {
-    return <Badge variant="outline">All Properties</Badge>
+  if (!propertyId || propertyId === 'all') {
+    return <Badge variant="outline">Consolidated View (All)</Badge>
   }
 
   const property = properties.find(p => p.id === propertyId)

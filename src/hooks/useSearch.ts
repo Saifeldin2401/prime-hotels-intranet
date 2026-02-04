@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { escapeSearchQuery } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 // Local interface for suggestions
 export interface SearchSuggestion {
@@ -66,6 +67,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
       setIsSearching(true)
       const results: SearchResult[] = []
       const queryLower = query.toLowerCase()
+      const escapedQuery = escapeSearchQuery(query)
 
       // 1. Search System Pages (Local)
       const matchingPages = SYSTEM_PAGES.filter(page =>
@@ -91,7 +93,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const { data: documents } = await supabase
               .from('documents')
               .select('id, title, description, status')
-              .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+              .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`)
               .limit(Math.ceil(limit / 2))
 
             if (documents) {
@@ -115,7 +117,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const { data: users } = await supabase
               .from('profiles')
               .select('id, full_name, email')
-              .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+              .or(`full_name.ilike.%${escapedQuery}%,email.ilike.%${escapedQuery}%`)
               .limit(Math.ceil(limit / 4))
 
             if (users) {
@@ -139,7 +141,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const { data: training } = await supabase
               .from('training_modules')
               .select('id, title, description, category, status')
-              .or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
+              .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,category.ilike.%${escapedQuery}%`)
               .limit(Math.ceil(limit / 4))
 
             if (training) {
@@ -163,7 +165,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const { data: announcements } = await supabase
               .from('announcements')
               .select('id, title, content, priority')
-              .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+              .or(`title.ilike.%${escapedQuery}%,content.ilike.%${escapedQuery}%`)
               .limit(Math.ceil(limit / 4))
 
             if (announcements) {
@@ -188,7 +190,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const { data: sops } = await supabase
               .from('sop_documents')
               .select('id, title, description, category, version')
-              .or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
+              .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,category.ilike.%${escapedQuery}%`)
               .limit(Math.ceil(limit / 4))
 
             if (sops) {
@@ -339,7 +341,7 @@ export function useSearchSuggestions(query: string) {
           const { data: documents } = await supabase
             .from('documents')
             .select('id, title, status')
-            .ilike('title', `%${query}%`)
+            .ilike('title', `%${escapeSearchQuery(query)}%`)
             .limit(3)
 
           if (documents) {
@@ -356,7 +358,7 @@ export function useSearchSuggestions(query: string) {
             const { data: sops } = await supabase
               .from('sop_documents')
               .select('id, title')
-              .ilike('title', `%${query}%`)
+              .ilike('title', `%${escapeSearchQuery(query)}%`)
               .limit(3)
 
             if (sops) {

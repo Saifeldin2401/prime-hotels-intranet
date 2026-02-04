@@ -13,6 +13,7 @@ interface AuthContextType {
   departments: Department[]
   primaryRole: AppRole | null
   loading: boolean
+  rolesLoading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [properties, setProperties] = useState<Property[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
+  const [rolesLoading, setRolesLoading] = useState(true)
 
   const loadUserData = async (userId: string) => {
     try {
@@ -109,15 +111,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Roles error code:', rolesError.code)
           console.error('Roles error message:', rolesError.message)
           console.error('Roles error details:', rolesError.details)
+          setRolesLoading(false) // Mark as done even on error
         } else {
           const rolesData = directRoles || []
-          if (rolesData.length > 0) {
-            setRoles(rolesData)
-          }
-
+          setRoles(rolesData) // Set even if empty - means user has no roles
+          setRolesLoading(false)
         }
       } else {
         console.error('Roles loading failed or timed out:', rolesResult.reason)
+        setRolesLoading(false) // Mark as done even on timeout
       }
 
       // Handle properties
@@ -232,6 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRoles([])
         setProperties([])
         setDepartments([])
+        setRolesLoading(false)
         loadingState = false
         setLoading(false)
         clearTimeout(timeoutId)
@@ -329,6 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         departments,
         primaryRole,
         loading,
+        rolesLoading,
         signIn,
         signOut,
         refreshSession,

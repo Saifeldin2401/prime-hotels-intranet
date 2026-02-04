@@ -6,6 +6,7 @@ import { validateTransition, getTransitionErrorMessage } from '@/lib/statusTrans
 import { useAuth } from '@/hooks/useAuth'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { crudToasts } from '@/lib/toastHelpers'
+import { escapeSearchQuery } from '@/lib/utils'
 
 // Fetch tasks
 export function useTasks(filters?: {
@@ -32,6 +33,7 @@ export function useTasks(filters?: {
           property:properties(id, name),
           department:departments(id, name)
         `)
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       if (filters?.status) {
@@ -59,7 +61,8 @@ export function useTasks(filters?: {
         query = query.eq('department_id', filters.departmentId)
       }
       if (filters?.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+        const escaped = escapeSearchQuery(filters.search)
+        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
       }
 
       const { data, error } = await query
@@ -93,6 +96,7 @@ export function useTasksPaginated(
       let countQuery = supabase
         .from('tasks')
         .select('id', { count: 'exact', head: true })
+        .eq('is_deleted', false)
 
       if (filters?.status) countQuery = countQuery.eq('status', filters.status)
       if (filters?.priority) countQuery = countQuery.eq('priority', filters.priority)
@@ -106,7 +110,8 @@ export function useTasksPaginated(
       }
       if (filters?.departmentId) countQuery = countQuery.eq('department_id', filters.departmentId)
       if (filters?.search) {
-        countQuery = countQuery.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+        const escaped = escapeSearchQuery(filters.search)
+        countQuery = countQuery.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
       }
 
       const { count, error: countError } = await countQuery
@@ -125,6 +130,7 @@ export function useTasksPaginated(
           property:properties(id, name),
           department:departments(id, name)
         `)
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       if (filters?.status) query = query.eq('status', filters.status)
@@ -139,7 +145,8 @@ export function useTasksPaginated(
       }
       if (filters?.departmentId) query = query.eq('department_id', filters.departmentId)
       if (filters?.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+        const escaped = escapeSearchQuery(filters.search)
+        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
       }
 
       // Apply pagination

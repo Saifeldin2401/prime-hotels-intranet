@@ -24,6 +24,7 @@ export function useMyMaintenanceTickets() {
           assigned_to:profiles!assigned_to_id(id, full_name, email)
         `)
         .eq('reported_by_id', user.id)
+        .eq('is_deleted', false) // Exclude soft-deleted tickets
         .order('created_at', { ascending: false })
 
       // Filter by current property if selected (and not 'all')
@@ -58,6 +59,7 @@ export function useAssignedMaintenanceTickets() {
           department:departments(id, name),
           assigned_to:profiles!assigned_to_id(id, full_name, email)
         `)
+        .eq('is_deleted', false) // Exclude soft-deleted tickets
         .order('created_at', { ascending: false })
 
       // Filter by current property if selected (and not 'all')
@@ -172,22 +174,42 @@ export function useCreateMaintenanceTicket() {
       // AUTO AI TRIAGE: Trigger AI analysis in background
       // Only if priority is default (medium) and description is substantial
       if (result && data.description && data.description.length > 20) {
-        try {
-          // Call auto-triage edge function asynchronously (don't await)
-          supabase.functions.invoke('auto-triage-ticket', {
-            body: { ticket_id: result.id }
-          }).then(({ data: triageResult, error: triageError }) => {
-            if (triageError) {
-              console.warn('Auto-triage failed:', triageError)
-            } else if (triageResult?.triage) {
-              console.log('✅ AI auto-triaged ticket:', triageResult.triage)
-              // Invalidate to refresh with AI suggestions
-              queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
-            }
-          })
-        } catch (aiErr) {
+        // Set triage status to 'pending' before starting
+        await supabase
+          .from('maintenance_tickets')
+          .update({ ai_triage_status: 'pending' })
+          .eq('id', result.id)
+
+        // Call auto-triage edge function asynchronously (don't await for response)
+        supabase.functions.invoke('auto-triage-ticket', {
+          body: { ticket_id: result.id }
+        }).then(async ({ data: triageResult, error: triageError }) => {
+          if (triageError) {
+            console.warn('Auto-triage failed:', triageError)
+            // Update status to failed
+            await supabase
+              .from('maintenance_tickets')
+              .update({
+                ai_triage_status: 'failed',
+                ai_triage_notes: triageError.message || 'Triage failed'
+              })
+              .eq('id', result.id)
+          } else if (triageResult?.triage) {
+            console.log('✅ AI auto-triaged ticket:', triageResult.triage)
+            // Status already updated by edge function to 'completed'
+            // Invalidate to refresh with AI suggestions
+            queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
+          }
+        }).catch(async (aiErr) => {
           console.warn('Auto-triage call failed:', aiErr)
-        }
+          await supabase
+            .from('maintenance_tickets')
+            .update({
+              ai_triage_status: 'failed',
+              ai_triage_notes: 'Triage call failed'
+            })
+            .eq('id', result.id)
+        })
       }
 
       return result as MaintenanceTicket

@@ -100,11 +100,11 @@ export default function OrganizationalControlCenter() {
                 >
                     <SelectTrigger className="w-[200px]">
                         <Building2 className="h-4 w-4 me-2" />
-                        <SelectValue placeholder={t('organization.all_properties', 'All Properties')} />
+                        <SelectValue placeholder={t('organization.all_properties', 'Consolidated View (All)')} />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">
-                            {t('organization.all_properties', 'All Properties')}
+                            {t('organization.all_properties', 'Consolidated View (All)')}
                         </SelectItem>
                         {properties?.map((property) => (
                             <SelectItem key={property.id} value={property.id}>

@@ -319,8 +319,6 @@ export async function getComments(documentId: string): Promise<KnowledgeComment[
             upvotes,
             created_at,
             updated_at,
-            created_at,
-            updated_at,
             user:profiles(id, full_name, avatar_url)
         `)
         .eq('document_id', documentId)

@@ -213,7 +213,7 @@ export type Database = {
             }
         }
         Enums: {
-            entity_status: "draft" | "pending" | "submitted" | "approved" | "rejected" | "todo" | "open" | "in_progress" | "review" | "pending_parts" | "completed" | "cancelled" | "archived" | "published" | "closed" | "filled" | "active" | "inactive"
+            entity_status: "draft" | "pending" | "submitted" | "approved" | "rejected" | "todo" | "open" | "in_progress" | "on_hold" | "review" | "pending_parts" | "completed" | "cancelled" | "archived" | "published" | "closed" | "filled" | "active" | "inactive"
             task_priority: "low" | "medium" | "high" | "urgent"
         }
     }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { escapeSearchQuery } from '@/lib/utils'
 import type { Document, DocumentApproval, DocumentVersion } from '@/lib/types'
 
 export function useDocuments(filters?: {
@@ -35,7 +36,8 @@ export function useDocuments(filters?: {
         query = query.eq('department_id', filters.department_id)
       }
       if (filters?.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+        const escaped = escapeSearchQuery(filters.search)
+        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
       }
 
       // Apply RLS - user can only see documents they have access to
@@ -281,53 +283,20 @@ export function useApproveDocument() {
     mutationFn: async ({ approvalId, feedback }: { approvalId: string, feedback?: string }) => {
       if (!user) throw new Error('User must be authenticated')
 
-      // 1. Update the approval record
-      const { data: approval, error: approvalError } = await supabase
-        .from('document_approvals')
-        .update({
-          status: 'approved',
-          approved_by: user.id,
-          approved_at: new Date().toISOString(),
-          feedback
-        })
-        .eq('id', approvalId)
-        .select(`*, document:documents(id, title, created_by)`)
-        .single()
+      // Use atomic RPC function to prevent race conditions
+      // This handles: update approval, check remaining, update document status, send notification
+      const { data, error } = await supabase.rpc('approve_document_atomic', {
+        p_approval_id: approvalId,
+        p_approver_id: user.id,
+        p_feedback: feedback || null
+      })
 
-      if (approvalError) throw approvalError
-
-      // 2. Check if all required approvals for this document are complete
-      const { count, error: countError } = await supabase
-        .from('document_approvals')
-        .select('*', { count: 'exact', head: true })
-        .eq('document_id', approval.document_id)
-        .eq('status', 'pending')
-
-      if (countError) throw countError
-
-      // If no pending approvals left, update document status to APPROVED
-      if (count === 0) {
-        await supabase
-          .from('documents')
-          .update({ status: 'APPROVED' })
-          .eq('id', approval.document_id)
+      if (error) {
+        console.error('Document approval failed:', error)
+        throw error
       }
 
-      // 3. Send notification to document creator
-      if (approval.document?.created_by && approval.document.created_by !== user.id) {
-        try {
-          await supabase.from('notifications').insert({
-            user_id: approval.document.created_by,
-            type: 'document_approved',
-            title: 'Document Approved',
-            message: `Your document "${approval.document.title}" has been approved.`,
-            link: `/documents/${approval.document_id}`,
-            data: { documentId: approval.document_id }
-          })
-        } catch (err) {
-          console.error('Notification failed:', err)
-        }
-      }
+      return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })

@@ -61,3 +61,63 @@ export const crudToasts = {
         error: (item: string) => showErrorToast(`Failed to cancel ${item}`, 'Please try again.')
     }
 }
+
+/**
+ * Promise-based toast that shows loading state and resolves to success/error
+ * Usage: await asyncToast(promise, { loading: 'Saving...', success: 'Saved!', error: 'Failed' })
+ */
+export async function asyncToast<T>(
+    promise: Promise<T>,
+    messages: {
+        loading: string
+        success: string | ((data: T) => string)
+        error: string | ((error: unknown) => string)
+    }
+): Promise<T> {
+    const toastId = toast.loading(messages.loading)
+
+    try {
+        const result = await promise
+        const successMessage = typeof messages.success === 'function'
+            ? messages.success(result)
+            : messages.success
+        toast.success(successMessage, { id: toastId })
+        return result
+    } catch (error) {
+        const errorMessage = typeof messages.error === 'function'
+            ? messages.error(error)
+            : messages.error
+        toast.error(errorMessage, { id: toastId })
+        throw error
+    }
+}
+
+/**
+ * Helper for common async operations with standard messages
+ */
+export const asyncCrudToasts = {
+    create: <T>(promise: Promise<T>, item: string) =>
+        asyncToast(promise, {
+            loading: `Creating ${item}...`,
+            success: `${item} created successfully`,
+            error: `Failed to create ${item}`
+        }),
+    update: <T>(promise: Promise<T>, item: string) =>
+        asyncToast(promise, {
+            loading: `Updating ${item}...`,
+            success: `${item} updated successfully`,
+            error: `Failed to update ${item}`
+        }),
+    delete: <T>(promise: Promise<T>, item: string) =>
+        asyncToast(promise, {
+            loading: `Deleting ${item}...`,
+            success: `${item} deleted successfully`,
+            error: `Failed to delete ${item}`
+        }),
+    submit: <T>(promise: Promise<T>, item: string) =>
+        asyncToast(promise, {
+            loading: `Submitting ${item}...`,
+            success: `${item} submitted successfully`,
+            error: `Failed to submit ${item}`
+        })
+}

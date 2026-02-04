@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { escapeSearchQuery } from '@/lib/utils'
 
 export type RequestStatus =
   | 'draft'
@@ -322,7 +323,8 @@ export function useRequestsInbox(filters?: {
       }
 
       if (filters?.search) {
-        query = query.or(`request_no.ilike.%${filters.search}%`)
+        const escaped = escapeSearchQuery(filters.search)
+        query = query.or(`request_no.ilike.%${escaped}%`)
       }
 
       if (filters?.employee) {

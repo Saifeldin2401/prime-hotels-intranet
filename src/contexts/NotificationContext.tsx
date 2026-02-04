@@ -83,11 +83,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     })
 
                     // 3. Browser Notification (if enabled)
+                    // Use window.Notification to avoid conflict with local Notification type
                     if (
                         preferencesRef.current?.browser_push_enabled &&
-                        Notification.permission === 'granted'
+                        'Notification' in window &&
+                        window.Notification.permission === 'granted'
                     ) {
-                        new Notification(newNotification.title || 'New Notification', {
+                        new window.Notification(newNotification.title || 'New Notification', {
                             body: newNotification.message,
                             icon: '/favicon.ico'
                         })

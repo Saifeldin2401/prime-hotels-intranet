@@ -155,19 +155,22 @@ export function useUpdateWorkflowSteps(workflowId: string) {
 
     return useMutation({
         mutationFn: async (steps: Omit<WorkflowStep, 'id' | 'workflow_id'>[]) => {
-            // First delete existing steps
-            await supabase
-                .from('workflow_steps')
-                .delete()
-                .eq('workflow_id', workflowId)
+            // Use atomic RPC function to replace steps in a single transaction
+            // This prevents data loss if the insert fails after delete
+            const stepsPayload = steps.map((s, i) => ({
+                ...s,
+                step_order: i + 1
+            }))
 
-            // Insert new steps
-            const { data, error } = await supabase
-                .from('workflow_steps')
-                .insert(steps.map((s, i) => ({ ...s, workflow_id: workflowId, step_order: i + 1 })))
-                .select()
+            const { data, error } = await supabase.rpc('replace_workflow_steps', {
+                p_workflow_id: workflowId,
+                p_steps: stepsPayload
+            })
 
-            if (error) throw error
+            if (error) {
+                console.error('Failed to update workflow steps:', error)
+                throw error
+            }
             return data
         },
         onSuccess: () => {

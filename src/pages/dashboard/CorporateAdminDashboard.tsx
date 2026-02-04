@@ -12,11 +12,25 @@ import type { AppRole } from '@/lib/constants'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
 import { useAuth } from '@/hooks/useAuth'
 import { useCorporateStats } from '@/hooks/useDashboardStats'
+import { PropertyManagerDashboard } from './PropertyManagerDashboard'
 
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 export function CorporateAdminDashboard() {
+  const { currentProperty } = useProperty()
+
+  // Simplified Switcher Component
+  // This component acts as a router between the Corporate view and the Property view
+  // It must rely on PropertyManagerDashboard to handle its own context
+  if (currentProperty && currentProperty.id !== 'all') {
+    return <PropertyManagerDashboard />
+  }
+
+  return <CorporateDashboardContent />
+}
+
+function CorporateDashboardContent() {
   const { t } = useTranslation('dashboard')
   const navigate = useNavigate()
   const { currentProperty, availableProperties } = useProperty()

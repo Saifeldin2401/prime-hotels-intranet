@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { escapeSearchQuery } from '@/lib/utils'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -286,7 +287,8 @@ export function useOrgHierarchy(searchTerm?: string) {
             // Sorting is now done in memory by job title hierarchy
 
             if (searchTerm) {
-                query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,job_title.ilike.%${searchTerm}%,staff_id.ilike.%${searchTerm}%`)
+                const escaped = escapeSearchQuery(searchTerm)
+                query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%,staff_id.ilike.%${escaped}%`)
             }
 
             const { data, error } = await query

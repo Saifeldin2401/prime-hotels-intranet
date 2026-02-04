@@ -29,7 +29,7 @@ export function ProtectedRoute({
   fallbackPath = "/unauthorized",
   smartFallback = true // Default to smart fallback for better UX
 }: ProtectedRouteProps) {
-  const { user, primaryRole, roles, loading } = useAuth()
+  const { user, primaryRole, roles, rolesLoading, loading } = useAuth()
   const { hasPermission } = usePermissions()
 
   if (loading) {
@@ -49,11 +49,16 @@ export function ProtectedRoute({
 
   // Check role-based access
   if (allowedRoles && allowedRoles.length > 0) {
-    // If roles haven't loaded yet, wait by allowing access temporarily
-    // The user will be redirected once roles load if they don't have access
-    if (roles.length === 0) {
-      // Allow rendering while roles are loading
-      return <>{children}</>
+    // If roles are still loading, show loading state to prevent unauthorized access
+    if (rolesLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Verifying access...</p>
+          </div>
+        </div>
+      )
     }
 
     // Roles have loaded - check if user has access

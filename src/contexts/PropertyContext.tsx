@@ -48,7 +48,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 // Add "All Properties" option
                 const allOption: Property = {
                     id: 'all',
-                    name: 'All Properties',
+                    name: 'Consolidated View (All)',
                     address: 'Corporate',
                     phone: '',
                     is_active: true,

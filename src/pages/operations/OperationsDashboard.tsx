@@ -189,7 +189,7 @@ export default function OperationsDashboard() {
             {
                 reportType: type,
                 title,
-                hotelName: currentProperty?.name || 'All Properties',
+                hotelName: currentProperty?.name || 'Consolidated View (All)',
                 hotelCode: currentProperty?.id === 'all' ? 'CONSOLIDATED' : undefined,
                 period: {
                     start: dateRange?.from?.toISOString().split('T')[0] || selectedDate,
@@ -235,7 +235,7 @@ export default function OperationsDashboard() {
                         {t('operations:dashboard.title', 'Operations Dashboard')}
                     </h1>
                     <p className="text-muted-foreground">
-                        {currentProperty?.name || t('operations:dashboard.all_properties', 'All Properties')} - {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
+                        {currentProperty?.name || t('operations:dashboard.all_properties', 'Consolidated View (All)')} - {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">

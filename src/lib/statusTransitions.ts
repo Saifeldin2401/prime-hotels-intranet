@@ -16,8 +16,9 @@ export type EntityType = 'task' | 'maintenance_ticket' | 'leave_request' | 'job_
  * Key: current status, Value: array of valid next statuses
  */
 const STATUS_TRANSITIONS: Record<EntityType, Record<string, EntityStatus[]>> = {
-    // Tasks: open → in_progress → completed/cancelled
+    // Tasks: todo/open → in_progress → completed/cancelled
     task: {
+        todo: ['in_progress', 'open', 'cancelled'], // Initial state (same as open)
         open: ['in_progress', 'cancelled'],
         in_progress: ['completed', 'cancelled', 'on_hold'],
         on_hold: ['in_progress', 'cancelled'],

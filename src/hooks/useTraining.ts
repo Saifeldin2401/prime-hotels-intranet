@@ -16,6 +16,7 @@ import type {
 import { learningService } from '@/services/learningService'
 import type { QuestionStatus } from '@/types/questions'
 import { crudToasts, showSuccessToast, showErrorToast } from '@/lib/toastHelpers'
+import { escapeSearchQuery } from '@/lib/utils'
 
 
 // Training Modules
@@ -53,7 +54,8 @@ export function useTrainingModules(filters?: {
         query = query.eq('created_by', filters.created_by)
       }
       if (filters?.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+        const escaped = escapeSearchQuery(filters.search)
+        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
       }
 
       const { data, error } = await query
@@ -512,6 +514,9 @@ export function useCompleteTraining() {
       if (error) throw error
 
       // Auto-generate certificate
+      let certificateGenerated = false
+      let certificateError: string | null = null
+
       if (data && data.training_modules) {
         try {
           // Get user info for certificate
@@ -524,7 +529,7 @@ export function useCompleteTraining() {
               .single()
 
             // Create certificate
-            await supabase.from('certificates').insert({
+            const { error: certInsertError } = await supabase.from('certificates').insert({
               user_id: user.id,
               recipient_name: profile?.full_name || user.email || 'Participant',
               recipient_email: user.email,
@@ -535,21 +540,41 @@ export function useCompleteTraining() {
               training_module_id: data.training_modules.id,
               training_progress_id: progressId
             })
+
+            if (certInsertError) {
+              throw certInsertError
+            }
+            certificateGenerated = true
           }
-        } catch (certError) {
+        } catch (certError: any) {
           console.error('Certificate generation failed:', certError)
+          certificateError = certError.message || 'Certificate generation failed'
           // Don't throw - training completion should succeed even if cert fails
+          // But we'll communicate the issue to the user via toast
         }
       }
 
-      return data
+      return {
+        ...data,
+        certificateGenerated,
+        certificateError
+      }
     },
-    onSuccess: (data) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['training-progress'] })
       queryClient.invalidateQueries({ queryKey: ['my-training'] })
-      queryClient.invalidateQueries({ queryKey: ['training-module', data.training_id] })
+      queryClient.invalidateQueries({ queryKey: ['training-module', result.training_id] })
       queryClient.invalidateQueries({ queryKey: ['certificates'] })
-      showSuccessToast('Training Completed!', 'Great job on finishing this module.')
+
+      if (result.certificateGenerated) {
+        showSuccessToast('Training Completed!', 'Great job! Your certificate has been generated.')
+      } else if (result.certificateError) {
+        showSuccessToast('Training Completed!', 'Your certificate will be generated shortly.')
+        // Also show a warning toast about the certificate issue
+        console.warn('Certificate will be retried:', result.certificateError)
+      } else {
+        showSuccessToast('Training Completed!', 'Great job on finishing this module.')
+      }
     },
     onError: () => showErrorToast('Failed to complete training')
   })

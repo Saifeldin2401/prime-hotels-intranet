@@ -205,10 +205,21 @@ export function useSubmitLeaveRequest() {
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
-      // Use the currently selected property, or fallback to first assigned
-      const propertyId = (currentProperty && currentProperty.id !== 'all')
-        ? currentProperty.id
-        : (properties.length > 0 ? properties[0].id : null)
+      // Determine property for the request
+      let propertyId: string | null = null
+
+      if (currentProperty && currentProperty.id !== 'all') {
+        // User has explicitly selected a property
+        propertyId = currentProperty.id
+      } else if (properties.length === 1) {
+        // User only has one property, use it
+        propertyId = properties[0].id
+      } else if (properties.length > 1) {
+        // User has multiple properties but hasn't selected one
+        throw new Error('Please select a specific property for your leave request')
+      }
+      // If properties.length === 0, propertyId stays null (handled by backend validation)
+
       const departmentId = departments.length > 0 ? departments[0].id : null
 
       const insertData = {
