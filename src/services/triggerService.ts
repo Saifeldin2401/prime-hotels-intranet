@@ -82,6 +82,13 @@ export async function processTrigger(context: TriggerContext): Promise<{
         })
 
         if (error) throw error
+        if (!data) {
+            return {
+                success: false,
+                actionsExecuted: 0,
+                errors: ['No response from trigger processor']
+            }
+        }
 
         return {
             success: data.success,

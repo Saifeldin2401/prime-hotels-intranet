@@ -184,7 +184,6 @@ class AnalyticsService {
             session_id: this.sessionId,
             user_id: this.userId || e.user_id // Ensure latest user_id
         }))
-
         this.buffer = []
 
         try {
@@ -194,11 +193,13 @@ class AnalyticsService {
 
             if (error) {
                 console.error('Failed to flush analytics events', error)
-                // Put back in buffer? Or just log error. 
-                // For now, let's just log to avoid infinite loops if it's a data issue.
+                // Keep events in buffer for retry to avoid data loss.
+                this.buffer = [...eventsToSend, ...this.buffer]
+                return
             }
         } catch (e) {
             console.error('Analytics flush error', e)
+            this.buffer = [...eventsToSend, ...this.buffer]
         }
     }
 
