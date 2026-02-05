@@ -430,32 +430,60 @@ export interface AreaManagerStats {
     openIssues: number
 }
 
-export function useAreaManagerStats() {
+export function useAreaManagerStats(propertyId?: string) {
     return useQuery({
-        queryKey: ['area-manager-stats'],
+        queryKey: ['area-manager-stats', propertyId],
         queryFn: async (): Promise<AreaManagerStats> => {
+            const isAll = !propertyId || propertyId === 'all'
+
             // Get total active properties
-            const { count: totalProperties } = await supabase
+            const propCountQuery = supabase
                 .from('properties')
                 .select('*', { count: 'exact', head: true })
                 .eq('is_active', true)
 
+            if (!isAll) {
+                propCountQuery.eq('id', propertyId)
+            }
+            const { count: totalProperties } = await propCountQuery
+
             // Get open issues/tasks
-            const { count: openIssues } = await supabase
+            const tasksQuery = supabase
                 .from('tasks')
                 .select('*', { count: 'exact', head: true })
                 .neq('status', 'completed')
                 .neq('status', 'cancelled')
 
+            if (!isAll) {
+                tasksQuery.eq('property_id', propertyId)
+            }
+            const { count: openIssues } = await tasksQuery
+
             // Get training compliance
-            const { count: completedTraining } = await supabase
+            const completedQuery = supabase
                 .from('training_progress')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'completed')
 
-            const { count: totalTraining } = await supabase
+            const totalQuery = supabase
                 .from('learning_assignments')
                 .select('*', { count: 'exact', head: true })
+
+            // Filter training by property users if not 'all'
+            if (!isAll) {
+                const { data: users } = await supabase.from('user_properties').select('user_id').eq('property_id', propertyId)
+                const userIds = users?.map(u => u.user_id) || []
+                if (userIds.length > 0) {
+                    completedQuery.in('user_id', userIds)
+                    totalQuery.in('assigned_to_user_id', userIds)
+                } else {
+                    // Force zero if no users
+                    return { totalProperties: totalProperties || 0, maintenanceEfficiency: 100, openVacancies: 0, staffCompliance: 0, openIssues: 0 }
+                }
+            }
+
+            const { count: completedTraining } = await completedQuery
+            const { count: totalTraining } = await totalQuery
 
             const staffCompliance = totalTraining && totalTraining > 0
                 ? Math.round((completedTraining || 0) / totalTraining * 100)
@@ -465,26 +493,39 @@ export function useAreaManagerStats() {
             const thirtyDaysAgo = new Date()
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-            const { count: completedTickets } = await supabase
+            const compTicketsQuery = supabase
                 .from('maintenance_tickets')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'completed')
                 .gte('created_at', thirtyDaysAgo.toISOString())
 
-            const { count: totalTickets } = await supabase
+            const totalTicketsQuery = supabase
                 .from('maintenance_tickets')
                 .select('*', { count: 'exact', head: true })
                 .gte('created_at', thirtyDaysAgo.toISOString())
+
+            if (!isAll) {
+                compTicketsQuery.eq('property_id', propertyId)
+                totalTicketsQuery.eq('property_id', propertyId)
+            }
+
+            const { count: completedTickets } = await compTicketsQuery
+            const { count: totalTickets } = await totalTicketsQuery
 
             const maintenanceEfficiency = totalTickets && totalTickets > 0
                 ? Math.round((completedTickets || 0) / totalTickets * 100)
                 : 100
 
             // Open Vacancies
-            const { count: openVacancies } = await supabase
+            const vacanciesQuery = supabase
                 .from('job_postings')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'open')
+
+            if (!isAll) {
+                vacanciesQuery.eq('property_id', propertyId)
+            }
+            const { count: openVacancies } = await vacanciesQuery
 
             return {
                 totalProperties: totalProperties || 0,
@@ -507,60 +548,85 @@ export interface CorporateStats {
     complianceRate: number
 }
 
-export function useCorporateStats() {
+export function useCorporateStats(propertyId?: string) {
     return useQuery({
-        queryKey: ['corporate-stats'],
+        queryKey: ['corporate-stats', propertyId],
         queryFn: async (): Promise<CorporateStats> => {
+            const isAll = !propertyId || propertyId === 'all'
+
             // Get total properties
-            const { count: totalProperties } = await supabase
+            const propQuery = supabase
                 .from('properties')
                 .select('*', { count: 'exact', head: true })
                 .eq('is_active', true)
 
-            // Get total staff
-            const { count: totalStaff } = await supabase
-                .from('profiles')
-                .select('*', { count: 'exact', head: true })
-                .eq('is_active', true)
+            if (!isAll) propQuery.eq('id', propertyId)
+            const { count: totalProperties } = await propQuery
 
-            // Calculate compliance from training
-            const { count: completedTraining } = await supabase
+            // Get total staff
+            const staffQuery = supabase
+                .from('user_properties')
+                .select('user_id', { count: 'exact', head: true })
+
+            if (!isAll) staffQuery.eq('property_id', propertyId)
+            const { count: totalStaff } = await staffQuery
+
+            // Compliance Logic
+            const completedQuery = supabase
                 .from('training_progress')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'completed')
 
-            const { count: totalTraining } = await supabase
+            const totalTrainQuery = supabase
                 .from('learning_assignments')
                 .select('*', { count: 'exact', head: true })
+
+            if (!isAll) {
+                const { data: users } = await supabase.from('user_properties').select('user_id').eq('property_id', propertyId)
+                const userIds = users?.map(u => u.user_id) || []
+                if (userIds.length > 0) {
+                    completedQuery.in('user_id', userIds)
+                    totalTrainQuery.in('assigned_to_user_id', userIds)
+                }
+            }
+
+            const { count: completedTraining } = await completedQuery
+            const { count: totalTraining } = await totalTrainQuery
 
             const complianceRate = totalTraining && totalTraining > 0
                 ? Math.round((completedTraining || 0) / totalTraining * 100)
                 : 0
 
-            // Maintenance Efficiency (Last 30 Days)
-            const thirtyDaysAgo = new Date()
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-            const { count: completedTickets } = await supabase
+            // Maintenance
+            const compTicketsQuery = supabase
                 .from('maintenance_tickets')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'completed')
-                .gte('created_at', thirtyDaysAgo.toISOString())
 
-            const { count: totalTickets } = await supabase
+            const totalTicketsQuery = supabase
                 .from('maintenance_tickets')
                 .select('*', { count: 'exact', head: true })
-                .gte('created_at', thirtyDaysAgo.toISOString())
+
+            if (!isAll) {
+                compTicketsQuery.eq('property_id', propertyId)
+                totalTicketsQuery.eq('property_id', propertyId)
+            }
+
+            const { count: completedTickets } = await compTicketsQuery
+            const { count: totalTickets } = await totalTicketsQuery
 
             const maintenanceEfficiency = totalTickets && totalTickets > 0
                 ? Math.round((completedTickets || 0) / totalTickets * 100)
-                : 100 // Default to 100 if no tickets (efficiency is not "bad")
+                : 100
 
-            // Open Vacancies
-            const { count: openVacancies } = await supabase
+            // Vacancies
+            const vacancyQuery = supabase
                 .from('job_postings')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'open')
+
+            if (!isAll) vacancyQuery.eq('property_id', propertyId)
+            const { count: openVacancies } = await vacancyQuery
 
             return {
                 totalProperties: totalProperties || 0,

@@ -24,9 +24,9 @@ CREATE POLICY "Users can view training module documents" ON training_module_docu
 CREATE POLICY "System can manage training module documents" ON training_module_documents
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE user_profiles.id = auth.uid() 
-      AND user_profiles.role IN ('regional_admin', 'regional_hr', 'property_manager')
+      SELECT 1 FROM public.user_roles
+      WHERE user_roles.user_id = auth.uid()
+      AND user_roles.role IN ('regional_admin', 'regional_hr', 'property_manager')
     )
   );
 

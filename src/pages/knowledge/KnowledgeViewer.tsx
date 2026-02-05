@@ -86,6 +86,7 @@ import { useTrackView } from '@/hooks/useRecentlyViewed'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { supabase } from '@/lib/supabase'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
@@ -861,7 +862,7 @@ export default function KnowledgeViewer() {
                                             fontSize === 'xl' && "text-kb-xl",
                                             readerTheme === 'dark' && "text-gray-100"
                                         )}
-                                        dangerouslySetInnerHTML={{ __html: htmlContent }}
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
                                     />
                                 ) : (
                                     !article.file_url && !article.video_url && !article.checklist_items?.length && !article.faq_items?.length && !article.images?.length && (

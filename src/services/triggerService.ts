@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import { createBulkNotifications } from '@/lib/notificationService'
 
 // ============================================================================
 // TYPES
@@ -248,20 +249,22 @@ async function sendNotifications(
     userIds: string[],
     context: TriggerContext
 ): Promise<void> {
-    const notifications = userIds.map(userId => ({
-        user_id: userId,
+    const title = `Action Required: ${context.event.replace('_', ' ')}`
+    const message = `Please review the ${context.source_type || 'item'} that was ${context.event.toLowerCase().replace('_', ' ')}.`
+    const link = context.source_id ? `/${context.source_type}/${context.source_id}` : null
+
+    await createBulkNotifications({
+        userIds,
         type: 'trigger_notification',
-        title: `Action Required: ${context.event.replace('_', ' ')}`,
-        message: `Please review the ${context.source_type || 'item'} that was ${context.event.toLowerCase().replace('_', ' ')}.`,
-        link: context.source_id ? `/${context.source_type}/${context.source_id}` : null,
-        is_read: false
-    }))
-
-    const { error } = await supabase
-        .from('notifications')
-        .insert(notifications)
-
-    if (error) throw error
+        title,
+        message,
+        metadata: {
+            link,
+            source_type: context.source_type,
+            source_id: context.source_id,
+            event: context.event
+        }
+    })
 }
 
 // ============================================================================
@@ -272,23 +275,62 @@ async function sendNotifications(
  * Trigger when a SOP is published
  */
 export async function onSOPPublished(sopId: string, departmentId?: string): Promise<void> {
-    // Get users in department
-    let affectedUsers: string[] = []
+    // 1. Fetch document details for accurate targeting
+    const { data: document } = await supabase
+        .from('documents')
+        .select('title, visibility, property_id, department_id')
+        .eq('id', sopId)
+        .single()
 
-    if (departmentId) {
+    // 2. Determine Audience based on Visibility
+    let affectedUsers: string[] = []
+    let targetId = departmentId || document?.department_id
+
+    if (document) {
+        if (document.visibility === 'department' && document.department_id) {
+            targetId = document.department_id
+            const { data: users } = await supabase
+                .from('user_departments')
+                .select('user_id')
+                .eq('department_id', document.department_id)
+            affectedUsers = users?.map(u => u.user_id) || []
+        } else if (document.visibility === 'property' && document.property_id) {
+            // For property-wide SOPs, notify all staff in that property
+            const { data: users } = await supabase
+                .from('user_properties')
+                .select('user_id')
+                .eq('property_id', document.property_id)
+            affectedUsers = users?.map(u => u.user_id) || []
+        }
+    } else if (targetId) {
+        // Fallback if document fetch failed (legacy behavior)
         const { data: users } = await supabase
             .from('user_departments')
             .select('user_id')
-            .eq('department_id', departmentId)
-
+            .eq('department_id', targetId)
         affectedUsers = users?.map(u => u.user_id) || []
     }
 
+    // 3. Send Direct Notification (Bypassing Rule Engine for Critical Visibility)
+    if (affectedUsers.length > 0 && document) {
+        await createBulkNotifications({
+            userIds: affectedUsers,
+            type: 'announcement_new', // Triggers email + in-app
+            title: `New SOP Published: ${document.title}`,
+            message: `A new Standard Operating Procedure "${document.title}" has been published for your ${document.visibility === 'department' ? 'department' : 'property'}.`,
+            link: `/knowledge/${sopId}`,
+            entityType: 'document',
+            entityId: sopId,
+            skipDbInsert: false // We need to insert this because backend rules seemingly aren't
+        })
+    }
+
+    // 4. Call Legacy Trigger (for other side effects like audits)
     await processTrigger({
         event: 'SOP_PUBLISHED',
         source_id: sopId,
         source_type: 'knowledge',
-        department_id: departmentId,
+        department_id: targetId,
         affected_users: affectedUsers
     })
 }

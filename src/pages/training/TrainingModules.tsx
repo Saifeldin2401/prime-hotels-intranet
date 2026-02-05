@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { createBulkNotifications } from '@/lib/notificationService'
 import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -378,14 +379,18 @@ export default function TrainingModules() {
         }
       } else if (userIdsToNotify.length > 0) {
         // Direct insert for small groups
-        const notifications = userIdsToNotify.map(userId => ({
-          user_id: userId,
+        // We set skipDbInsert: false to ensure the notification is created with the correct link
+        // This overrides any potential missing trigger
+        await createBulkNotifications({
+          userIds: userIdsToNotify,
+          type: 'training_assigned',
           title: notificationData.title,
           message: notificationData.message,
-          type: 'training_assigned',
-          data: notificationData
-        }))
-        await supabase.from('notifications').insert(notifications)
+          metadata: notificationData,
+          entityId: assigningModuleId,
+          link: `/learning/training/${assigningModuleId}`,
+          skipDbInsert: false
+        })
       }
     },
     onSuccess: () => {
@@ -676,6 +681,7 @@ export default function TrainingModules() {
           difficulty_level: editingModule.difficulty || 'beginner',
           category: editingModule.category || '',
           status: editingModule.status,
+          certificate_enabled: false // Default value
         } : null}
         onSubmit={handleSubmit}
         isSubmitting={createModuleMutation.isPending || updateModuleMutation.isPending}

@@ -245,14 +245,33 @@ async function processNotifications(
                 .eq("id", item.id);
 
             // Create the actual notification
+            const data = item.notification_data || {};
+            // Derive generic entity details
+            const entityId = data.moduleId || data.announcement_id || data.entityId;
+            let entityType = data.entityType;
+            if (!entityType) {
+                if (data.moduleId) entityType = 'training_module';
+                else if (data.announcement_id) entityType = 'announcement';
+            }
+
+            // Derive link if not provided
+            let link = data.link;
+            if (!link && data.moduleId) {
+                link = `/learning/training/${data.moduleId}`;
+            }
+
             const { error: notifError } = await supabase
                 .from("notifications")
                 .insert({
                     user_id: item.user_id,
-                    title: item.notification_data?.title || "New Training Assigned",
-                    message: item.notification_data?.message || "You have been assigned a new training module",
+                    title: data.title || "New Notification",
+                    message: data.message || "You have a new notification",
                     type: item.notification_type,
-                    data: item.notification_data
+                    data: data,
+                    metadata: data,
+                    entity_id: entityId || null,
+                    entity_type: entityType || null,
+                    link: link || null
                 });
 
             if (notifError) {

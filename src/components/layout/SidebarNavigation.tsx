@@ -17,10 +17,13 @@ import { sidebarItemVariants } from '@/lib/motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useProperty } from '@/contexts/PropertyContext'
 import {
   X,
   ChevronDown,
-  LogOut
+  LogOut,
+  Globe,
+  Building
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
@@ -47,6 +50,7 @@ export function SidebarNavigation({
   const navigate = useNavigate()
   const { primaryRole, profile, signOut } = useAuth()
   const { groupedNavigation } = useNavigation()
+  const { currentProperty } = useProperty()
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
 
   // Auto-expand groups with active items
@@ -276,18 +280,32 @@ export function SidebarNavigation({
             <div className="px-4 py-5">
               <div className="p-3 rounded-xl bg-hotel-navy-dark border border-hotel-navy-light">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-hotel-gold flex items-center justify-center border-2 border-hotel-navy shadow-sm">
-                    <span className="font-bold text-hotel-navy text-sm">
-                      {profile?.full_name?.[0] || 'U'}
-                    </span>
+                  <div className={cn(
+                    "h-9 w-9 rounded-full flex items-center justify-center border-2 border-hotel-navy shadow-sm transition-colors",
+                    currentProperty?.id === 'all' ? "bg-hotel-navy text-hotel-gold border-hotel-gold/30" : "bg-hotel-gold text-hotel-navy"
+                  )}>
+                    {currentProperty?.id === 'all' ? (
+                      <Globe className="h-5 w-5" />
+                    ) : (
+                      <span className="font-bold text-sm">
+                        {profile?.full_name?.[0] || 'U'}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-white truncate font-serif">
                       {profile?.full_name || 'Guest User'}
                     </p>
-                    <p className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-medium truncate">
-                      {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`, primaryRole.replace('_', ' ')) : 'Guest')}
-                    </p>
+                    <div className="flex flex-col">
+                      <p className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-medium truncate">
+                        {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
+                      </p>
+                      {currentProperty && (
+                        <p className="text-[9px] text-white/50 truncate italic mt-0.5">
+                          {currentProperty.name}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

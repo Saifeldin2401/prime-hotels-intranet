@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Icons } from '@/components/icons'
 import { useDepartmentKPIs } from '@/hooks/useDepartmentKPIs'
-import { useProperty } from '@/contexts/PropertyContext'
 import { KnowledgeComplianceWidget } from '@/components/knowledge/KnowledgeComplianceWidget'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useDepartmentStaff } from '@/hooks/useDepartmentStaff'
@@ -19,14 +18,20 @@ export default function DepartmentDetails() {
     const { t } = useTranslation('dashboard')
     const { id } = useParams()
     const navigate = useNavigate()
-    const { currentProperty } = useProperty()
-    const { data: kpis } = useDepartmentKPIs(currentProperty?.id)
+
+    // Fetch ALL departments first to find the target one and its property_id
     const { departments } = useDepartments()
-    const { staff, loading: loadingStaff } = useDepartmentStaff(id, currentProperty?.id)
+    const department = departments.find(d => d.id === id)
+
+    // Use the department's actual property_id for KPIs and staff queries
+    // This ensures data loads correctly even when viewing from HEAD OFFICE
+    const departmentPropertyId = department?.property_id
+
+    const { data: kpis } = useDepartmentKPIs(departmentPropertyId)
+    const { staff, loading: loadingStaff } = useDepartmentStaff(id, departmentPropertyId)
     const [searchTerm, setSearchTerm] = useState('')
 
-    // Find department info
-    const department = departments.find(d => d.id === id)
+    // Find KPI for this department
     const departmentKpi = kpis?.find(k => k.department_id === id)
 
     const filteredStaff = staff.filter(member =>
@@ -116,7 +121,7 @@ export default function DepartmentDetails() {
                 </TabsList>
 
                 <TabsContent value="training" className="space-y-6">
-                    <KnowledgeComplianceWidget variant="department" propertyId={currentProperty?.id} />
+                    <KnowledgeComplianceWidget variant="department" propertyId={departmentPropertyId} />
                 </TabsContent>
 
                 <TabsContent value="staff">

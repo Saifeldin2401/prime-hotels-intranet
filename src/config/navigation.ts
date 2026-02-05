@@ -46,7 +46,7 @@ import {
     Activity,
     type LucideIcon
 } from 'lucide-react'
-import type { AppRole } from '@/lib/constants'
+import { ROLES, type AppRole } from '@/lib/constants'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -236,7 +236,10 @@ export const ROUTES: RouteConfig[] = [
             property_manager: '/dashboard/property-manager',
             property_hr: '/dashboard/property-hr',
             regional_hr: '/dashboard/regional-hr',
-            regional_admin: '/dashboard/corporate-admin'
+            regional_admin: '/dashboard/corporate-admin',
+            corporate_admin: '/dashboard/corporate-admin',
+            super_admin: '/dashboard/corporate-admin',
+            manager: '/staff-dashboard'
         }
     },
     {
@@ -800,7 +803,14 @@ export function resolvePathForRole(route: RouteConfig, role: AppRole | null): st
 export function canAccessRoute(route: RouteConfig, role: AppRole | null): boolean {
     if (!role) return false
     if (route.allowedRoles === 'all') return true
-    return route.allowedRoles.includes(role)
+
+    if (route.allowedRoles.includes(role)) return true
+
+    const currentLevel = ROLES[role]?.level ?? Number.MAX_SAFE_INTEGER
+    return route.allowedRoles.some((allowedRole) => {
+        const allowedLevel = ROLES[allowedRole]?.level ?? Number.MAX_SAFE_INTEGER
+        return currentLevel <= allowedLevel
+    })
 }
 
 /**
@@ -809,7 +819,14 @@ export function canAccessRoute(route: RouteConfig, role: AppRole | null): boolea
 export function canSeeGroup(group: NavigationGroupConfig, role: AppRole | null): boolean {
     if (!role) return false
     if (group.visibleTo === 'all') return true
-    return group.visibleTo.includes(role)
+
+    if (group.visibleTo.includes(role)) return true
+
+    const currentLevel = ROLES[role]?.level ?? Number.MAX_SAFE_INTEGER
+    return group.visibleTo.some((allowedRole) => {
+        const allowedLevel = ROLES[allowedRole]?.level ?? Number.MAX_SAFE_INTEGER
+        return currentLevel <= allowedLevel
+    })
 }
 
 /**

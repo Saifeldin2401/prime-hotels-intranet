@@ -10,49 +10,72 @@ SECURITY DEFINER
 AS $$
 DECLARE
   matched_template_id uuid;
+  process_id uuid;
   task_record jsonb;
+  user_role public.app_role;
+  assignee_id uuid;
 BEGIN
-  -- 1. Find a matching template (Role specific > Department specific > General fallback)
-  SELECT id INTO matched_template_id
-  FROM onboarding_templates
-  WHERE is_active = true
-    AND (
-      (role = NEW.role::text) 
-      OR (department_id = NEW.department_id)
-      OR (role IS NULL AND department_id IS NULL)
-    )
-  ORDER BY 
-    CASE 
-      WHEN role = NEW.role::text THEN 1
-      WHEN department_id = NEW.department_id THEN 2
-      ELSE 3
-    END
+  -- 1. Determine the user's role
+  SELECT role INTO user_role
+  FROM public.user_roles
+  WHERE user_id = NEW.user_id
   LIMIT 1;
 
-  -- 2. If template found, create process and tasks
-  IF matched_template_id IS NOT NULL THEN
-    -- Create Process
-    WITH new_process AS (
-      INSERT INTO onboarding_process (user_id, template_id, status, assigned_at)
-      VALUES (NEW.user_id, matched_template_id, 'active', NOW())
-      RETURNING id
+  -- 2. Find a matching template (Department specific > Role specific > General fallback)
+  SELECT id INTO matched_template_id
+  FROM public.onboarding_templates
+  WHERE is_active = true
+    AND (
+      (department_id = NEW.department_id)
+      OR (department_id IS NULL AND role = user_role)
+      OR (role IS NULL AND department_id IS NULL)
     )
-    -- Create Tasks from Template
-    INSERT INTO onboarding_tasks (process_id, title, description, assigned_to_id, due_date, link_type, link_id)
-    SELECT 
-      (SELECT id FROM new_process),
-      t->>'title',
-      t->>'description',
-      CASE 
-        WHEN t->>'assignee_role' = 'self' THEN NEW.user_id
-        WHEN t->>'assignee_role' = 'manager' THEN (SELECT reporting_to FROM user_profiles WHERE id = NEW.user_id)
-        ELSE NULL 
-      END,
-      NOW() + ((t->>'due_day_offset')::int || ' days')::interval,
-      t->>'link_type',
-      (t->>'link_id')::uuid
-    FROM onboarding_templates, jsonb_array_elements(tasks) as t
-    WHERE id = matched_template_id;
+  ORDER BY
+    CASE
+      WHEN department_id = NEW.department_id THEN 1
+      WHEN department_id IS NULL AND role = user_role THEN 2
+      ELSE 3
+    END,
+    created_at DESC
+  LIMIT 1;
+
+  -- 3. If template found, create process and tasks
+  IF matched_template_id IS NOT NULL THEN
+    INSERT INTO public.onboarding_process (user_id, template_id, status, start_date)
+    VALUES (NEW.user_id, matched_template_id, 'pending', NOW())
+    RETURNING id INTO process_id;
+
+    FOR task_record IN
+      SELECT * FROM jsonb_array_elements((SELECT tasks FROM public.onboarding_templates WHERE id = matched_template_id))
+    LOOP
+      IF (task_record->>'assignee_role') = 'self' THEN
+        assignee_id := NEW.user_id;
+      ELSIF (task_record->>'assignee_role') = 'manager' THEN
+        SELECT reporting_to INTO assignee_id FROM public.profiles WHERE id = NEW.user_id;
+      ELSE
+        assignee_id := NULL;
+      END IF;
+
+      INSERT INTO public.onboarding_tasks (
+        process_id,
+        title,
+        description,
+        assigned_to_id,
+        due_date,
+        status,
+        link_type,
+        link_id
+      ) VALUES (
+        process_id,
+        task_record->>'title',
+        task_record->>'description',
+        assignee_id,
+        NOW() + ((task_record->>'due_day_offset')::int || ' days')::interval,
+        'pending',
+        task_record->>'link_type',
+        NULLIF(task_record->>'link_id', '')::uuid
+      );
+    END LOOP;
   END IF;
 
   RETURN NEW;

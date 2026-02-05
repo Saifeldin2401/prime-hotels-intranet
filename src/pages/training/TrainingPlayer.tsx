@@ -34,6 +34,7 @@ import { QuizComponent } from '@/pages/learning/components/QuizComponent'
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
+import { sanitizeHtml } from '@/lib/sanitize'
 import type { TrainingModule, TrainingContentBlock } from '@/lib/types'
 import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
 import { cn } from '@/lib/utils'
@@ -198,7 +199,7 @@ export default function TrainingPlayer() {
             >
                 {block.type === 'text' && (
                     <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
-                        <div dangerouslySetInnerHTML={{ __html: block.content }} />
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />
                     </div>
                 )}
 
@@ -221,7 +222,7 @@ export default function TrainingPlayer() {
                         </div>
                         {block.content && (
                             <div className="prose prose-lg max-w-none dark:prose-invert bg-slate-50 p-6 rounded-xl border border-slate-100">
-                                <div dangerouslySetInnerHTML={{ __html: block.content }} />
+                                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />
                             </div>
                         )}
                     </div>
@@ -241,7 +242,7 @@ export default function TrainingPlayer() {
                         )}
                         {block.content && (
                             <div className="prose prose-lg max-w-none dark:prose-invert">
-                                <div dangerouslySetInnerHTML={{ __html: block.content }} />
+                                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />
                             </div>
                         )}
                     </div>
@@ -305,7 +306,7 @@ export default function TrainingPlayer() {
                         </Button>
                         {block.content && (
                             <div className="prose prose-sm max-w-none dark:prose-invert mt-6 pt-6 border-t border-emerald-100">
-                                <div dangerouslySetInnerHTML={{ __html: block.content }} />
+                                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />
                             </div>
                         )}
                     </div>

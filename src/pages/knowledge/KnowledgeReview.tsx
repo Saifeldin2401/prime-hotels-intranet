@@ -50,6 +50,7 @@ import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import type { KnowledgeArticle } from '@/types/knowledge'
+import { createNotification } from '@/lib/notificationService'
 
 export default function KnowledgeReview() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
@@ -142,21 +143,23 @@ export default function KnowledgeReview() {
                 }
                 const config = actionConfig[action]
 
-                await supabase.from('notifications').insert({
-                    user_id: selectedArticle.created_by,
+                const targetLink = action === 'approve'
+                    ? `/knowledge/${selectedArticle.id}`
+                    : `/knowledge/edit/${selectedArticle.id}`
+
+                await createNotification({
+                    userId: selectedArticle.created_by,
                     type: config.type,
                     title: `${config.emoji} Document ${config.titleSuffix}`,
                     message: `Your document "${selectedArticle.title}" has been ${config.text}${reviewComment.trim() ? `. Feedback: "${reviewComment.trim()}"` : '.'}`,
-                    link: `/knowledge/${selectedArticle.id}`,
-                    data: {
+                    link: targetLink,
+                    metadata: {
                         document_id: selectedArticle.id,
                         action,
                         reviewer_id: user.id,
                         reviewer_name: profile?.full_name,
                         feedback: reviewComment.trim() || null
                     }
-                }).then(({ error }) => {
-                    if (error) console.error('Failed to notify author:', error)
                 })
             }
         },

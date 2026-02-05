@@ -1,12 +1,12 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
@@ -254,9 +254,9 @@ async function notifyOverdueTasks(supabaseClient: any, config: any) {
     const { data: tasks } = await supabaseClient
         .from('tasks')
         .select('id, title, assigned_to_id, due_date')
-        .eq('status', 'open')
+        .in('status', ['todo', 'in_progress', 'review'])
         .not('due_date', 'is', null)
-        .lt('due_date', now)
+        .lt('due_date', new Date().toISOString().split('T')[0])
         .eq('is_deleted', false)
 
     if (!tasks) return { tasks_notified: 0 }

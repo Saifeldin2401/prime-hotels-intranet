@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import type { AppRole } from '@/lib/constants'
+import { ROLES, type AppRole } from '@/lib/constants'
 
 export type Permission =
   // Training permissions
@@ -85,7 +85,20 @@ export function usePermissions() {
 
       // Check role-based access
       if (!config.roles.includes('all')) {
-        if (!primaryRole || !config.roles.includes(primaryRole)) {
+        if (!primaryRole) {
+          return false
+        }
+
+        const currentLevel = ROLES[primaryRole]?.level ?? Number.MAX_SAFE_INTEGER
+        const direct = config.roles.includes(primaryRole)
+        const inherited = config.roles.some((allowed) => {
+          if (allowed === 'all') return true
+          const allowedRole = allowed as AppRole
+          const allowedLevel = ROLES[allowedRole]?.level ?? Number.MAX_SAFE_INTEGER
+          return currentLevel <= allowedLevel
+        })
+
+        if (!direct && !inherited) {
           return false
         }
       }

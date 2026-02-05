@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import { createNotification, createBulkNotifications } from '@/lib/notificationService'
 
 export type ApprovalType =
     | 'leave_request'
@@ -71,13 +72,13 @@ export async function notifyApprovalRequired({
     }
 
     try {
-        await supabase.from('notifications').insert({
-            user_id: approverId,
+        await createNotification({
+            userId: approverId,
             type: `approval_required_${type}`,
             title: `${priorityEmoji[priority]} ${typeLabels[type]} Pending Approval`,
             message: `${requesterName} has submitted a ${typeLabels[type].toLowerCase()}: "${title}"${description ? ` - ${description}` : ''}`,
-            link,
-            data: {
+            metadata: {
+                link,
                 approval_type: type,
                 entity_id: entityId,
                 requester_id: requesterId,
@@ -117,15 +118,15 @@ export async function notifyApprovalOutcome({
     const emoji = approved ? '✅' : '❌'
 
     try {
-        await supabase.from('notifications').insert({
-            user_id: requesterId,
+        await createNotification({
+            userId: requesterId,
             type: `approval_${status}_${type}`,
             title: `${emoji} Your ${typeLabels[type]} has been ${status}`,
             message: reason
                 ? `${approverName} has ${status} your ${typeLabels[type]}. Reason: "${reason}"`
                 : `${approverName} has ${status} your ${typeLabels[type]}.`,
-            link,
-            data: {
+            metadata: {
+                link,
                 approval_type: type,
                 entity_id: entityId,
                 approver_id: approverId,
@@ -148,13 +149,13 @@ export async function sendApprovalReminder(
     oldestDays: number
 ): Promise<void> {
     try {
-        await supabase.from('notifications').insert({
-            user_id: approverId,
+        await createNotification({
+            userId: approverId,
             type: 'approval_reminder',
             title: `⏰ You have ${pendingCount} pending approval${pendingCount > 1 ? 's' : ''}`,
             message: `Please review your pending approvals. The oldest has been waiting ${oldestDays} day${oldestDays > 1 ? 's' : ''}.`,
-            link: '/approvals',
-            data: {
+            metadata: {
+                link: '/approvals',
                 pending_count: pendingCount,
                 oldest_days: oldestDays
             }
@@ -178,23 +179,27 @@ export async function escalateOverdueApprovals(
         link: string
     }>
 ): Promise<void> {
-    const notifications = overdueItems.map(item => ({
-        user_id: item.escalateToId,
-        type: 'approval_escalated',
-        title: `⚠️ Escalated: ${item.title}`,
-        message: `This ${item.type.replace('_', ' ')} has been pending for ${item.daysOverdue} days and requires your attention.`,
-        link: item.link,
-        data: {
-            type: item.type,
-            entity_id: item.entityId,
-            original_approver_id: item.currentApproverId,
-            days_overdue: item.daysOverdue
-        }
-    }))
-
     try {
-        if (notifications.length > 0) {
-            await supabase.from('notifications').insert(notifications)
+        if (overdueItems.length > 0) {
+            // Process individually to handle unique messages, or group by user?
+            // For simplicity and correctness with the existing API, we'll iterate.
+            // Escalations are usually low volume.
+
+            await Promise.all(overdueItems.map(item =>
+                createNotification({
+                    userId: item.escalateToId,
+                    type: 'approval_escalated',
+                    title: `⚠️ Escalated: ${item.title}`,
+                    message: `This ${item.type.replace('_', ' ')} has been pending for ${item.daysOverdue} days and requires your attention.`,
+                    metadata: {
+                        link: item.link,
+                        type: item.type,
+                        entity_id: item.entityId,
+                        original_approver_id: item.currentApproverId,
+                        days_overdue: item.daysOverdue
+                    }
+                })
+            ))
         }
     } catch (error) {
         console.error('Failed to send escalation notifications:', error)

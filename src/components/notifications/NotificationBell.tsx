@@ -40,11 +40,15 @@ export function NotificationBell() {
       case 'request_rejected':
         return '/approvals'
       case 'training_assigned':
+        return notification.entity_id ? `/learning/training/${notification.entity_id}` : '/learning/assignments'
       case 'training_deadline':
-        return '/training'
+        return notification.entity_id ? `/learning/training/${notification.entity_id}` : '/learning/assignments'
       case 'document_published':
       case 'document_acknowledgment_required':
-        return '/documents'
+        return '/knowledge' // Default to KB root if specific link missing
+      case 'document_changes_requested':
+      case 'document_rejected':
+        return '/knowledge' // Or /knowledge/my-articles if it existed
       case 'announcement_new':
         return '/announcements'
       case 'maintenance_assigned':

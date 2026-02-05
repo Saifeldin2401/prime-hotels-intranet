@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as LinkIcon } from 'lucide-react'
+import { sanitizeHtml } from '@/lib/sanitize'
 import type { TrainingContentBlock } from '@/lib/types'
 import { PdfViewer } from '@/components/common/PdfViewer'
 
@@ -30,7 +31,7 @@ export const DocumentBlockRenderer = ({ block }: DocumentBlockRendererProps) => 
                     </div>
                 </div>
                 <div className="mt-2 text-sm text-gray-500 prose max-w-none dark:prose-invert">
-                    <div dangerouslySetInnerHTML={{ __html: block.content }} />
+                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />
                 </div>
             </div>
         )
@@ -40,7 +41,7 @@ export const DocumentBlockRenderer = ({ block }: DocumentBlockRendererProps) => 
         <div className="space-y-4">
             <PdfViewer url={block.content_url || ''} />
             <div className="mt-2 text-sm text-gray-500 prose max-w-none dark:prose-invert">
-                <div dangerouslySetInnerHTML={{ __html: block.content }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />
             </div>
         </div>
     )

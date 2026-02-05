@@ -111,14 +111,15 @@ function AssignmentProgressDialog({
 }
 
 const ROLES = [
-    { value: 'admin', label: 'Admin' },
+    { value: 'super_admin', label: 'Super Admin' },
+    { value: 'corporate_admin', label: 'Corporate Admin' },
+    { value: 'regional_admin', label: 'Regional Admin' },
+    { value: 'regional_hr', label: 'Regional HR' },
+    { value: 'property_manager', label: 'Property Manager' },
+    { value: 'property_hr', label: 'Property HR' },
+    { value: 'department_head', label: 'Department Head' },
     { value: 'manager', label: 'Manager' },
     { value: 'staff', label: 'Staff' },
-    { value: 'housekeeping', label: 'Housekeeping' },
-    { value: 'front_desk', label: 'Front Desk' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'food_beverage', label: 'Food & Beverage' },
-    { value: 'security', label: 'Security' },
 ]
 
 export default function AssignmentManager() {
