@@ -125,13 +125,22 @@ export function AssignmentDialog({
         setPropertyFilter('all')
     }, [])
 
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        await onAssign({
-            targetType,
-            targetIds: selectedIds,
-            deadline: deadline || undefined
-        })
+        if (isSubmitting || isAssigning) return
+
+        setIsSubmitting(true)
+        try {
+            await onAssign({
+                targetType,
+                targetIds: selectedIds,
+                deadline: deadline || undefined
+            })
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     if (!open) return null
@@ -250,7 +259,7 @@ export function AssignmentDialog({
                         <Button
                             type="submit"
                             className="bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-md min-w-[120px]"
-                            disabled={isAssigning || (targetType !== 'all' && selectedIds.length === 0)}
+                            disabled={isAssigning || isSubmitting || (targetType !== 'all' && selectedIds.length === 0)}
                         >
                             {isAssigning ? t('common:saving', 'Assigning...') : t('assign', 'Assign')}
                         </Button>

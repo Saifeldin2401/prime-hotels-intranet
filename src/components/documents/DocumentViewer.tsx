@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { Button } from '@/components/ui/button'
 import { X, Download, Loader2 } from 'lucide-react'
 
@@ -118,7 +119,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
                   {document.description}
                 </p>
               )}
-              <div dangerouslySetInnerHTML={{ __html: document.content || '' }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(document.content || '') }} />
             </div>
           )}
 

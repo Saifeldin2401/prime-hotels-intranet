@@ -303,7 +303,19 @@ export async function acknowledgeArticle(documentId: string, userId: string): Pr
 // STUBS FOR REMOVED FEATURES (Comments, Bookmarks, Feedback, Contextual Help)
 // ============================================================================
 
-export async function getContextualHelp(triggerType: string, triggerValue: string): Promise<ContextualHelp[]> { return [] }
+export async function getContextualHelp(triggerType: string, triggerValue: string): Promise<ContextualHelp[]> {
+    const { data, error } = await supabase.rpc('get_contextual_help', {
+        p_trigger_type: triggerType,
+        p_trigger_value: triggerValue
+    })
+
+    if (error) {
+        console.warn('getContextualHelp error:', error.message)
+        return []
+    }
+
+    return data || []
+}
 
 export async function getComments(documentId: string): Promise<KnowledgeComment[]> {
     const { data, error } = await supabase
@@ -362,7 +374,20 @@ export async function createComment(documentId: string, userId: string, content:
         user_id: userId
     } as any
 }
-export async function voteComment(commentId: string, userId: string, voteType: 'up' | 'down'): Promise<void> { }
+export async function voteComment(commentId: string, userId: string, voteType: 'up' | 'down'): Promise<void> {
+    const { error } = await supabase
+        .from('sop_comment_votes')
+        .upsert({
+            comment_id: commentId,
+            user_id: userId,
+            vote_type: voteType
+        }, { onConflict: 'comment_id,user_id' })
+
+    if (error) {
+        console.error('Vote comment failed:', error)
+        throw error
+    }
+}
 export async function getBookmarks(userId: string): Promise<KnowledgeBookmark[]> {
     const { data, error } = await supabase
         .from('document_bookmarks')

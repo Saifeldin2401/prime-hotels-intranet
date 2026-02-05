@@ -51,8 +51,10 @@ create policy "Templates editable by admins"
   on public.onboarding_templates for all
   using (
     exists (
-      select 1 from public.user_roles
-      and role in ('regional_admin', 'property_manager', 'department_head')
+      select 1
+      from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('regional_admin', 'property_manager', 'department_head')
     )
   );
 
@@ -70,8 +72,10 @@ create policy "Managers can view/edit their staff's process"
       and (
           reporting_to = auth.uid() OR
           exists (
-             select 1 from public.user_roles
-             and role in ('regional_admin', 'property_manager', 'department_head')
+             select 1
+             from public.user_roles ur
+             where ur.user_id = auth.uid()
+             and ur.role in ('regional_admin', 'property_manager', 'department_head')
           )
       )
     )
@@ -87,8 +91,10 @@ create policy "Users can view assigned tasks"
         where id = process_id and user_id = auth.uid()
     ) OR 
     exists (
-      select 1 from public.user_roles
-      and role in ('regional_admin', 'property_manager', 'department_head')
+      select 1
+      from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('regional_admin', 'property_manager', 'department_head')
     )
   );
   

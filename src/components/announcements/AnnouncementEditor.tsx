@@ -257,22 +257,17 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
           }
         } else {
           // Direct insert for <= 10 users
-          const notifications = uniqueUserIds.map(userId => ({
-            user_id: userId,
-            type: 'announcement_new',
-            title: announcementTitle,
-            message: `A new announcement has been posted: "${announcementTitle}"`,
-            link: `/announcements/${result.id}`,
-            data: { announcement_id: result.id, creator_id: user?.id }
-          }))
-
-          const { error: notifError } = await supabase
-            .from('notifications')
-            .insert(notifications)
-
-          if (notifError) {
-            console.error('Failed to create notifications:', notifError)
-          }
+          // use createBulkNotifications from service to ensure side-effects (like emails) run
+          await import('@/lib/notificationService').then(({ createBulkNotifications }) =>
+            createBulkNotifications({
+              userIds: uniqueUserIds,
+              type: 'announcement_new',
+              title: announcementTitle,
+              message: `A new announcement has been posted: "${announcementTitle}"`,
+              link: `/announcements/${result.id}`,
+              metadata: { announcement_id: result.id, creator_id: user?.id }
+            })
+          ).catch(err => console.error('Failed to send notifications:', err))
         }
       }
 

@@ -25,7 +25,7 @@ export function AreaManagerDashboard() {
   const { currentProperty, availableProperties } = useProperty()
   const { user, profile, primaryRole } = useAuth()
   const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
-  const { data: stats, isLoading: statsLoading } = useAreaManagerStats()
+  const { data: stats, isLoading: statsLoading } = useAreaManagerStats(currentProperty?.id)
   const { data: auditLogs = [], isLoading: auditLogsLoading } = useRecentAuditLogs(10)
 
   // Create real user object from auth context

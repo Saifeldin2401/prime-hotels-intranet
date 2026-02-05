@@ -21,7 +21,8 @@ import {
   LogOut,
   Settings,
   Sparkles,
-  Building
+  Building,
+  Globe
 } from 'lucide-react'
 
 interface HeaderProps {
@@ -39,9 +40,9 @@ export function Header({
   setUserMenuOpen,
   handleLogout
 }: HeaderProps) {
-  const { user, profile } = useAuth()
+  const { user, profile, primaryRole } = useAuth()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
-  const { t } = useTranslation(['nav', 'common'])
+  const { t } = useTranslation(['common', 'nav'])
 
   return (
     <header className="sticky top-0 z-40 w-full transition-all duration-300">
@@ -66,18 +67,56 @@ export function Header({
           <div className="flex items-center gap-3">
             {/* Property Switcher for Multi-Property Users */}
             {isMultiPropertyUser && (
-              <div className="hidden md:flex items-center me-2">
+              <div className="hidden md:flex flex-col items-start me-4">
+                <span className="text-[9px] text-hotel-gold-light/70 uppercase tracking-widest font-bold mb-1 ps-1">
+                  {currentProperty?.id === 'all' ? 'Administrative Context' : 'Active Property'}
+                </span>
                 <Select value={currentProperty?.id} onValueChange={switchProperty}>
-                  <SelectTrigger className="w-[260px] h-9 bg-hotel-navy-light border-hotel-navy-dark text-white hover:bg-hotel-navy focus:ring-hotel-gold transition-colors">
-                    <div className="flex items-center gap-2 truncate">
-                      <Building className="h-3.5 w-3.5 text-hotel-gold" />
-                      <SelectValue placeholder="Select Property" />
+                  <SelectTrigger className={cn(
+                    "w-[280px] h-10 bg-hotel-navy-dark border-hotel-navy-light/30 text-white hover:bg-hotel-navy focus:ring-hotel-gold transition-all duration-300 rounded-lg shadow-inner",
+                    currentProperty?.id === 'all' && "border-hotel-gold/50 bg-hotel-navy"
+                  )}>
+                    <div className="flex items-center gap-2.5 truncate">
+                      <div className={cn(
+                        "p-1.5 rounded-md",
+                        currentProperty?.id === 'all' ? "bg-hotel-gold text-hotel-navy" : "bg-hotel-navy text-hotel-gold"
+                      )}>
+                        {currentProperty?.id === 'all' ? (
+                          <Globe className="h-4 w-4" />
+                        ) : (
+                          <Building className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="flex flex-col items-start overflow-hidden">
+                        <span className="text-[9px] text-hotel-gold/60 uppercase tracking-widest font-bold leading-none mb-0.5">
+                          {currentProperty?.id === 'all' ? 'Administrative Context' : 'Active Property'}
+                        </span>
+                        <SelectValue placeholder="Select Property" />
+                      </div>
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent className="max-h-[400px] border-hotel-navy-light/20 bg-white dark:bg-hotel-navy text-foreground dark:text-white shadow-2xl rounded-xl">
+                    <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border mb-1">
+                      Available Properties
+                    </div>
                     {availableProperties.map(prop => (
-                      <SelectItem key={prop.id} value={prop.id} className="cursor-pointer">
-                        {prop.name}
+                      <SelectItem key={prop.id} value={prop.id} className="cursor-pointer py-3 focus:bg-hotel-navy-light focus:text-white rounded-md mx-1 my-0.5">
+                        <div className="flex items-center gap-3 w-full">
+                          {prop.id === 'all' ? (
+                            <Globe className="h-4 w-4 text-hotel-gold shrink-0" />
+                          ) : (
+                            <Building className="h-4 w-4 text-hotel-gold/60 shrink-0" />
+                          )}
+                          <div className="flex flex-col">
+                            <span className={cn(
+                              "font-semibold text-sm",
+                              prop.id === 'all' && "text-hotel-gold font-bold"
+                            )}>
+                              {prop.name}
+                            </span>
+                            {prop.address && <span className="text-[10px] opacity-70 italic">{prop.address}</span>}
+                          </div>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -105,8 +144,8 @@ export function Header({
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </span>
                   <span className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-semibold">
-                    {/* Role display based on profile data */}
-                    {profile?.roles?.some(r => ['regional_admin', 'regional_hr'].includes(r)) ? 'Admin' : 'Employee'}
+                    {/* Display job title or translated primary role */}
+                    {profile?.job_title || (primaryRole ? t(`roles.${primaryRole}`) : t('roles.staff'))}
                   </span>
                 </div>
 

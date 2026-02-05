@@ -24,7 +24,33 @@ Deno.serve(async (req) => {
     }
 
     try {
+        // ===================================
+        // SECURITY CHECK - AUTH REQUIRED
+        // ===================================
+        const authHeader = req.headers.get('Authorization')
+        if (!authHeader) {
+            return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
+                status: 401,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+        }
+
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+        const supabaseUserClient = createClient(supabaseUrl, supabaseAnonKey, {
+            global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUserClient.auth.getUser()
+
+        if (userError || !user) {
+            return new Response(JSON.stringify({ error: 'Unauthorized', details: userError?.message }), {
+                status: 401,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+        }
+
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 

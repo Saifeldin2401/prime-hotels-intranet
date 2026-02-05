@@ -99,6 +99,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'training_module',
             entityId: moduleId,
+            link: `/learning/training/${moduleId}`,
             metadata: { assigner_id: user?.id, assigner_name: currentUserName, deadline }
         })
     }, [user?.id, currentUserName])
@@ -116,7 +117,9 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'training_module',
             entityId: moduleId,
-            metadata: { assigner_id: user?.id, assigner_name: currentUserName, deadline }
+            link: `/learning/training/${moduleId}`,
+            metadata: { assigner_id: user?.id, assigner_name: currentUserName, deadline },
+            skipDbInsert: false
         })
     }, [user?.id, currentUserName])
 

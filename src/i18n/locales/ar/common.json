@@ -22,7 +22,9 @@
       "enabled": "مفعّل",
       "disabled": "معطّل",
       "active": "نشط",
-      "inactive": "غير نشط"
+      "inactive": "غير نشط",
+      "loading": "جاري التحميل...",
+      "verifying_access": "جاري التحقق من الوصول..."
     },
     "assign": "تعيين",
     "unassign": "إلغاء التعيين",
@@ -161,12 +163,12 @@
   },
   "roles": {
     "super_admin": "مشرف عام",
-    "admin": "مسؤول",
+    "corporate_admin": "مسؤول الشركة",
     "regional_admin": "مسؤول إقليمي",
-    "regional_hr": "موارد بشرية إقليمية",
     "property_manager": "مدير المنشأة",
     "property_hr": "موارد بشرية للمنشأة",
     "department_head": "رئيس قسم",
+    "manager": "مدير",
     "staff": "موظف"
   },
   "errors": {

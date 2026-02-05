@@ -4,5 +4,5 @@ INSERT INTO properties (name, address, is_active, created_at, updated_at) VALUES
 ('Prime Al Corniche Hotel Jeddah', 'Jeddah, Saudi Arabia', true, NOW(), NOW()),
 ('Prime Al Hamra Hotel Jeddah', 'Jeddah, Saudi Arabia', true, NOW(), NOW()),
 ('Prime Al Hamra Hotel Riyadh', 'Riyadh, Saudi Arabia', true, NOW(), NOW()),
-('Prime Hotel - Main', '123 Hotel Street', true, NOW(), NOW())
+('PRIME Head Office', '123 Hotel Street', true, NOW(), NOW())
 ON CONFLICT (name) DO NOTHING;

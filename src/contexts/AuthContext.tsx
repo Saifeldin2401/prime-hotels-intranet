@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       const { data: profileData, error: profileError } = await withTimeout(
-        profilePromise,
+        profilePromise as any,
         10000,
         'Profile load'
       ) as any
@@ -117,9 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Load all data with individual timeouts
       const [rolesResult, propertiesResult, departmentsResult] = await Promise.allSettled([
-        withTimeout(rolesPromise, 10000, 'Roles load'),
-        withTimeout(propertiesPromise, 10000, 'Properties load'),
-        withTimeout(departmentsPromise, 10000, 'Departments load')
+        withTimeout(rolesPromise as any, 10000, 'Roles load'),
+        withTimeout(propertiesPromise as any, 10000, 'Properties load'),
+        withTimeout(departmentsPromise as any, 10000, 'Departments load')
       ]) as [PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>]
 
       if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
@@ -322,6 +322,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Even if server signout fails, clear local state
       console.warn('Server signout failed, clearing local state:', error)
     }
+    // Clear local property context to prevent confusion for next user
+    localStorage.removeItem('prime_current_property_id')
+
     // Always clear local state regardless of server response
     setUser(null)
     setProfile(null)
@@ -345,12 +348,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const primaryRole = roles.length > 0
     ? [...roles].sort((a, b) => {
       const order: Record<AppRole, number> = {
-        regional_admin: 1,
-        regional_hr: 2,
-        property_manager: 3,
-        property_hr: 4,
-        department_head: 5,
-        staff: 6,
+        super_admin: 1,
+        corporate_admin: 2,
+        regional_admin: 3,
+        regional_hr: 4,
+        property_manager: 5,
+        property_hr: 6,
+        department_head: 7,
+        manager: 8,
+        staff: 9,
       }
       return order[a.role] - order[b.role]
     })[0]?.role || null

@@ -18,12 +18,15 @@ import { useState, useEffect } from 'react'
  */
 
 const roleToDashboardPath: Record<AppRole, string> = {
+    super_admin: '/dashboard/corporate-admin',
+    corporate_admin: '/dashboard/corporate-admin',
     staff: '/staff-dashboard',
     department_head: '/dashboard/department-head',
     property_manager: '/dashboard/property-manager',
     property_hr: '/dashboard/property-hr',
     regional_hr: '/dashboard/regional-hr',
     regional_admin: '/dashboard/corporate-admin',
+    manager: '/staff-dashboard',
 }
 
 export function RoleBasedRedirect() {

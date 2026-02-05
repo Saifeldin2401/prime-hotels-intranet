@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link, FileText, Image, Video, FileQuestion, BookOpen } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
 
 interface ContentBlock {
@@ -71,7 +72,7 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                                         <h3 className="text-lg font-semibold mb-2 text-gray-900">{item.title}</h3>
                                                         {item.content && (
                                                             <div
-                                                                dangerouslySetInnerHTML={{ __html: item.content }}
+                                                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }}
                                                                 className="mb-4 text-gray-600 prose-sm"
                                                             />
                                                         )}

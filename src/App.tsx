@@ -385,7 +385,7 @@ function AppRoutes() {
         <Route
           path="/dashboard/corporate-admin"
           element={
-            <ProtectedRoute allowedRoles={['regional_admin']}>
+            <ProtectedRoute allowedRoles={['regional_admin', 'corporate_admin', 'super_admin']}>
               <AppLayout>
                 <MotionWrapper>
                   <CorporateAdminDashboard />

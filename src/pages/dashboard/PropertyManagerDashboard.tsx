@@ -63,7 +63,7 @@ export function PropertyManagerDashboard() {
 
   // Use real stats from database
   const { data: propertyStats, isLoading: statsLoading } = usePropertyManagerStats()
-  const { departments, isLoading: deptsLoading } = useDepartments()
+  const { departments, isLoading: deptsLoading } = useDepartments(currentProperty?.id)
   const { data: maintenanceTickets = [] } = useAssignedMaintenanceTickets()
   const { data: departmentKPIs } = useDepartmentKPIs(currentProperty?.id)
   const loading = announcementsLoading || statsLoading || deptsLoading

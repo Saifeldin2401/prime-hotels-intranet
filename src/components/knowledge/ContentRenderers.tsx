@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { useTranslation } from 'react-i18next'
 import {
     Accordion,
@@ -229,7 +230,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
                     <AccordionContent className="pl-8 pb-4">
                         <div
                             className="prose prose-sm max-w-none text-gray-600"
-                            dangerouslySetInnerHTML={{ __html: item.answer }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.answer) }}
                         />
                     </AccordionContent>
                 </AccordionItem>

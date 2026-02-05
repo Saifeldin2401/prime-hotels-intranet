@@ -9,6 +9,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
+import { sanitizeHtml } from '@/lib/sanitize'
 import {
     Save,
     Send,
@@ -43,6 +44,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useProperty } from '@/contexts/PropertyContext'
 import { supabase } from '@/lib/supabase'
 import { triggerService } from '@/services/triggerService'
+import { createBulkNotifications } from '@/lib/notificationService'
 import { aiService } from '@/lib/gemini'
 import {
     type KnowledgeVisibility,
@@ -168,23 +170,23 @@ export default function KnowledgeEditor() {
             // Create notifications for all reviewers
             const notifications = reviewers.map(reviewer => ({
                 user_id: reviewer.id,
-                type: 'document_review_pending',
                 title: '📋 New Document for Review',
                 message: `"${documentTitle}" has been submitted for review by ${profile?.full_name || 'a team member'}.`,
-                link: `/knowledge/review`,
-                data: {
-                    document_id: documentId,
-                    submitted_by: user?.id,
-                    submitted_by_name: profile?.full_name
-                }
             }))
 
-            const { error: notifError } = await supabase
-                .from('notifications')
-                .insert(notifications)
-
-            if (notifError) {
-                console.error('Error creating review notifications:', notifError)
+            if (notifications.length > 0) {
+                await createBulkNotifications({
+                    userIds: reviewers.map(r => r.id),
+                    type: 'document_review_pending',
+                    title: '📋 New Document for Review',
+                    message: `"${documentTitle}" has been submitted for review by ${profile?.full_name || 'a team member'}.`,
+                    metadata: {
+                        link: `/knowledge/review`,
+                        document_id: documentId,
+                        submitted_by: user?.id,
+                        submitted_by_name: profile?.full_name
+                    }
+                })
             } else {
                 console.log(`Notified ${reviewers.length} reviewers about document submission`)
             }
@@ -384,7 +386,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             if (result) {
                 // Parse AI markdown response to HTML
                 const htmlContent = await marked(result)
-                updateField('content', htmlContent)
+                updateField('content', sanitizeHtml(htmlContent))
             }
             toast.success(t('editor.alerts.ai_success'))
         } catch (error) {
@@ -542,8 +544,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4 mr-2" />}
                         {t('editor.draft')}
                     </Button>
-                    {/* Role-based: department_head and property_hr need review, others can publish directly */}
-                    {['department_head', 'property_hr'].includes(primaryRole || '') ? (
+                    {/* Submit for Review (Dept Head, HR, Prop Manager) */}
+                    {['department_head', 'property_hr', 'property_manager'].includes(primaryRole || '') && (
                         <Button
                             onClick={() => saveArticle('PENDING_REVIEW')}
                             disabled={isSaving || isUploading}
@@ -552,7 +554,10 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Clock className="h-4 w-4 mr-2" />}
                             {t('editor.submit_for_review')}
                         </Button>
-                    ) : (
+                    )}
+
+                    {/* Publish (Prop Manager, Admin only) */}
+                    {['property_manager', 'regional_admin', 'corporate_admin', 'super_admin'].includes(primaryRole || '') && (
                         <Button
                             onClick={() => saveArticle('PUBLISHED')}
                             disabled={isSaving || isUploading}
@@ -770,7 +775,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 </div>
                             ) : (
                                 <div className="prose max-w-none min-h-[400px] p-4 border rounded bg-white">
-                                    <div dangerouslySetInnerHTML={{ __html: formData.content || `<p class="text-gray-400">${t('editor.empty_preview')}</p>` }} />
+                                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(formData.content || `<p class="text-gray-400">${t('editor.empty_preview')}</p>`) }} />
 
                                     {/* Preview content type specific blocks */}
                                     <div className="mt-8 space-y-6">
@@ -874,9 +879,9 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     {/* Visibility Context Helpers */}
                                     {formData.visibility === 'department' && (
                                         <span className="block mt-1 text-blue-600" dangerouslySetInnerHTML={{
-                                            __html: t('editor.visibility.dept_context', {
+                                            __html: sanitizeHtml(t('editor.visibility.dept_context', {
                                                 dept: formData.department_id ? departments?.find(d => d.id === formData.department_id)?.name : 'Selected Department'
-                                            })
+                                            }))
                                         }} />
                                     )}
 

@@ -20,8 +20,8 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
     const [availableProperties, setAvailableProperties] = useState<Property[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    // System roles that have access to ALL properties
-    const isCorporateRole = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
+    // System roles that have access to ALL properties (Corporate level)
+    const isCorporateRole = ['super_admin', 'corporate_admin', 'regional_admin'].includes(primaryRole || '')
 
     const fetchProperties = async () => {
         if (!user) {
@@ -45,17 +45,19 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
 
                 if (error) throw error
 
-                // Add "All Properties" option
+                // Add Group-level option for corporate users (also acts as Head Office)
                 const allOption: Property = {
                     id: 'all',
-                    name: 'Consolidated View (All)',
-                    address: 'Corporate',
+                    name: 'PRIME GROUP (HEAD OFFICE)',
+                    address: 'Corporate Headquarters & Global Operations',
                     phone: '',
                     is_active: true,
                     created_at: new Date().toISOString()
                 }
 
-                props = [allOption, ...(data || [])]
+                // Filter out the redundant 'PRIME Head Office' from the list if it exists
+                const filteredData = (data || []).filter(p => p.name !== 'PRIME Head Office')
+                props = [allOption, ...filteredData]
             } else {
                 // Property users fetch ONLY assigned properties via user_properties
                 const { data, error } = await supabase

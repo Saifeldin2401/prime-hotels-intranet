@@ -22,7 +22,9 @@
       "enabled": "Enabled",
       "disabled": "Disabled",
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "loading": "Loading...",
+      "verifying_access": "Verifying access..."
     },
     "assign": "Assign",
     "unassign": "Unassign",
@@ -160,12 +162,12 @@
   },
   "roles": {
     "super_admin": "Super Admin",
-    "admin": "Administrator",
+    "corporate_admin": "Corporate Admin",
     "regional_admin": "Regional Admin",
-    "regional_hr": "Regional HR",
     "property_manager": "Property Manager",
     "property_hr": "Property HR",
     "department_head": "Department Head",
+    "manager": "Manager",
     "staff": "Staff"
   },
   "errors": {

@@ -9,6 +9,7 @@ import { Icons } from '@/components/icons'
 import { useProperty } from '@/contexts/PropertyContext'
 import type { Profile } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
+import type { User } from '@/lib/rbac'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
 import { useAuth } from '@/hooks/useAuth'
 import { useCorporateStats } from '@/hooks/useDashboardStats'
@@ -36,15 +37,16 @@ function CorporateDashboardContent() {
   const { currentProperty, availableProperties } = useProperty()
   const { user, profile, primaryRole } = useAuth()
   const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
-  const { data: corporateStats, isLoading: statsLoading } = useCorporateStats()
+  const { data: corporateStats, isLoading: statsLoading } = useCorporateStats(currentProperty?.id)
 
   // Memoize currentUser to prevent unnecessary re-renders
-  const currentUser = useMemo(() => ({
+  const currentUser: User = useMemo(() => ({
     id: user?.id || 'guest',
-    full_name: profile?.full_name || user?.email || 'Corporate Admin',
+    name: profile?.full_name || user?.email || 'Corporate Admin',
     email: user?.email || '',
     role: (primaryRole as AppRole) || 'regional_admin',
     property: 'Corporate HQ',
+    permissions: []
   }), [user?.id, user?.email, profile?.full_name, primaryRole])
 
   // Memoize feedItems transformation to prevent infinite re-renders
@@ -112,7 +114,7 @@ function CorporateDashboardContent() {
           </h1>
           <p className="text-muted-foreground mt-1">
             {currentProperty?.id === 'all'
-              ? t('property_overview', { name: 'Prime Hotel - Main' })
+              ? t('property_overview', { name: 'PRIME GROUP (HEAD OFFICE)' })
               : t('property_overview', { name: currentProperty?.name })}
           </p>
         </div>
