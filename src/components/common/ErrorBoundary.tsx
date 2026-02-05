@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { analytics } from '@/services/analyticsService'
 
 interface Props {
   children: ReactNode
@@ -25,25 +26,19 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo)
-    
-    // Log error to audit trail if available
+
+    // Log error to analytics for server-side visibility
+    analytics.track('application_fatal_error', {
+      message: error.message,
+      name: error.name,
+      componentStack: errorInfo.componentStack,
+      url: window.location.href
+    }, 'error')
+
     this.setState({
       error,
       errorInfo
     })
-
-    // You could also send this to an error reporting service
-    this.logErrorToService(error, errorInfo)
-  }
-
-  private logErrorToService = (error: Error, errorInfo: ErrorInfo) => {
-    // In a real app, you'd send this to a service like Sentry
-    // For now, just log to console
-    console.group('Error Boundary Log')
-    console.error('Error:', error)
-    console.error('Error Info:', errorInfo)
-    console.error('Component Stack:', errorInfo.componentStack)
-    console.groupEnd()
   }
 
   private handleRetry = () => {
@@ -55,6 +50,9 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback
       }
+
+      // Check if we are in development mode using Vite's env
+      const isDev = import.meta.env.DEV
 
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
@@ -69,8 +67,8 @@ export class ErrorBoundary extends Component<Props, State> {
               <p className="text-gray-600">
                 We're sorry, but something unexpected happened. The error has been logged and our team will look into it.
               </p>
-              
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+
+              {isDev && this.state.error && (
                 <details className="text-left bg-gray-50 p-3 rounded text-sm">
                   <summary className="cursor-pointer font-medium">Error Details</summary>
                   <pre className="mt-2 text-xs overflow-auto">
@@ -79,14 +77,14 @@ export class ErrorBoundary extends Component<Props, State> {
                   </pre>
                 </details>
               )}
-              
+
               <div className="flex gap-2">
                 <Button onClick={this.handleRetry} className="flex-1">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Try Again
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => window.location.reload()}
                   className="flex-1"
                 >

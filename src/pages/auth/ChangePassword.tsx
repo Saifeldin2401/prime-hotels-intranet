@@ -72,7 +72,22 @@ export default function ChangePassword() {
             if (!passwordsMatch) throw new Error('Passwords do not match')
             if (!isPasswordValid) throw new Error('Password does not meet requirements')
 
-            // 1. Check Reuse (Internal DB check)
+            // 1. Verify Current Password (if not using temp password)
+            if (!isTempPassword) {
+                if (!currentPassword) throw new Error('Current password is required')
+
+                // Re-authenticate to verify current password
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: user?.email || '',
+                    password: currentPassword
+                })
+
+                if (signInError) {
+                    throw new Error('Current password is incorrect')
+                }
+            }
+
+            // 2. Check Reuse (Internal DB check)
             const { data: isReused, error: reuseError } = await supabase.rpc('check_password_reuse', {
                 plain_password: newPassword
             })

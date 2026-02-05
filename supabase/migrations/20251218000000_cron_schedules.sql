@@ -1,4 +1,11 @@
 -- Schedule Preventive Maintenance (Daily at Midnight)
+-- SECURITY NOTE: This cron job requires service-role access.
+-- The token should be stored in Supabase Vault, not hardcoded.
+-- To set up:
+-- 1. Go to Supabase Dashboard > Project Settings > Vault
+-- 2. Create a secret named 'service_role_key' with your service role JWT
+-- 3. Run: SELECT vault.create_secret('your-service-role-jwt', 'service_role_key');
+
 select cron.schedule(
     'preventive-maintenance-job',
     '0 0 * * *',
@@ -6,7 +13,10 @@ select cron.schedule(
     select
         net.http_post(
             url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/preventive-maintenance',
-            headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0c3ZqZnJvZmNwa2Z6dmpwd3Z4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTM3OTUxNCwiZXhwIjoyMDgwOTU1NTE0fQ.7Mm34jjj4jWdp4AK2ABTn9r4H3qcPC3uKgkKdUnBKsI"}'::jsonb
+            headers:=jsonb_build_object(
+                'Content-Type', 'application/json',
+                'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key' limit 1)
+            )
         ) as request_id;
     $$
 );
@@ -19,7 +29,10 @@ select cron.schedule(
     select
         net.http_post(
             url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/training-notifications',
-            headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0c3ZqZnJvZmNwa2Z6dmpwd3Z4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTM3OTUxNCwiZXhwIjoyMDgwOTU1NTE0fQ.7Mm34jjj4jWdp4AK2ABTn9r4H3qcPC3uKgkKdUnBKsI"}'::jsonb
+            headers:=jsonb_build_object(
+                'Content-Type', 'application/json',
+                'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key' limit 1)
+            )
         ) as request_id;
     $$
 );

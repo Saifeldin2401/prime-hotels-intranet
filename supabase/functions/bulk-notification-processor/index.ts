@@ -28,13 +28,11 @@ Deno.serve(async (req) => {
 
     try {
         // ===================================
-        // SECURITY CHECK - Internal Crons Only
+        // SECURITY CHECK - Role Based Access
         // ===================================
         const authHeader = req.headers.get('Authorization')
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-
-        if (authHeader !== `Bearer ${serviceRoleKey}`) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        if (!authHeader) {
+            return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
                 status: 401,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             })
@@ -43,7 +41,40 @@ Deno.serve(async (req) => {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        // 1. Verify User Identity using the incoming JWT
+        const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+            global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await userClient.auth.getUser();
+
+        if (userError || !user) {
+            return new Response(JSON.stringify({ error: 'Invalid Token' }), {
+                status: 401,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+        }
+
+        // 2. Verify User Permissions (Must be Admin/Manager)
+        // We use the service client for this check to ensure we can read roles reliably
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        const allowedRoles = ['corporate_admin', 'regional_admin', 'property_manager', 'department_head', 'property_hr'];
+        if (!profile || !allowedRoles.includes(profile.role)) {
+            return new Response(JSON.stringify({ error: 'Unauthorized: Insufficient permissions for bulk operations' }), {
+                status: 403,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+        }
+
+        // 3. Proceed with Privileged Client for Bulk Operations
+        const supabase = supabaseAdmin;
 
         const { action, userIds, notificationType, notificationData, batchId, batchSize = 50 }: NotificationRequest = await req.json();
 

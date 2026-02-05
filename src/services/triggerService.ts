@@ -277,11 +277,11 @@ export async function onSOPPublished(sopId: string, departmentId?: string): Prom
 
     if (departmentId) {
         const { data: users } = await supabase
-            .from('profiles')
-            .select('id')
+            .from('user_departments')
+            .select('user_id')
             .eq('department_id', departmentId)
 
-        affectedUsers = users?.map(u => u.id) || []
+        affectedUsers = users?.map(u => u.user_id) || []
     }
 
     await processTrigger({

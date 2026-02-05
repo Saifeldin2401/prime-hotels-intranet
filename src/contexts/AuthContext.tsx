@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { analytics } from '@/services/analyticsService'
@@ -29,20 +29,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [rolesLoading, setRolesLoading] = useState(true)
+  const loadSeqRef = useRef(0)
+  const activeUserIdRef = useRef<string | null>(null)
+
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string) => {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`${label} timeout`)), ms)
+      promise
+        .then((value) => {
+          clearTimeout(timer)
+          resolve(value)
+        })
+        .catch((err) => {
+          clearTimeout(timer)
+          reject(err)
+        })
+    })
+  }
 
   const loadUserData = async (userId: string) => {
     try {
-      // Prevent duplicate loading
-      if (profile && profile.id === userId) {
-        return
-      }
-
-
-
-      // Add a timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('User data loading timeout')), 10000) // 10 second timeout
-      })
+      const loadId = ++loadSeqRef.current
+      activeUserIdRef.current = userId
+      setRolesLoading(true)
 
       // Load profile with timeout
       const profilePromise = supabase
@@ -51,13 +60,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single()
 
-      const { data: profileData, error: profileError } = await Promise.race([profilePromise, timeoutPromise]) as any
+      const { data: profileData, error: profileError } = await withTimeout(
+        profilePromise,
+        10000,
+        'Profile load'
+      ) as any
 
       if (profileError) {
         console.error('Error loading profile:', profileError)
 
         // Try alternative: use auth.users metadata
         const { data: { user } } = await supabase.auth.getUser()
+        if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
+          return
+        }
         if (user) {
           // Set basic profile from auth user
           const fullProfile: Profile = {
@@ -77,6 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(fullProfile)
         }
       } else if (profileData) {
+        if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
+          return
+        }
         setProfile(profileData)
       }
 
@@ -98,10 +117,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Load all data with individual timeouts
       const [rolesResult, propertiesResult, departmentsResult] = await Promise.allSettled([
-        Promise.race([rolesPromise, timeoutPromise]),
-        Promise.race([propertiesPromise, timeoutPromise]),
-        Promise.race([departmentsPromise, timeoutPromise])
+        withTimeout(rolesPromise, 10000, 'Roles load'),
+        withTimeout(propertiesPromise, 10000, 'Properties load'),
+        withTimeout(departmentsPromise, 10000, 'Departments load')
       ]) as [PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>]
+
+      if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
+        return
+      }
 
       // Handle roles
       if (rolesResult.status === 'fulfilled') {
@@ -188,6 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user) {
         setUser(session.user)
+        setRolesLoading(true)
         // Set loading to false immediately, load data in background
         loadingState = false
         setLoading(false)
@@ -220,6 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         setUser(session.user)
         analytics.identify(session.user.id)
+        setRolesLoading(true)
         // Set loading to false immediately, load data in background
         loadingState = false
         setLoading(false)
@@ -235,6 +260,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProperties([])
         setDepartments([])
         setRolesLoading(false)
+        activeUserIdRef.current = null
+        loadSeqRef.current += 1
         loadingState = false
         setLoading(false)
         clearTimeout(timeoutId)
@@ -251,6 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
+      setRolesLoading(true)
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -259,6 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         setLoading(false)
+        setRolesLoading(false) // FIX: Reset roles loading on error to prevent infinite loop
         return { error }
       }
 
@@ -279,6 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: null }
     } catch (error) {
       setLoading(false)
+      setRolesLoading(false) // FIX: Reset roles loading on unexpected error
       return { error: error as Error }
     }
   }
@@ -298,18 +328,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRoles([])
     setProperties([])
     setDepartments([])
+    setRolesLoading(false)
+    activeUserIdRef.current = null
+    loadSeqRef.current += 1
   }
 
   const refreshSession = async () => {
     const { data: { session } } = await supabase.auth.refreshSession()
     if (session?.user) {
       setUser(session.user)
+      setRolesLoading(true)
       await loadUserData(session.user.id)
     }
   }
 
   const primaryRole = roles.length > 0
-    ? roles.sort((a, b) => {
+    ? [...roles].sort((a, b) => {
       const order: Record<AppRole, number> = {
         regional_admin: 1,
         regional_hr: 2,
@@ -350,4 +384,3 @@ export function useAuth() {
   }
   return context
 }
-

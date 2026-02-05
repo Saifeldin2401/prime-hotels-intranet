@@ -23,9 +23,9 @@ export function useInactivityTimeout({
     const [showWarning, setShowWarning] = useState(false)
     const [remainingTime, setRemainingTime] = useState(timeoutMs - warningMs)
 
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-    const warningRef = useRef<NodeJS.Timeout | null>(null)
-    const countdownRef = useRef<NodeJS.Timeout | null>(null)
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const lastActivityRef = useRef(Date.now())
 
     const clearAllTimers = useCallback(() => {

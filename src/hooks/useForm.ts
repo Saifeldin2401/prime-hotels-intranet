@@ -59,7 +59,7 @@ const setFieldErrorUtil = <T>(state: FormState<T>, fieldName: string, error: str
   } else {
     delete newErrors[fieldName]
   }
-  
+
   return updateFormState(state, {
     errors: newErrors,
     isValid: Object.keys(newErrors).length === 0
@@ -86,10 +86,23 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
     if (!schema) return undefined
 
     try {
-      // Create a partial schema for just this field
-      const fieldSchema = z.object({ [fieldName]: schema })
-      const result = fieldSchema.safeParse({ [fieldName]: value })
-      
+      // If the schema is a ZodObject, we can extract the specific field schema
+      if (schema instanceof z.ZodObject) {
+        const fieldSchema = schema.shape[fieldName]
+        if (fieldSchema) {
+          const result = fieldSchema.safeParse(value)
+          if (!result.success) {
+            return result.error.issues[0]?.message
+          }
+          return undefined
+        }
+      }
+
+      // Fallback: Create a partial schema for just this field if the above fails
+      // or if it's not a standard ZodObject (though most form schemas are)
+      const partialSchema = z.object({ [fieldName]: schema })
+      const result = partialSchema.safeParse({ [fieldName]: value })
+
       if (!result.success) {
         return result.error.issues[0]?.message
       }
@@ -107,23 +120,23 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
     if (!schema) return {}
 
     const result = validateFormUtil(schema, data)
-    if (result.success) {
-      return {}
+    if (!result.success) {
+      return result.errors
     }
-    return result.errors
+    return {}
   }, [schema])
 
   // Update field value
   const setField = useCallback((fieldName: string, value: any) => {
     setState(prevState => {
       let newState = setFieldValue(prevState, fieldName, value)
-      
+
       // Validate on change if enabled
       if (validateOnChange && schema) {
         const error = validateField(fieldName, value)
         newState = setFieldErrorUtil(newState, fieldName, error)
       }
-      
+
       return newState
     })
   }, [validateOnChange, schema, validateField])
@@ -132,17 +145,17 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
   const setFields = useCallback((updates: Partial<T>) => {
     setState(prevState => {
       let newState = prevState
-      
+
       Object.entries(updates).forEach(([fieldName, value]) => {
         newState = setFieldValue(newState, fieldName, value)
-        
+
         // Validate on change if enabled
         if (validateOnChange && schema) {
           const error = validateField(fieldName, value)
           newState = setFieldErrorUtil(newState, fieldName, error)
         }
       })
-      
+
       return newState
     })
   }, [validateOnChange, schema, validateField])
@@ -151,13 +164,13 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
   const handleBlur = useCallback((fieldName: string) => {
     setState(prevState => {
       let newState = markFieldTouched(prevState, fieldName)
-      
+
       // Validate on blur if enabled
       if (validateOnBlur && schema) {
         const error = validateField(fieldName, prevState.data[fieldName])
         newState = setFieldErrorUtil(newState, fieldName, error)
       }
-      
+
       return newState
     })
   }, [validateOnBlur, schema, validateField])
@@ -207,9 +220,9 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
 
     // Validate form
     const errors = validate()
-    
+
     if (Object.keys(errors).length > 0) {
-      setState(prevState => updateFormState(prevState, { 
+      setState(prevState => updateFormState(prevState, {
         isSubmitted: true,
         touched: Object.keys(prevState.data).reduce((acc, key) => ({ ...acc, [key]: true }), {})
       }))
@@ -223,7 +236,7 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
 
     try {
       let submitData = state.data
-      
+
       // Sanitize data if enabled
       if (sanitizeOnSubmit) {
         submitData = sanitizeFormData(submitData)
@@ -238,7 +251,7 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
       if (resetOnSubmit) {
         reset()
       } else {
-        setState(prevState => updateFormState(prevState, { 
+        setState(prevState => updateFormState(prevState, {
           isSubmitting: false,
           isSubmitted: true
         }))
@@ -362,7 +375,7 @@ export function useAsyncForm<T extends Record<string, any>>(options: UseFormOpti
   // Validate all fields asynchronously
   const validateFormAsync = useCallback(async (data: T): Promise<Record<string, string>> => {
     const errors: Record<string, string> = {}
-    
+
     // Validate each field asynchronously
     for (const [fieldName, value] of Object.entries(data)) {
       const error = await validateFieldAsync(fieldName, value)
@@ -370,7 +383,7 @@ export function useAsyncForm<T extends Record<string, any>>(options: UseFormOpti
         errors[fieldName] = error
       }
     }
-    
+
     return errors
   }, [validateFieldAsync])
 
@@ -382,7 +395,7 @@ export function useAsyncForm<T extends Record<string, any>>(options: UseFormOpti
 
     // First do sync validation
     const syncErrors = form.validate()
-    
+
     if (Object.keys(syncErrors).length > 0) {
       return
     }
@@ -391,7 +404,7 @@ export function useAsyncForm<T extends Record<string, any>>(options: UseFormOpti
     if (validateOnSubmit) {
       const asyncValidationErrors = await validateFormAsync(form.values)
       setAsyncErrors(asyncValidationErrors)
-      
+
       if (Object.keys(asyncValidationErrors).length > 0) {
         return
       }
@@ -450,7 +463,7 @@ export function useMultiStepForm<T extends Record<string, any>>(options: UseForm
   // Go to next step
   const nextStep = useCallback(async () => {
     const errors = validateCurrentStepFields()
-    
+
     if (Object.keys(errors).length > 0) {
       // Set errors for current step fields
       Object.entries(errors).forEach(([fieldName, error]) => {

@@ -51,7 +51,16 @@
     "no_title": "بدون عنوان",
     "please_login": "يرجى تسجيل الدخول لعرض هذه الصفحة",
     "view_profile": "عرض الملف الشخصي",
-    "total": "الإجمالي"
+    "total": "الإجمالي",
+    "noResults": "لا توجد نتائج.",
+    "of": "من",
+    "rowsSelected": "صف(وف) محددة",
+    "rowsPerPage": "صفوف لكل صفحة",
+    "page": "صفحة",
+    "goToFirstPage": "الذهاب للصفحة الأولى",
+    "goToLastPage": "الذهاب للصفحة الأخيرة",
+    "goToPreviousPage": "الذهاب للصفحة السابقة",
+    "goToNextPage": "الذهاب للصفحة التالية"
   },
   "nav": {
     "dashboard": "لوحة التحكم",

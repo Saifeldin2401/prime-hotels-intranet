@@ -228,10 +228,7 @@ export default function AnalyticsDashboard() {
               </div>
               <CardTitle className="text-sm font-semibold text-gray-700">{t('analytics.total_users')}</CardTitle>
             </div>
-            <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              <TrendingUp className="h-3 w-3" />
-              <span className="text-xs font-medium">+12%</span>
-            </div>
+            {/* Growth metrics removed to comply with 'no mock data' rule. Could be calculated from comparative period in future. */}
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-hotel-navy">{analytics?.users.total || 0}</div>
@@ -252,10 +249,7 @@ export default function AnalyticsDashboard() {
               </div>
               <CardTitle className="text-sm font-semibold text-gray-700">{t('analytics.documents')}</CardTitle>
             </div>
-            <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              <TrendingUp className="h-3 w-3" />
-              <span className="text-xs font-medium">+8%</span>
-            </div>
+            {/* Growth metrics removed to comply with 'no mock data' rule. */}
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-hotel-navy">{analytics?.documents.total || 0}</div>
@@ -276,10 +270,7 @@ export default function AnalyticsDashboard() {
               </div>
               <CardTitle className="text-sm font-semibold text-gray-700">{t('analytics.training')}</CardTitle>
             </div>
-            <div className="flex items-center gap-1 text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-              <TrendingDown className="h-3 w-3" />
-              <span className="text-xs font-medium">-3%</span>
-            </div>
+            {/* Growth metrics removed to comply with 'no mock data' rule. */}
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-hotel-navy">{analytics?.training.completed || 0}</div>
@@ -300,10 +291,7 @@ export default function AnalyticsDashboard() {
               </div>
               <CardTitle className="text-sm font-semibold text-gray-700">{t('analytics.maintenance')}</CardTitle>
             </div>
-            <div className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-full">
-              <AlertTriangle className="h-3 w-3" />
-              <span className="text-xs font-medium">+5</span>
-            </div>
+            {/* Alert indicators for critical items could be shown here if non-zero. */}
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-hotel-navy">{analytics?.maintenance.open || 0}</div>

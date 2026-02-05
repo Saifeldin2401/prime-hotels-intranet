@@ -13,6 +13,11 @@ import { useAreaManagerStats } from '@/hooks/useDashboardStats'
 
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { useRecentAuditLogs } from '@/hooks/useAuditLogs'
+import { format } from 'date-fns'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export function AreaManagerDashboard() {
   const { t } = useTranslation('dashboard')
@@ -21,6 +26,7 @@ export function AreaManagerDashboard() {
   const { user, profile, primaryRole } = useAuth()
   const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
   const { data: stats, isLoading: statsLoading } = useAreaManagerStats()
+  const { data: auditLogs = [], isLoading: auditLogsLoading } = useRecentAuditLogs(10)
 
   // Create real user object from auth context
   const currentUser: User = {
@@ -215,10 +221,11 @@ export function AreaManagerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center py-8 text-gray-500">
-                <Icons.BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>{t('cards.detailed_performance_coming_soon')}</p>
-              </div>
+              <EmptyState
+                icon={Icons.BarChart3}
+                title={t('cards.area_performance_metrics')}
+                description={t('cards.detailed_performance_coming_soon')}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -232,10 +239,36 @@ export function AreaManagerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center py-8 text-gray-500">
-                <Icons.FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>{t('cards.area_reports_coming_soon')}</p>
-              </div>
+              {auditLogs.length > 0 ? (
+                <div className="space-y-4">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="flex items-start gap-4 p-3 rounded-lg border bg-card text-card-foreground">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={log.profile?.avatar_url || undefined} />
+                        <AvatarFallback>{log.profile?.full_name?.charAt(0) || '?'}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          <span className="text-blue-600">{log.profile?.full_name || t('common:common.system')}</span>
+                          {" "}
+                          <span className="text-muted-foreground">{log.action}</span>
+                          {" "}
+                          <span>{log.entity_type}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(log.created_at), 'MMM dd, HH:mm')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Icons.FileText}
+                  title={t('cards.area_reports_title')}
+                  description={t('cards.area_reports_coming_soon')}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -250,10 +283,11 @@ export function AreaManagerDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-center py-8 text-gray-500">
-                  <Icons.DollarSign className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>{t('cards.budget_tracking_coming_soon')}</p>
-                </div>
+                <EmptyState
+                  icon={Icons.DollarSign}
+                  title={t('cards.budget_overview')}
+                  description={t('cards.budget_tracking_coming_soon')}
+                />
               </CardContent>
             </Card>
 
@@ -265,10 +299,11 @@ export function AreaManagerDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-center py-8 text-gray-500">
-                  <Icons.TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>{t('cards.revenue_analysis_coming_soon')}</p>
-                </div>
+                <EmptyState
+                  icon={Icons.TrendingUp}
+                  title={t('cards.revenue_analysis')}
+                  description={t('cards.revenue_analysis_coming_soon')}
+                />
               </CardContent>
             </Card>
           </div>

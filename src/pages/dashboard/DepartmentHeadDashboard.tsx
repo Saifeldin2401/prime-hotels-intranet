@@ -17,6 +17,7 @@ import { useDepartmentHeadStats } from '@/hooks/useDashboardStats'
 
 import { DepartmentTeamList } from '@/components/dashboard/DepartmentTeamList'
 import { AIDigestWidget } from '@/components/dashboard/AIDigestWidget'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { useTranslation } from 'react-i18next'
 
 export function DepartmentHeadDashboard() {
@@ -231,10 +232,11 @@ export function DepartmentHeadDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center py-8 text-gray-500">
-                <Icons.BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>{t('cards.no_department_reports')}</p>
-              </div>
+              <EmptyState
+                icon={Icons.BarChart3}
+                title={t('cards.department_reports_title')}
+                description={t('cards.no_department_reports')}
+              />
             </CardContent>
           </Card>
         </TabsContent>

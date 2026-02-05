@@ -89,44 +89,7 @@ export default function PromotionTransferHistory() {
     // For Cancel Dialog
     const [recordToCancel, setRecordToCancel] = useState<HistoryRecord | null>(null)
 
-    // Fetch Promotions with Request ID
-    const { data: promotions, refetch: refetchPromotions } = useQuery({
-        queryKey: ['promotions-history'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('promotions')
-                .select(`
-                  *,
-                  employee:profiles!promotions_employee_id_fkey(full_name),
-                  promoter:profiles!promotions_promoted_by_fkey(full_name),
-                  new_department:departments!promotions_new_department_id_fkey(name)
-                `)
-                .order('created_at', { ascending: false })
-
-            if (error) throw error
-            return (data || []).map(p => ({
-                ...p,
-                type: 'promotion',
-                request_id: p.request_id
-                // Wait, 'requests' doesn't usually have a FK to 'promotions'. 'requests' has entity_id.
-                // So I can't simple select `requests!inner(id)` unless I set up that relationship in Supabase or manual join.
-                // Supabase postgrest logical relationships depend on FKs.
-                // Requests has entity_id. Promotions doesn't have request_id.
-                // So I need to fetch Requests and join them? Or reverse join?
-                // I can't do reverse join easily if not defined.
-                // EASIER: Fetch requests directly? 
-                // Requests contains metadata.
-                // Actually, getting everything from 'requests' is cleaner if metadata has it all.
-                // BUT current page uses 'promotions' fields.
-                // I'll stick to fetching promotions and finding their request via RPC or simpler:
-                // Modify Fetch to also get the request_id by matching entity_id?
-                // No, standard PostgREST doesn't support arbitrary joins.
-                // I will add a `get_promotion_history` RPC that joins them?
-                // OR just fetch all requests of type promotion/transfer and map them.
-            })) as PromotionRecord[]
-            // Reverting to fetch strategy below for now.
-        }
-    })
+    // Unified query for requests (promotions + transfers)
 
     // To implement Edit/Delete, I really need the `request_id`.
     // I'll fetch `requests` instead of `promotions` table directly?

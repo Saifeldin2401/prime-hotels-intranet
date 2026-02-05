@@ -27,20 +27,7 @@ const roleToDashboardPath: Record<AppRole, string> = {
 }
 
 export function RoleBasedRedirect() {
-    const { user, primaryRole, roles, loading } = useAuth()
-    const [timedOut, setTimedOut] = useState(false)
-
-    // Timeout after 3 seconds to prevent infinite loading
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (roles.length === 0) {
-                console.warn('RoleBasedRedirect: Timeout waiting for roles, using fallback')
-                setTimedOut(true)
-            }
-        }, 3000)
-
-        return () => clearTimeout(timer)
-    }, [roles.length])
+    const { user, primaryRole, roles, loading, rolesLoading } = useAuth()
 
     // Show loading while auth is loading
     if (loading) {
@@ -58,8 +45,10 @@ export function RoleBasedRedirect() {
         return <Navigate to="/login" replace />
     }
 
-    // Wait for roles to load, but not forever
-    if (roles.length === 0 && !timedOut) {
+    // Wait for roles to load
+    // We strictly wait for rolesLoading to be false.
+    // AuthContext now has a safety timeout internally, so we don't need a second one here.
+    if (rolesLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { AppRole } from '@/lib/constants'
 
-export type Permission = 
+export type Permission =
   // Training permissions
   | 'training.view'
   | 'training.create'
@@ -48,27 +48,27 @@ const PERMISSION_CONFIG: PermissionConfig = {
   'training.delete': { roles: ['regional_admin', 'regional_hr'] },
   'training.assign': { roles: ['regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
   'training.report': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  
+
   // User management permissions
   'users.view': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
   'users.create': { roles: ['regional_admin', 'regional_hr'] },
   'users.edit': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
   'users.delete': { roles: ['regional_admin', 'regional_hr'] },
   'users.assign_roles': { roles: ['regional_admin', 'regional_hr'] },
-  
+
   // Document permissions
   'documents.view': { roles: ['all'] },
   'documents.create': { roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
   'documents.edit': { roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
   'documents.delete': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
   'documents.approve': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  
+
   // Announcement permissions
   'announcements.view': { roles: ['all'] },
   'announcements.create': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
   'announcements.edit': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
   'announcements.delete': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  
+
   // System permissions
   'system.view_logs': { roles: ['regional_admin'] },
   'system.manage_settings': { roles: ['regional_admin'] },
@@ -84,8 +84,10 @@ export function usePermissions() {
       if (!config) return false
 
       // Check role-based access
-      if (!config.roles.includes('all') && primaryRole && !config.roles.includes(primaryRole)) {
-        return false
+      if (!config.roles.includes('all')) {
+        if (!primaryRole || !config.roles.includes(primaryRole)) {
+          return false
+        }
       }
 
       // Check property access if required
@@ -130,7 +132,7 @@ export function usePermissions() {
         return [] as Permission[]
       }
 
-      return Object.keys(PERMISSION_CONFIG).filter(permission => 
+      return Object.keys(PERMISSION_CONFIG).filter(permission =>
         hasPermission(permission as Permission, propertyId)
       ) as Permission[]
     }
@@ -142,7 +144,7 @@ export function usePermissions() {
         return [] as Permission[]
       }
 
-      return Object.keys(PERMISSION_CONFIG).filter(permission => 
+      return Object.keys(PERMISSION_CONFIG).filter(permission =>
         hasPermission(permission as Permission, undefined, departmentId)
       ) as Permission[]
     }

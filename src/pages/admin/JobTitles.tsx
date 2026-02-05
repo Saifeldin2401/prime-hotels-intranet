@@ -1,8 +1,8 @@
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import type { ColumnDef } from "@tanstack/react-table"
 import {
     Briefcase,
-    Search,
     Plus,
     MoreVertical,
     Pencil,
@@ -15,14 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
+import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -54,18 +47,16 @@ import { useDepartments } from '@/hooks/useDepartments'
 interface JobTitle {
     id: string
     title: string
-    category: string // Legacy category string, populated from department name if linked
+    category: string
     department_id: string | null
     default_role: string | null
     created_at: string
 }
 
 export default function JobTitles() {
-    const [search, setSearch] = useState('')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingTitle, setEditingTitle] = useState<JobTitle | null>(null)
 
-    // Form State
     const [formData, setFormData] = useState({
         title: '',
         department_id: '',
@@ -75,7 +66,8 @@ export default function JobTitles() {
     const { toast } = useToast()
     const queryClient = useQueryClient()
     const { departments } = useDepartments()
-    const { t } = useTranslation('admin')
+    const { t, i18n } = useTranslation('admin')
+    const isRTL = i18n.dir() === 'rtl'
 
     // Fetch Job Titles
     const { data: jobTitles, isLoading } = useQuery({
@@ -90,7 +82,6 @@ export default function JobTitles() {
                 .order('title', { ascending: true })
 
             if (error) throw error
-            // Map the response to include department name in category if available for backward compat
             return data.map((item: any) => ({
                 ...item,
                 category: item.department?.name || item.category
@@ -136,7 +127,7 @@ export default function JobTitles() {
                 .update({
                     title: title.title,
                     department_id: title.department_id,
-                    category: title.category, // Keep syncing category for now
+                    category: title.category,
                     default_role: title.default_role
                 })
                 .eq('id', title.id)
@@ -182,7 +173,6 @@ export default function JobTitles() {
             })
         },
         onError: (error: any) => {
-            // Check for foreign key violation
             if (error.code === '23503') {
                 toast({
                     title: t('common.error'),
@@ -250,10 +240,80 @@ export default function JobTitles() {
         })
     }
 
-    const filteredTitles = jobTitles?.filter(jt =>
-        jt.title.toLowerCase().includes(search.toLowerCase()) ||
-        jt.category.toLowerCase().includes(search.toLowerCase())
-    )
+    // Column definitions for DataTable
+    const columns: ColumnDef<JobTitle>[] = useMemo(() => [
+        {
+            accessorKey: "title",
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title={t('job_titles.table.title')} />
+            ),
+            cell: ({ row }) => (
+                <span className="font-medium text-hotel-navy">{row.getValue("title")}</span>
+            ),
+        },
+        {
+            accessorKey: "category",
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title={t('job_titles.table.department')} />
+            ),
+            cell: ({ row }) => (
+                <Badge variant="secondary" className="bg-gray-100 text-gray-600 hover:bg-gray-200">
+                    {row.getValue("category")}
+                </Badge>
+            ),
+        },
+        {
+            accessorKey: "default_role",
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title={t('job_titles.table.default_role')} />
+            ),
+            cell: ({ row }) => {
+                const role = row.getValue("default_role") as string | null
+                return role ? (
+                    <Badge variant="outline" className="border-hotel-gold text-hotel-navy">
+                        {(ROLES[role as keyof typeof ROLES] as any)?.label || role}
+                    </Badge>
+                ) : (
+                    <span className="text-muted-foreground text-sm">-</span>
+                )
+            },
+        },
+        {
+            id: "actions",
+            header: () => <div className={isRTL ? "text-left" : "text-right"}>{t('job_titles.table.actions')}</div>,
+            cell: ({ row }) => {
+                const job = row.original
+                return (
+                    <div className={isRTL ? "text-left" : "text-right"}>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align={isRTL ? "start" : "end"}>
+                                <DropdownMenuItem onClick={() => handleEdit(job)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    {t('job_titles.edit')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-600"
+                                    onClick={() => {
+                                        if (confirm(t('job_titles.delete_confirm'))) {
+                                            deleteMutation.mutate(job.id)
+                                        }
+                                    }}
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    {t('job_titles.delete')}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                )
+            },
+        },
+    ], [t, isRTL, deleteMutation])
 
     return (
         <div className="space-y-6">
@@ -352,99 +412,26 @@ export default function JobTitles() {
                 </Dialog>
             </div>
 
-            <div className="flex items-center gap-4 bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                        placeholder={t('job_titles.search_placeholder')}
-                        className="pl-9"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+            <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        {t('job_titles.loading')}
+                    </div>
+                ) : !jobTitles?.length ? (
+                    <div className="flex flex-col items-center justify-center text-muted-foreground py-12">
+                        <Briefcase className="h-10 w-10 text-gray-300 mb-3" />
+                        <p>{t('job_titles.no_data')}</p>
+                        <p className="text-sm mt-1">{t('job_titles.no_data_desc')}</p>
+                    </div>
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={jobTitles}
+                        searchKey="title"
+                        searchPlaceholder={t('job_titles.search_placeholder')}
                     />
-                </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-gray-50/50">
-                            <TableHead>{t('job_titles.table.title')}</TableHead>
-                            <TableHead>{t('job_titles.table.department')}</TableHead>
-                            <TableHead>{t('job_titles.table.default_role')}</TableHead>
-                            <TableHead className="w-[100px] text-right">{t('job_titles.table.actions')}</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
-                                    <div className="flex items-center justify-center text-muted-foreground">
-                                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                                        {t('job_titles.loading')}
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ) : filteredTitles?.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
-                                    <div className="flex flex-col items-center justify-center text-muted-foreground py-8">
-                                        <Briefcase className="h-10 w-10 text-gray-300 mb-3" />
-                                        <p>{t('job_titles.no_data')}</p>
-                                        <p className="text-sm mt-1">{t('job_titles.no_data_desc')}</p>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            filteredTitles?.map((job) => (
-                                <TableRow key={job.id} className="group hover:bg-gray-50/50 transition-colors">
-                                    <TableCell className="font-medium text-hotel-navy">
-                                        {job.title}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary" className="bg-gray-100 text-gray-600 hover:bg-gray-200">
-                                            {job.category}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        {job.default_role ? (
-                                            <Badge variant="outline" className="border-hotel-gold text-hotel-navy">
-                                                {(ROLES[job.default_role as keyof typeof ROLES] as any)?.label || job.default_role}
-                                            </Badge>
-                                        ) : (
-                                            <span className="text-muted-foreground text-sm">-</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEdit(job)}>
-                                                    <Pencil className="h-4 w-4 mr-2" />
-                                                    {t('job_titles.edit')}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    className="text-red-600 focus:text-red-600"
-                                                    onClick={() => {
-                                                        if (confirm(t('job_titles.delete_confirm'))) {
-                                                            deleteMutation.mutate(job.id)
-                                                        }
-                                                    }}
-                                                >
-                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                    {t('job_titles.delete')}
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                )}
             </div>
 
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">

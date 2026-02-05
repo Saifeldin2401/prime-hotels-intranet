@@ -49,8 +49,8 @@ export function ProtectedRoute({
 
   // Check role-based access
   if (allowedRoles && allowedRoles.length > 0) {
-    // If roles are still loading, show loading state to prevent unauthorized access
-    if (rolesLoading) {
+    // If roles are still loading or not resolved, show loading state to prevent unauthorized access
+    if (rolesLoading || !primaryRole) {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">

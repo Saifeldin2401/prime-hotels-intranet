@@ -50,7 +50,16 @@
     "no_title": "No title",
     "please_login": "Please log in to view this page",
     "view_profile": "View Profile",
-    "total": "Total"
+    "total": "Total",
+    "noResults": "No results.",
+    "of": "of",
+    "rowsSelected": "row(s) selected",
+    "rowsPerPage": "Rows per page",
+    "page": "Page",
+    "goToFirstPage": "Go to first page",
+    "goToLastPage": "Go to last page",
+    "goToPreviousPage": "Go to previous page",
+    "goToNextPage": "Go to next page"
   },
   "nav": {
     "dashboard": "Dashboard",

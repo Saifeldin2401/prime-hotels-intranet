@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { useToast } from '@/components/ui/use-toast'
 
 export function LoginForm() {
   const { t, i18n } = useTranslation('auth')
@@ -29,6 +29,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const { signIn } = useAuth()
+  const { toast } = useToast()
   const isRTL = i18n.dir() === 'rtl'
 
   useEffect(() => {
@@ -54,22 +55,34 @@ export function LoginForm() {
       const { error } = await signIn(email, password)
 
       if (error) {
-        const errorMessage = error.message || t('errors.invalid_credentials')
+        console.log('Login error caught:', error)
+        let errorMessage = error.message
+        if (errorMessage === 'Invalid login credentials') {
+          errorMessage = t('errors.invalid_credentials')
+        }
+        // Fallback if empty
+        if (!errorMessage) errorMessage = t('errors.title')
+
         setError(errorMessage)
-        toast.error(t('errors.title'), {
+        toast({
+          variant: 'destructive',
+          title: t('errors.title'),
           description: errorMessage
         })
         setLoading(false)
       } else {
         // Sign in successful
-        toast.success(t('sign_in_title'), {
+        toast({
+          title: t('sign_in_title'),
           description: t('welcome_back', 'Welcome back to Prime Hotels'),
         })
         // Redirect handled by AuthContext/AppRouter, but we can ensure navigation
       }
     } catch (err) {
       setError(t('errors.network_error'))
-      toast.error(t('errors.title'), {
+      toast({
+        variant: 'destructive',
+        title: t('errors.title'),
         description: t('errors.network_error')
       })
       setLoading(false)
