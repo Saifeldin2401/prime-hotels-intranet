@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { BrowserRouter } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
@@ -39,6 +40,7 @@ function App() {
           {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         </ThemeProvider>
         <Toaster />
+        <Analytics />
       </QueryClientProvider>
     </ErrorBoundary>
   )
