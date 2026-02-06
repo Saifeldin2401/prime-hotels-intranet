@@ -12,9 +12,15 @@ export function useProfiles(filters?: {
     limit?: number // Max records to fetch, defaults to 200
 }) {
     // const { primaryRole, properties } = useAuth() // unused for now
+    const normalizedPropertyId = filters?.property_id && filters.property_id !== 'all'
+        ? filters.property_id
+        : undefined
+    const normalizedFilters = filters
+        ? { ...filters, property_id: normalizedPropertyId }
+        : undefined
 
     return useQuery({
-        queryKey: ['profiles', filters],
+        queryKey: ['profiles', normalizedFilters],
         queryFn: async () => {
             let query = supabase
                 .from('profiles')
@@ -33,12 +39,12 @@ export function useProfiles(filters?: {
                 query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
             }
 
-            if (filters?.property_id) {
+            if (normalizedPropertyId) {
                 // Filter by users who have a user_properties entry for this property
                 // This requires a join filter or a subquery. Supabase postgrest supports filtering on joined tables.
                 // However, user_properties is M:N. Simplest is !inner join if we want users belonging to property.
                 // Let's use the relation filtering syntax:
-                query = query.not('user_properties', 'is', null).eq('user_properties.property_id', filters.property_id)
+                query = query.not('user_properties', 'is', null).eq('user_properties.property_id', normalizedPropertyId)
             }
 
             if (filters?.department_id) {

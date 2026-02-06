@@ -36,10 +36,13 @@ export function useOrgHierarchy(propertyId?: string) {
     return useQuery({
         queryKey: ['org-hierarchy', propertyId],
         queryFn: async () => {
+            const normalizedPropertyId = propertyId && propertyId !== 'all'
+                ? propertyId
+                : null
             const { data, error } = await supabase
                 .rpc('get_org_hierarchy', {
                     p_root_user_id: null,
-                    p_property_id: propertyId || null
+                    p_property_id: normalizedPropertyId
                 })
 
             if (error) throw error
@@ -101,6 +104,9 @@ export function usePotentialManagers(propertyId?: string, excludeUserId?: string
     return useQuery({
         queryKey: ['potential-managers', propertyId, excludeUserId],
         queryFn: async () => {
+            const normalizedPropertyId = propertyId && propertyId !== 'all'
+                ? propertyId
+                : undefined
             let query = supabase
                 .from('profiles')
                 .select(`
@@ -114,8 +120,8 @@ export function usePotentialManagers(propertyId?: string, excludeUserId?: string
                 .order('full_name')
 
             // Filter by property if specified
-            if (propertyId) {
-                query = query.eq('user_properties.property_id', propertyId)
+            if (normalizedPropertyId) {
+                query = query.eq('user_properties.property_id', normalizedPropertyId)
             }
 
             // Exclude the user being edited (can't report to self)

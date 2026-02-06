@@ -12,14 +12,15 @@ export interface Department {
 
 export function useDepartments(propertyId?: string) { // Optional filter
   const queryClient = useQueryClient();
+  const normalizedPropertyId = propertyId && propertyId !== 'all' ? propertyId : undefined;
 
   // Fetch departments
   const { data: departments = [], isLoading, error } = useQuery({
-    queryKey: ['departments', propertyId],
+    queryKey: ['departments', normalizedPropertyId],
     queryFn: async () => {
       let query = supabase.from('departments').select('*').eq('is_deleted', false).order('name');
-      if (propertyId) {
-        query = query.eq('property_id', propertyId);
+      if (normalizedPropertyId) {
+        query = query.eq('property_id', normalizedPropertyId);
       }
       const { data, error } = await query;
       if (error) throw error;

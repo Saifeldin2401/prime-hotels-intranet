@@ -13,6 +13,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "@ckeditor/ckeditor5-build-classic": "^41.4.2",
     "@ckeditor/ckeditor5-react": "^11.0.0",
     "@google/generative-ai": "^0.24.1",
@@ -36,6 +37,11 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-toggle": "^1.1.10",
+    "@refinedev/antd": "^6.0.3",
+    "@refinedev/core": "^5.0.9",
+    "@refinedev/react-router-v6": "^4.6.2",
+    "@refinedev/simple-rest": "^6.0.1",
+    "@refinedev/supabase": "^6.0.1",
     "@supabase/supabase-js": "^2.87.1",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-query-devtools": "^5.91.1",
@@ -71,6 +77,7 @@
     "@tiptap/starter-kit": "^3.13.0",
     "@types/dompurify": "^3.0.5",
     "@xenova/transformers": "^2.17.2",
+    "antd": "^6.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
