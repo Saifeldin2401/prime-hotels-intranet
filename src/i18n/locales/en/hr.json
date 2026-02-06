@@ -302,6 +302,205 @@
         "no_payslips": "No payslips found in your record.",
         "downloading": "Generating PDF download...",
         "initiating_secure_download": "Contacting payroll secure server...",
-        "download_success": "Payslip downloaded successfully"
+        "download_success": "Payslip downloaded successfully",
+        "generating_download": "Generating secure download...",
+        "download_error": "Failed to generate download link.",
+        "file_missing": "Payslip file is not available yet."
+    },
+    "hr_admin": {
+        "title": "HR Control Center",
+        "description": "Manage HR workflows, approvals, and employee data from one place.",
+        "loading": "Loading...",
+        "empty": "No records found.",
+        "actions": {
+            "open": "Open",
+            "manage": "Manage",
+            "create": "Create",
+            "save": "Save",
+            "cancel": "Cancel",
+            "edit": "Edit",
+            "delete": "Delete",
+            "download": "Download"
+        },
+        "tools": {
+            "performance": {
+                "title": "Performance Reviews",
+                "description": "Create and track employee reviews."
+            },
+            "goals": {
+                "title": "Career Goals",
+                "description": "Assign and monitor development goals."
+            },
+            "payslips": {
+                "title": "Payslips",
+                "description": "Publish payroll documents securely."
+            },
+            "scheduling": {
+                "title": "Shift Scheduling",
+                "description": "Plan team shifts and attendance corrections."
+            },
+            "approvals": {
+                "title": "Approvals",
+                "description": "Review pending approvals and requests."
+            },
+            "directory": {
+                "title": "Directory",
+                "description": "Access employee directory records."
+            },
+            "operations": {
+                "title": "HR Operations",
+                "description": "Monitor HR operations and escalations."
+            }
+        },
+        "defaults": {
+            "review_period": "Current Period",
+            "no_reviewer": "Not assigned"
+        },
+        "messages": {
+            "review_created": "Performance review created.",
+            "review_create_failed": "Failed to create review.",
+            "review_updated": "Performance review updated.",
+            "review_update_failed": "Failed to update review.",
+            "review_deleted": "Performance review deleted.",
+            "review_delete_failed": "Failed to delete review.",
+            "goal_created": "Goal created.",
+            "goal_create_failed": "Failed to create goal.",
+            "goal_updated": "Goal updated.",
+            "goal_update_failed": "Failed to update goal.",
+            "goal_deleted": "Goal deleted.",
+            "goal_delete_failed": "Failed to delete goal.",
+            "payslip_created": "Payslip created.",
+            "payslip_updated": "Payslip updated.",
+            "payslip_save_failed": "Failed to save payslip.",
+            "payslip_deleted": "Payslip deleted.",
+            "payslip_delete_failed": "Failed to delete payslip.",
+            "payslip_download_failed": "Unable to generate download link.",
+            "select_employee": "Select an employee."
+        },
+        "filters": {
+            "title": "Filters",
+            "description": "Narrow results by department or employee.",
+            "department": "Department",
+            "all_departments": "All departments",
+            "employee": "Employee",
+            "all_employees": "All employees",
+            "status": "Status",
+            "all_statuses": "All statuses",
+            "month": "Month",
+            "year": "Year"
+        },
+        "fields": {
+            "employee": "Employee",
+            "reviewer": "Reviewer",
+            "review_period": "Review Period",
+            "review_date": "Review Date",
+            "rating": "Overall Rating",
+            "status": "Status",
+            "strengths": "Strengths",
+            "improvements": "Areas for Improvement",
+            "comments": "Comments",
+            "goals": "Goals",
+            "goal_title": "Goal Title",
+            "target_date": "Target Date",
+            "category": "Category",
+            "progress": "Progress",
+            "description": "Description",
+            "month": "Month",
+            "year": "Year",
+            "period_start": "Period Start",
+            "period_end": "Period End",
+            "payment_date": "Payment Date",
+            "currency": "Currency",
+            "basic_salary": "Basic Salary",
+            "gross_salary": "Gross Salary",
+            "deductions": "Deductions",
+            "net_salary": "Net Salary",
+            "file": "Payslip PDF",
+            "published": "Published"
+        },
+        "performance": {
+            "title": "Performance Review Management",
+            "description": "Create, review, and track performance reviews.",
+            "form_title": "Create or Update Review",
+            "form_description": "Capture review details and ratings.",
+            "list_title": "Review History",
+            "list_description": "Recent reviews for your teams."
+        },
+        "goals": {
+            "title": "Goals Management",
+            "description": "Assign and track career goals for your teams.",
+            "form_title": "Create or Update Goal",
+            "form_description": "Set milestones and progress targets.",
+            "list_title": "Goal Tracker",
+            "list_description": "Monitor progress across teams."
+        },
+        "payslips": {
+            "title": "Payslip Management",
+            "description": "Create, publish, and distribute staff payslips.",
+            "form_title": "Create or Update Payslip",
+            "form_description": "Upload payslip PDFs and manage payroll metadata.",
+            "list_title": "Payslip Records",
+            "list_description": "Track published and draft payslips across teams.",
+            "current_file": "Current file"
+        },
+        "columns": {
+            "employee": "Employee",
+            "period": "Period",
+            "rating": "Rating",
+            "status": "Status",
+            "date": "Date",
+            "actions": "Actions",
+            "goal": "Goal",
+            "progress": "Progress",
+            "due": "Due",
+            "net": "Net Pay",
+            "published": "Published",
+            "payment_date": "Payment Date",
+            "file": "File"
+        },
+        "labels": {
+            "published": "Published",
+            "draft": "Draft",
+            "file_ready": "Ready",
+            "file_missing": "Missing"
+        }
+    },
+    "shift_management": {
+        "title": "Shift Scheduling",
+        "description": "Plan team shifts and correct attendance records.",
+        "tabs": {
+            "shifts": "Shifts",
+            "attendance": "Attendance Corrections"
+        },
+        "filters": {
+            "department": "Department",
+            "all_departments": "All departments",
+            "start_date": "Start Date",
+            "end_date": "End Date",
+            "attendance_date": "Attendance Date"
+        },
+        "actions": {
+            "create_shift": "Create Shift",
+            "edit": "Edit",
+            "delete": "Delete",
+            "add_attendance": "Add Attendance"
+        },
+        "form": {
+            "staff_member": "Staff Member",
+            "shift_type": "Shift Type",
+            "start_time": "Start Time",
+            "end_time": "End Time",
+            "location": "Location",
+            "status": "Status",
+            "notes": "Notes",
+            "check_in": "Check In",
+            "check_out": "Check Out",
+            "save": "Save",
+            "cancel": "Cancel"
+        },
+        "empty": {
+            "shifts": "No shifts found for the selected period.",
+            "attendance": "No attendance records found for this date."
+        }
     }
 }

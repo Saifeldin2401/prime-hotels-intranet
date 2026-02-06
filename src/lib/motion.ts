@@ -41,21 +41,36 @@ export const TRANSITION_FAST: Transition = {
 // CENTRALIZED VARIANTS
 // ==========================================
 
+// Check simplified reduced motion (can be expanded with hooks)
+const isReducedMotion = typeof window !== 'undefined'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false
+
 // 1. Page Transitions (Subtle fade + slight slide up)
+// Enterprise Feel: Less bounce, more transparency flow
 export const pageVariants: Variants = {
     initial: {
         opacity: 0,
-        y: 4
+        y: isReducedMotion ? 0 : 8, // Reduced movement distance
+        scale: isReducedMotion ? 1 : 0.995 // Very subtle scale up
     },
     animate: {
         opacity: 1,
         y: 0,
-        transition: TRANSITION_DEFAULT
+        scale: 1,
+        transition: {
+            duration: DURATION.SLOW,
+            ease: "easeOut" // Smooth deceleration
+        }
     },
     exit: {
         opacity: 0,
-        y: -4,
-        transition: TRANSITION_FAST
+        y: isReducedMotion ? 0 : -4,
+        scale: 1,
+        transition: {
+            duration: DURATION.FAST,
+            ease: "easeIn"
+        }
     }
 }
 

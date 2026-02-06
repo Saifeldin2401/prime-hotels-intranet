@@ -34,6 +34,9 @@ BEGIN
     END IF;
     
     -- Task notifications
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'task_assigned' AND enumtypid = 'notification_type'::regtype) THEN
+        ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'task_assigned';
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'task_due_soon' AND enumtypid = 'notification_type'::regtype) THEN
         ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'task_due_soon';
     END IF;
@@ -42,6 +45,22 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'task_completed' AND enumtypid = 'notification_type'::regtype) THEN
         ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'task_completed';
+    END IF;
+
+    -- Document workflow notifications
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'document_approved' AND enumtypid = 'notification_type'::regtype) THEN
+        ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'document_approved';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'document_rejected' AND enumtypid = 'notification_type'::regtype) THEN
+        ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'document_rejected';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'document_review_pending' AND enumtypid = 'notification_type'::regtype) THEN
+        ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'document_review_pending';
+    END IF;
+
+    -- Trigger system notifications
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'trigger_notification' AND enumtypid = 'notification_type'::regtype) THEN
+        ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'trigger_notification';
     END IF;
     
     -- SOP notifications

@@ -52,6 +52,9 @@ export interface KnowledgeArticle {
     status: KnowledgeStatus
     version: number
     visibility_scope: KnowledgeVisibility
+    translation_status?: 'pending' | 'automated' | 'reviewed'
+    last_translated_at?: string
+    content_ar?: string
 
     // Relations
     property_id?: string

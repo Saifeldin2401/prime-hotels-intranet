@@ -391,7 +391,7 @@ export default function TrainingBuilder() {
 
   const [uploading, setUploading] = useState(false)
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'document') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'document' | 'audio') => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -399,7 +399,7 @@ export default function TrainingBuilder() {
       setUploading(true)
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
-      const filePath = `training/${type}s/${fileName}`
+      const filePath = `training/${type === 'audio' ? 'audios' : `${type}s`}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('documents')
@@ -489,6 +489,9 @@ export default function TrainingBuilder() {
       if (currentModuleId) {
         // Delete existing blocks
         await supabase
+          .from('training_content_blocks')
+          .delete()
+          .eq('training_module_id', currentModuleId)
         // Flatten sections into content blocks
         const allBlocks: any[] = []
         let orderIndex = 0
@@ -507,17 +510,19 @@ export default function TrainingBuilder() {
           }
         }
 
-        // Also include any standalone content blocks
-        for (const block of contentBlocks) {
-          allBlocks.push({
-            training_module_id: currentModuleId,
-            type: block.type,
-            content: block.content || block.title || '',
-            content_url: block.content_url || null,
-            content_data: block.content_data || {},
-            order: orderIndex++,
-            is_mandatory: block.is_mandatory ?? true
-          })
+        // Also include any standalone content blocks only if sections are empty
+        if (allBlocks.length === 0) {
+          for (const block of contentBlocks) {
+            allBlocks.push({
+              training_module_id: currentModuleId,
+              type: block.type,
+              content: block.content || block.title || '',
+              content_url: block.content_url || null,
+              content_data: block.content_data || {},
+              order: orderIndex++,
+              is_mandatory: block.is_mandatory ?? true
+            })
+          }
         }
 
         if (allBlocks.length > 0) {
@@ -1148,6 +1153,51 @@ export default function TrainingBuilder() {
                   value={currentBlock.content_url}
                   onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
                   placeholder="https://youtube.com/watch?v=..."
+                  className={isRTL ? 'text-right' : ''}
+                />
+              </div>
+            )}
+
+            {currentBlock.type === 'audio' && (
+              <div className={isRTL ? 'text-right' : ''}>
+                <Label>{t('builder.audioUrl', 'Audio URL')}</Label>
+                <div className="space-y-3">
+                  <Input
+                    value={currentBlock.content_url}
+                    onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
+                    placeholder="https://example.com/audio.mp3"
+                    className={isRTL ? 'text-right' : ''}
+                  />
+                  <div className={`flex items-center gap-2 ${isRTL ? 'justify-end' : ''}`}>
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        accept="audio/*"
+                        onChange={(e) => handleFileUpload(e, 'audio')}
+                        disabled={uploading}
+                        className="hidden"
+                        id="audio-upload"
+                      />
+                      <label
+                        htmlFor="audio-upload"
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}
+                      >
+                        <Upload className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">{uploading ? t('uploading') : t('builder.uploadAudio', 'Upload Audio')}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {currentBlock.type === 'interactive' && (
+              <div className={isRTL ? 'text-right' : ''}>
+                <Label>{t('builder.interactiveUrl', 'Interactive URL')}</Label>
+                <Input
+                  value={currentBlock.content_url}
+                  onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
+                  placeholder="https://example.com/interactive"
                   className={isRTL ? 'text-right' : ''}
                 />
               </div>

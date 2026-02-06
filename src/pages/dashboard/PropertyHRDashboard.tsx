@@ -3,16 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { SocialFeed, type FeedItem } from '@/components/social/SocialFeed'
+import { SocialFeed } from '@/components/social/SocialFeed'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 import { useTeamLeaveRequests, useApproveLeaveRequest, useRejectLeaveRequest } from '@/hooks/useLeaveRequests'
 import { format } from 'date-fns'
-import { CheckCircle, XCircle } from 'lucide-react'
+import { CheckCircle, XCircle, Users, ClipboardCheck, Briefcase, ShieldCheck } from 'lucide-react'
 import { useProperty } from '@/contexts/PropertyContext'
-import { useAnnouncements } from '@/hooks/useAnnouncements'
-import { useAuth } from '@/hooks/useAuth'
 import { useHRStats } from '@/hooks/useDashboardStats'
+import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
 import JobPostings from '@/pages/jobs/JobPostings'
 import { KnowledgeComplianceWidget } from '@/components/knowledge/KnowledgeComplianceWidget'
 import { useProfiles } from '@/hooks/useUsers'
@@ -21,50 +20,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { EnhancedCard } from '@/components/ui/enhanced-card'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { DepartmentControlCenter } from '@/components/departments/DepartmentControlCenter'
+import { ReportsControlCenter } from '@/components/reports/ReportsControlCenter'
+import { AuditsControlCenter } from '@/components/audits/AuditsControlCenter'
 
 export function PropertyHRDashboard() {
   const { t } = useTranslation('dashboard')
   const { currentProperty } = useProperty()
-  const { user, profile, primaryRole } = useAuth()
-  const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements({ limit: 5 })
+  const { currentUser, feedItems, onReact, onComment, onShare } = useUnifiedSocialFeed()
   const { data: hrStatsData, isLoading: statsLoading } = useHRStats(currentProperty?.id)
   const { data: staffMembers = [], isLoading: staffLoading } = useProfiles({ property_id: currentProperty?.id })
   const [staffSearchTerm, setStaffSearchTerm] = useState('')
   const navigate = useNavigate()
 
-  // Create real user object from auth context
-  const currentUser: User = {
-    id: user?.id || 'guest',
-    name: profile?.full_name || user?.email || 'Property HR',
-    email: user?.email || '',
-    role: (primaryRole as User['role']) || 'property_hr',
-    property: currentProperty?.name || '',
-    permissions: []
-  }
-
-  // Transform announcements to feed items format
-  const feedItems: FeedItem[] = announcements.map(announcement => ({
-    id: announcement.id,
-    type: 'announcement' as const,
-    author: {
-      id: announcement.created_by || 'system',
-      name: announcement.created_by_profile?.full_name || 'HR System',
-      email: '',
-      role: 'property_hr' as const,
-      department: 'Human Resources',
-      property: currentProperty?.name || '',
-      permissions: []
-    },
-    title: announcement.title,
-    content: announcement.content,
-    timestamp: new Date(announcement.created_at),
-    tags: announcement.pinned ? ['pinned'] : [],
-    priority: (announcement.priority === 'critical' ? 'high' : announcement.priority === 'important' ? 'medium' : 'low') as 'high' | 'medium' | 'low',
-    reactions: {},
-    comments: []
-  }))
-
-  const loading = announcementsLoading || statsLoading
+  const loading = statsLoading
 
   // Use real stats or defaults
   const hrStats = hrStatsData || {
@@ -80,6 +51,39 @@ export function PropertyHRDashboard() {
   const approveMutation = useApproveLeaveRequest()
   const rejectMutation = useRejectLeaveRequest()
 
+  const quickActions = [
+    {
+      title: t('cards.quick_actions.leave', 'Leave Requests'),
+      description: t('cards.quick_actions.leave_desc', 'Review and approve time off.'),
+      icon: ClipboardCheck,
+      onClick: () => navigate('/hr/leave'),
+      badge: hrStats.pendingLeaveRequests
+    },
+    {
+      title: t('cards.quick_actions.staff', 'Staff Directory'),
+      description: t('cards.quick_actions.staff_desc', 'Manage profiles and assignments.'),
+      icon: Users,
+      onClick: () => navigate('/directory')
+    },
+    {
+      title: t('cards.quick_actions.recruitment', 'Recruitment'),
+      description: t('cards.quick_actions.recruitment_desc', 'Open roles and hiring pipeline.'),
+      icon: Briefcase,
+      onClick: () => navigate('/jobs'),
+      badge: hrStats.openPositions
+    },
+    {
+      title: t('cards.quick_actions.compliance', 'Compliance'),
+      description: t('cards.quick_actions.compliance_desc', 'Track training and SOP coverage.'),
+      icon: ShieldCheck,
+      onClick: () => navigate('/training'),
+      badge: `${hrStats.trainingCompliance}%`
+    }
+  ]
+
+  const staffSpotlight = staffMembers.slice(0, 3)
+  const pendingLeave = (leaveRequests || []).filter(r => r.status === 'pending').slice(0, 3)
+
   const handleApprove = (requestId: string) => {
     approveMutation.mutate({ requestId })
   }
@@ -90,20 +94,6 @@ export function PropertyHRDashboard() {
       rejectMutation.mutate({ requestId, reason })
     }
   }
-
-
-  const handleReact = (_itemId: string, _reaction: string) => {
-    // Reaction functionality placeholder - to be implemented
-  }
-
-  const handleComment = (_itemId: string, _content: string) => {
-    // Comment functionality placeholder - to be implemented
-  }
-
-  const handleShare = (_itemId: string) => {
-    // Share functionality placeholder - to be implemented
-  }
-
 
   if (loading) {
     return (
@@ -118,61 +108,144 @@ export function PropertyHRDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{t('cards.hr_dashboard_title')}</h1>
-          <p className="text-gray-600 text-sm sm:text-base">{t('cards.hr_dashboard_subtitle')}</p>
-        </div>
-        <div className="flex items-center">
+    <div className="space-y-8">
+      <PageHeader
+        title={t('cards.hr_dashboard_title')}
+        description={t('cards.hr_dashboard_subtitle')}
+        actions={
           <Badge className="text-xs sm:text-sm bg-blue-100 text-blue-800">
             {t('cards.active_staff_badge', { count: hrStats.totalStaff })}
           </Badge>
-        </div>
-      </div>
+        }
+      />
 
       {/* HR Stats */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
-        <Card className="role-property-hr">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.staff_attendance')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{hrStats.presentToday}/{hrStats.totalStaff}</div>
+        <EnhancedCard className="role-property-hr" padding="lg">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{t('cards.staff_attendance')}</p>
+            <p className="text-2xl font-bold text-green-600">{hrStats.presentToday}/{hrStats.totalStaff}</p>
             <Progress value={hrStats.totalStaff > 0 ? (hrStats.presentToday / hrStats.totalStaff) * 100 : 0} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">{t('cards.daily_attendance')}</p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground">{t('cards.daily_attendance')}</p>
+          </div>
+        </EnhancedCard>
 
-        <Card className="role-property-hr">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.leave_requests')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{hrStats.pendingLeaveRequests}</div>
-            <p className="text-xs text-gray-600 mt-1">{t('cards.pending_approval')}</p>
-          </CardContent>
-        </Card>
+        <EnhancedCard className="role-property-hr" padding="lg">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{t('cards.leave_requests')}</p>
+            <p className="text-2xl font-bold text-orange-600">{hrStats.pendingLeaveRequests}</p>
+            <p className="text-xs text-muted-foreground">{t('cards.pending_approval')}</p>
+          </div>
+        </EnhancedCard>
 
-        <Card className="role-property-hr">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.training_compliance')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{hrStats.trainingCompliance}%</div>
+        <EnhancedCard className="role-property-hr" padding="lg">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{t('cards.training_compliance')}</p>
+            <p className="text-2xl font-bold text-blue-600">{hrStats.trainingCompliance}%</p>
             <Progress value={hrStats.trainingCompliance} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-1">{t('cards.completion_rate')}</p>
+            <p className="text-xs text-muted-foreground">{t('cards.completion_rate')}</p>
+          </div>
+        </EnhancedCard>
+
+        <EnhancedCard className="role-property-hr" padding="lg">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{t('cards.open_positions')}</p>
+            <p className="text-2xl font-bold text-purple-600">{hrStats.openPositions}</p>
+            <p className="text-xs text-muted-foreground">{t('cards.hired_this_month', { count: hrStats.newHiresThisMonth })}</p>
+          </div>
+        </EnhancedCard>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">{t('cards.quick_actions_title', 'Quick Actions')}</h2>
+          <p className="text-sm text-muted-foreground">{t('cards.quick_actions_subtitle', 'Keep HR workflows moving fast.')}</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {quickActions.map(action => (
+            <EnhancedCard key={action.title} clickable onClick={action.onClick} padding="md" className="group">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{action.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
+                </div>
+                <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors">
+                  <action.icon className="h-4 w-4" />
+                </div>
+              </div>
+              {action.badge !== undefined && (
+                <Badge className="mt-3 text-[11px] bg-blue-50 text-blue-700 border border-blue-100">
+                  {action.badge}
+                </Badge>
+              )}
+            </EnhancedCard>
+          ))}
+        </div>
+      </div>
+
+      {/* People Pulse */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center space-x-2">
+              <Icons.Users className="h-5 w-5" />
+              <span>{t('cards.staff_spotlight', 'Staff Spotlight')}</span>
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/directory')}>
+              {t('actions.view_all', 'View all')}
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {staffSpotlight.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                {t('cards.no_staff_found', 'No staff found yet.')}
+              </div>
+            ) : staffSpotlight.map(member => (
+              <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage src={member.avatar_url || ''} />
+                    <AvatarFallback>{member.full_name?.charAt(0) || '?'}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-foreground">{member.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{member.job_title || t('cards.job_title_missing', 'No job title')}</p>
+                  </div>
+                </div>
+                <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                  {member.status || t('cards.status_unknown', 'Unknown')}
+                </Badge>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
-        <Card className="role-property-hr">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{t('cards.open_positions')}</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Icons.Calendar className="h-5 w-5" />
+              <span>{t('cards.leave_queue', 'Leave Queue')}</span>
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{hrStats.openPositions}</div>
-            <p className="text-xs text-gray-600 mt-1">{t('cards.hired_this_month', { count: hrStats.newHiresThisMonth })}</p>
+          <CardContent className="space-y-3">
+            {pendingLeave.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                {t('cards.no_pending_leave', 'No pending leave requests.')}
+              </div>
+            ) : pendingLeave.map(request => (
+              <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="text-sm font-medium">{request.requester?.full_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(request.start_date), 'MMM dd')} - {format(new Date(request.end_date), 'MMM dd')}
+                  </p>
+                </div>
+                <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                  {t('cards.pending', 'Pending')}
+                </Badge>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
@@ -180,23 +253,27 @@ export function PropertyHRDashboard() {
       {/* Main Content Tabs */}
       <Tabs defaultValue="feed" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5 h-auto">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-7 h-auto">
             <TabsTrigger value="feed" className="text-xs sm:text-sm whitespace-nowrap">{t('tabs.feed')}</TabsTrigger>
             <TabsTrigger value="leave" className="text-xs sm:text-sm whitespace-nowrap">{t('cards.leave', 'Leave')}</TabsTrigger>
             <TabsTrigger value="staff" className="text-xs sm:text-sm whitespace-nowrap">{t('cards.staff', 'Staff')}</TabsTrigger>
             <TabsTrigger value="recruitment" className="text-xs sm:text-sm whitespace-nowrap">{t('cards.recruitment')}</TabsTrigger>
             <TabsTrigger value="compliance" className="text-xs sm:text-sm whitespace-nowrap">{t('tabs.compliance')}</TabsTrigger>
+            <TabsTrigger value="reports" className="text-xs sm:text-sm whitespace-nowrap">{t('tabs.reports')}</TabsTrigger>
+            <TabsTrigger value="audits" className="text-xs sm:text-sm whitespace-nowrap">{t('tabs.audits', 'Audits')}</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="feed" className="space-y-6">
-          <SocialFeed
-            user={currentUser}
-            feedItems={feedItems}
-            onReact={handleReact}
-            onComment={handleComment}
-            onShare={handleShare}
-          />
+          {currentUser && (
+            <SocialFeed
+              user={currentUser as User}
+              feedItems={feedItems}
+              onReact={onReact}
+              onComment={onComment}
+              onShare={onShare}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="leave" className="space-y-6">
@@ -339,6 +416,8 @@ export function PropertyHRDashboard() {
               )}
             </CardContent>
           </Card>
+
+          <DepartmentControlCenter propertyId={currentProperty?.id} />
         </TabsContent>
 
         <TabsContent value="recruitment" className="space-y-6">
@@ -351,6 +430,74 @@ export function PropertyHRDashboard() {
 
         <TabsContent value="compliance" className="space-y-6">
           <KnowledgeComplianceWidget propertyId={currentProperty?.id} variant="department" />
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <ReportsControlCenter />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <EnhancedCard padding="lg">
+              <h4 className="text-base font-semibold text-foreground mb-2">{t('cards.hr_reports', 'HR Reports')}</h4>
+              <p className="text-sm text-muted-foreground mb-4">{t('cards.hr_reports_subtitle', 'Generate workforce, leave, and compliance reports.')}</p>
+              <div className="space-y-2">
+                <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/reports')}>
+                  {t('actions.open_reports_center', 'Open Reports Center')}
+                </button>
+                <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/dashboard')}>
+                  {t('actions.view_analytics', 'View Analytics')}
+                </button>
+              </div>
+            </EnhancedCard>
+            <EnhancedCard padding="lg">
+              <h4 className="text-base font-semibold text-foreground mb-2">{t('cards.people_insights', 'People Insights')}</h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('cards.present_today', 'Present Today')}</span>
+                  <Badge className="bg-green-50 text-green-700 border border-green-100">{hrStats.presentToday}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('cards.pending_leave', 'Pending Leave')}</span>
+                  <Badge className="bg-yellow-50 text-yellow-700 border border-yellow-100">{hrStats.pendingLeaveRequests}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('cards.open_positions')}</span>
+                  <Badge className="bg-blue-50 text-blue-700 border border-blue-100">{hrStats.openPositions}</Badge>
+                </div>
+              </div>
+            </EnhancedCard>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="audits" className="space-y-6">
+          <AuditsControlCenter />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <EnhancedCard padding="lg">
+              <h4 className="text-base font-semibold text-foreground mb-2">{t('cards.audit_readiness', 'Audit Readiness')}</h4>
+              <p className="text-sm text-muted-foreground mb-4">{t('cards.audit_readiness_subtitle', 'Verify HR compliance and policy coverage.')}</p>
+              <KnowledgeComplianceWidget propertyId={currentProperty?.id} variant="department" />
+            </EnhancedCard>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Icons.Shield className="h-5 w-5" />
+                  <span>{t('cards.audit_checklist', 'Audit Checklist')}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <div className="flex items-center justify-between border rounded-md p-2">
+                  <span>{t('cards.policy_acknowledgments', 'Policy acknowledgments')}</span>
+                  <Badge variant="secondary">{t('cards.in_review', 'In review')}</Badge>
+                </div>
+                <div className="flex items-center justify-between border rounded-md p-2">
+                  <span>{t('cards.training_records', 'Training records')}</span>
+                  <Badge variant="secondary">{t('cards.in_review', 'In review')}</Badge>
+                </div>
+                <div className="flex items-center justify-between border rounded-md p-2">
+                  <span>{t('cards.leave_approvals', 'Leave approvals')}</span>
+                  <Badge variant="secondary">{t('cards.in_review', 'In review')}</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

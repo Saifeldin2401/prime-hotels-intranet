@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useDocuments, useDocumentStats, useUpdateDocument, useFavorites, useToggleFavorite } from '@/hooks/useDocuments'
+import { useDocuments, useDocumentStats, useFavorites, useToggleFavorite, useSubmitForApproval } from '@/hooks/useDocuments'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
@@ -48,7 +48,7 @@ export default function DocumentLibrary() {
   const [viewerOpen, setViewerOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<{ id: string; title: string; file_url: string } | null>(null)
 
-  const updateDocument = useUpdateDocument()
+  const submitForApproval = useSubmitForApproval()
   const { data: favorites = new Set() } = useFavorites()
   const toggleFavorite = useToggleFavorite()
 
@@ -58,10 +58,10 @@ export default function DocumentLibrary() {
     status: selectedStatus !== 'all' ? selectedStatus : undefined,
   })
 
-  const handlePublish = (documentId: string, e: React.MouseEvent) => {
+  const handleSubmitForApproval = (documentId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!documentId) return
-    updateDocument.mutate({ id: documentId, status: 'PUBLISHED' })
+    submitForApproval.mutate(documentId)
   }
 
   const handleViewDocument = (doc: any, e: React.MouseEvent) => {
@@ -208,14 +208,14 @@ export default function DocumentLibrary() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={doc.status} />
-                    {user?.id === doc.created_by && doc.status !== 'PUBLISHED' && (
+                    {user?.id === doc.created_by && (doc.status === 'DRAFT' || doc.status === 'REJECTED') && (
                       <Button
                         size="sm"
                         className="h-8 text-xs"
-                        disabled={updateDocument.isPending}
-                        onClick={(e) => handlePublish(doc.id, e)}
+                        disabled={submitForApproval.isPending}
+                        onClick={(e) => handleSubmitForApproval(doc.id, e)}
                       >
-                        Publish
+                        Submit for Approval
                       </Button>
                     )}
                     {doc.requires_acknowledgment && (

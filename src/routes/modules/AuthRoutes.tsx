@@ -3,6 +3,7 @@ import { Route, Navigate } from 'react-router-dom'
 import type { User } from '@supabase/supabase-js'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { PublicOnlyRoute } from '@/components/auth/PublicOnlyRoute'
 
 const Login = lazy(() => import('@/pages/Login'))
 const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'))
@@ -10,16 +11,24 @@ const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'))
 const ChangePassword = lazy(() => import('@/pages/auth/ChangePassword'))
 const Unauthorized = lazy(() => import('@/pages/Unauthorized'))
 
-export const AuthRoutes = (user: User | null) => {
+export const AuthRoutes = () => {
     return (
         <>
             <Route
                 path="/login"
-                element={user ? <Navigate to="/home" replace /> : <Login />}
+                element={
+                    <PublicOnlyRoute>
+                        <Login />
+                    </PublicOnlyRoute>
+                }
             />
             <Route
                 path="/forgot-password"
-                element={user ? <Navigate to="/home" replace /> : <ForgotPassword />}
+                element={
+                    <PublicOnlyRoute>
+                        <ForgotPassword />
+                    </PublicOnlyRoute>
+                }
             />
             <Route
                 path="/reset-password"

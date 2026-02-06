@@ -44,6 +44,7 @@ import {
     Wallet,
     Brain,
     Activity,
+    Clock,
     type LucideIcon
 } from 'lucide-react'
 import { ROLES, type AppRole } from '@/lib/constants'
@@ -407,6 +408,42 @@ export const ROUTES: RouteConfig[] = [
     // HR MANAGEMENT GROUP
     // -------------------------------------------------------------------------
     {
+        path: '/hr/control',
+        title: 'hr_control_center',
+        icon: ClipboardList,
+        description: 'Central hub for HR workflows and approvals',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'hr_management',
+        order: 0
+    },
+    {
+        path: '/hr/performance-management',
+        title: 'performance_management',
+        icon: Award,
+        description: 'Manage performance reviews for staff',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'hr_management',
+        order: 6.6
+    },
+    {
+        path: '/hr/goals-management',
+        title: 'goals_management',
+        icon: Target,
+        description: 'Assign and track employee goals',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'hr_management',
+        order: 6.7
+    },
+    {
+        path: '/hr/payslips-management',
+        title: 'payslips_management',
+        icon: Wallet,
+        description: 'Create and publish payslips',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'hr_management',
+        order: 6.8
+    },
+    {
         path: '/directory',
         title: 'directory',
         icon: Users,
@@ -459,6 +496,15 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
         group: 'hr_management',
         order: 6
+    },
+    {
+        path: '/hr/scheduling',
+        title: 'shift_scheduling',
+        icon: Clock,
+        description: 'Shift planning and attendance corrections',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        group: 'hr_management',
+        order: 6.5
     },
     {
         path: '/hr/onboarding',

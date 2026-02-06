@@ -16,6 +16,11 @@ const MyAttendance = lazy(() => import('@/pages/hr/MyAttendance'))
 const MyPerformance = lazy(() => import('@/pages/hr/MyPerformance'))
 const MyGoals = lazy(() => import('@/pages/hr/MyGoals'))
 const MyPayslips = lazy(() => import('@/pages/hr/MyPayslips'))
+const ShiftScheduling = lazy(() => import('@/pages/hr/ShiftScheduling'))
+const HRControlCenter = lazy(() => import('@/pages/hr/HRControlCenter'))
+const PerformanceReviewsAdmin = lazy(() => import('@/pages/hr/PerformanceReviewsAdmin'))
+const GoalsAdmin = lazy(() => import('@/pages/hr/GoalsAdmin'))
+const PayslipsAdmin = lazy(() => import('@/pages/hr/PayslipsAdmin'))
 const OnboardingTracker = lazy(() => import('@/pages/onboarding/OnboardingTracker'))
 
 export const HRRoutes = () => (
@@ -23,9 +28,49 @@ export const HRRoutes = () => (
         <Route
             path="/hr"
             element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
                     <AppLayout>
-                        <EmployeeReferrals />
+                        <HRControlCenter />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/control"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+                    <AppLayout>
+                        <HRControlCenter />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/performance-management"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+                    <AppLayout>
+                        <PerformanceReviewsAdmin />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/goals-management"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+                    <AppLayout>
+                        <GoalsAdmin />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/payslips-management"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+                    <AppLayout>
+                        <PayslipsAdmin />
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -66,6 +111,16 @@ export const HRRoutes = () => (
                 <ProtectedRoute>
                     <AppLayout>
                         <MyPayslips />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/scheduling"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+                    <AppLayout>
+                        <ShiftScheduling />
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -113,7 +168,7 @@ export const HRRoutes = () => (
         <Route
             path="/hr/referrals"
             element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
                     <AppLayout>
                         <EmployeeReferrals />
                     </AppLayout>

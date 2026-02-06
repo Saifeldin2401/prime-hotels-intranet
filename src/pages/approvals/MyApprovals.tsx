@@ -85,8 +85,8 @@ export default function MyApprovals() {
             )
           )
         `)
-        .eq('approver_id', user.id)
         .eq('status', 'pending')
+        .eq('is_active', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -126,7 +126,7 @@ export default function MyApprovals() {
             )
           )
         `)
-        .eq('approver_id', user.id)
+        .or(`approved_by.eq.${user.id},rejected_by.eq.${user.id}`)
         .in('status', ['approved', 'rejected'])
         .order('updated_at', { ascending: false })
 
@@ -256,55 +256,16 @@ export default function MyApprovals() {
   })
 
   const approveMutation = useMutation({
-    mutationFn: async (documentId: string) => {
+    mutationFn: async (approvalId: string) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to approve documents')
 
-      // Get document details
-      const { data: document } = await supabase
-        .from('documents')
-        .select('created_by, title')
-        .eq('id', documentId)
-        .single()
+      const { error } = await supabase.rpc('approve_document_atomic', {
+        p_approval_id: approvalId,
+        p_approver_id: user.id,
+        p_feedback: null,
+      })
 
-      // Update the approval record
-      const { error: approvalError } = await supabase
-        .from('document_approvals')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-        })
-        .eq('document_id', documentId)
-        .eq('approver_id', user.id)
-        .eq('status', 'pending')
-
-      if (approvalError) throw approvalError
-
-      // Check if all required approvals are complete
-      const { data: remainingApprovals } = await supabase
-        .from('document_approvals')
-        .select('status')
-        .eq('document_id', documentId)
-        .eq('status', 'pending')
-
-      // If no more pending approvals, update document status to PUBLISHED
-      if (!remainingApprovals || remainingApprovals.length === 0) {
-        const { error: docError } = await supabase
-          .from('documents')
-          .update({ status: 'PUBLISHED' })
-          .eq('id', documentId)
-
-        if (docError) throw docError
-
-        // Notify document creator that their document was approved
-        if (document?.created_by) {
-          await notifyRequestApproved(
-            document.created_by,
-            'document',
-            documentId,
-            document.title || 'Document'
-          )
-        }
-      }
+      if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document-approvals-pending'] })
@@ -318,48 +279,16 @@ export default function MyApprovals() {
   })
 
   const rejectMutation = useMutation({
-    mutationFn: async ({ documentId, reason }: { documentId: string; reason: string }) => {
+    mutationFn: async ({ approvalId, reason }: { approvalId: string; reason: string }) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to reject documents')
 
-      // Get document details
-      const { data: document } = await supabase
-        .from('documents')
-        .select('created_by, title')
-        .eq('id', documentId)
-        .single()
+      const { error } = await supabase.rpc('reject_document_atomic', {
+        p_approval_id: approvalId,
+        p_approver_id: user.id,
+        p_reason: reason
+      })
 
-      // Update the approval record with feedback
-      const { error: approvalError } = await supabase
-        .from('document_approvals')
-        .update({
-          status: 'rejected',
-          approved_at: new Date().toISOString(),
-          feedback: reason,
-        })
-        .eq('document_id', documentId)
-        .eq('approver_id', user.id)
-        .eq('status', 'pending')
-
-      if (approvalError) throw approvalError
-
-      // Update document status to REJECTED
-      const { error: docError } = await supabase
-        .from('documents')
-        .update({ status: 'REJECTED' })
-        .eq('id', documentId)
-
-      if (docError) throw docError
-
-      // Notify document creator that their document was rejected
-      if (document?.created_by) {
-        await notifyRequestRejected(
-          document.created_by,
-          'document',
-          documentId,
-          document.title || 'Document',
-          reason
-        )
-      }
+      if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document-approvals-pending'] })
@@ -505,14 +434,14 @@ export default function MyApprovals() {
     }
   })
 
-  const handleApprove = (documentId: string) => {
-    approveMutation.mutate(documentId)
+  const handleApprove = (approvalId: string) => {
+    approveMutation.mutate(approvalId)
   }
 
-  const handleReject = (documentId: string) => {
+  const handleReject = (approvalId: string) => {
     const reason = prompt('Please provide a reason for rejection:')
     if (reason) {
-      rejectMutation.mutate({ documentId, reason })
+      rejectMutation.mutate({ approvalId, reason })
     }
   }
 
@@ -687,7 +616,7 @@ export default function MyApprovals() {
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => handleApprove(approval.document_id)}
+                          onClick={() => handleApprove(approval.id)}
                           disabled={approveMutation.isPending}
                           className="bg-green-600 hover:bg-green-700"
                         >
@@ -697,7 +626,7 @@ export default function MyApprovals() {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleReject(approval.document_id)}
+                          onClick={() => handleReject(approval.id)}
                           disabled={rejectMutation.isPending}
                         >
                           <XCircle className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { CheckCircle2, XCircle, Award, Clock, ArrowRight, HelpCircle, ArrowLeft, PenBox } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { CheckCircle2, XCircle, Award, Clock, ArrowRight, HelpCircle, ArrowLeft, PenBox, Languages, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -7,6 +7,14 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/components/ui/use-toast'
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { learningService } from '@/services/learningService'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
 import type { LearningQuiz } from '@/types/learning'
@@ -14,6 +22,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
+import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 
 interface QuizComponentProps {
     quizId: string
@@ -28,12 +38,21 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
     const { user, profile } = useAuth()
     const { t, i18n } = useTranslation(['training', 'common'])
     const isRTL = i18n.language === 'ar'
+    const translateAI = useTranslationAI()
 
     const [quiz, setQuiz] = useState<LearningQuiz | null>(null)
     const [loading, setLoading] = useState(true)
     const [answers, setAnswers] = useState<Record<string, string>>({})
     const [submitted, setSubmitted] = useState(false)
     const [result, setResult] = useState<any>(null)
+    const [translationTarget, setTranslationTarget] = useState<TranslationTargetLanguage | null>(null)
+    const [showBilingual, setShowBilingual] = useState(false)
+    const [isTranslating, setIsTranslating] = useState(false)
+    const [translatedQuestions, setTranslatedQuestions] = useState<Record<string, Partial<Record<TranslationTargetLanguage, {
+        text: string
+        explanation?: string
+        options?: Record<string, string>
+    }>>>>({})
 
     // Quiz state
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -44,6 +63,21 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
             loadQuiz(quizId)
         }
     }, [quizId])
+
+    useEffect(() => {
+        setTranslationTarget(null)
+        setShowBilingual(false)
+        setTranslatedQuestions({})
+    }, [quizId])
+
+    useEffect(() => {
+        if (!translationTarget || !quiz?.questions?.length) return
+        const current = quiz.questions[currentQuestionIndex]
+        if (!current?.question) return
+        const existing = translatedQuestions[current.question_id]?.[translationTarget]
+        if (existing) return
+        void translateQuestion(current)
+    }, [translationTarget, currentQuestionIndex, quiz])
 
     useEffect(() => {
         let timer: NodeJS.Timeout
@@ -191,6 +225,67 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
         return `${mins}:${secs.toString().padStart(2, '0')}`
     }
 
+    const translationTargetMeta = useMemo(() => (
+        translationTarget
+            ? SUPPORTED_TRANSLATION_LANGUAGES.find(lang => lang.code === translationTarget)
+            : null
+    ), [translationTarget])
+
+    const translateQuestion = async (questionItem: NonNullable<LearningQuiz['questions']>[number]) => {
+        if (!translationTarget || !questionItem?.question) return
+
+        setIsTranslating(true)
+        try {
+            const questionText = questionItem.question.question_text || ''
+            const explanationText = questionItem.question.explanation || ''
+            const optionTexts = questionItem.question.options?.map(o => ({ id: o.id, text: o.option_text })) || []
+
+            const [translatedQuestion, translatedExplanation] = await Promise.all([
+                translateAI.mutateAsync({ text: questionText, target_lang: translationTarget, source_lang: 'auto' }),
+                explanationText
+                    ? translateAI.mutateAsync({ text: explanationText, target_lang: translationTarget, source_lang: 'auto' })
+                    : Promise.resolve({ translated_text: '' })
+            ])
+
+            const translatedOptionsEntries = await Promise.all(
+                optionTexts.map(async (opt) => {
+                    const res = opt.text
+                        ? await translateAI.mutateAsync({ text: opt.text, target_lang: translationTarget, source_lang: 'auto' })
+                        : { translated_text: '' }
+                    return [opt.id, res.translated_text]
+                })
+            )
+
+            setTranslatedQuestions(prev => ({
+                ...prev,
+                [questionItem.question_id]: {
+                    ...prev[questionItem.question_id],
+                    [translationTarget]: {
+                        text: translatedQuestion.translated_text,
+                        explanation: translatedExplanation.translated_text,
+                        options: Object.fromEntries(translatedOptionsEntries)
+                    }
+                }
+            }))
+        } catch (error) {
+            console.error('Quiz translation failed:', error)
+            const errorMessage = error instanceof Error ? error.message : t('training:translationFailed', 'Translation failed')
+            toast({
+                title: t('training:translationFailed', 'Translation failed'),
+                description: errorMessage,
+                variant: 'destructive'
+            })
+            setTranslationTarget(null)
+        } finally {
+            setIsTranslating(false)
+        }
+    }
+
+    const getTranslatedQuestion = (questionItem?: NonNullable<LearningQuiz['questions']>[number]) => {
+        if (!questionItem || !translationTarget) return null
+        return translatedQuestions[questionItem.question_id]?.[translationTarget] || null
+    }
+
     if (loading || !quiz) {
         return <div className="p-8 text-center">{t('training:quizzes.player.loading')}</div>
     }
@@ -262,13 +357,18 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
                                 const question = quiz.questions?.find(q => q.question_id === answer.question_id)?.question
                                 if (!question) return null
 
+                                const translatedReview = translationTarget
+                                    ? translatedQuestions[answer.question_id]?.[translationTarget]
+                                    : null
                                 const isMCQ = question.question_type === 'mcq'
                                 const userAnswerText = isMCQ
-                                    ? question.options?.find(o => o.id === answer.answer)?.option_text
+                                    ? (translatedReview?.options?.[answer.answer] || question.options?.find(o => o.id === answer.answer)?.option_text)
                                     : answer.answer
 
                                 const correctAnswerText = isMCQ
-                                    ? question.options?.find(o => o.is_correct)?.option_text
+                                    ? (translatedReview?.options
+                                        ? Object.entries(translatedReview.options).find(([id]) => question.options?.find(o => o.id === id)?.is_correct)?.[1]
+                                        : question.options?.find(o => o.is_correct)?.option_text)
                                     : question.correct_answer
 
                                 return (
@@ -290,7 +390,14 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
                                                 {index + 1}
                                             </div>
                                             <div className="flex-1 space-y-2 md:space-y-3">
-                                                <p className="font-bold text-hotel-navy text-base md:text-lg">{question.question_text}</p>
+                                                <p className="font-bold text-hotel-navy text-base md:text-lg">
+                                                    {translatedReview?.text || question.question_text}
+                                                </p>
+                                                {showBilingual && translationTarget && translatedReview?.text && (
+                                                    <p className="text-xs text-slate-500">
+                                                        {question.question_text}
+                                                    </p>
+                                                )}
 
                                                 <div className="text-xs md:text-sm space-y-1 md:space-y-2">
                                                     <div className={cn(
@@ -312,7 +419,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
                                                     )}
                                                 </div>
 
-                                                {question.explanation && (
+                                                {(translatedReview?.explanation || question.explanation) && (
                                                     <div className="mt-2 md:mt-4 p-3 md:p-4 bg-white/60 rounded-xl border border-white text-xs text-slate-600 leading-relaxed italic relative">
                                                         <div className={cn(
                                                             "absolute top-0 opacity-10",
@@ -320,7 +427,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
                                                         )}>
                                                             <HelpCircle className="h-6 w-6 md:h-8 md:w-8" />
                                                         </div>
-                                                        <strong>{t('training:quizzes.player.explanation')}</strong> {question.explanation}
+                                                        <strong>{t('training:quizzes.player.explanation')}</strong> {translatedReview?.explanation || question.explanation}
                                                     </div>
                                                 )}
                                             </div>
@@ -369,6 +476,17 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
     }
 
     const currentQuestion = quiz.questions?.[currentQuestionIndex]
+    const translatedCurrent = getTranslatedQuestion(currentQuestion)
+    const displayQuestionText = translationTarget && translatedCurrent?.text
+        ? translatedCurrent.text
+        : currentQuestion?.question?.question_text
+    const displayExplanation = translationTarget && translatedCurrent?.explanation
+        ? translatedCurrent.explanation
+        : currentQuestion?.question?.explanation
+    const displayOptionText = (optionId?: string, fallback?: string) => {
+        if (!translationTarget || !translatedCurrent?.options) return fallback
+        return translatedCurrent.options[optionId || ''] || fallback
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-10 pb-10">
@@ -389,6 +507,47 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
                 </div>
 
                 <div className="flex items-center gap-6">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 border-slate-200 bg-white"
+                                disabled={isTranslating}
+                            >
+                                {isTranslating ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Languages className="h-4 w-4" />
+                                )}
+                                <span className="hidden sm:inline">
+                                    {translationTargetMeta
+                                        ? t('training:translatedTo', { language: translationTargetMeta.label })
+                                        : t('training:translate')}
+                                </span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            <div className="px-2 py-1.5 text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                                {t('training:translateTo')}
+                            </div>
+                            {SUPPORTED_TRANSLATION_LANGUAGES.map(lang => (
+                                <DropdownMenuItem key={lang.code} onClick={() => setTranslationTarget(lang.code)}>
+                                    {lang.label}
+                                </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={showBilingual}
+                                onCheckedChange={() => setShowBilingual(prev => !prev)}
+                            >
+                                {t('training:showBilingual')}
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuItem onClick={() => setTranslationTarget(null)}>
+                                {t('training:viewOriginal')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     {timeLeft !== null && (
                         <div className={cn(
                             "flex items-center gap-3 px-3 md:px-5 py-2 md:py-3 rounded-2xl bg-white border-2 shadow-sm transition-all animate-in fade-in slide-in-from-right-4",
@@ -430,8 +589,13 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
                                         {t('knowledgeCheck')}
                                     </div>
                                     <h2 className="text-xl md:text-3xl font-bold text-hotel-navy leading-tight">
-                                        {currentQuestion.question?.question_text}
+                                        {displayQuestionText}
                                     </h2>
+                                    {showBilingual && translationTarget && translatedCurrent?.text && (
+                                        <p className={cn("text-sm text-slate-500", isRTL && "text-right")}>
+                                            {currentQuestion.question?.question_text}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="space-y-4">
@@ -446,6 +610,7 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
                                             )}
                                             {currentQuestion.question.options?.map((opt, idx) => {
                                                 const isSelected = answers[currentQuestion.question_id] === opt.id
+                                                const translatedOption = displayOptionText(opt.id, opt.option_text)
                                                 return (
                                                     <motion.div
                                                         key={opt.id || idx}
@@ -470,7 +635,12 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
                                                             isSelected ? "text-hotel-navy font-bold" : "text-slate-600 group-hover:text-hotel-navy",
                                                             isRTL && "text-right"
                                                         )}>
-                                                            {opt.option_text || <span className="text-red-300 italic">{t('training:quizzes.player.empty_option')}</span>}
+                                                            {translatedOption || <span className="text-red-300 italic">{t('training:quizzes.player.empty_option')}</span>}
+                                                            {showBilingual && translationTarget && translatedOption && opt.option_text && translatedOption !== opt.option_text && (
+                                                                <span className="block text-xs text-slate-400 mt-1">
+                                                                    {opt.option_text}
+                                                                </span>
+                                                            )}
                                                         </span>
                                                     </motion.div>
                                                 )

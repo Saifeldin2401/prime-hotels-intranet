@@ -23,12 +23,23 @@ import {
     Loader2,
     ThumbsUp,
     ThumbsDown,
-    Edit3
+    Edit3,
+    Languages,
+    Sparkles,
+    Check
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from '@/components/ui/tabs'
 import {
     Dialog,
     DialogContent,
@@ -51,6 +62,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import type { KnowledgeArticle } from '@/types/knowledge'
 import { createNotification } from '@/lib/notificationService'
+import { useTranslationAI } from '@/hooks/useTranslationAI'
 
 export default function KnowledgeReview() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
@@ -59,6 +71,12 @@ export default function KnowledgeReview() {
     const [reviewComment, setReviewComment] = useState('')
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'changes' | null>(null)
     const [statusFilter, setStatusFilter] = useState<string>('PENDING_REVIEW')
+    const [translationData, setTranslationData] = useState({
+        title_ar: '',
+        description_ar: '',
+        content_ar: ''
+    })
+    const [activeTab, setActiveTab] = useState('review')
 
     const { user, profile, primaryRole, departments: userDepts } = useAuth()
     const queryClient = useQueryClient()
@@ -108,10 +126,21 @@ export default function KnowledgeReview() {
             else if (action === 'reject') newStatus = 'REJECTED'
             // 'changes' keeps as DRAFT
 
-            // Update document status
+            // Update document content and status
+            const updatePayload: any = { status: newStatus }
+
+            // If in translation mode or translation fields were edited, include them
+            if (activeTab === 'translation' || translationData.title_ar) {
+                updatePayload.title_ar = translationData.title_ar
+                updatePayload.description_ar = translationData.description_ar
+                updatePayload.content_ar = translationData.content_ar
+                updatePayload.translation_status = 'reviewed'
+                updatePayload.last_translated_at = new Date().toISOString()
+            }
+
             const { error: updateError } = await supabase
                 .from('documents')
-                .update({ status: newStatus })
+                .update(updatePayload)
                 .eq('id', selectedArticle.id)
 
             if (updateError) throw updateError
@@ -182,6 +211,72 @@ export default function KnowledgeReview() {
             toast.error(`${t('review_queue.messages.failed')} ${error.message}`)
         }
     })
+
+    const translateAI = useTranslationAI()
+
+    const handleAITranslate = async () => {
+        if (!selectedArticle) return
+
+        try {
+            toast.loading(t('translation.processing', 'Generating AI translation...'), { id: 'ai-translate' })
+
+            // Prepare parallel translation tasks
+            const translationTasks = []
+
+            // Title is required
+            translationTasks.push(
+                selectedArticle.title
+                    ? translateAI.mutateAsync({ text: selectedArticle.title, target_lang: 'ar' })
+                    : Promise.resolve({ translated_text: '', success: true })
+            )
+
+            // Description is optional
+            translationTasks.push(
+                selectedArticle.description
+                    ? translateAI.mutateAsync({ text: selectedArticle.description, target_lang: 'ar' })
+                    : Promise.resolve({ translated_text: '', success: true })
+            )
+
+            // Content (handle PDF/DOCX or text)
+            if (selectedArticle.file_url && (selectedArticle.file_url.endsWith('.pdf') || selectedArticle.file_url.endsWith('.docx'))) {
+                translationTasks.push(
+                    translateAI.mutateAsync({
+                        file_url: selectedArticle.file_url,
+                        target_lang: 'ar'
+                    })
+                )
+            } else {
+                translationTasks.push(
+                    selectedArticle.content
+                        ? translateAI.mutateAsync({ text: selectedArticle.content, target_lang: 'ar' })
+                        : Promise.resolve({ translated_text: '', success: true })
+                )
+            }
+
+            // Run all in parallel
+            const [titleRes, descRes, contentRes] = await Promise.all(translationTasks)
+
+            setTranslationData({
+                title_ar: titleRes.translated_text,
+                description_ar: descRes.translated_text,
+                content_ar: contentRes.translated_text
+            })
+
+            toast.success(t('translation.success', 'AI translation generated successfully'), { id: 'ai-translate' })
+        } catch (error: any) {
+            toast.error(t('translation.error', 'Translation failed: ') + error.message, { id: 'ai-translate' })
+        }
+    }
+
+    const handleSelectArticle = (article: KnowledgeArticle) => {
+        setSelectedArticle(article)
+        setTranslationData({
+            title_ar: article.title_ar || '',
+            description_ar: article.description_ar || '',
+            content_ar: article.content_ar || ''
+        })
+        setActiveTab('review')
+    }
 
     const handleReview = (action: 'approve' | 'reject' | 'changes') => {
         setReviewAction(action)
@@ -302,7 +397,7 @@ export default function KnowledgeReview() {
                         <Card
                             key={article.id}
                             className="hover:border-hotel-gold/50 transition-colors cursor-pointer"
-                            onClick={() => setSelectedArticle(article)}
+                            onClick={() => handleSelectArticle(article)}
                         >
                             <CardContent className="p-4">
                                 <div className="flex items-start gap-4">
@@ -365,37 +460,102 @@ export default function KnowledgeReview() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4">
-                        {/* Article Preview */}
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-2 mb-2">
-                                {getStatusBadge(selectedArticle?.status || '')}
-                            </div>
-                            <h3 className="font-semibold text-lg mb-2">{selectedArticle?.title}</h3>
-                            <p className="text-sm text-gray-600">{selectedArticle?.description}</p>
-                            <Button
-                                variant="link"
-                                className="p-0 h-auto mt-2"
-                                onClick={() => selectedArticle && navigate(`/knowledge/${selectedArticle.id}`)}
-                            >
-                                <Eye className="h-4 w-4 mr-1" />
-                                {t('review_queue.dialog.view_full')}
-                            </Button>
-                        </div>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="review">{t('review_queue.tabs.review', 'General Review')}</TabsTrigger>
+                            <TabsTrigger value="translation">{t('review_queue.tabs.translation', 'Translation QC')}</TabsTrigger>
+                        </TabsList>
 
-                        {/* Review Comment */}
-                        <div>
-                            <label className="text-sm font-medium mb-2 block">
-                                {t('review_queue.dialog.comment_label')}
-                            </label>
-                            <Textarea
-                                placeholder={t('review_queue.dialog.comment_placeholder')}
-                                value={reviewComment}
-                                onChange={(e) => setReviewComment(e.target.value)}
-                                rows={3}
-                            />
-                        </div>
-                    </div>
+                        <TabsContent value="review" className="space-y-4 pt-4">
+                            {/* Article Preview */}
+                            <div className="p-4 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                    {getStatusBadge(selectedArticle?.status || '')}
+                                </div>
+                                <h3 className="font-semibold text-lg mb-2">{selectedArticle?.title}</h3>
+                                <p className="text-sm text-gray-600">{selectedArticle?.description}</p>
+                                <Button
+                                    variant="link"
+                                    className="p-0 h-auto mt-2"
+                                    onClick={() => selectedArticle && navigate(`/knowledge/${selectedArticle.id}`)}
+                                >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    {t('review_queue.dialog.view_full')}
+                                </Button>
+                            </div>
+
+                            {/* Review Comment */}
+                            <div>
+                                <Label className="text-sm font-medium mb-2 block">
+                                    {t('review_queue.dialog.comment_label')}
+                                </Label>
+                                <Textarea
+                                    placeholder={t('review_queue.dialog.comment_placeholder')}
+                                    value={reviewComment}
+                                    onChange={(e) => setReviewComment(e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="translation" className="space-y-4 pt-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm text-gray-500">{t('review_queue.translation.help', 'Review and edit Arabic translations for this document.')}</p>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-2 text-hotel-gold border-hotel-gold hover:bg-hotel-gold/5"
+                                    onClick={handleAITranslate}
+                                    disabled={translateAI.isPending}
+                                >
+                                    {translateAI.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                    {t('review_queue.translation.auto_translate', 'Generate AI Translation')}
+                                </Button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <Label className="text-xs text-gray-400 mb-1 block">Title (Arabic)</Label>
+                                    <Input
+                                        value={translationData.title_ar}
+                                        onChange={(e) => setTranslationData({ ...translationData, title_ar: e.target.value })}
+                                        placeholder="العنوان باللغة العربية"
+                                        dir="rtl"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1">English: {selectedArticle?.title}</p>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs text-gray-400 mb-1 block">Description (Arabic)</Label>
+                                    <Textarea
+                                        value={translationData.description_ar}
+                                        onChange={(e) => setTranslationData({ ...translationData, description_ar: e.target.value })}
+                                        placeholder="الوصف باللغة العربية"
+                                        rows={2}
+                                        dir="rtl"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1">English: {selectedArticle?.description}</p>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs text-gray-400 mb-1 block">Content (Arabic)</Label>
+                                    <Textarea
+                                        value={translationData.content_ar}
+                                        onChange={(e) => setTranslationData({ ...translationData, content_ar: e.target.value })}
+                                        placeholder="المحتوى باللغة العربية"
+                                        rows={6}
+                                        dir="rtl"
+                                    />
+                                    {selectedArticle?.file_url && (
+                                        <p className="text-[10px] text-hotel-gold mt-1 flex items-center gap-1">
+                                            <FileText className="h-3 w-3" />
+                                            {t('review_queue.translation.extracted', 'Text extracted from document')}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </TabsContent>
+                    </Tabs>
 
                     <DialogFooter className="flex flex-wrap gap-2">
                         {(() => {

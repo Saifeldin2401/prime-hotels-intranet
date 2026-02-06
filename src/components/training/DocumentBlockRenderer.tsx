@@ -7,11 +7,58 @@ import { PdfViewer } from '@/components/common/PdfViewer'
 
 interface DocumentBlockRendererProps {
     block: TrainingContentBlock
+    translatedContent?: string
+    showBilingual?: boolean
+    translationLabel?: string
+    translationDir?: 'ltr' | 'rtl'
 }
 
-export const DocumentBlockRenderer = ({ block }: DocumentBlockRendererProps) => {
+export const DocumentBlockRenderer = ({
+    block,
+    translatedContent,
+    showBilingual,
+    translationLabel,
+    translationDir = 'ltr'
+}: DocumentBlockRendererProps) => {
     const { t } = useTranslation('training')
     const isPdf = block.content_url?.toLowerCase().endsWith('.pdf')
+    const originalMarkup = sanitizeHtml(block.content)
+    const translatedMarkup = translatedContent ? sanitizeHtml(translatedContent) : ''
+
+    const renderDescription = () => {
+        if (!translatedContent) {
+            return (
+                <div className="text-sm text-gray-500 prose max-w-none dark:prose-invert">
+                    <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
+                </div>
+            )
+        }
+
+        if (showBilingual) {
+            return (
+                <div className="space-y-4">
+                    <div className="text-sm text-gray-500 prose max-w-none dark:prose-invert">
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
+                            {t('original', 'Original')}
+                        </div>
+                        <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
+                    </div>
+                    <div className="text-sm text-gray-600 prose max-w-none dark:prose-invert" dir={translationDir}>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 mb-2">
+                            {t('translatedTo', { language: translationLabel || t('translated', 'Translated') })}
+                        </div>
+                        <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
+                    </div>
+                </div>
+            )
+        }
+
+        return (
+            <div className="text-sm text-gray-600 prose max-w-none dark:prose-invert" dir={translationDir}>
+                <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
+            </div>
+        )
+    }
 
     if (!isPdf) {
         return (
@@ -30,8 +77,8 @@ export const DocumentBlockRenderer = ({ block }: DocumentBlockRendererProps) => 
                         </a>
                     </div>
                 </div>
-                <div className="mt-2 text-sm text-gray-500 prose max-w-none dark:prose-invert">
-                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />
+                <div className="mt-2">
+                    {renderDescription()}
                 </div>
             </div>
         )
@@ -40,8 +87,8 @@ export const DocumentBlockRenderer = ({ block }: DocumentBlockRendererProps) => 
     return (
         <div className="space-y-4">
             <PdfViewer url={block.content_url || ''} />
-            <div className="mt-2 text-sm text-gray-500 prose max-w-none dark:prose-invert">
-                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />
+            <div className="mt-2">
+                {renderDescription()}
             </div>
         </div>
     )

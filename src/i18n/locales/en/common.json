@@ -202,6 +202,72 @@
     "post_comment": "Post Comment",
     "write_comment": "Write a comment..."
   },
+  "social_feed": {
+    "labels": {
+      "admin": "Admin",
+      "knowledge_base": "Knowledge Base",
+      "manager": "Manager",
+      "training_dept": "Training Dept",
+      "payroll_dept": "Payroll Dept",
+      "performance_review": "Performance Review",
+      "certification": "Certification",
+      "you": "You",
+      "management": "Management",
+      "operations": "Operations",
+      "hr": "HR",
+      "finance": "Finance",
+      "system": "System"
+    },
+    "tags": {
+      "knowledge_base": "Knowledge Base"
+    },
+    "actions": {
+      "read_article": "Read Article",
+      "view_task": "View Task",
+      "start_training": "Start Training",
+      "view_payslip": "View Payslip",
+      "view_review": "View Review",
+      "view_certificate": "View Certificate"
+    },
+    "defaults": {
+      "new_training": "New Training"
+    },
+    "titles": {
+      "new_article": "New Article: {{title}}",
+      "updated_article": "Updated: {{title}}",
+      "task_due": "Task Due: {{title}}",
+      "task_overdue": "Overdue Task: {{title}}",
+      "task": "Task: {{title}}",
+      "training_assigned": "Training Assigned: {{title}}",
+      "training_completed": "{{name}} completed \"{{title}}\"",
+      "birthday_today": "Happy Birthday {{name}}!",
+      "birthday_upcoming_one": "{{name}}'s birthday in {{count}} day",
+      "birthday_upcoming_other": "{{name}}'s birthday in {{count}} days",
+      "new_joiner": "Welcome {{name}} to the team!",
+      "payslip_available": "New Payslip Available",
+      "performance_review": "New Performance Review",
+      "shift_started": "Shift Started",
+      "shift_ended": "Shift Ended",
+      "certificate": "Graduation: {{title}}",
+      "goal_completed": "Goal Achieved: {{title}}"
+    },
+    "messages": {
+      "kb_update_fallback": "A Knowledge Base article has been updated.",
+      "task_fallback": "You have a pending task.",
+      "training_due": "Due by {{date}}",
+      "training_no_deadline": "Please complete this training module.",
+      "training_congrats": "Congratulations on completing the training!",
+      "birthday_message": "Send your birthday wishes!",
+      "new_joiner_role": "Joined as {{role}}",
+      "new_joiner_message": "Say hello to our new team member!",
+      "payslip_message": "Your payslip for the period ending {{date}} has been generated.",
+      "performance_review_message": "A new performance review from {{date}} has been posted.",
+      "shift_started_message": "You clocked in at {{time}}.",
+      "shift_ended_message": "You clocked out at {{time}}.",
+      "certificate_message": "Congratulations! You've earned a new certificate.",
+      "goal_message": "You've successfully completed a career milestone!"
+    }
+  },
   "confirm": {
     "delete_title": "Delete {{item}}?",
     "delete_message": "Are you sure you want to delete this? This action cannot be undone.",

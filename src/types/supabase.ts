@@ -19,6 +19,8 @@ export type Database = {
                     status: string
                     notes: string | null
                     property_id: string | null
+                    created_at: string | null
+                    updated_at: string | null
                 }
                 Insert: {
                     id?: string
@@ -29,6 +31,8 @@ export type Database = {
                     status?: string
                     notes?: string | null
                     property_id?: string | null
+                    created_at?: string | null
+                    updated_at?: string | null
                 }
                 Update: {
                     id?: string
@@ -39,6 +43,58 @@ export type Database = {
                     status?: string
                     notes?: string | null
                     property_id?: string | null
+                    created_at?: string | null
+                    updated_at?: string | null
+                }
+            }
+            shifts: {
+                Row: {
+                    id: string
+                    user_id: string
+                    shift_type: string
+                    start_time: string
+                    end_time: string
+                    location: string | null
+                    department_id: string | null
+                    property_id: string | null
+                    notes: string | null
+                    status: string
+                    break_duration_minutes: number
+                    created_by: string | null
+                    created_at: string | null
+                    updated_at: string | null
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    shift_type?: string
+                    start_time: string
+                    end_time: string
+                    location?: string | null
+                    department_id?: string | null
+                    property_id?: string | null
+                    notes?: string | null
+                    status?: string
+                    break_duration_minutes?: number
+                    created_by?: string | null
+                    created_at?: string | null
+                    updated_at?: string | null
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    shift_type?: string
+                    start_time?: string
+                    end_time?: string
+                    location?: string | null
+                    department_id?: string | null
+                    property_id?: string | null
+                    notes?: string | null
+                    status?: string
+                    break_duration_minutes?: number
+                    created_by?: string | null
+                    created_at?: string | null
+                    updated_at?: string | null
                 }
             }
             performance_reviews: {
@@ -47,36 +103,46 @@ export type Database = {
                     employee_id: string
                     reviewer_id: string | null
                     review_period: string
+                    review_date: string
                     overall_rating: number
+                    rating: number
                     strengths: string | null
                     areas_for_improvement: string | null
                     comments: string | null
                     goals: string | null
+                    status: string | null
                     created_at: string | null
+                    updated_at: string | null
                 }
                 Insert: {
                     id?: string
                     employee_id: string
                     reviewer_id?: string | null
                     review_period: string
+                    review_date?: string
                     overall_rating: number
                     strengths?: string | null
                     areas_for_improvement?: string | null
                     comments?: string | null
                     goals?: string | null
+                    status?: string | null
                     created_at?: string | null
+                    updated_at?: string | null
                 }
                 Update: {
                     id?: string
                     employee_id?: string
                     reviewer_id?: string | null
                     review_period?: string
+                    review_date?: string
                     overall_rating?: number
                     strengths?: string | null
                     areas_for_improvement?: string | null
                     comments?: string | null
                     goals?: string | null
+                    status?: string | null
                     created_at?: string | null
+                    updated_at?: string | null
                 }
             }
             goals: {
@@ -86,9 +152,12 @@ export type Database = {
                     title: string
                     description: string | null
                     target_date: string | null
+                    progress: number | null
                     status: string
                     category: string | null
+                    training_module_id: string | null
                     created_at: string | null
+                    updated_at: string | null
                 }
                 Insert: {
                     id?: string
@@ -96,9 +165,12 @@ export type Database = {
                     title: string
                     description?: string | null
                     target_date?: string | null
+                    progress?: number | null
                     status?: string
                     category?: string | null
+                    training_module_id?: string | null
                     created_at?: string | null
+                    updated_at?: string | null
                 }
                 Update: {
                     id?: string
@@ -106,9 +178,12 @@ export type Database = {
                     title?: string
                     description?: string | null
                     target_date?: string | null
+                    progress?: number | null
                     status?: string
                     category?: string | null
+                    training_module_id?: string | null
                     created_at?: string | null
+                    updated_at?: string | null
                 }
             }
             payslips: {
@@ -117,30 +192,60 @@ export type Database = {
                     employee_id: string
                     month: number
                     year: number
+                    basic_salary: number | null
+                    gross_salary: number | null
+                    deductions: number | null
+                    net_salary: number | null
+                    components: Json | null
+                    status: string | null
                     payment_date: string | null
-                    net_pay: number | null
-                    is_published: boolean
+                    period_start: string | null
+                    period_end: string | null
+                    currency: string | null
+                    is_published: boolean | null
+                    storage_path: string | null
                     created_at: string | null
+                    updated_at: string | null
                 }
                 Insert: {
                     id?: string
                     employee_id: string
                     month: number
                     year: number
+                    basic_salary?: number | null
+                    gross_salary?: number | null
+                    deductions?: number | null
+                    net_salary?: number | null
+                    components?: Json | null
+                    status?: string | null
                     payment_date?: string | null
-                    net_pay?: number | null
+                    period_start?: string | null
+                    period_end?: string | null
+                    currency?: string | null
                     is_published?: boolean | null
+                    storage_path?: string | null
                     created_at?: string | null
+                    updated_at?: string | null
                 }
                 Update: {
                     id?: string
                     employee_id?: string
                     month?: number
                     year?: number
+                    basic_salary?: number | null
+                    gross_salary?: number | null
+                    deductions?: number | null
+                    net_salary?: number | null
+                    components?: Json | null
+                    status?: string | null
                     payment_date?: string | null
-                    net_pay?: number | null
+                    period_start?: string | null
+                    period_end?: string | null
+                    currency?: string | null
                     is_published?: boolean | null
+                    storage_path?: string | null
                     created_at?: string | null
+                    updated_at?: string | null
                 }
             }
             // Re-include existing tables to prevent regression

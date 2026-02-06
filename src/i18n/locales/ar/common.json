@@ -203,6 +203,72 @@
     "post_comment": "إرسال تعليق",
     "write_comment": "أكتب تعليقاً..."
   },
+  "social_feed": {
+    "labels": {
+      "admin": "المشرف",
+      "knowledge_base": "قاعدة المعرفة",
+      "manager": "المدير",
+      "training_dept": "قسم التدريب",
+      "payroll_dept": "قسم الرواتب",
+      "performance_review": "تقييم الأداء",
+      "certification": "الشهادات",
+      "you": "أنت",
+      "management": "الإدارة",
+      "operations": "العمليات",
+      "hr": "الموارد البشرية",
+      "finance": "المالية",
+      "system": "النظام"
+    },
+    "tags": {
+      "knowledge_base": "قاعدة المعرفة"
+    },
+    "actions": {
+      "read_article": "قراءة المقال",
+      "view_task": "عرض المهمة",
+      "start_training": "بدء التدريب",
+      "view_payslip": "عرض قسيمة الراتب",
+      "view_review": "عرض التقييم",
+      "view_certificate": "عرض الشهادة"
+    },
+    "defaults": {
+      "new_training": "تدريب جديد"
+    },
+    "titles": {
+      "new_article": "مقال جديد: {{title}}",
+      "updated_article": "تحديث: {{title}}",
+      "task_due": "مهمة مستحقة: {{title}}",
+      "task_overdue": "مهمة متأخرة: {{title}}",
+      "task": "مهمة: {{title}}",
+      "training_assigned": "تم تعيين تدريب: {{title}}",
+      "training_completed": "أكمل {{name}} تدريب \"{{title}}\"",
+      "birthday_today": "عيد ميلاد سعيد {{name}}!",
+      "birthday_upcoming_one": "عيد ميلاد {{name}} بعد يوم واحد",
+      "birthday_upcoming_other": "عيد ميلاد {{name}} بعد {{count}} أيام",
+      "new_joiner": "مرحباً {{name}} في الفريق!",
+      "payslip_available": "قسيمة راتب جديدة متاحة",
+      "performance_review": "تقييم أداء جديد",
+      "shift_started": "بدء الوردية",
+      "shift_ended": "انتهاء الوردية",
+      "certificate": "تخرج: {{title}}",
+      "goal_completed": "تم تحقيق الهدف: {{title}}"
+    },
+    "messages": {
+      "kb_update_fallback": "تم تحديث مقال في قاعدة المعرفة.",
+      "task_fallback": "لديك مهمة معلّقة.",
+      "training_due": "الموعد النهائي في {{date}}",
+      "training_no_deadline": "يرجى إكمال هذه الوحدة التدريبية.",
+      "training_congrats": "تهانينا على إكمال التدريب!",
+      "birthday_message": "أرسل تهانيك بعيد الميلاد!",
+      "new_joiner_role": "انضم بوظيفة {{role}}",
+      "new_joiner_message": "رحّب بعضو الفريق الجديد!",
+      "payslip_message": "تم إنشاء قسيمة راتبك للفترة المنتهية في {{date}}.",
+      "performance_review_message": "تم نشر تقييم أداء جديد بتاريخ {{date}}.",
+      "shift_started_message": "سجلت الدخول في {{time}}.",
+      "shift_ended_message": "سجلت الخروج في {{time}}.",
+      "certificate_message": "تهانينا! لقد حصلت على شهادة جديدة.",
+      "goal_message": "لقد أنجزت معلماً مهنيًا بنجاح!"
+    }
+  },
   "confirm": {
     "delete_title": "حذف {{item}}؟",
     "delete_message": "هل أنت متأكد أنك تريد حذف هذا؟ لا يمكن التراجع عن هذا الإجراء.",

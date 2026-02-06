@@ -64,6 +64,11 @@
     "performance": "Performance",
     "goals": "Career Goals",
     "payslips": "Payslips",
+    "shift_scheduling": "Shift Scheduling",
+    "hr_control_center": "HR Control Center",
+    "performance_management": "Performance Management",
+    "goals_management": "Goals Management",
+    "payslips_management": "Payslips Management",
     "groups": {
         "home": "Home",
         "my_work": "My Work",

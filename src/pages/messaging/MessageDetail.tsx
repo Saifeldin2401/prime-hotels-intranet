@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -127,6 +127,16 @@ export default function MessageDetail() {
     }
   }
 
+  useEffect(() => {
+    if (!message) return
+    if (!user?.id) return
+    if (!messageId) return
+
+    if (message.recipient_id === user.id && message.status !== 'read') {
+      markAsReadMutation.mutate(messageId)
+    }
+  }, [message, user?.id, messageId, markAsReadMutation])
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -149,11 +159,6 @@ export default function MessageDetail() {
         </Button>
       </div>
     )
-  }
-
-  // Auto-mark as read if user is recipient
-  if (message.recipient_id === user?.id && message.status !== 'read') {
-    handleMarkAsRead()
   }
 
   return (

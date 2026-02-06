@@ -46,9 +46,6 @@ export function NotificationBell() {
       case 'document_published':
       case 'document_acknowledgment_required':
         return '/knowledge' // Default to KB root if specific link missing
-      case 'document_changes_requested':
-      case 'document_rejected':
-        return '/knowledge' // Or /knowledge/my-articles if it existed
       case 'announcement_new':
         return '/announcements'
       case 'maintenance_assigned':
@@ -56,6 +53,10 @@ export function NotificationBell() {
         return '/maintenance'
       case 'referral_status_update':
         return '/jobs/referrals'
+      case 'message_received':
+        return '/messaging'
+      case 'system':
+        return null
       default:
         return null
     }

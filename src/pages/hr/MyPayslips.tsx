@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
 import { useTranslation } from 'react-i18next'
 import { ar, enUS } from 'date-fns/locale'
@@ -16,16 +17,30 @@ export default function MyPayslips() {
     const dateLocale = i18n.language.startsWith('ar') ? ar : enUS
     const { data: payslips, isLoading } = usePayslips()
 
-    const handleDownload = (id: string) => {
-        toast.info(t('payroll.initiating_secure_download'))
-        // Simulate contacting payroll server for secure document retrieval
-        // In a real application, this would involve an API call to a backend endpoint
-        // that handles secure document generation/retrieval and streaming.
-        setTimeout(() => {
-            toast.success(t('payroll.download_success'))
-            // Example: Trigger actual download if a URL was received from the server
-            // window.open(`/api/payslips/${id}/download`, '_blank');
-        }, 2000)
+    const handleDownload = async (payslip: { id: string; storage_path: string | null }) => {
+        if (!payslip.storage_path) {
+            toast.error(t('payroll.file_missing', 'Payslip file is not available yet.'))
+            return
+        }
+
+        toast.info(t('payroll.generating_download', 'Generating secure download...'))
+        const { data, error } = await supabase.rpc('get_secure_payslip_url', { p_payslip_id: payslip.id })
+
+        if (error || !data) {
+            toast.error(t('payroll.download_error', 'Failed to generate download link.'))
+            return
+        }
+
+        window.open(data, '_blank', 'noopener,noreferrer')
+
+        // Best-effort audit log
+        supabase.rpc('log_audit_event', {
+            p_action: 'download',
+            p_entity_type: 'payslip',
+            p_entity_id: payslip.id
+        })
+
+        toast.success(t('payroll.download_success'))
     }
 
     return (
@@ -79,7 +94,9 @@ export default function MyPayslips() {
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {payslips?.map((payslip) => (
+                                        {payslips?.map((payslip) => {
+                                            const isPublished = payslip.is_published ?? payslip.status === 'published'
+                                            return (
                                             <div
                                                 key={payslip.id}
                                                 className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors group"
@@ -94,7 +111,7 @@ export default function MyPayslips() {
                                                             <Badge variant="outline" className="text-[10px]">
                                                                 {payslip.payment_date ? `${t('payroll.paid_on')} ${format(new Date(payslip.payment_date), 'MMM d', { locale: dateLocale })}` : t('payroll.processing')}
                                                             </Badge>
-                                                            {payslip.is_published && (
+                                                            {isPublished && (
                                                                 <Badge className="text-[10px] bg-green-500/10 text-green-600 hover:bg-green-500/10 border-green-500/20">
                                                                     {t('payroll.published')}
                                                                 </Badge>
@@ -103,7 +120,7 @@ export default function MyPayslips() {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button variant="ghost" size="sm" onClick={() => handleDownload(payslip.id)}>
+                                                    <Button variant="ghost" size="sm" onClick={() => handleDownload(payslip)}>
                                                         <Download className="w-4 h-4 mr-2" />
                                                         {t('payroll.download')}
                                                     </Button>
@@ -112,7 +129,7 @@ export default function MyPayslips() {
                                                     </Button>
                                                 </div>
                                             </div>
-                                        ))}
+                                        )})}
                                         {payslips?.length === 0 && (
                                             <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed">
                                                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />

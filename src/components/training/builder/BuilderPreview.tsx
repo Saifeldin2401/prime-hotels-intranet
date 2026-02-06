@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Link, FileText, Image, Video, FileQuestion, BookOpen } from 'lucide-react'
+import { Link, FileText, Image, Video, FileQuestion, BookOpen, Headphones, Gamepad2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
@@ -62,6 +62,8 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                                 <div className={`flex items-start gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                                     <div className="mt-1 p-2 bg-slate-100 rounded-lg text-slate-500">
                                                         {item.type === 'video' && <Video className="w-5 h-5" />}
+                                                        {item.type === 'audio' && <Headphones className="w-5 h-5" />}
+                                                        {item.type === 'interactive' && <Gamepad2 className="w-5 h-5" />}
                                                         {item.type === 'image' && <Image className="w-5 h-5" />}
                                                         {item.type === 'text' && <FileText className="w-5 h-5" />}
                                                         {item.type === 'document_link' && <Link className="w-5 h-5" />}
@@ -83,6 +85,24 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                                                     src={item.content_url}
                                                                     className="w-full h-full"
                                                                     allowFullScreen
+                                                                    title={item.title}
+                                                                />
+                                                            </div>
+                                                        )}
+
+                                                        {item.type === 'audio' && item.content_url && (
+                                                            <div className="mt-4">
+                                                                <audio controls className="w-full" src={item.content_url} />
+                                                            </div>
+                                                        )}
+
+                                                        {item.type === 'interactive' && item.content_url && (
+                                                            <div className="aspect-video rounded-lg overflow-hidden bg-slate-900 shadow-inner mt-4">
+                                                                <iframe
+                                                                    src={item.content_url}
+                                                                    className="w-full h-full"
+                                                                    allow="clipboard-read; clipboard-write; fullscreen"
+                                                                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
                                                                     title={item.title}
                                                                 />
                                                             </div>

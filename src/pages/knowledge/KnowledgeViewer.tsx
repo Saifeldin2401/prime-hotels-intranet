@@ -68,6 +68,8 @@ import {
     useSubmitFeedback,
     useRelatedArticles
 } from '@/hooks/useKnowledge'
+import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
+import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -121,6 +123,19 @@ export default function KnowledgeViewer() {
     const [readerTheme, setReaderTheme] = useState<'light' | 'sepia' | 'dark'>('light')
     const [showReadabilityMenu, setShowReadabilityMenu] = useState(false)
 
+    // Translation States
+    const [isTranslating, setIsTranslating] = useState(false)
+    const [translatedData, setTranslatedData] = useState<{
+        title: string
+        description: string
+        content: string
+        summary?: string
+    } | null>(null)
+    const [showBilingual, setShowBilingual] = useState(false)
+    const [translationTarget, setTranslationTarget] = useState<TranslationTargetLanguage | null>(null)
+
+    const translateAI = useTranslationAI()
+
     // Ensure useKnowledgeArticle handles the 'documents' table correctly via knowledgeService
     const { data: article, isLoading, error } = useKnowledgeArticle(id)
 
@@ -142,14 +157,18 @@ export default function KnowledgeViewer() {
     // Convert markdown content to HTML
     const htmlContent = useMemo(() => {
         if (!article?.content) return ''
-        // Check if content is already HTML or markdown
         const isHtml = article.content.trim().startsWith('<')
-        if (isHtml) {
-            return article.content
-        }
-        // Convert markdown to HTML
+        if (isHtml) return article.content
         return marked.parse(article.content, { async: false }) as string
     }, [article?.content])
+
+    // Memoize Arabic content HTML if it exists in DB
+    const htmlContentAr = useMemo(() => {
+        if (!article?.content_ar) return ''
+        const isHtml = article.content_ar.trim().startsWith('<')
+        if (isHtml) return article.content_ar
+        return marked.parse(article.content_ar, { async: false }) as string
+    }, [article?.content_ar])
 
     // Check if user can edit
     const { primaryRole } = useAuth()
@@ -304,6 +323,71 @@ export default function KnowledgeViewer() {
         })
     }
 
+    const handleAITranslate = async (targetOverride?: TranslationTargetLanguage) => {
+        if (!article || !id) return
+
+        const currentLang = article.title_ar && article.content?.includes('\u0600') ? 'ar' : 'en'
+        const targetLang = targetOverride || (currentLang === 'en' ? 'ar' : 'en')
+
+        setIsTranslating(true)
+        setTranslationTarget(targetLang)
+
+        try {
+            // Prepare translations in parallel
+            const translationTasks = []
+
+            // Title is required
+            translationTasks.push(
+                article.title
+                    ? translateAI.mutateAsync({ text: article.title, target_lang: targetLang, source_lang: 'auto' })
+                    : Promise.resolve({ translated_text: '', success: true })
+            )
+
+            // Description is optional
+            translationTasks.push(
+                article.description
+                    ? translateAI.mutateAsync({ text: article.description, target_lang: targetLang, source_lang: 'auto' })
+                    : Promise.resolve({ translated_text: '', success: true })
+            )
+
+            // Content - use provided or empty
+            translationTasks.push(
+                article.content
+                    ? translateAI.mutateAsync({ text: article.content, target_lang: targetLang, source_lang: 'auto' })
+                    : Promise.resolve({ translated_text: '', success: true })
+            )
+
+            // Summary is optional
+            const summary = (article as any).summary
+            translationTasks.push(
+                summary
+                    ? translateAI.mutateAsync({ text: summary, target_lang: targetLang, source_lang: 'auto' })
+                    : Promise.resolve({ translated_text: '', success: true })
+            )
+
+            // Run all translations in parallel
+            const [titleRes, descRes, contentRes, summaryRes] = await Promise.all(translationTasks)
+
+            setTranslatedData({
+                title: titleRes.translated_text,
+                description: descRes.translated_text,
+                content: contentRes.translated_text,
+                summary: summaryRes.translated_text
+            })
+
+            toast.success(t('viewer.translation_complete', 'Translation complete!'))
+        } catch (error) {
+            console.error('Translation failed:', error)
+            const errorMessage = error instanceof Error ? error.message : ''
+            const baseMessage = t('viewer.translation_error', 'Failed to translate article')
+            toast.error(errorMessage ? `${baseMessage}: ${errorMessage}` : baseMessage)
+            // Reset target on failure to avoid showing partial/broken translation
+            setTranslationTarget(null)
+        } finally {
+            setIsTranslating(false)
+        }
+    }
+
     if (!id) return null
 
     if (isLoading) {
@@ -337,6 +421,11 @@ export default function KnowledgeViewer() {
     // Default to gray if status not found in config
     const statusConfig = STATUS_CONFIG[article.status as keyof typeof STATUS_CONFIG] || { label: article.status, color: 'gray' }
     const statusLabel = t(`status.${article.status}`, article.status)
+    const translationTargetMeta = translationTarget
+        ? SUPPORTED_TRANSLATION_LANGUAGES.find(lang => lang.code === translationTarget)
+        : null
+    const isRtlTarget = translationTargetMeta?.direction === 'rtl'
+    const shouldUseRtl = isRtlTarget || (!translationTarget && !!article.content_ar)
 
     return (
         <div className={cn(
@@ -650,6 +739,56 @@ export default function KnowledgeViewer() {
                                 </div>
                             )}
                             <div className="h-4 w-px bg-gray-200 hidden xs:block print:hidden mx-1" />
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className={cn(
+                                            "h-8 px-2 sm:h-9 sm:px-3 gap-2",
+                                            translatedData && "bg-hotel-gold/10 border-hotel-gold/30 text-hotel-gold"
+                                        )}
+                                        disabled={isTranslating}
+                                    >
+                                        {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                        <span className="hidden sm:inline">
+                                            {translatedData
+                                                ? t('viewer.translated', `Translated${translationTargetMeta ? ` (${translationTargetMeta.label})` : ''}`)
+                                                : t('viewer.translate', 'Translate')}
+                                        </span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    {!translatedData ? (
+                                        <>
+                                            <div className="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                                                {t('viewer.translate_ai', 'Translate to')}
+                                            </div>
+                                            {SUPPORTED_TRANSLATION_LANGUAGES.map(lang => (
+                                                <DropdownMenuItem key={lang.code} onClick={() => handleAITranslate(lang.code)}>
+                                                    <Languages className="h-4 w-4 mr-2" />
+                                                    {lang.label}
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DropdownMenuItem onClick={() => setShowBilingual(!showBilingual)}>
+                                                <Maximize2 className="h-4 w-4 mr-2" />
+                                                {showBilingual ? t('viewer.show_single', 'Show Single View') : t('viewer.show_bilingual', 'Show Bilingual View')}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => { setTranslatedData(null); setShowBilingual(false); setTranslationTarget(null); }}>
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                {t('viewer.clear_translation', 'Clear Translation')}
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+</DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
+
                             <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)} className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:text-hotel-gold print:hidden">
                                 {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-hotel-gold" /> : <Bookmark className="h-4 w-4" />}
                             </Button>
@@ -707,13 +846,45 @@ export default function KnowledgeViewer() {
                         )}>
                             <h1 className={cn(
                                 "text-3xl font-bold mb-2 text-hotel-navy",
-                                isFocusMode && "text-5xl"
-                            )}>{article.title}</h1>
-                            {article.description && (
-                                <p className={cn(
+                                isFocusMode && "text-5xl",
+                                shouldUseRtl && "font-arabic"
+                            )}>
+                                {translatedData && !showBilingual ? translatedData.title : article.title}
+                            </h1>
+                            {showBilingual && translatedData && (
+                                <h2
+                                    dir={isRtlTarget ? 'rtl' : 'ltr'}
+                                    className={cn(
+                                        "text-2xl font-bold mb-4 text-hotel-gold",
+                                        isRtlTarget ? "text-right font-arabic" : "text-left"
+                                    )}
+                                >
+                                    {translatedData.title}
+                                </h2>
+                            )}
+
+                            {(translatedData?.description || article.description) && (
+                                <div className={cn(
                                     "text-xl text-gray-500 font-medium leading-relaxed mb-6",
                                     isFocusMode && "text-2xl text-gray-400"
-                                )}>{article.description}</p>
+                                )}>
+                                    {showBilingual && translatedData ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div>{article.description}</div>
+                                            <div
+                                                dir={isRtlTarget ? 'rtl' : 'ltr'}
+                                                className={cn(
+                                                    "text-hotel-gold",
+                                                    isRtlTarget ? "text-right font-arabic" : "text-left"
+                                                )}
+                                            >
+                                                {translatedData.description}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        translatedData ? translatedData.description : article.description
+                                    )}
+                                </div>
                             )}
 
                             {/* Readability Metadata Bar */}
@@ -747,7 +918,21 @@ export default function KnowledgeViewer() {
                                     {t('viewer.tldr', 'Quick Summary')}
                                 </h3>
                                 <p className="text-hotel-navy/80 text-sm md:text-base font-medium leading-relaxed italic">
-                                    "{(article as any).summary}"
+                                    {showBilingual && translatedData ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>"{(article as any).summary}"</div>
+                                            <div
+                                                dir={isRtlTarget ? 'rtl' : 'ltr'}
+                                                className={cn(
+                                                    isRtlTarget ? "text-right font-arabic" : "text-left"
+                                                )}
+                                            >
+                                                "{translatedData.summary}"
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        translatedData && translatedData.summary ? `"${translatedData.summary}"` : `"{(article as any).summary}"`
+                                    )}
                                 </p>
                             </div>
                         )}
@@ -795,8 +980,8 @@ export default function KnowledgeViewer() {
                                 </AlertDialog>
                             </div>
                         )}
-                        {/* File Attachment */}
-                        {article.file_url ? (
+                        {/* File Attachment - Only show in English view or if no Arabic content exists */}
+                        {article.file_url && (!translationTarget || translationTarget === 'en' || (!article.content_ar && !translatedData)) ? (
                             <div className="mb-8">
                                 {article.file_url.toLowerCase().endsWith('.pdf') ? (
                                     <div className="space-y-2">
@@ -851,11 +1036,53 @@ export default function KnowledgeViewer() {
                                 "p-6 lg:p-10 transition-all duration-500",
                                 isFocusMode && "px-0"
                             )}>
-                                {article.content ? (
+                                {translatedData || article.content_ar ? (
+                                    showBilingual ? (
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-hotel-navy">
+                                            <div
+                                                className={cn(
+                                                    "prose max-w-none transition-all duration-300",
+                                                    fontSize === 'sm' && "text-kb-sm",
+                                                    fontSize === 'base' && "text-kb-base",
+                                                    fontSize === 'lg' && "text-kb-lg",
+                                                    fontSize === 'xl' && "text-kb-xl",
+                                                )}
+                                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
+                                            />
+                                            <div
+                                                dir={shouldUseRtl ? 'rtl' : 'ltr'}
+                                                className={cn(
+                                                    "prose max-w-none transition-all duration-300",
+                                                    shouldUseRtl
+                                                        ? "border-r-2 border-hotel-gold/20 pr-8 text-right font-arabic"
+                                                        : "border-l-2 border-hotel-gold/20 pl-8",
+                                                    fontSize === 'sm' && "text-kb-sm",
+                                                    fontSize === 'base' && "text-kb-base",
+                                                    fontSize === 'lg' && "text-kb-lg",
+                                                    fontSize === 'xl' && "text-kb-xl",
+                                                )}
+                                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedData?.content ? (marked.parse(translatedData.content, { async: false }) as string) : htmlContentAr) }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div
+                                            dir={shouldUseRtl ? 'rtl' : 'ltr'}
+                                            className={cn(
+                                                "prose md:prose-lg max-w-none transition-all duration-300",
+                                                shouldUseRtl && "text-right font-arabic",
+                                                fontSize === 'sm' && "text-kb-sm",
+                                                fontSize === 'base' && "text-kb-base",
+                                                fontSize === 'lg' && "text-kb-lg",
+                                                fontSize === 'xl' && "text-kb-xl",
+                                            )}
+                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedData?.content ? (marked.parse(translatedData.content, { async: false }) as string) : htmlContentAr) }}
+                                        />
+                                    )
+                                ) : article.content ? (
                                     <div
                                         ref={contentRef}
                                         className={cn(
-                                            "prose md:prose-lg max-w-none text-gray-900 kb-prose transition-all duration-300",
+                                            "prose md:prose-lg max-w-none text-hotel-navy kb-prose transition-all duration-300",
                                             fontFamily === 'serif' && "kb-prose-serif",
                                             fontSize === 'sm' && "text-kb-sm",
                                             fontSize === 'base' && "text-kb-base",

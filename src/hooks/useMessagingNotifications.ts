@@ -4,15 +4,15 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useMessagingPermissions } from './useMessagingPermissions'
 import { crudToasts } from '@/lib/toastHelpers'
+import { createBulkNotifications, createNotification } from '@/lib/notificationService'
 import type { Message, Notification } from '@/lib/types'
 
 interface CreateNotificationData {
   user_id: string
   title: string
   message: string
-  type: 'message' | 'system' | 'approval' | 'task' | 'training' | 'sop'
-  priority: 'low' | 'medium' | 'high' | 'urgent'
-  action_url?: string
+  type: 'message_received' | 'system'
+  link?: string
   metadata?: Record<string, any>
 }
 
@@ -26,24 +26,18 @@ export function useCreateNotification() {
       if (!profile?.id) throw new Error('User must be authenticated')
       if (!canManageNotifications) throw new Error('Insufficient permissions')
 
-      const { data: notification, error } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: data.user_id,
-          title: data.title,
-          message: data.message,
-          type: data.type,
-          priority: data.priority,
-          action_url: data.action_url,
-          metadata: data.metadata,
-          is_read: false,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
+	  await createNotification({
+		  userId: data.user_id,
+		  type: data.type,
+		  title: data.title,
+		  message: data.message,
+		  entityType: 'message',
+		  entityId: data.metadata?.message_id,
+		  metadata: data.metadata,
+		  link: data.link || null,
+	  })
 
-      if (error) throw error
-      return notification
+	  return true
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
@@ -70,9 +64,8 @@ export function useMessageNotifications() {
       user_id: recipientId,
       title: `New Message: ${message.subject}`,
       message: `From: ${message.sender?.full_name || 'Unknown'}\n${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}`,
-      type: 'message',
-      priority: message.priority,
-      action_url: `/messaging/${message.id}`,
+	  type: 'message_received',
+	  link: `/messaging/${message.id}`,
       metadata: {
         message_id: message.id,
         sender_id: message.sender_id,
@@ -89,27 +82,20 @@ export function useMessageNotifications() {
   ) => {
     if (!profile?.id) return
 
-    const notifications = recipientIds.map(recipientId => ({
-      user_id: recipientId,
-      title: `New ${message.message_type === 'broadcast' ? 'Broadcast' : 'Message'}: ${message.subject}`,
-      message: `From: ${message.sender?.full_name || 'Unknown'}\n${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}`,
-      type: 'message' as const,
-      priority: message.priority,
-      action_url: `/messaging/${message.id}`,
-      metadata: {
-        message_id: message.id,
-        sender_id: message.sender_id,
-        message_type: message.message_type
-      },
-      is_read: false,
-      created_at: new Date().toISOString()
-    }))
-
-    const { error } = await supabase
-      .from('notifications')
-      .insert(notifications)
-
-    if (error) throw error
+	  await createBulkNotifications({
+		  userIds: recipientIds,
+		  type: 'message_received',
+		  title: `New ${message.message_type === 'broadcast' ? 'Broadcast' : 'Message'}: ${message.subject}`,
+		  message: `From: ${message.sender?.full_name || 'Unknown'}\n${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}`,
+		  entityType: 'message',
+		  entityId: message.id,
+		  link: `/messaging/${message.id}`,
+		  metadata: {
+			  message_id: message.id,
+			  sender_id: message.sender_id,
+			  message_type: message.message_type,
+		  },
+	  })
 
     queryClient.invalidateQueries({ queryKey: ['notifications'] })
   }, [profile?.id, queryClient])
@@ -117,49 +103,31 @@ export function useMessageNotifications() {
   const createSystemNotification = useCallback(async (
     title: string,
     message: string,
-    priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium',
     targetUserIds?: string[]
   ) => {
     if (!profile?.id) return
 
     if (targetUserIds && targetUserIds.length > 0) {
-      // Create notifications for specific users
-      const notifications = targetUserIds.map(userId => ({
-        user_id: userId,
-        title,
-        message,
-        type: 'system' as const,
-        priority,
-        metadata: {
-          created_by: profile.id
-        },
-        is_read: false,
-        created_at: new Date().toISOString()
-      }))
-
-      const { error } = await supabase
-        .from('notifications')
-        .insert(notifications)
-
-      if (error) throw error
+	  await createBulkNotifications({
+		  userIds: targetUserIds,
+		  type: 'system',
+		  title,
+		  message,
+		  metadata: {
+			  created_by: profile.id,
+		  },
+	  })
     } else {
-      // Create system-wide notification (admin only)
-      const { error } = await supabase
-        .from('notifications')
-        .insert({
-          title,
-          message,
-          type: 'system',
-          priority,
-          metadata: {
-            created_by: profile.id,
-            system_wide: true
-          },
-          is_read: false,
-          created_at: new Date().toISOString()
-        })
-
-      if (error) throw error
+	  await createNotification({
+		  userId: profile.id,
+		  type: 'system',
+		  title,
+		  message,
+		  metadata: {
+			  created_by: profile.id,
+			  system_wide: true,
+		  },
+	  })
     }
 
     queryClient.invalidateQueries({ queryKey: ['notifications'] })

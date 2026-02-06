@@ -39,141 +39,172 @@ serve(async (req) => {
 
         console.log('Starting approval escalation workflow...')
 
-        const timeoutHours = 48
-        const cutoffTime = new Date()
-        cutoffTime.setHours(cutoffTime.getHours() - timeoutHours)
+        const now = new Date()
+        const today = now.toISOString().split('T')[0]
+
+        const { data: rules, error: rulesError } = await supabaseClient
+            .from('escalation_rules')
+            .select('action_type, threshold_hours, next_role, is_active')
+            .eq('is_active', true)
+
+        if (rulesError) throw rulesError
+
+        const rulesByType = new Map<string, { threshold_hours: number; next_role: string }>()
+        for (const r of rules || []) {
+            rulesByType.set(r.action_type, { threshold_hours: r.threshold_hours, next_role: r.next_role })
+        }
 
         let totalEscalated = 0
 
-        // Find pending document approvals
-        const { data: docApprovals } = await supabaseClient
-            .from('document_approvals')
-            .select(`
-        id,
-        document_id,
-        approver_role,
-        created_at,
-        documents:document_id (
+        const getCutoffIso = (hours: number) => {
+            const cutoff = new Date(now)
+            cutoff.setHours(cutoff.getHours() - hours)
+            return cutoff.toISOString()
+        }
+
+        const ensureNotSentToday = async (entityType: string, entityId: string) => {
+            const { data: existing, error } = await supabaseClient
+                .from('scheduled_reminders')
+                .select('id')
+                .eq('entity_type', entityType)
+                .eq('entity_id', entityId)
+                .eq('reminder_type', 'escalation')
+                .gte('sent_at', `${today}T00:00:00Z`)
+                .maybeSingle()
+
+            if (error) throw error
+            return !existing
+        }
+
+        const markSent = async (entityType: string, entityId: string, userId: string) => {
+            const { error } = await supabaseClient.from('scheduled_reminders').insert({
+                entity_type: entityType,
+                entity_id: entityId,
+                user_id: userId,
+                reminder_type: 'escalation',
+                scheduled_for: now.toISOString(),
+                sent_at: now.toISOString(),
+                status: 'sent'
+            })
+
+            if (error) throw error
+        }
+
+        const notifyUsers = async (userIds: string[], type: string, title: string, message: string, meta: Record<string, unknown>) => {
+            if (userIds.length === 0) return
+            const payload = userIds.map(uid => ({
+                user_id: uid,
+                type,
+                title,
+                message,
+                metadata: meta
+            }))
+
+            const { error } = await supabaseClient.from('notifications').insert(payload)
+            if (error) throw error
+        }
+
+        // Document approvals escalation (action_type: document_approval)
+        const docRule = rulesByType.get('document_approval')
+        if (docRule) {
+            const cutoffIso = getCutoffIso(docRule.threshold_hours)
+            const { data: docApprovals, error: docError } = await supabaseClient
+                .from('document_approvals')
+                .select(`
           id,
-          title,
-          created_by
-        )
-      `)
-            .eq('status', 'pending')
-            .lt('created_at', cutoffTime.toISOString())
+          document_id,
+          created_at,
+          documents:document_id (id, title)
+        `)
+                .eq('status', 'pending')
+                .eq('is_active', true)
+                .lt('created_at', cutoffIso)
 
-        if (docApprovals) {
-            for (const approval of docApprovals) {
-                // Check if already escalated today
-                const today = new Date().toISOString().split('T')[0]
-                const { data: existing } = await supabaseClient
-                    .from('scheduled_reminders')
-                    .select('id')
-                    .eq('entity_type', 'document_approval')
-                    .eq('entity_id', approval.id)
-                    .eq('reminder_type', 'escalation')
-                    .gte('sent_at', `${today}T00:00:00Z`)
-                    .maybeSingle()
+            if (docError) throw docError
 
-                if (existing) continue
+            for (const approval of docApprovals || []) {
+                const ok = await ensureNotSentToday('document_approval', approval.id)
+                if (!ok) continue
 
-                // Get users with the approver role
-                const { data: approvers } = await supabaseClient
+                const { data: escalatedTo, error: escalatedToError } = await supabaseClient
                     .from('user_roles')
                     .select('user_id')
-                    .eq('role', approval.approver_role)
+                    .eq('role', docRule.next_role)
 
-                if (approvers) {
-                    for (const approver of approvers) {
-                        await supabaseClient.from('notifications').insert({
-                            user_id: approver.user_id,
-                            type: 'approval_required',
-                            title: 'Approval Overdue - Escalated',
-                            message: `Document "${approval.documents?.title}" has been pending approval for over ${timeoutHours} hours. Please review urgently.`,
-                            entity_type: 'document',
-                            entity_id: approval.document_id,
-                            link: '/approvals',
-                            metadata: { escalated: true, hours_pending: timeoutHours }
-                        })
+                if (escalatedToError) throw escalatedToError
 
-                        totalEscalated++
+                const userIds = (escalatedTo || []).map((x: { user_id: string }) => x.user_id)
+                await notifyUsers(
+                    userIds,
+                    'escalation_alert',
+                    'Approval Escalated',
+                    `Document "${approval.documents?.title ?? 'Document'}" is overdue for approval.`,
+                    {
+                        entity_type: 'document',
+                        entity_id: approval.document_id,
+                        link: '/approvals',
+                        approval_id: approval.id,
+                        escalated: true,
+                        threshold_hours: docRule.threshold_hours,
+                        next_role: docRule.next_role,
                     }
+                )
 
-                    // Mark as escalated
-                    await supabaseClient.from('scheduled_reminders').insert({
-                        entity_type: 'document_approval',
-                        entity_id: approval.id,
-                        user_id: approvers[0].user_id, // Just for tracking
-                        reminder_type: 'escalation',
-                        scheduled_for: new Date().toISOString(),
-                        sent_at: new Date().toISOString(),
-                        status: 'sent'
-                    })
+                if (userIds.length > 0) {
+                    await markSent('document_approval', approval.id, userIds[0])
+                    totalEscalated += userIds.length
                 }
             }
         }
 
-        // Find pending leave requests
-        const { data: leaveRequests } = await supabaseClient
-            .from('leave_requests')
-            .select(`
-        id,
-        requester_id,
-        type,
-        created_at,
-        profiles:requester_id (
+        // Leave requests escalation (action_type: leave_request)
+        const leaveRule = rulesByType.get('leave_request')
+        if (leaveRule) {
+            const cutoffIso = getCutoffIso(leaveRule.threshold_hours)
+            const { data: leaveRequests, error: leaveError } = await supabaseClient
+                .from('leave_requests')
+                .select(`
           id,
-          full_name
-        )
-      `)
-            .eq('status', 'pending')
-            .lt('created_at', cutoffTime.toISOString())
+          requester_id,
+          type,
+          created_at,
+          profiles:requester_id (id, full_name)
+        `)
+                .eq('status', 'pending')
+                .lt('created_at', cutoffIso)
 
-        if (leaveRequests) {
-            for (const request of leaveRequests) {
-                const today = new Date().toISOString().split('T')[0]
-                const { data: existing } = await supabaseClient
-                    .from('scheduled_reminders')
-                    .select('id')
-                    .eq('entity_type', 'leave_request')
-                    .eq('entity_id', request.id)
-                    .eq('reminder_type', 'escalation')
-                    .gte('sent_at', `${today}T00:00:00Z`)
-                    .maybeSingle()
+            if (leaveError) throw leaveError
 
-                if (existing) continue
+            for (const request of leaveRequests || []) {
+                const ok = await ensureNotSentToday('leave_request', request.id)
+                if (!ok) continue
 
-                // Get managers/approvers
-                const { data: managers } = await supabaseClient
+                const { data: escalatedTo, error: escalatedToError } = await supabaseClient
                     .from('user_roles')
                     .select('user_id')
-                    .in('role', ['regional_admin', 'regional_hr', 'property_manager'])
+                    .eq('role', leaveRule.next_role)
 
-                if (managers) {
-                    for (const manager of managers) {
-                        await supabaseClient.from('notifications').insert({
-                            user_id: manager.user_id,
-                            type: 'approval_required',
-                            title: 'Leave Request Overdue - Escalated',
-                            message: `Leave request from ${request.profiles?.full_name} has been pending for over ${timeoutHours} hours. Please review urgently.`,
-                            entity_type: 'leave_request',
-                            entity_id: request.id,
-                            link: '/approvals',
-                            metadata: { escalated: true, hours_pending: timeoutHours }
-                        })
+                if (escalatedToError) throw escalatedToError
 
-                        totalEscalated++
-                    }
-
-                    await supabaseClient.from('scheduled_reminders').insert({
+                const userIds = (escalatedTo || []).map((x: { user_id: string }) => x.user_id)
+                await notifyUsers(
+                    userIds,
+                    'escalation_alert',
+                    'Leave Request Escalated',
+                    `Leave request from ${request.profiles?.full_name ?? 'an employee'} is overdue for approval.`,
+                    {
                         entity_type: 'leave_request',
                         entity_id: request.id,
-                        user_id: managers[0].user_id,
-                        reminder_type: 'escalation',
-                        scheduled_for: new Date().toISOString(),
-                        sent_at: new Date().toISOString(),
-                        status: 'sent'
-                    })
+                        link: '/approvals',
+                        escalated: true,
+                        threshold_hours: leaveRule.threshold_hours,
+                        next_role: leaveRule.next_role,
+                    }
+                )
+
+                if (userIds.length > 0) {
+                    await markSent('leave_request', request.id, userIds[0])
+                    totalEscalated += userIds.length
                 }
             }
         }

@@ -8,26 +8,6 @@ import { Separator } from '@/components/ui/separator'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 import { formatDistanceToNow } from 'date-fns'
-import {
-  Heart,
-  MessageCircle,
-  Share2,
-  Bookmark,
-  MoreHorizontal,
-  Image,
-  Video,
-  FileText,
-  Users,
-  TrendingUp,
-  Calendar,
-  MapPin,
-  Award,
-  AlertCircle,
-  CheckCircle,
-  ThumbsUp,
-  Laugh,
-  Star
-} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -70,6 +50,8 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
   const { t } = useTranslation('common')
   const [newComment, setNewComment] = useState<Record<string, string>>({})
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
+
+  const reactionTypes = ['like', 'love', 'clap', 'wow'] as const
 
   const getTypeIcon = (type: FeedItem['type']) => {
     switch (type) {
@@ -225,11 +207,14 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
-                    {Object.entries(item.reactions).map(([reaction, count]) => (
+                    {reactionTypes.map((reaction) => {
+                      const count = item.reactions[reaction] || 0
+
+                      return (
                       <button
                         key={reaction}
                         onClick={() => onReact(item.id, reaction)}
-                        className={`social-reaction-btn ${item.reactions[reaction] > 0 ? 'active' : ''}`}
+                        className={`social-reaction-btn ${count > 0 ? 'active' : ''}`}
                       >
                         {reaction === 'like' && <Icons.ThumbsUp className="h-4 w-4" />}
                         {reaction === 'love' && <Icons.Heart className="h-4 w-4" />}
@@ -237,7 +222,8 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                         {reaction === 'wow' && <Icons.Eye className="h-4 w-4" />}
                         <span className="text-sm">{count}</span>
                       </button>
-                    ))}
+                      )
+                    })}
                   </div>
 
                   <button

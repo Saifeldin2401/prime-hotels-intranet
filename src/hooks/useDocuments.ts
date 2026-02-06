@@ -144,49 +144,96 @@ export function useSubmitForApproval() {
     mutationFn: async (documentId: string) => {
       if (!user) throw new Error('User must be authenticated')
 
+      const nowIso = new Date().toISOString()
+
       // Update document status
       const { error: docError } = await supabase
         .from('documents')
-        .update({ status: 'PENDING_REVIEW' })
+        .update({ status: 'PENDING_REVIEW', updated_at: nowIso })
         .eq('id', documentId)
 
       if (docError) throw docError
 
+      const { error: cleanupError } = await supabase
+        .from('document_approvals')
+        .delete()
+        .eq('document_id', documentId)
+        .eq('status', 'pending')
+
+      if (cleanupError) throw cleanupError
+
       // Create approval requests based on document visibility
       const { data: doc } = await supabase
         .from('documents')
-        .select('visibility, property_id, department_id')
+        .select('visibility, property_id, department_id, title')
         .eq('id', documentId)
         .single()
 
       if (!doc) throw new Error('Document not found')
 
-      // Determine approvers based on visibility
-      let approvers: string[] = []
-
+      let roleFilters: string[] = []
       if (doc.visibility === 'all_properties') {
-        approvers = ['regional_admin']
+        roleFilters = ['regional_admin']
       } else if (doc.visibility === 'property') {
-        approvers = ['property_manager', 'property_hr']
+        roleFilters = ['property_manager', 'property_hr']
       } else if (doc.visibility === 'department') {
-        approvers = ['department_head']
+        roleFilters = ['department_head']
       } else if (doc.visibility === 'role') {
-        approvers = ['regional_admin'] // Default to regional admin for role-specific
+        roleFilters = ['regional_admin']
       }
 
-      // Create approval requests
-      const approvalRequests = approvers.map(role => ({
+      let approverQuery = supabase
+        .from('profiles')
+        .select('id, user_roles!inner(role), user_properties(property_id), user_departments(department_id)')
+        .eq('is_active', true)
+        .in('user_roles.role', roleFilters)
+
+      if (doc.visibility === 'property' && doc.property_id) {
+        approverQuery = approverQuery.eq('user_properties.property_id', doc.property_id)
+      }
+      if (doc.visibility === 'department' && doc.department_id) {
+        approverQuery = approverQuery.eq('user_departments.department_id', doc.department_id)
+      }
+
+      const { data: approverProfiles, error: approverError } = await approverQuery
+
+      if (approverError) throw approverError
+
+      const approverIds = Array.from(new Set((approverProfiles || []).map(p => p.id)))
+
+      if (approverIds.length === 0) {
+        throw new Error('No approvers found for this document scope')
+      }
+
+      const approvalRows = approverIds.map(approverId => ({
+        document_id: documentId,
+        approver_id: approverId,
+        approver_role: (roleFilters[0] as any),
+        status: 'pending',
+        is_active: true,
         entity_type: 'document',
         entity_id: documentId,
-        approver_role: role,
-        status: 'pending',
       }))
 
       const { error: approvalError } = await supabase
         .from('document_approvals')
-        .insert(approvalRequests)
+        .insert(approvalRows)
 
       if (approvalError) throw approvalError
+
+      const { error: notifyError } = await supabase.from('notifications').insert(
+        approverIds.map(approverId => ({
+          user_id: approverId,
+          type: 'approval_required',
+          title: 'Approval Required',
+          message: `A document "${doc.title || 'Document'}" is awaiting your approval.`,
+          entity_type: 'document',
+          entity_id: documentId,
+          link: '/approvals',
+          metadata: { document_id: documentId }
+        })))
+
+      if (notifyError) throw notifyError
 
       return documentId
     },
@@ -315,26 +362,18 @@ export function useRejectDocument() {
     mutationFn: async ({ approvalId, reason }: { approvalId: string, reason: string }) => {
       if (!user) throw new Error('User must be authenticated')
 
-      // 1. Update approval record
-      const { data: approval, error: approvalError } = await supabase
-        .from('document_approvals')
-        .update({
-          status: 'rejected',
-          rejected_by: user.id,
-          rejected_at: new Date().toISOString(),
-          rejection_reason: reason
-        })
-        .eq('id', approvalId)
-        .select()
-        .single()
+      const { data, error } = await supabase.rpc('reject_document_atomic', {
+        p_approval_id: approvalId,
+        p_approver_id: user.id,
+        p_reason: reason
+      })
 
-      if (approvalError) throw approvalError
+      if (error) {
+        console.error('Document rejection failed:', error)
+        throw error
+      }
 
-      // 2. Update document status to REJECTED immediately
-      await supabase
-        .from('documents')
-        .update({ status: 'REJECTED' })
-        .eq('id', approval.document_id)
+      return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })

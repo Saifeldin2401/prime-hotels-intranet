@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { SocialFeed, type FeedItem } from '@/components/social/SocialFeed'
+import { SocialFeed } from '@/components/social/SocialFeed'
 import { useAuth } from '@/hooks/useAuth'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { EnhancedBadge } from '@/components/ui/enhanced-badge'
@@ -20,7 +19,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
-import { useStaffFeed } from '@/hooks/useStaffFeed'
+import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
 import { StatSkeleton, ListSkeleton, CardSkeleton, LoadingTransition } from '@/components/ui/loading-system'
 import { useStaffDashboardStats } from '@/hooks/useStaffDashboardStats'
 import { useUserTasks, useUserSchedule } from '@/hooks/useUserData'
@@ -38,7 +37,7 @@ import { LogIn, LogOut, BookOpen } from 'lucide-react'
 export function StaffDashboard() {
   const { user, profile, primaryRole } = useAuth()
   const { currentProperty } = useProperty()
-  const { data: realFeedItems, isLoading: feedLoading } = useStaffFeed()
+  const { currentUser, feedItems, isLoading: feedLoading, onReact, onComment, onShare } = useUnifiedSocialFeed()
   const { data: stats, isLoading: statsLoading } = useStaffDashboardStats()
   const { data: tasks, isLoading: tasksLoading } = useUserTasks()
   const { data: schedule, isLoading: scheduleLoading } = useUserSchedule()
@@ -83,68 +82,8 @@ export function StaffDashboard() {
     show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
   }
 
-  // Create a compatible user object for SocialFeed
-  const currentUser = user ? {
-    id: user.id,
-    name: profile?.full_name || user.email || 'Unknown',
-    email: user.email || '',
-    role: (primaryRole as any) || 'staff',
-    department: 'Staff', // Default or fetch from context
-    property: currentProperty?.name || 'Prime Hotels',
-    permissions: []
-  } : null
-
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   // Show loading skeleton only for initial auth loading, not data loading
   const isInitialLoading = !user
-
-  useEffect(() => {
-    if (realFeedItems) {
-      setFeedItems(realFeedItems)
-    }
-  }, [realFeedItems])
-
-  const handleReact = (itemId: string, reaction: string) => {
-    setFeedItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const currentReactions = item.reactions[reaction] || 0
-        return {
-          ...item,
-          reactions: {
-            ...item.reactions,
-            [reaction]: currentReactions + 1
-          }
-        }
-      }
-      return item
-    }))
-  }
-
-  const handleComment = (itemId: string, content: string) => {
-    if (!currentUser) return
-
-    const newComment = {
-      id: Date.now().toString(),
-      author: currentUser,
-      content,
-      timestamp: new Date(),
-      reactions: {}
-    }
-
-    setFeedItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          comments: [...item.comments, newComment]
-        }
-      }
-      return item
-    }))
-  }
-
-  const handleShare = (_itemId: string) => {
-    // Share functionality placeholder - to be implemented
-  }
 
   if (isInitialLoading) {
     return (
@@ -201,6 +140,19 @@ export function StaffDashboard() {
       </motion.div>
 
       {/* Stats Cards */}
+      <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">{t('staff.sections.my_day', 'My Day')}</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {t('staff.sections.my_day_subtitle', 'Your key priorities and progress at a glance.')}
+          </p>
+        </div>
+        <Badge variant={todayAttendance?.check_in && !todayAttendance?.check_out ? 'gold' : 'secondary'} className="text-xs">
+          {todayAttendance?.check_in && !todayAttendance?.check_out
+            ? t('staff.sections.on_duty', 'On duty')
+            : t('staff.sections.off_duty', 'Off duty')}
+        </Badge>
+      </motion.div>
       <LoadingTransition
         isLoading={statsLoading}
         skeleton={<StatSkeleton count={4} />}
@@ -278,6 +230,14 @@ export function StaffDashboard() {
       </LoadingTransition>
 
       {/* Quick Actions */}
+      <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">{t('staff.sections.quick_actions', 'Quick Actions')}</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {t('staff.sections.quick_actions_subtitle', 'Jump to your most common tasks.')}
+          </p>
+        </div>
+      </motion.div>
       <motion.div variants={item} className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
         <motion.div
           whileHover={{ y: -4, transition: { duration: 0.2 } }}
@@ -415,9 +375,25 @@ export function StaffDashboard() {
           </TransferEmployeeDialog>
         )}
       </motion.div>
+      <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">{t('staff.sections.learning', 'Knowledge & Learning')}</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {t('staff.sections.learning_subtitle', 'Required reading, quizzes, and certifications.')}
+          </p>
+        </div>
+      </motion.div>
       <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <KnowledgeWidget />
         <DailyQuizWidget />
+      </motion.div>
+      <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">{t('staff.sections.workspace', 'Your Workspace')}</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {t('staff.sections.workspace_subtitle', 'Activity, tasks, and schedule in one place.')}
+          </p>
+        </div>
       </motion.div>
       <motion.div variants={item}>
         <Tabs defaultValue="feed" className="space-y-6">
@@ -441,9 +417,9 @@ export function StaffDashboard() {
                     <SocialFeed
                       user={currentUser}
                       feedItems={feedItems}
-                      onReact={handleReact}
-                      onComment={handleComment}
-                      onShare={handleShare}
+                      onReact={onReact}
+                      onComment={onComment}
+                      onShare={onShare}
                     />
                   )}
                 </div>

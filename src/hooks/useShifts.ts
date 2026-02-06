@@ -29,6 +29,7 @@ export interface CreateShiftInput {
     property_id?: string
     notes?: string
     break_duration_minutes?: number
+    status?: Shift['status']
 }
 
 /**

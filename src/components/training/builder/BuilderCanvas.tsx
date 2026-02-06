@@ -9,7 +9,9 @@ import {
     Video,
     Link,
     FileQuestion,
-    BookOpen
+    BookOpen,
+    Headphones,
+    Gamepad2
 } from 'lucide-react'
 import React from 'react'
 import { Button } from '@/components/ui/button'
@@ -77,6 +79,8 @@ export const BuilderCanvas = ({
             case 'text': return <FileText className="w-4 h-4" />
             case 'image': return <Image className="w-4 h-4" />
             case 'video': return <Video className="w-4 h-4" />
+            case 'audio': return <Headphones className="w-4 h-4" />
+            case 'interactive': return <Gamepad2 className="w-4 h-4" />
             case 'document_link': return <Link className="w-4 h-4" />
             case 'quiz': return <FileQuestion className="w-4 h-4" />
             case 'sop_reference': return <BookOpen className="w-4 h-4" />
@@ -212,7 +216,7 @@ export const BuilderCanvas = ({
                                                 <div className="text-center py-8 border-2 border-dashed rounded-lg bg-white/50">
                                                     <p className="text-sm text-slate-500 mb-4">{t('builder.emptySection')}</p>
                                                     <div className={`flex flex-wrap gap-2 justify-center max-w-lg mx-auto ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                                        {(['text', 'video', 'image', 'document_link', 'quiz', 'sop_reference'] as ContentType[]).map((type) => (
+                                                        {(['text', 'video', 'audio', 'interactive', 'image', 'document_link', 'quiz', 'sop_reference'] as ContentType[]).map((type) => (
                                                             <Button
                                                                 key={type}
                                                                 size="sm"
@@ -273,14 +277,18 @@ export const BuilderCanvas = ({
                                                     ))}
                                                     <div className="mt-4 pt-2 flex justify-center">
                                                         <div className={`flex flex-wrap gap-2 justify-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                className={cn("text-slate-500 hover:text-hotel-gold", isRTL ? 'flex-row-reverse' : '')}
-                                                                onClick={() => onAddContent('text', section.id)}
-                                                            >
-                                                                <Plus className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} /> {t('builder.addContent')}
-                                                            </Button>
+                                                            {(['text', 'video', 'audio', 'interactive', 'image', 'document_link', 'quiz', 'sop_reference'] as ContentType[]).map((type) => (
+                                                                <Button
+                                                                    key={type}
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className={cn("bg-white hover:bg-hotel-gold/5 hover:border-hotel-gold hover:text-hotel-gold text-xs h-8", isRTL ? 'flex-row-reverse' : '')}
+                                                                    onClick={() => onAddContent(type, section.id)}
+                                                                >
+                                                                    {getContentIcon(type)}
+                                                                    <span className={isRTL ? "mr-2 capitalize" : "ml-2 capitalize"}>{t(`wizard.type_${type}`, type.replace('_', ' '))}</span>
+                                                                </Button>
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 </div>

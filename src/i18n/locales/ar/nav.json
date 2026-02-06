@@ -19,6 +19,11 @@
     "performance": "الأداء والتقييم",
     "goals": "الأهداف المهنية",
     "payslips": "مسيرات الرواتب",
+    "shift_scheduling": "جدولة المناوبات",
+    "hr_control_center": "مركز تحكم الموارد البشرية",
+    "performance_management": "إدارة الأداء",
+    "goals_management": "إدارة الأهداف",
+    "payslips_management": "إدارة مسيرات الرواتب",
     "groups": {
         "home": "الرئيسية",
         "my_work": "عملي",

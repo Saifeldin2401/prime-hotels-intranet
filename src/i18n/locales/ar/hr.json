@@ -312,6 +312,207 @@
         "view": "عرض",
         "no_payslips": "لم يتم العثور على قسائم رواتب في سجلك.",
         "downloading": "جاري إنشاء ملف PDF...",
-        "download_success": "تم تنزيل قسيمة الراتب بنجاح"
+        "initiating_secure_download": "جارٍ الاتصال بخادم الرواتب الآمن...",
+        "download_success": "تم تنزيل قسيمة الراتب بنجاح",
+        "generating_download": "جاري إنشاء رابط تنزيل آمن...",
+        "download_error": "تعذر إنشاء رابط التنزيل.",
+        "file_missing": "ملف قسيمة الراتب غير متاح بعد."
+    },
+    "hr_admin": {
+        "title": "مركز تحكم الموارد البشرية",
+        "description": "إدارة سير عمل الموارد البشرية والموافقات وبيانات الموظفين من مكان واحد.",
+        "loading": "جارٍ التحميل...",
+        "empty": "لا توجد سجلات.",
+        "actions": {
+            "open": "فتح",
+            "manage": "إدارة",
+            "create": "إنشاء",
+            "save": "حفظ",
+            "cancel": "إلغاء",
+            "edit": "تعديل",
+            "delete": "حذف",
+            "download": "تنزيل"
+        },
+        "tools": {
+            "performance": {
+                "title": "مراجعات الأداء",
+                "description": "إنشاء وتتبع تقييمات الموظفين."
+            },
+            "goals": {
+                "title": "الأهداف المهنية",
+                "description": "تعيين وتتبع أهداف التطوير."
+            },
+            "payslips": {
+                "title": "مسيرات الرواتب",
+                "description": "نشر مستندات الرواتب بأمان."
+            },
+            "scheduling": {
+                "title": "جدولة المناوبات",
+                "description": "تخطيط المناوبات وتصحيح الحضور."
+            },
+            "approvals": {
+                "title": "الموافقات",
+                "description": "مراجعة الطلبات والموافقات المعلقة."
+            },
+            "directory": {
+                "title": "الدليل",
+                "description": "الوصول إلى سجلات دليل الموظفين."
+            },
+            "operations": {
+                "title": "عمليات الموارد البشرية",
+                "description": "متابعة عمليات الموارد البشرية والتصعيدات."
+            }
+        },
+        "defaults": {
+            "review_period": "الفترة الحالية",
+            "no_reviewer": "غير معين"
+        },
+        "messages": {
+            "review_created": "تم إنشاء تقييم الأداء.",
+            "review_create_failed": "فشل إنشاء التقييم.",
+            "review_updated": "تم تحديث تقييم الأداء.",
+            "review_update_failed": "فشل تحديث التقييم.",
+            "review_deleted": "تم حذف تقييم الأداء.",
+            "review_delete_failed": "فشل حذف التقييم.",
+            "goal_created": "تم إنشاء الهدف.",
+            "goal_create_failed": "فشل إنشاء الهدف.",
+            "goal_updated": "تم تحديث الهدف.",
+            "goal_update_failed": "فشل تحديث الهدف.",
+            "goal_deleted": "تم حذف الهدف.",
+            "goal_delete_failed": "فشل حذف الهدف.",
+            "payslip_created": "تم إنشاء مسير الراتب.",
+            "payslip_updated": "تم تحديث مسير الراتب.",
+            "payslip_save_failed": "فشل حفظ مسير الراتب.",
+            "payslip_deleted": "تم حذف مسير الراتب.",
+            "payslip_delete_failed": "فشل حذف مسير الراتب.",
+            "payslip_download_failed": "تعذر إنشاء رابط التنزيل.",
+            "select_employee": "يرجى اختيار موظف."
+        },
+        "filters": {
+            "title": "مرشحات",
+            "description": "تصفية حسب القسم أو الموظف.",
+            "department": "القسم",
+            "all_departments": "جميع الأقسام",
+            "employee": "الموظف",
+            "all_employees": "جميع الموظفين",
+            "status": "الحالة",
+            "all_statuses": "جميع الحالات",
+            "month": "الشهر",
+            "year": "السنة"
+        },
+        "fields": {
+            "employee": "الموظف",
+            "reviewer": "المراجع",
+            "review_period": "فترة المراجعة",
+            "review_date": "تاريخ المراجعة",
+            "rating": "التقييم العام",
+            "status": "الحالة",
+            "strengths": "نقاط القوة",
+            "improvements": "مجالات التحسين",
+            "comments": "ملاحظات",
+            "goals": "الأهداف",
+            "goal_title": "عنوان الهدف",
+            "target_date": "تاريخ الاستحقاق",
+            "category": "الفئة",
+            "progress": "التقدم",
+            "description": "الوصف",
+            "month": "الشهر",
+            "year": "السنة",
+            "period_start": "بداية الفترة",
+            "period_end": "نهاية الفترة",
+            "payment_date": "تاريخ الدفع",
+            "currency": "العملة",
+            "basic_salary": "الراتب الأساسي",
+            "gross_salary": "إجمالي الراتب",
+            "deductions": "الخصومات",
+            "net_salary": "صافي الراتب",
+            "file": "ملف مسير الراتب",
+            "published": "منشور"
+        },
+        "performance": {
+            "title": "إدارة تقييمات الأداء",
+            "description": "إنشاء ومراجعة وتتبع تقييمات الأداء.",
+            "form_title": "إنشاء أو تحديث تقييم",
+            "form_description": "تسجيل تفاصيل التقييم والدرجات.",
+            "list_title": "سجل التقييمات",
+            "list_description": "أحدث التقييمات لفِرَقك."
+        },
+        "goals": {
+            "title": "إدارة الأهداف",
+            "description": "تعيين وتتبع الأهداف المهنية لفرقك.",
+            "form_title": "إنشاء أو تحديث هدف",
+            "form_description": "تحديد المعالم وأهداف التقدم.",
+            "list_title": "متابعة الأهداف",
+            "list_description": "مراقبة التقدم عبر الفرق."
+        },
+        "payslips": {
+            "title": "إدارة مسيرات الرواتب",
+            "description": "إنشاء ونشر وتوزيع مسيرات الرواتب للموظفين.",
+            "form_title": "إنشاء أو تحديث مسير راتب",
+            "form_description": "رفع ملفات مسيرات الرواتب وإدارة بيانات الرواتب.",
+            "list_title": "سجلات مسيرات الرواتب",
+            "list_description": "متابعة المسيرات المنشورة والمسودات عبر الفرق.",
+            "current_file": "الملف الحالي"
+        },
+        "columns": {
+            "employee": "الموظف",
+            "period": "الفترة",
+            "rating": "التقييم",
+            "status": "الحالة",
+            "date": "التاريخ",
+            "actions": "إجراءات",
+            "goal": "الهدف",
+            "progress": "التقدم",
+            "due": "الاستحقاق",
+            "net": "صافي الراتب",
+            "published": "منشور",
+            "payment_date": "تاريخ الدفع",
+            "file": "الملف"
+        },
+        "labels": {
+            "published": "منشور",
+            "draft": "مسودة",
+            "file_ready": "متوفر",
+            "file_missing": "غير متوفر"
+        }
+    },
+    "shift_management": {
+        "title": "جدولة المناوبات",
+        "description": "تخطيط مناوبات الفريق وتصحيح سجلات الحضور.",
+        "tabs": {
+            "shifts": "المناوبات",
+            "attendance": "تصحيحات الحضور"
+        },
+        "filters": {
+            "department": "القسم",
+            "all_departments": "جميع الأقسام",
+            "start_date": "تاريخ البدء",
+            "end_date": "تاريخ الانتهاء",
+            "attendance_date": "تاريخ الحضور"
+        },
+        "actions": {
+            "create_shift": "إنشاء مناوبة",
+            "edit": "تعديل",
+            "delete": "حذف",
+            "add_attendance": "إضافة حضور"
+        },
+        "form": {
+            "staff_member": "الموظف",
+            "shift_type": "نوع المناوبة",
+            "start_time": "وقت البدء",
+            "end_time": "وقت الانتهاء",
+            "location": "الموقع",
+            "status": "الحالة",
+            "notes": "ملاحظات",
+            "check_in": "تسجيل الدخول",
+            "check_out": "تسجيل الخروج",
+            "save": "حفظ",
+            "cancel": "إلغاء"
+        },
+        "empty": {
+            "shifts": "لا توجد مناوبات للفترة المحددة.",
+            "attendance": "لا توجد سجلات حضور لهذا التاريخ."
+        }
     }
 }
+

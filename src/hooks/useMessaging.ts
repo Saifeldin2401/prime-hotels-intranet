@@ -22,7 +22,11 @@ export function useMessages(filters?: {
 
       let query = supabase
         .from('messages')
-        .select('*')
+        .select(`
+          *,
+          sender:profiles!sender_id(id, full_name, email, avatar_url, job_title),
+          recipient:profiles!recipient_id(id, full_name, email, avatar_url, job_title)
+        `)
         .order('created_at', { ascending: false })
 
       // Apply filters
@@ -43,12 +47,7 @@ export function useMessages(filters?: {
       }
 
       // Filter by user's access (sent or received messages)
-      query = query.or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
-
-      // Filter by properties if user has property access
-      if (properties && properties.length > 0 && !filters?.sender_id && !filters?.recipient_id) {
-        query = query.in('property_id', properties.map(p => p.id))
-      }
+      query = query.or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id},recipient_id.is.null`)
 
       const { data, error } = await query.limit(100)
 
@@ -74,8 +73,8 @@ export function useMessage(messageId: string) {
         .from('messages')
         .select(`
           *,
-          sender:profiles!messages_sender_id_fkey(id, full_name, email, avatar_url),
-          recipient:profiles!messages_recipient_id_fkey(id, full_name, email, avatar_url)
+          sender:profiles!sender_id(id, full_name, email, avatar_url, job_title),
+          recipient:profiles!recipient_id(id, full_name, email, avatar_url, job_title)
         `)
         .eq('id', messageId)
         .single()
@@ -105,18 +104,34 @@ export function useSendMessage() {
     }) => {
       if (!profile?.id) throw new Error('User must be authenticated')
 
+      const subject = data.subject && data.subject.trim() !== ''
+        ? data.subject
+        : (data.content || '').trim().slice(0, 80) || 'Message'
+
+      const normalizedRecipientId = data.recipient_id && data.recipient_id.trim() !== ''
+        ? data.recipient_id
+        : null
+
+      if (data.message_type === 'direct' && !normalizedRecipientId) {
+        throw new Error('Recipient is required for direct messages')
+      }
+
+      const effectiveRecipientId = data.message_type === 'direct'
+        ? normalizedRecipientId
+        : null
+
       // Create or find conversation for direct messages
       let conversationId = null
-      if (data.recipient_id && data.message_type === 'direct') {
+      if (effectiveRecipientId && data.message_type === 'direct') {
         // Check if conversation already exists between these users
         const { data: existingConversations } = await supabase
           .from('conversations')
           .select('*')
-          .contains('participant_ids', [profile.id, data.recipient_id])
+          .contains('participant_ids', [profile.id, effectiveRecipientId])
 
         const existingConv = existingConversations?.find(conv =>
           conv.participant_ids.includes(profile.id) &&
-          conv.participant_ids.includes(data.recipient_id!) &&
+          conv.participant_ids.includes(effectiveRecipientId) &&
           conv.participant_ids.length === 2
         )
 
@@ -128,7 +143,7 @@ export function useSendMessage() {
             .from('conversations')
             .insert({
               title: data.subject,
-              participant_ids: [profile.id, data.recipient_id]
+              participant_ids: [profile.id, effectiveRecipientId]
             })
             .select()
             .single()
@@ -144,8 +159,8 @@ export function useSendMessage() {
         .from('messages')
         .insert({
           sender_id: profile.id,
-          recipient_id: data.recipient_id,
-          subject: data.subject,
+          recipient_id: effectiveRecipientId,
+          subject,
           content: data.content,
           message_type: data.message_type,
           priority: data.priority || 'medium',
@@ -156,14 +171,11 @@ export function useSendMessage() {
           department_id: data.department_id,
           conversation_id: conversationId
         })
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(id, full_name, email, avatar_url),
-          recipient:profiles!messages_recipient_id_fkey(id, full_name, email, avatar_url)
-        `)
+        .select('*')
         .single()
 
       if (error) throw error
+
       return message
     },
     onSuccess: () => {
@@ -172,7 +184,8 @@ export function useSendMessage() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       crudToasts.create.success('Message')
     },
-    onError: () => {
+    onError: (err) => {
+      console.error('Failed to send message:', err)
       crudToasts.create.error('message')
     }
   })
@@ -211,7 +224,7 @@ export function useMarkMessageAsRead() {
 
   return useMutation({
     mutationFn: async (messageId: string) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages')
         .update({
           status: 'read',
@@ -219,11 +232,9 @@ export function useMarkMessageAsRead() {
           updated_at: new Date().toISOString()
         })
         .eq('id', messageId)
-        .select()
-        .single()
 
       if (error) throw error
-      return data
+      return true
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] })
@@ -423,12 +434,44 @@ export function useConversations() {
         (data || []).map(async (conv: any) => {
           const { data: participants } = await supabase
             .from('profiles')
-            .select('id, full_name, email, avatar_url')
+            .select('id, full_name, email, avatar_url, job_title')
             .in('id', conv.participant_ids)
+
+          const participantIds: string[] = Array.isArray(conv.participant_ids) ? conv.participant_ids : []
+          const { data: userProps } = participantIds.length
+            ? await supabase
+              .from('user_properties')
+              .select('user_id, properties(name)')
+              .in('user_id', participantIds)
+            : { data: [] as any[] }
+
+          const primaryPropertyByUserId = new Map<string, string>()
+          ;(userProps || []).forEach((row: any) => {
+            if (!row?.user_id) return
+            if (primaryPropertyByUserId.has(row.user_id)) return
+            const propName = row?.properties?.name
+            if (propName) primaryPropertyByUserId.set(row.user_id, propName)
+          })
+
+          const enrichedParticipants = (participants || []).map((p: any) => ({
+            ...p,
+            property_name: primaryPropertyByUserId.get(p.id) || null,
+          }))
+
+          const messages = Array.isArray(conv.messages) ? [...conv.messages] : []
+          messages.sort((a: any, b: any) => {
+            const aTime = new Date(a.created_at).getTime()
+            const bTime = new Date(b.created_at).getTime()
+            return bTime - aTime
+          })
+
+          const lastMessage = messages[0]
 
           return {
             ...conv,
-            participants: participants || []
+            participants: enrichedParticipants,
+            messages,
+            last_message_preview: lastMessage?.content || lastMessage?.subject || ''
           }
         })
       )
@@ -436,6 +479,118 @@ export function useConversations() {
       return conversationsWithParticipants
     },
     enabled: !!profile?.id
+  })
+}
+
+export function useCreateConversation() {
+  const queryClient = useQueryClient()
+  const { profile } = useAuth()
+
+  return useMutation({
+    mutationFn: async (params: { otherUserId: string; title?: string | null }) => {
+      if (!profile?.id) throw new Error('User must be authenticated')
+
+      const participantIds = [profile.id, params.otherUserId]
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          title: params.title || null,
+          participant_ids: participantIds,
+        })
+        .select('*')
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+  })
+}
+
+export function useConversationMessages(params: {
+  conversationId?: string | null
+  participantIds?: string[]
+  limit?: number
+}) {
+  const { profile } = useAuth()
+  const limit = params.limit ?? 50
+
+  return useQuery({
+    queryKey: ['conversation-messages', profile?.id, params.conversationId, params.participantIds, limit],
+    queryFn: async () => {
+      if (!profile?.id) return []
+
+      if (params.conversationId) {
+        const { data, error } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            sender:profiles!sender_id(id, full_name, email, avatar_url, job_title),
+            recipient:profiles!recipient_id(id, full_name, email, avatar_url, job_title)
+          `)
+          .eq('conversation_id', params.conversationId)
+          .order('created_at', { ascending: true })
+          .limit(limit)
+
+        if (error) throw error
+        return (data || []) as Message[]
+      }
+
+      const ids = params.participantIds || []
+      if (ids.length !== 2) return []
+      const [a, b] = ids
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:profiles!sender_id(id, full_name, email, avatar_url, job_title),
+          recipient:profiles!recipient_id(id, full_name, email, avatar_url, job_title)
+        `)
+        .or(`and(sender_id.eq.${a},recipient_id.eq.${b}),and(sender_id.eq.${b},recipient_id.eq.${a})`)
+        .order('created_at', { ascending: true })
+        .limit(limit)
+
+      if (error) throw error
+      return (data || []) as Message[]
+    },
+    enabled: !!profile?.id && (!!params.conversationId || (params.participantIds?.length === 2)),
+    staleTime: 1000 * 10,
+  })
+}
+
+export function useChannelMessages(params: {
+  channel: 'broadcast' | 'system'
+  limit?: number
+}) {
+  const { profile } = useAuth()
+  const limit = params.limit ?? 100
+
+  return useQuery({
+    queryKey: ['channel-messages', profile?.id, params.channel, limit],
+    queryFn: async () => {
+      if (!profile?.id) return []
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:profiles!sender_id(id, full_name, email, avatar_url, job_title),
+          recipient:profiles!recipient_id(id, full_name, email, avatar_url, job_title)
+        `)
+        .eq('message_type', params.channel)
+        .is('recipient_id', null)
+        .order('created_at', { ascending: true })
+        .limit(limit)
+
+      if (error) throw error
+      return (data || []) as Message[]
+    },
+    enabled: !!profile?.id,
+    staleTime: 1000 * 10,
   })
 }
 
@@ -459,7 +614,10 @@ export function useNotifications() {
         .limit(50)
 
       if (error) throw error
-      return data as Notification[]
+      return (data || []).map((n: any) => ({
+        ...n,
+        is_read: !!n.read_at,
+      })) as Notification[]
     },
     enabled: !!user?.id
   })
@@ -472,7 +630,7 @@ export function useMarkNotificationAsRead() {
     mutationFn: async (notificationId: string) => {
       const { data, error } = await supabase
         .from('notifications')
-        .update({ is_read: true })
+        .update({ read_at: new Date().toISOString() })
         .eq('id', notificationId)
         .select()
         .single()
@@ -498,7 +656,7 @@ export function useMessagingStats() {
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
-        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id},recipient_id.is.null`)
 
       if (error) throw error
 

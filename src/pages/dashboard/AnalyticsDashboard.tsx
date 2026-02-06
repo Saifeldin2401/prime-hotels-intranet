@@ -8,6 +8,8 @@ import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ReportsControlCenter } from '@/components/reports/ReportsControlCenter'
+import { AuditsControlCenter } from '@/components/audits/AuditsControlCenter'
 import {
   Users,
   FileText,
@@ -388,6 +390,12 @@ export default function AnalyticsDashboard() {
             </div>
           </CardContent>
         </EnhancedCard>
+      </div>
+
+      {/* Reporting & Audit Controls */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <ReportsControlCenter />
+        <AuditsControlCenter />
       </div>
 
       {/* Enhanced Recent Activity */}

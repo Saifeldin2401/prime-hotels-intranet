@@ -21,8 +21,8 @@ import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { pageVariants } from '@/lib/motion'
 import { cn } from '@/lib/utils'
-import { useSessionTimeout } from '@/hooks/useSessionTimeout'
-import { SessionTimeoutWarning } from '@/components/auth/SessionTimeoutWarning'
+
+import { PageTransition } from '@/components/layout/PageTransition'
 import { WizardTrigger } from '@/components/common/WizardTrigger'
 
 interface AppLayoutProps {
@@ -59,12 +59,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
   }
 
-  // Session timeout management (30 min inactivity, 5 min warning)
-  const { showWarning, remainingTimeFormatted, extendSession, logout } = useSessionTimeout({
-    timeoutMs: 30 * 60 * 1000,
-    warningMs: 5 * 60 * 1000,
-    enabled: true
-  })
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -160,16 +155,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         <main id="main-content" className="flex-1 bg-background/50 pb-20 lg:pb-0" role="main">
           <div className="container py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8">
             <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={pageVariants}
-                className="w-full"
-              >
+              <PageTransition className="w-full">
                 {children}
-              </motion.div>
+              </PageTransition>
             </AnimatePresence>
           </div>
         </main>
@@ -180,15 +168,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         onMenuClick={() => setSidebarOpen(true)}
       />
 
-      {/* Session Timeout Warning */}
-      <SessionTimeoutWarning
-        open={showWarning}
-        remainingTime={remainingTimeFormatted}
-        onExtend={extendSession}
-        onLogout={logout}
-      />
-
       {/* New User Onboarding Wizard Trigger */}
+
       <WizardTrigger />
 
     </div>

@@ -13,57 +13,76 @@ export function useDashboardStats() {
             const userId = profile?.id
             if (!userId) return null
 
-            // Get documents count
-            const { count: documentsCount } = await supabase
-                .from('documents')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'PUBLISHED')
+            const [
+                documentsResult,
+                trainingProgressResult,
+                announcementsResult,
+                readAnnouncementsResult,
+                pendingApprovalsResult,
+                unreadNotificationsResult
+            ] = await Promise.all([
+                // 1. Documents Count
+                supabase
+                    .from('documents')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'PUBLISHED'),
 
-            // Get training progress
-            const { data: trainingProgress } = await supabase
-                .from('training_progress')
-                .select('*')
-                .eq('user_id', userId)
+                // 2. Training Progress
+                supabase
+                    .from('training_progress')
+                    .select('status')
+                    .eq('user_id', userId),
 
-            const completedTraining = trainingProgress?.filter(t => t.status === 'completed').length || 0
-            const inProgressTraining = trainingProgress?.filter(t => t.status === 'in_progress').length || 0
+                // 3. Announcements (Recent 10)
+                supabase
+                    .from('announcements')
+                    .select('id, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(10),
 
-            // Get unread announcements
-            const { data: announcements } = await supabase
-                .from('announcements')
-                .select('id, created_at')
-                .order('created_at', { ascending: false })
-                .limit(10)
+                // 4. Read Announcements
+                supabase
+                    .from('announcement_reads')
+                    .select('announcement_id')
+                    .eq('user_id', userId),
 
-            const { data: readAnnouncements } = await supabase
-                .from('announcement_reads')
-                .select('announcement_id')
-                .eq('user_id', userId)
+                // 5. Pending Approvals
+                supabase
+                    .from('approval_requests')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('current_approver_id', userId)
+                    .eq('status', 'pending'),
 
-            const readIds = new Set(readAnnouncements?.map(r => r.announcement_id) || [])
-            const unreadAnnouncements = announcements?.filter(a => !readIds.has(a.id)).length || 0
+                // 6. Unread Notifications
+                supabase
+                    .from('notifications')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', userId)
+                    .is('read_at', null)
+            ])
 
-            // Get pending approvals
-            const { count: pendingApprovals } = await supabase
-                .from('approval_requests')
-                .select('*', { count: 'exact', head: true })
-                .eq('current_approver_id', userId)
-                .eq('status', 'pending')
+            // Process Results
+            const documentsCount = documentsResult.count || 0
 
-            // Get unread notifications
-            const { count: unreadNotifications } = await supabase
-                .from('notifications')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', userId)
-                .is('read_at', null)
+            const trainingProgress = trainingProgressResult.data || []
+            const completedTraining = trainingProgress.filter(t => t.status === 'completed').length
+            const inProgressTraining = trainingProgress.filter(t => t.status === 'in_progress').length
+
+            const announcements = announcementsResult.data || []
+            const readAnnouncements = readAnnouncementsResult.data || []
+            const readIds = new Set(readAnnouncements.map(r => r.announcement_id))
+            const unreadAnnouncements = announcements.filter(a => !readIds.has(a.id)).length
+
+            const pendingApprovals = pendingApprovalsResult.count || 0
+            const unreadNotifications = unreadNotificationsResult.count || 0
 
             return {
-                documentsCount: documentsCount || 0,
+                documentsCount,
                 completedTraining,
                 inProgressTraining,
                 unreadAnnouncements,
-                pendingApprovals: pendingApprovals || 0,
-                unreadNotifications: unreadNotifications || 0,
+                pendingApprovals,
+                unreadNotifications,
             }
         },
         enabled: !!profile?.id,
@@ -96,71 +115,88 @@ export function usePropertyManagerStats() {
                 trainingCompletion: 0
             }
 
-            // Get total staff
-            const { count: totalStaff } = await supabase
-                .from('user_properties')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', propertyId)
-
-            // Get pending tasks
-            const { count: pendingTasks } = await supabase
-                .from('tasks')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', propertyId)
-                .neq('status', 'completed')
-                .neq('status', 'cancelled')
-
-            // Get maintenance issues (Real maintenance tickets)
-            const { count: maintenanceIssues } = await supabase
-                .from('maintenance_tickets')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', propertyId)
-                .neq('status', 'completed')
-                .neq('status', 'closed')
-
-            // Get active departments (Departments linked to this property)
-            const { count: activeDepartments } = await supabase
-                .from('departments')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', propertyId)
-                .eq('is_active', true)
-
-            // Get training completion (Property specific)
+            // Fetch property users first for training stats
             const { data: propertyUsers } = await supabase
                 .from('user_properties')
                 .select('user_id')
                 .eq('property_id', propertyId)
-
             const userIds = propertyUsers?.map(u => u.user_id) || []
-            let completedTraining = 0
-            let totalAssignments = 0
 
-            if (userIds.length > 0) {
-                const { count: completed } = await supabase
-                    .from('training_progress')
+            const [
+                totalStaffResult,
+                pendingTasksResult,
+                maintenanceIssuesResult,
+                activeDepartmentsResult,
+                completedTrainingResult,
+                totalAssignmentsResult
+            ] = await Promise.all([
+                // 1. Total Staff
+                supabase
+                    .from('user_properties')
                     .select('*', { count: 'exact', head: true })
-                    .eq('status', 'completed')
-                    .in('user_id', userIds)
-                completedTraining = completed || 0
+                    .eq('property_id', propertyId),
 
-                const { count: total } = await supabase
-                    .from('learning_assignments')
+                // 2. Pending Tasks
+                supabase
+                    .from('tasks')
                     .select('*', { count: 'exact', head: true })
-                    .eq('target_type', 'user')
-                    .in('target_id', userIds)
-                totalAssignments = total || 0
-            }
+                    .eq('property_id', propertyId)
+                    .neq('status', 'completed')
+                    .neq('status', 'cancelled'),
+
+                // 3. Maintenance Issues
+                supabase
+                    .from('maintenance_tickets')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', propertyId)
+                    .neq('status', 'completed')
+                    .neq('status', 'closed'),
+
+                // 4. Active Departments
+                supabase
+                    .from('departments')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', propertyId)
+                    .eq('is_active', true),
+
+                // 5. Completed Training
+                (async () => {
+                    if (userIds.length === 0) return { count: 0 }
+                    return supabase
+                        .from('training_progress')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('status', 'completed')
+                        .in('user_id', userIds)
+                })(),
+
+                // 6. Total Assignments
+                (async () => {
+                    if (userIds.length === 0) return { count: 0 }
+                    return supabase
+                        .from('learning_assignments')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('target_type', 'user')
+                        .in('target_id', userIds)
+                })()
+            ])
+
+            const totalStaff = totalStaffResult.count || 0
+            const pendingTasks = pendingTasksResult.count || 0
+            const maintenanceIssues = maintenanceIssuesResult.count || 0
+            const activeDepartments = activeDepartmentsResult.count || 0
+            const completedTraining = completedTrainingResult.count || 0
+            const totalAssignments = totalAssignmentsResult.count || 0
 
             const trainingCompletion = totalAssignments && totalAssignments > 0
-                ? Math.round((completedTraining || 0) / totalAssignments * 100)
+                ? Math.round((completedTraining / totalAssignments) * 100)
                 : 0
 
             return {
-                totalStaff: totalStaff || 0,
-                pendingTasks: pendingTasks || 0,
-                activeDepartments: activeDepartments || 0,
+                totalStaff,
+                pendingTasks,
+                activeDepartments,
                 staffCompliance: Math.min(trainingCompletion, 100),
-                maintenanceIssues: maintenanceIssues || 0,
+                maintenanceIssues,
                 trainingCompletion: Math.min(trainingCompletion, 100)
             }
         },
@@ -187,107 +223,119 @@ export function useDepartmentHeadStats() {
         queryKey: ['department-head-stats', currentProperty?.id, profile?.id],
         queryFn: async (): Promise<DepartmentHeadStats> => {
             // Find user's department(s)
-            // Assuming the Dept Head manages departments they belong to
             const { data: myDepts } = await supabase
                 .from('user_departments')
                 .select('department_id')
                 .eq('user_id', profile?.id || '')
 
             const deptIds = myDepts?.map(d => d.department_id) || []
-
-            // Get total staff (users in my departments)
-            let totalStaff = 0
-            if (deptIds.length > 0) {
-                const { count } = await supabase
-                    .from('user_departments')
-                    .select('*', { count: 'exact', head: true })
-                    .in('department_id', deptIds)
-                totalStaff = count || 0
+            if (deptIds.length === 0) {
+                return {
+                    totalStaff: 0,
+                    presentToday: 0,
+                    trainingCompliance: 0,
+                    pendingApprovals: 0,
+                    performanceScore: 0,
+                    departmentIds: []
+                }
             }
 
-            // Get present today (shifts overlapping now, in my departments)
+            // Pre-fetch dept users
+            const { data: deptUsers } = await supabase
+                .from('user_departments')
+                .select('user_id')
+                .in('department_id', deptIds)
+            const deptUserIds = deptUsers?.map(u => u.user_id) || []
+
             const now = new Date().toISOString()
-            let presentToday = 0
-            if (deptIds.length > 0) {
-                const { count } = await supabase
+
+            const [
+                totalStaffResult,
+                presentTodayResult,
+                completedTrainingResult,
+                totalAssignmentsResult,
+                totalTasksResult,
+                completedTasksResult,
+                pendingApprovalsResult
+            ] = await Promise.all([
+                // 1. Total Staff
+                supabase
+                    .from('user_departments')
+                    .select('*', { count: 'exact', head: true })
+                    .in('department_id', deptIds),
+
+                // 2. Present Today
+                supabase
                     .from('shifts')
                     .select('*', { count: 'exact', head: true })
                     .in('department_id', deptIds)
                     .lte('start_time', now)
                     .gte('end_time', now)
                     .neq('status', 'cancelled')
-                    .neq('status', 'no_show')
-                presentToday = count || 0
-            }
+                    .neq('status', 'no_show'),
 
-            // Get training compliance (users in my depts)
-            // Simplify: approximate by assignment counts if strict user-filtering is heavy
-            // Ideally: fetch all users in dept, then check their training.
-            // For efficiency, we'll rely on training_assignments linked to departments if possible,
-            // or just use department users.
-
-            let completedTraining = 0
-            let totalAssignments = 0
-            let performanceScore = 0
-
-            if (deptIds.length > 0) {
-                // Get users in these depts
-                const { data: deptUsers } = await supabase
-                    .from('user_departments')
-                    .select('user_id')
-                    .in('department_id', deptIds)
-
-                const deptUserIds = deptUsers?.map(u => u.user_id) || []
-
-                if (deptUserIds.length > 0) {
-                    const { count: completed } = await supabase
+                // 3. Completed Training
+                (async () => {
+                    if (deptUserIds.length === 0) return { count: 0 }
+                    return supabase
                         .from('training_progress')
                         .select('*', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .in('user_id', deptUserIds)
-                    completedTraining = completed || 0
+                })(),
 
-                    const { count: total } = await supabase
+                // 4. Total Assignments
+                (async () => {
+                    return supabase
                         .from('learning_assignments')
-                        .select('id, status')
+                        .select('id, status', { count: 'exact', head: true })
                         .or(`target_id.in.(${deptIds.join(',')}),target_id.eq.${profile?.id}`)
-                        .eq('target_type', 'department') // Simplification: Dept aggregated stats
-                    // Note: For true aggregation we'd check target_type IN (user, dept) and match IDs
-                    // But for simplicity let's stick to simple counts if possible or just dept assignmentserIds)
-                    totalAssignments = total || 0
+                        .eq('target_type', 'department')
+                })(),
 
-                    // Performance Score: Task Completion Rate
-                    const { count: totalTasks } = await supabase
+                // 5. Total Tasks
+                (async () => {
+                    if (deptUserIds.length === 0) return { count: 0 }
+                    return supabase
                         .from('tasks')
                         .select('*', { count: 'exact', head: true })
                         .in('assigned_to_id', deptUserIds)
+                })(),
 
-                    const { count: completedTasks } = await supabase
+                // 6. Completed Tasks
+                (async () => {
+                    if (deptUserIds.length === 0) return { count: 0 }
+                    return supabase
                         .from('tasks')
                         .select('*', { count: 'exact', head: true })
                         .in('assigned_to_id', deptUserIds)
                         .eq('status', 'completed')
+                })(),
 
-                    performanceScore = totalTasks && totalTasks > 0
-                        ? Math.round((completedTasks || 0) / totalTasks * 100)
-                        : 0
-                }
-            }
-
-            const trainingCompliance = totalAssignments && totalAssignments > 0
-                ? Math.round((completedTraining || 0) / totalAssignments * 100)
-                : 0
-
-            // Get pending leave approvals (in my depts)
-            let pendingApprovals = 0
-            if (deptIds.length > 0) {
-                const { count } = await supabase
+                // 7. Pending Leave Approvals
+                supabase
                     .from('leave_requests')
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'pending')
                     .in('department_id', deptIds)
-                pendingApprovals = count || 0
-            }
+            ])
+
+            const totalStaff = totalStaffResult.count || 0
+            const presentToday = presentTodayResult.count || 0
+
+            const completedTraining = completedTrainingResult.count || 0
+            const totalAssignments = totalAssignmentsResult.count || 0
+            const trainingCompliance = totalAssignments && totalAssignments > 0
+                ? Math.round((completedTraining / totalAssignments) * 100)
+                : 0
+
+            const totalTasks = totalTasksResult.count || 0
+            const completedTasks = completedTasksResult.count || 0
+            const performanceScore = totalTasks && totalTasks > 0
+                ? Math.round((completedTasks / totalTasks) * 100)
+                : 0
+
+            const pendingApprovals = pendingApprovalsResult.count || 0
 
             return {
                 totalStaff,
@@ -329,90 +377,108 @@ export function useHRStats(propertyId?: string) {
                 openPositions: 0
             }
 
-            // Get total employees for this property
-            const { count: totalStaff } = await supabase
-                .from('user_properties')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', propId)
-
-            // Present Today (Active Shifts)
-            const now = new Date().toISOString()
-            const { count: presentToday } = await supabase
-                .from('shifts')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', propId)
-                .lte('start_time', now)
-                .gte('end_time', now)
-                .neq('status', 'cancelled')
-                .neq('status', 'no_show')
-
-            // Get active leave requests for this property
-            let leaveQuery = supabase
-                .from('leave_requests')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'pending')
-
-            if (propId !== 'all') {
-                leaveQuery = leaveQuery.eq('property_id', propId)
-            }
-            const { count: pendingLeaveRequests } = await leaveQuery
-
-            // Get training compliance
-            // Using property-based user filtering
+            // Pre-fetch property users for training
             const { data: propUsers } = await supabase
                 .from('user_properties')
                 .select('user_id')
                 .eq('property_id', propId)
-
             const propUserIds = propUsers?.map(u => u.user_id) || []
 
-            let completedTraining = 0
-            let totalAssignments = 0
-
-            if (propUserIds.length > 0) {
-                const { count: completed } = await supabase
-                    .from('training_progress')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'completed')
-                    .in('user_id', propUserIds)
-                completedTraining = completed || 0
-
-                const { count: total } = await supabase
-                    .from('learning_assignments')
-                    .select('*', { count: 'exact', head: true })
-                    .in('assigned_to_user_id', propUserIds)
-                totalAssignments = total || 0
-            }
-
-            const trainingCompliance = totalAssignments && totalAssignments > 0
-                ? Math.round((completedTraining || 0) / totalAssignments * 100)
-                : 0
-
-            // Get new hires this month
+            const now = new Date().toISOString()
             const startOfMonth = new Date()
             startOfMonth.setDate(1)
             startOfMonth.setHours(0, 0, 0, 0)
 
-            const { count: newHiresThisMonth } = await supabase
-                .from('user_properties')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', propId)
-                .gte('created_at', startOfMonth.toISOString())
+            const [
+                totalStaffResult,
+                presentTodayResult,
+                pendingLeaveResult,
+                newHiresResult,
+                openPositionsResult,
+                completedTrainingResult,
+                totalAssignmentsResult
+            ] = await Promise.all([
+                // 1. Total Staff
+                supabase
+                    .from('user_properties')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', propId),
 
-            // Get open positions
-            const { count: openPositions } = await supabase
-                .from('job_postings')
-                .select('*', { count: 'exact', head: true })
-                .eq('property_id', propId)
-                .eq('status', 'open')
+                // 2. Present Today
+                supabase
+                    .from('shifts')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', propId)
+                    .lte('start_time', now)
+                    .gte('end_time', now)
+                    .neq('status', 'cancelled')
+                    .neq('status', 'no_show'),
+
+                // 3. Pending Leave Requests
+                (async () => {
+                    let q = supabase
+                        .from('leave_requests')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('status', 'pending')
+                    if (propId !== 'all') {
+                        q = q.eq('property_id', propId)
+                    }
+                    return q
+                })(),
+
+                // 4. New Hires
+                supabase
+                    .from('user_properties')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', propId)
+                    .gte('created_at', startOfMonth.toISOString()),
+
+                // 5. Open Positions
+                supabase
+                    .from('job_postings')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', propId)
+                    .eq('status', 'open'),
+
+                // 6. Completed Training
+                (async () => {
+                    if (propUserIds.length === 0) return { count: 0 }
+                    return supabase
+                        .from('training_progress')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('status', 'completed')
+                        .in('user_id', propUserIds)
+                })(),
+
+                // 7. Total Assignments
+                (async () => {
+                    if (propUserIds.length === 0) return { count: 0 }
+                    return supabase
+                        .from('learning_assignments')
+                        .select('*', { count: 'exact', head: true })
+                        .in('assigned_to_user_id', propUserIds)
+                })()
+            ])
+
+            const totalStaff = totalStaffResult.count || 0
+            const presentToday = presentTodayResult.count || 0
+            const pendingLeaveRequests = pendingLeaveResult.count || 0
+            const newHiresThisMonth = newHiresResult.count || 0
+            const openPositions = openPositionsResult.count || 0
+
+            const completedTraining = completedTrainingResult.count || 0
+            const totalAssignments = totalAssignmentsResult.count || 0
+            const trainingCompliance = totalAssignments && totalAssignments > 0
+                ? Math.round((completedTraining / totalAssignments) * 100)
+                : 0
 
             return {
-                totalStaff: totalStaff || 0,
-                presentToday: presentToday || 0,
-                pendingLeaveRequests: pendingLeaveRequests || 0,
-                newHiresThisMonth: newHiresThisMonth || 0,
+                totalStaff,
+                presentToday,
+                pendingLeaveRequests,
+                newHiresThisMonth,
                 trainingCompliance: Math.min(trainingCompliance, 100),
-                openPositions: openPositions || 0
+                openPositions
             }
         },
         refetchInterval: 300000,
@@ -436,103 +502,109 @@ export function useAreaManagerStats(propertyId?: string) {
         queryFn: async (): Promise<AreaManagerStats> => {
             const isAll = !propertyId || propertyId === 'all'
 
-            // Get total active properties
-            const propCountQuery = supabase
-                .from('properties')
-                .select('*', { count: 'exact', head: true })
-                .eq('is_active', true)
-
+            // Pre-fetch users if we need to filter by property
+            let userIds: string[] = []
             if (!isAll) {
-                propCountQuery.eq('id', propertyId)
-            }
-            const { count: totalProperties } = await propCountQuery
+                const { data: users } = await supabase
+                    .from('user_properties')
+                    .select('user_id')
+                    .eq('property_id', propertyId)
+                userIds = users?.map(u => u.user_id) || []
 
-            // Get open issues/tasks
-            const tasksQuery = supabase
-                .from('tasks')
-                .select('*', { count: 'exact', head: true })
-                .neq('status', 'completed')
-                .neq('status', 'cancelled')
-
-            if (!isAll) {
-                tasksQuery.eq('property_id', propertyId)
-            }
-            const { count: openIssues } = await tasksQuery
-
-            // Get training compliance
-            const completedQuery = supabase
-                .from('training_progress')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'completed')
-
-            const totalQuery = supabase
-                .from('learning_assignments')
-                .select('*', { count: 'exact', head: true })
-
-            // Filter training by property users if not 'all'
-            if (!isAll) {
-                const { data: users } = await supabase.from('user_properties').select('user_id').eq('property_id', propertyId)
-                const userIds = users?.map(u => u.user_id) || []
-                if (userIds.length > 0) {
-                    completedQuery.in('user_id', userIds)
-                    totalQuery.in('assigned_to_user_id', userIds)
-                } else {
-                    // Force zero if no users
-                    return { totalProperties: totalProperties || 0, maintenanceEfficiency: 100, openVacancies: 0, staffCompliance: 0, openIssues: 0 }
+                // If filtering by property and no users found, short-circuit training stats
+                if (userIds.length === 0) {
+                    // We still need other stats like properties, tasks, vacancies even if no staff
                 }
             }
 
-            const { count: completedTraining } = await completedQuery
-            const { count: totalTraining } = await totalQuery
-
-            const staffCompliance = totalTraining && totalTraining > 0
-                ? Math.round((completedTraining || 0) / totalTraining * 100)
-                : 0
-
-            // Maintenance Efficiency (Last 30 Days)
+            // maintenance efficiency date range
             const thirtyDaysAgo = new Date()
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-            const compTicketsQuery = supabase
-                .from('maintenance_tickets')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'completed')
-                .gte('created_at', thirtyDaysAgo.toISOString())
+            const [
+                totalPropertiesResult,
+                openIssuesResult,
+                completedTrainingResult,
+                totalTrainingResult,
+                completedTicketsResult,
+                totalTicketsResult,
+                openVacanciesResult
+            ] = await Promise.all([
+                // 1. Total Properties
+                (async () => {
+                    const q = supabase.from('properties').select('*', { count: 'exact', head: true }).eq('is_active', true)
+                    if (!isAll) q.eq('id', propertyId)
+                    return q
+                })(),
 
-            const totalTicketsQuery = supabase
-                .from('maintenance_tickets')
-                .select('*', { count: 'exact', head: true })
-                .gte('created_at', thirtyDaysAgo.toISOString())
+                // 2. Open Issues (Tasks)
+                (async () => {
+                    const q = supabase.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'cancelled')
+                    if (!isAll) q.eq('property_id', propertyId)
+                    return q
+                })(),
 
-            if (!isAll) {
-                compTicketsQuery.eq('property_id', propertyId)
-                totalTicketsQuery.eq('property_id', propertyId)
-            }
+                // 3. Completed Training
+                (async () => {
+                    if (!isAll && userIds.length === 0) return { count: 0 }
+                    const q = supabase.from('training_progress').select('*', { count: 'exact', head: true }).eq('status', 'completed')
+                    if (!isAll && userIds.length > 0) q.in('user_id', userIds)
+                    return q
+                })(),
 
-            const { count: completedTickets } = await compTicketsQuery
-            const { count: totalTickets } = await totalTicketsQuery
+                // 4. Total Training Assignments
+                (async () => {
+                    if (!isAll && userIds.length === 0) return { count: 0 }
+                    const q = supabase.from('learning_assignments').select('*', { count: 'exact', head: true })
+                    if (!isAll && userIds.length > 0) q.in('assigned_to_user_id', userIds)
+                    return q
+                })(),
 
+                // 5. Completed Maintenance Tickets (Last 30 Days)
+                (async () => {
+                    const q = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true }).eq('status', 'completed').gte('created_at', thirtyDaysAgo.toISOString())
+                    if (!isAll) q.eq('property_id', propertyId)
+                    return q
+                })(),
+
+                // 6. Total Maintenance Tickets (Last 30 Days)
+                (async () => {
+                    const q = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo.toISOString())
+                    if (!isAll) q.eq('property_id', propertyId)
+                    return q
+                })(),
+
+                // 7. Open Vacancies
+                (async () => {
+                    const q = supabase.from('job_postings').select('*', { count: 'exact', head: true }).eq('status', 'open')
+                    if (!isAll) q.eq('property_id', propertyId)
+                    return q
+                })()
+            ])
+
+            const totalProperties = totalPropertiesResult.count || 0
+            const openIssues = openIssuesResult.count || 0
+
+            const completedTraining = completedTrainingResult.count || 0
+            const totalTraining = totalTrainingResult.count || 0
+            const staffCompliance = totalTraining && totalTraining > 0
+                ? Math.round((completedTraining / totalTraining) * 100)
+                : 0
+
+            const completedTickets = completedTicketsResult.count || 0
+            const totalTickets = totalTicketsResult.count || 0
             const maintenanceEfficiency = totalTickets && totalTickets > 0
-                ? Math.round((completedTickets || 0) / totalTickets * 100)
+                ? Math.round((completedTickets / totalTickets) * 100)
                 : 100
 
-            // Open Vacancies
-            const vacanciesQuery = supabase
-                .from('job_postings')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'open')
-
-            if (!isAll) {
-                vacanciesQuery.eq('property_id', propertyId)
-            }
-            const { count: openVacancies } = await vacanciesQuery
+            const openVacancies = openVacanciesResult.count || 0
 
             return {
-                totalProperties: totalProperties || 0,
+                totalProperties,
                 maintenanceEfficiency,
-                openVacancies: openVacancies || 0,
+                openVacancies,
                 staffCompliance: Math.min(staffCompliance, 100),
-                openIssues: openIssues || 0
+                openIssues
             }
         },
         refetchInterval: 300000,
@@ -546,6 +618,8 @@ export interface CorporateStats {
     maintenanceEfficiency: number
     openVacancies: number
     complianceRate: number
+    totalTraining: number
+    totalTickets: number
 }
 
 export function useCorporateStats(propertyId?: string) {
@@ -554,86 +628,103 @@ export function useCorporateStats(propertyId?: string) {
         queryFn: async (): Promise<CorporateStats> => {
             const isAll = !propertyId || propertyId === 'all'
 
-            // Get total properties
-            const propQuery = supabase
-                .from('properties')
-                .select('*', { count: 'exact', head: true })
-                .eq('is_active', true)
-
-            if (!isAll) propQuery.eq('id', propertyId)
-            const { count: totalProperties } = await propQuery
-
-            // Get total staff
-            const staffQuery = supabase
-                .from('user_properties')
-                .select('user_id', { count: 'exact', head: true })
-
-            if (!isAll) staffQuery.eq('property_id', propertyId)
-            const { count: totalStaff } = await staffQuery
-
-            // Compliance Logic
-            const completedQuery = supabase
-                .from('training_progress')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'completed')
-
-            const totalTrainQuery = supabase
-                .from('learning_assignments')
-                .select('*', { count: 'exact', head: true })
-
+            // Pre-fetch users if we need to filter by property
+            let userIds: string[] = []
             if (!isAll) {
-                const { data: users } = await supabase.from('user_properties').select('user_id').eq('property_id', propertyId)
-                const userIds = users?.map(u => u.user_id) || []
-                if (userIds.length > 0) {
-                    completedQuery.in('user_id', userIds)
-                    totalTrainQuery.in('assigned_to_user_id', userIds)
-                }
+                const { data: users } = await supabase
+                    .from('user_properties')
+                    .select('user_id')
+                    .eq('property_id', propertyId)
+                userIds = users?.map(u => u.user_id) || []
             }
 
-            const { count: completedTraining } = await completedQuery
-            const { count: totalTraining } = await totalTrainQuery
+            const [
+                propResult,
+                staffResult,
+                completedTrainingResult,
+                totalTrainResult,
+                completedTicketsResult,
+                totalTicketsResult,
+                vacancyResult
+            ] = await Promise.all([
+                // 1. Total Properties
+                (async () => {
+                    const q = supabase.from('properties').select('*', { count: 'exact', head: true }).eq('is_active', true)
+                    if (!isAll) q.eq('id', propertyId)
+                    return q
+                })(),
 
+                // 2. Total Staff
+                (async () => {
+                    const q = supabase.from('user_properties').select('user_id', { count: 'exact', head: true })
+                    if (!isAll) q.eq('property_id', propertyId)
+                    return q
+                })(),
+
+                // 3. Completed Training
+                (async () => {
+                    if (!isAll && userIds.length === 0) return { count: 0 }
+                    const q = supabase.from('training_progress').select('*', { count: 'exact', head: true }).eq('status', 'completed')
+                    if (!isAll && userIds.length > 0) q.in('user_id', userIds)
+                    return q
+                })(),
+
+                // 4. Total Training Assignments
+                (async () => {
+                    if (!isAll && userIds.length === 0) return { count: 0 }
+                    const q = supabase.from('learning_assignments').select('*', { count: 'exact', head: true })
+                    // Logic check: if filtering by property, we filter assignments by property users
+                    if (!isAll && userIds.length > 0) q.in('assigned_to_user_id', userIds)
+                    return q
+                })(),
+
+                // 5. Completed Maintenance
+                (async () => {
+                    const q = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true }).eq('status', 'completed')
+                    if (!isAll) q.eq('property_id', propertyId)
+                    return q
+                })(),
+
+                // 6. Total Maintenance
+                (async () => {
+                    const q = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true })
+                    if (!isAll) q.eq('property_id', propertyId)
+                    return q
+                })(),
+
+                // 7. Vacancies
+                (async () => {
+                    const q = supabase.from('job_postings').select('*', { count: 'exact', head: true }).eq('status', 'open')
+                    if (!isAll) q.eq('property_id', propertyId)
+                    return q
+                })()
+            ])
+
+            const totalProperties = propResult.count || 0
+            const totalStaff = staffResult.count || 0
+
+            const completedTraining = completedTrainingResult.count || 0
+            const totalTraining = totalTrainResult.count || 0
             const complianceRate = totalTraining && totalTraining > 0
-                ? Math.round((completedTraining || 0) / totalTraining * 100)
+                ? Math.round((completedTraining / totalTraining) * 100)
                 : 0
 
-            // Maintenance
-            const compTicketsQuery = supabase
-                .from('maintenance_tickets')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'completed')
-
-            const totalTicketsQuery = supabase
-                .from('maintenance_tickets')
-                .select('*', { count: 'exact', head: true })
-
-            if (!isAll) {
-                compTicketsQuery.eq('property_id', propertyId)
-                totalTicketsQuery.eq('property_id', propertyId)
-            }
-
-            const { count: completedTickets } = await compTicketsQuery
-            const { count: totalTickets } = await totalTicketsQuery
-
+            const completedTickets = completedTicketsResult.count || 0
+            const totalTickets = totalTicketsResult.count || 0
             const maintenanceEfficiency = totalTickets && totalTickets > 0
-                ? Math.round((completedTickets || 0) / totalTickets * 100)
+                ? Math.round((completedTickets / totalTickets) * 100)
                 : 100
 
-            // Vacancies
-            const vacancyQuery = supabase
-                .from('job_postings')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'open')
-
-            if (!isAll) vacancyQuery.eq('property_id', propertyId)
-            const { count: openVacancies } = await vacancyQuery
+            const openVacancies = vacancyResult.count || 0
 
             return {
-                totalProperties: totalProperties || 0,
-                totalStaff: totalStaff || 0,
+                totalProperties,
+                totalStaff,
                 maintenanceEfficiency,
-                openVacancies: openVacancies || 0,
-                complianceRate: Math.min(complianceRate, 100)
+                openVacancies,
+                complianceRate: Math.min(complianceRate, 100),
+                totalTraining: totalTraining || 0,
+                totalTickets: totalTickets || 0
             }
         },
         refetchInterval: 300000,

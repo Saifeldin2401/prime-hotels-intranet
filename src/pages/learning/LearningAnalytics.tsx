@@ -25,7 +25,7 @@ import {
     BookOpen,
     ClipboardCheck
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -83,6 +83,24 @@ interface AnalyticsData {
         status: string
         score: number | null
         date: string
+    }[]
+    moduleInsights: {
+        module_id: string
+        title: string
+        active_learners: number
+        completion_rate: number
+        avg_progress: number
+        avg_time_minutes: number
+        total_blocks: number
+    }[]
+    blockInsights: {
+        module_id: string
+        module_title: string
+        block_id: string
+        block_type: string
+        block_order: number
+        avg_time_seconds: number
+        completion_count: number
     }[]
 }
 
@@ -231,6 +249,107 @@ export default function LearningAnalytics() {
                 date: item.completed_at || item.started_at
             })) || []
 
+            // Module insights
+            const { data: modules } = await supabase
+                .from('training_modules')
+                .select('id, title, estimated_duration_minutes')
+                .eq('is_active', true)
+                .order('updated_at', { ascending: false })
+                .limit(20)
+
+            const { data: moduleBlocks } = await supabase
+                .from('training_content_blocks')
+                .select('id, training_module_id, type, "order"')
+
+            const { data: moduleProgress } = await supabase
+                .from('learning_progress')
+                .select('training_module_id, content_id, status, progress_percentage, time_spent_seconds')
+                .eq('content_type', 'module')
+                .gte('last_activity_at', dateFilter)
+
+            const { data: blockProgress } = await supabase
+                .from('training_block_progress')
+                .select('training_module_id, block_id, completed_at, time_spent_seconds, last_viewed_at')
+                .gte('last_viewed_at', dateFilter)
+
+            const blockCountMap = new Map<string, number>()
+            moduleBlocks?.forEach(b => {
+                blockCountMap.set(b.training_module_id, (blockCountMap.get(b.training_module_id) || 0) + 1)
+            })
+
+            const moduleProgressMap = new Map<string, {
+                total: number
+                completed: number
+                progressSum: number
+                timeSum: number
+            }>()
+
+            moduleProgress?.forEach(p => {
+                const moduleId = p.training_module_id || p.content_id
+                if (!moduleId) return
+                const current = moduleProgressMap.get(moduleId) || { total: 0, completed: 0, progressSum: 0, timeSum: 0 }
+                current.total += 1
+                if (p.status === 'completed') current.completed += 1
+                current.progressSum += p.progress_percentage || 0
+                current.timeSum += p.time_spent_seconds || 0
+                moduleProgressMap.set(moduleId, current)
+            })
+
+            const moduleInsights = (modules || []).map(m => {
+                const stats = moduleProgressMap.get(m.id) || { total: 0, completed: 0, progressSum: 0, timeSum: 0 }
+                const totalBlocks = blockCountMap.get(m.id) || 0
+                const avgProgress = stats.total > 0 ? Math.round(stats.progressSum / stats.total) : 0
+                const avgTimeMinutes = stats.total > 0 ? Math.round((stats.timeSum / stats.total) / 60) : 0
+                const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
+                return {
+                    module_id: m.id,
+                    title: m.title,
+                    active_learners: stats.total,
+                    completion_rate: completionRate,
+                    avg_progress: avgProgress,
+                    avg_time_minutes: avgTimeMinutes,
+                    total_blocks: totalBlocks
+                }
+            })
+
+            const blockMetaMap = new Map<string, { moduleId: string; moduleTitle: string; type: string; order: number }>()
+            moduleBlocks?.forEach(b => {
+                const moduleTitle = modules?.find(m => m.id === b.training_module_id)?.title || 'Unknown Module'
+                blockMetaMap.set(b.id, {
+                    moduleId: b.training_module_id,
+                    moduleTitle,
+                    type: b.type,
+                    order: b.order
+                })
+            })
+
+            const blockStatsMap = new Map<string, { timeSum: number; count: number; completionCount: number }>()
+            blockProgress?.forEach(bp => {
+                const meta = blockMetaMap.get(bp.block_id)
+                if (!meta) return
+                const current = blockStatsMap.get(bp.block_id) || { timeSum: 0, count: 0, completionCount: 0 }
+                current.count += 1
+                current.timeSum += bp.time_spent_seconds || 0
+                if (bp.completed_at) current.completionCount += 1
+                blockStatsMap.set(bp.block_id, current)
+            })
+
+            const blockInsights = Array.from(blockStatsMap.entries())
+                .map(([blockId, stats]) => {
+                    const meta = blockMetaMap.get(blockId)
+                    return {
+                        module_id: meta?.moduleId || '',
+                        module_title: meta?.moduleTitle || 'Unknown Module',
+                        block_id: blockId,
+                        block_type: meta?.type || 'text',
+                        block_order: meta?.order || 0,
+                        avg_time_seconds: stats.count > 0 ? Math.round(stats.timeSum / stats.count) : 0,
+                        completion_count: stats.completionCount
+                    }
+                })
+                .sort((a, b) => b.avg_time_seconds - a.avg_time_seconds)
+                .slice(0, 12)
+
             return {
                 overview: {
                     totalQuizzes: totalQuizzes || 0,
@@ -243,7 +362,9 @@ export default function LearningAnalytics() {
                 departmentProgress,
                 recentActivity,
                 topPerformers,
-                teamProgress
+                teamProgress,
+                moduleInsights,
+                blockInsights
             }
         }
     })
@@ -308,6 +429,7 @@ export default function LearningAnalytics() {
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="modules">Module Insights</TabsTrigger>
                     <TabsTrigger value="team">Team Progress</TabsTrigger>
                 </TabsList>
 
@@ -557,6 +679,103 @@ export default function LearningAnalytics() {
                                             <tr>
                                                 <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                                                     No training progress data found
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="modules" className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {analytics?.moduleInsights.map(module => (
+                            <Card key={module.module_id} className="border border-slate-200">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center justify-between">
+                                        <span className="truncate">{module.title}</span>
+                                        <Badge variant="secondary">{module.total_blocks} blocks</Badge>
+                                    </CardTitle>
+                                    <p className="text-xs text-slate-500">
+                                        Active learners: {module.active_learners}
+                                    </p>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between text-xs text-slate-500">
+                                            <span>Completion rate</span>
+                                            <span className="font-semibold text-slate-700">{module.completion_rate}%</span>
+                                        </div>
+                                        <Progress value={module.completion_rate} className="h-2" />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
+                                            <p className="text-xs text-slate-400 uppercase tracking-widest">Avg progress</p>
+                                            <p className="text-lg font-semibold text-hotel-navy">{module.avg_progress}%</p>
+                                        </div>
+                                        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
+                                            <p className="text-xs text-slate-400 uppercase tracking-widest">Avg time</p>
+                                            <p className="text-lg font-semibold text-hotel-navy">{module.avg_time_minutes}m</p>
+                                        </div>
+                                        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
+                                            <p className="text-xs text-slate-400 uppercase tracking-widest">Learners</p>
+                                            <p className="text-lg font-semibold text-hotel-navy">{module.active_learners}</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                        {(!analytics?.moduleInsights.length) && (
+                            <Card>
+                                <CardContent className="py-8 text-center text-slate-500">
+                                    No module analytics data available
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <BookOpen className="h-5 w-5 text-hotel-gold" />
+                                Most Engaging Blocks
+                            </CardTitle>
+                            <p className="text-sm text-slate-500">Blocks with the highest average time spent</p>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="rounded-md border">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-gray-50 border-b">
+                                        <tr>
+                                            <th className="px-4 py-3 font-medium text-gray-500">Module</th>
+                                            <th className="px-4 py-3 font-medium text-gray-500">Block</th>
+                                            <th className="px-4 py-3 font-medium text-gray-500">Type</th>
+                                            <th className="px-4 py-3 font-medium text-gray-500">Avg Time</th>
+                                            <th className="px-4 py-3 font-medium text-gray-500">Completions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {analytics?.blockInsights.map(block => (
+                                            <tr key={block.block_id} className="hover:bg-gray-50/50">
+                                                <td className="px-4 py-3 font-medium">{block.module_title}</td>
+                                                <td className="px-4 py-3 text-gray-600">Block {block.block_order + 1}</td>
+                                                <td className="px-4 py-3">
+                                                    <Badge variant="secondary" className="capitalize">
+                                                        {block.block_type.replace('_', ' ')}
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {Math.round(block.avg_time_seconds / 60)}m
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">{block.completion_count}</td>
+                                            </tr>
+                                        ))}
+                                        {(!analytics?.blockInsights.length) && (
+                                            <tr>
+                                                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                                                    No block engagement data found
                                                 </td>
                                             </tr>
                                         )}

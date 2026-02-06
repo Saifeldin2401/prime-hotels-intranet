@@ -103,6 +103,7 @@ export interface LearningProgress {
 
     content_type: LearningContentType
     content_id: string
+    training_module_id?: string
 
     status: LearningAssignmentStatus
     progress_percentage: number
@@ -112,6 +113,10 @@ export interface LearningProgress {
     completed_at?: string
     last_accessed_at: string
     last_session_id?: string
+    last_block_index?: number | null
+    last_block_id?: string | null
+    time_spent_seconds?: number | null
+    last_activity_at?: string | null
     metadata?: Record<string, unknown> // flexible for now to store answers/attempt details
 
     created_at: string

@@ -155,6 +155,7 @@ export interface Message {
   parent_message_id: string | null // for replies
   property_id: string | null
   department_id: string | null
+  conversation_id?: string | null
   created_at: string
   updated_at: string
 
@@ -221,7 +222,7 @@ export interface Conversation {
 export interface Notification {
   id: string
   user_id: string
-  type: 'approval_required' | 'request_approved' | 'request_rejected' | 'request_submitted' | 'comment_added' | 'request_returned' | 'request_closed' | 'training_assigned' | 'training_deadline' | 'document_published' | 'document_acknowledgment_required' | 'announcement_new' | 'escalation_alert' | 'referral_status_update' | 'maintenance_assigned' | 'maintenance_resolved' | 'message' | 'mention' | 'task_assigned' | 'system'
+  type: 'approval_required' | 'request_approved' | 'request_rejected' | 'request_submitted' | 'comment_added' | 'request_returned' | 'request_closed' | 'training_assigned' | 'training_deadline' | 'document_published' | 'document_acknowledgment_required' | 'announcement_new' | 'escalation_alert' | 'referral_status_update' | 'maintenance_assigned' | 'maintenance_resolved' | 'message_received' | 'mention' | 'task_assigned' | 'system'
   title: string
   message: string
   entity_type: string | null
@@ -358,7 +359,7 @@ export interface TrainingModule {
 export interface TrainingContentBlock {
   id: string
   training_module_id: string
-  type: 'text' | 'image' | 'video' | 'document_link' | 'quiz' | 'sop_reference'
+  type: 'text' | 'image' | 'video' | 'audio' | 'interactive' | 'document_link' | 'quiz' | 'sop_reference' | 'inline_quiz' | 'ai_generated'
   title: string | null
   content: string
   content_url: string | null

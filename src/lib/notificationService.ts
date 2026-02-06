@@ -52,16 +52,11 @@ export type NotificationType =
   | 'sop_assigned'
   | 'sop_quiz_required'
   | 'sop_quiz_passed'
-  | 'sop_quiz_passed'
   | 'sop_quiz_failed'
   // System
   | 'system'
   // Triggers
   | 'trigger_notification'
-  // Documents
-  | 'document_review_pending'
-  // Approvals (Dynamic types)
-  | string & {}
   // Documents
   | 'document_review_pending'
   // Approvals (Dynamic types)

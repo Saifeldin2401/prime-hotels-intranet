@@ -54,12 +54,18 @@ export function useDepartmentStaff(departmentId: string | undefined, propertyId:
 
                 // 2. "Smart" Feature: Check active shifts for these users
                 if (staffMembers.length > 0) {
-                    const today = new Date().toISOString().split('T')[0]
+                    const startOfDay = new Date()
+                    startOfDay.setHours(0, 0, 0, 0)
+                    const endOfDay = new Date(startOfDay)
+                    endOfDay.setDate(endOfDay.getDate() + 1)
+
                     const { data: shifts } = await supabase
                         .from('shifts')
                         .select('*')
                         .in('user_id', staffMembers.map(s => s.id))
-                        .eq('date', today)
+                        .gte('start_time', startOfDay.toISOString())
+                        .lt('start_time', endOfDay.toISOString())
+                        .neq('status', 'cancelled')
 
                     if (shifts) {
                         staffMembers.forEach(member => {
