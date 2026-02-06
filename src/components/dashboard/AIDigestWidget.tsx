@@ -204,11 +204,12 @@ Generate the summary now:`
                 description: 'Your weekly insights have been updated.',
             })
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Digest generation error:', err)
+            const errorMessage = err instanceof Error ? err.message : 'Could not generate digest'
             toast({
                 title: 'Generation Failed',
-                description: err.message || 'Could not generate digest',
+                description: errorMessage,
                 variant: 'destructive'
             })
         } finally {

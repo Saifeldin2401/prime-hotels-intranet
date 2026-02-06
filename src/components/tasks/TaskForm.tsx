@@ -5,7 +5,7 @@ import * as z from 'zod'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useCreateTask, useUpdateTask } from '@/hooks/useTasks'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import type { Task } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -200,9 +200,10 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                 toast.success(t('messages.task_created', 'Task created successfully'))
             }
             onSuccess?.()
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : t('messages.save_failed', 'Failed to save task')
             console.error('Error saving task:', error)
-            toast.error(error.message || t('messages.save_failed', 'Failed to save task'))
+            toast.error(errorMessage)
         }
     }
 

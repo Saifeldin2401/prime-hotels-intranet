@@ -162,7 +162,6 @@
     "numeric": "يجب أن يكون رقماً"
   },
   "roles": {
-    "super_admin": "مشرف عام",
     "corporate_admin": "مسؤول الشركة",
     "regional_admin": "مسؤول إقليمي",
     "property_manager": "مدير المنشأة",

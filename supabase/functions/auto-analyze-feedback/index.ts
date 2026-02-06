@@ -2,18 +2,53 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
 Deno.serve(async (req) => {
+    // Handle CORS preflight
+    if (req.method === "OPTIONS") {
+        return new Response(null, { headers: corsHeaders });
+    }
+
     try {
+        // ===================================
+        // SECURITY: JWT Authentication Required
+        // ===================================
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+            return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
+                status: 401,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // Verify the JWT token
+        const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+            global: { headers: { Authorization: authHeader } }
+        });
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+
+        if (authError || !user) {
+            return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+                status: 401,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
         const { feedback_id } = await req.json();
 
         if (!feedback_id) {
             return new Response(JSON.stringify({ error: "No feedback_id provided" }), {
                 status: 400,
-                headers: { "Content-Type": "application/json" },
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
@@ -36,14 +71,14 @@ Deno.serve(async (req) => {
             console.error("Error fetching feedback:", fetchError);
             return new Response(JSON.stringify({ error: "Feedback not found" }), {
                 status: 404,
-                headers: { "Content-Type": "application/json" },
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
         // Skip if already analyzed or no text
         if (feedback.ai_analysis_status === "completed" || !feedback.comment) {
             return new Response(JSON.stringify({ success: true, message: "Skipped" }), {
-                headers: { "Content-Type": "application/json" },
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
@@ -102,14 +137,14 @@ Deno.serve(async (req) => {
         }
 
         return new Response(JSON.stringify({ success: true, analysis }), {
-            headers: { "Content-Type": "application/json" },
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
     } catch (err) {
         console.error("Critical error in auto-analyze-feedback:", err.message);
         return new Response(JSON.stringify({ error: err.message }), {
             status: 500,
-            headers: { "Content-Type": "application/json" },
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     }
 });

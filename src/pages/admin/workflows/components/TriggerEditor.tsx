@@ -55,10 +55,11 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
                 description: 'Trigger rule saved successfully',
             })
             onClose()
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to save trigger'
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to save trigger',
+                description: errorMessage,
                 variant: 'destructive'
             })
         }

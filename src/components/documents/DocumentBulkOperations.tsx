@@ -1,27 +1,27 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { 
-  Download, 
-  Trash2, 
-  Share2, 
-  Move, 
-  Copy, 
-  Archive, 
-  Tag, 
+import {
+  Download,
+  Trash2,
+  Share2,
+  Move,
+  Copy,
+  Archive,
+  Tag,
   Eye,
   FileText,
   FolderOpen,
   MoreHorizontal,
   CheckCircle
 } from 'lucide-react'
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -50,11 +50,11 @@ interface DocumentBulkOperationsProps {
   className?: string
 }
 
-export function DocumentBulkOperations({ 
-  documents, 
-  selectedDocuments, 
-  setSelectedDocuments, 
-  className 
+export function DocumentBulkOperations({
+  documents,
+  selectedDocuments,
+  setSelectedDocuments,
+  className
 }: DocumentBulkOperationsProps) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -80,11 +80,11 @@ export function DocumentBulkOperations({
 
   const handleBulkDownload = async () => {
     if (selectedDocuments.size === 0) return
-    
+
     setIsProcessing(true)
     try {
       const documentsToDownload = documents.filter(doc => selectedDocuments.has(doc.id))
-      
+
       for (const document of documentsToDownload) {
         if (document.file_url) {
           // Create download link
@@ -97,7 +97,7 @@ export function DocumentBulkOperations({
           document.body.removeChild(link)
         }
       }
-      
+
       toast.success(`Downloaded ${selectedDocuments.size} documents`)
     } catch (error) {
       toast.error('Failed to download documents')
@@ -108,11 +108,11 @@ export function DocumentBulkOperations({
 
   const handleBulkDelete = async () => {
     if (selectedDocuments.size === 0) return
-    
+
     if (!confirm(`Are you sure you want to delete ${selectedDocuments.size} documents?`)) {
       return
     }
-    
+
     setIsProcessing(true)
     try {
       const { error } = await supabase
@@ -122,7 +122,7 @@ export function DocumentBulkOperations({
         .eq('created_by', user?.id)
 
       if (error) throw error
-      
+
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       setSelectedDocuments(new Set())
       toast.success(`Deleted ${selectedDocuments.size} documents`)
@@ -135,7 +135,7 @@ export function DocumentBulkOperations({
 
   const handleBulkArchive = async () => {
     if (selectedDocuments.size === 0) return
-    
+
     setIsProcessing(true)
     try {
       const { error } = await supabase
@@ -145,7 +145,7 @@ export function DocumentBulkOperations({
         .eq('created_by', user?.id)
 
       if (error) throw error
-      
+
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       setSelectedDocuments(new Set())
       toast.success(`Archived ${selectedDocuments.size} documents`)
@@ -158,14 +158,14 @@ export function DocumentBulkOperations({
 
   const handleBulkShare = async () => {
     if (selectedDocuments.size === 0) return
-    
+
     // This would open a share dialog
     toast.info('Share dialog would open here')
   }
 
   const handleBulkMove = async (folderId: string) => {
     if (selectedDocuments.size === 0) return
-    
+
     setIsProcessing(true)
     try {
       const { error } = await supabase
@@ -175,7 +175,7 @@ export function DocumentBulkOperations({
         .eq('created_by', user?.id)
 
       if (error) throw error
-      
+
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       setSelectedDocuments(new Set())
       toast.success(`Moved ${selectedDocuments.size} documents`)
@@ -188,7 +188,7 @@ export function DocumentBulkOperations({
 
   const handleBulkTag = async (tags: string[]) => {
     if (selectedDocuments.size === 0) return
-    
+
     setIsProcessing(true)
     try {
       const { error } = await supabase
@@ -198,7 +198,7 @@ export function DocumentBulkOperations({
         .eq('created_by', user?.id)
 
       if (error) throw error
-      
+
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       toast.success(`Updated tags for ${selectedDocuments.size} documents`)
     } catch (error) {
@@ -238,7 +238,7 @@ export function DocumentBulkOperations({
                   Clear selection
                 </Button>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -249,7 +249,7 @@ export function DocumentBulkOperations({
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" disabled={isProcessing}>
@@ -275,7 +275,7 @@ export function DocumentBulkOperations({
                       <Archive className="h-4 w-4 mr-2" />
                       Archive
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={handleBulkDelete}
                       className="text-red-600"
                     >
@@ -320,7 +320,7 @@ export function DocumentBulkOperations({
                 checked={selectedDocuments.has(document.id)}
                 onCheckedChange={(checked) => handleSelectDocument(document.id, checked as boolean)}
               />
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium truncate">{document.title}</h4>
@@ -345,7 +345,7 @@ export function DocumentBulkOperations({
                   )}
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-1">
                 {document.file_url && (
                   <Button
@@ -359,7 +359,7 @@ export function DocumentBulkOperations({
               </div>
             </div>
           ))}
-          
+
           {documents.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />

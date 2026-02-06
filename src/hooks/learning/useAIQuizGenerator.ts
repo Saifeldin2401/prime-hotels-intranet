@@ -91,11 +91,12 @@ export const useAIQuizGenerator = () => {
             // 6. Navigate to Editor
             navigate(`/learning/quizzes/${newQuiz.id}`)
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'
             console.error('Quiz Generation Error:', error)
             toast({
                 title: 'Generation Failed',
-                description: error.message || 'An unexpected error occurred',
+                description: errorMessage,
                 variant: 'destructive'
             })
         } finally {

@@ -19,7 +19,7 @@ interface AuthContextType {
   refreshSession: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -348,15 +348,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const primaryRole = roles.length > 0
     ? [...roles].sort((a, b) => {
       const order: Record<AppRole, number> = {
-        super_admin: 1,
-        corporate_admin: 2,
-        regional_admin: 3,
-        regional_hr: 4,
-        property_manager: 5,
-        property_hr: 6,
-        department_head: 7,
-        manager: 8,
-        staff: 9,
+        corporate_admin: 1,
+        regional_admin: 2,
+        regional_hr: 3,
+        property_manager: 4,
+        property_hr: 5,
+        department_head: 6,
+        manager: 7,
+        staff: 8,
       }
       return order[a.role] - order[b.role]
     })[0]?.role || null
@@ -383,10 +382,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+// useAuth hook moved to @/hooks/useAuth to resolve circular dependencies

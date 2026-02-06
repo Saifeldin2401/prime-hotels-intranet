@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { ROLES } from '@/lib/constants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -126,7 +126,6 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log('Creating announcement with data:', { ...data, created_by: user?.id })
       const { data: result, error } = await supabase
         .from('announcements')
         .insert({
@@ -205,13 +204,11 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
       // Remove duplicates and exclude the creator
       const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user?.id)
-      console.log(`Sending notifications to ${uniqueUserIds.length} users`)
 
       // Create notifications for target users
       if (uniqueUserIds.length > 0) {
         if (uniqueUserIds.length > 10) {
           // Use bulk notification system for > 10 users
-          console.log('Using bulk notification system for large audience')
           try {
             const { data: session } = await supabase.auth.getSession()
             const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`
@@ -249,8 +246,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
               }))
               await supabase.from('notifications').insert(notifications)
             } else {
-              const batchResult = await response.json()
-              console.log('Bulk notification batch created:', batchResult)
+              await response.json()
             }
           } catch (bulkError) {
             console.error('Bulk notification error:', bulkError)
@@ -352,15 +348,10 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
   const handleSubmit = () => {
     try {
-      console.log('handleSubmit called', formData)
-
       if (!formData.title.trim() || !formData.content.trim()) {
-        console.log('Validation failed: Title or content missing')
         toast.error('Title and content are required')
         return
       }
-
-      console.log('Validation passed')
 
       const { is_pinned, is_scheduled, ...restFormData } = formData
 
@@ -372,8 +363,6 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         scheduled_at: is_scheduled && formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : null,
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null
       }
-
-      console.log('Submitting data:', announcementData)
 
       if (initialData?.id) {
         updateAnnouncementMutation.mutate(announcementData)

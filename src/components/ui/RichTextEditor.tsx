@@ -134,7 +134,7 @@ const setupSmartFormatting = (editor: any) => {
             });
         });
 
-        console.log('Smart Formatting & Autoformat Plugin Loaded');
+        // Smart Formatting & Autoformat Plugin Loaded
     } catch (err) {
         console.error('Smart formatting setup failed:', err);
     }

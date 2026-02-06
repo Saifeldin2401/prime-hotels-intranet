@@ -114,8 +114,7 @@ export function Sidebar() {
     { name: 'pii_access_logs', href: '/admin/pii-audit', icon: ShieldAlert, roles: ['regional_admin', 'regional_hr'] },
   ]
 
-  console.log('Current User Roles:', primaryRole)
-  console.log('Admin Menu Items:', adminMenu)
+  // Primary role is the first/highest role
 
   const filteredNavigation = navigation.filter((item) => {
     // Exclude items that are now in the admin menu or handled separately

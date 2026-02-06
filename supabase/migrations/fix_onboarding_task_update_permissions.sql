@@ -2,6 +2,7 @@
 -- Allows: assigned user, process owner (hiree), and management roles
 
 drop policy if exists "Users can update their own tasks" on public.onboarding_tasks;
+drop policy if exists "Users can update relevant onboarding tasks" on public.onboarding_tasks;
 
 create policy "Users can update relevant onboarding tasks"
   on public.onboarding_tasks for update
@@ -9,7 +10,7 @@ create policy "Users can update relevant onboarding tasks"
     assigned_to_id = auth.uid() OR
     exists (
         select 1 from public.onboarding_process p
-        where p.id = process_id and (p.user_id = auth.uid() OR p.mentor_id = auth.uid())
+        where p.id = process_id and p.user_id = auth.uid()
     ) OR
     exists (
       select 1 from public.user_roles r

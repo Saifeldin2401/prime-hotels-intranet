@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,7 +66,6 @@ export default function ChangePassword() {
 
         // Capture this BEFORE any async operations that might change it
         const wasUsingTempPassword = isTempPassword
-        console.log('Password change started. Is temp password?', wasUsingTempPassword)
 
         try {
             if (!passwordsMatch) throw new Error('Passwords do not match')
@@ -115,7 +114,6 @@ export default function ChangePassword() {
             // Trigger onboarding wizard for first-time users BEFORE refreshSession
             // Use the captured value, not the current state
             if (wasUsingTempPassword) {
-                console.log('Marking wizard as pending for new user...')
                 markWizardPending()
             }
 
@@ -132,12 +130,12 @@ export default function ChangePassword() {
             })
 
             // Redirect to home
-            console.log('Redirecting to /home...')
             navigate('/home', { replace: true })
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Password change error:', err)
-            setError(err.message || 'An error occurred while changing your password.')
+            const errorMessage = err instanceof Error ? err.message : 'An error occurred while changing your password.'
+            setError(errorMessage)
         } finally {
             setIsLoading(false)
         }

@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import type { AppRole } from '@/lib/constants'
 import { useState, useEffect } from 'react'
 
@@ -18,7 +18,6 @@ import { useState, useEffect } from 'react'
  */
 
 const roleToDashboardPath: Record<AppRole, string> = {
-    super_admin: '/dashboard/corporate-admin',
     corporate_admin: '/dashboard/corporate-admin',
     staff: '/staff-dashboard',
     department_head: '/dashboard/department-head',
@@ -68,7 +67,7 @@ export function RoleBasedRedirect() {
         ? (roleToDashboardPath[primaryRole as AppRole] || '/staff-dashboard')
         : '/staff-dashboard'
 
-    console.log('RoleBasedRedirect: primaryRole =', primaryRole, '-> redirecting to', dashboardPath)
+    // Navigate to the appropriate dashboard
 
     return <Navigate to={dashboardPath} replace />
 }

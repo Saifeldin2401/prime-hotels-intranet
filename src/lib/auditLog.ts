@@ -72,9 +72,10 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<{ success: bo
         }
 
         return { success: true }
-    } catch (err: any) {
+    } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown audit log error'
         console.error('Audit log exception:', err)
-        return { success: false, error: err.message }
+        return { success: false, error: errorMessage }
     }
 }
 

@@ -15,7 +15,7 @@ import {
 import { Header } from '@/components/layout/Header'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'

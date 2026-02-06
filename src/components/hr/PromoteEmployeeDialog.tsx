@@ -205,9 +205,10 @@ export function PromoteEmployeeDialog({
             setOpen(false);
             form.reset();
             if (onSuccess) onSuccess();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to process promotion"
             console.error("Promotion error:", error);
-            toast.error(error.message || "Failed to process promotion");
+            toast.error(errorMessage);
         }
     };
 

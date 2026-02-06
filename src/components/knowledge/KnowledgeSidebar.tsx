@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useDepartmentContentCounts, useContentTypeCounts } from '@/hooks/useKnowledge'
 import { type KnowledgeContentType } from '@/types/knowledge'
 

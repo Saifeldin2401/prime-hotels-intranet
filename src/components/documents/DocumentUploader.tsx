@@ -16,7 +16,7 @@ interface DocumentUploaderProps {
 }
 
 export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) {
-    console.log('DocumentUploader rendered, open:', open)
+    // Component initialization
     const [file, setFile] = useState<File | null>(null)
     const [uploadProgress, setUploadProgress] = useState<number | null>(null)
     const { t } = useTranslation()

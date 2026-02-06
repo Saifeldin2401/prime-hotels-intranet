@@ -40,7 +40,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { supabase } from '@/lib/supabase'
 import { triggerService } from '@/services/triggerService'
@@ -146,7 +146,7 @@ export default function KnowledgeEditor() {
             }
 
             if (!reviewerRolesData || reviewerRolesData.length === 0) {
-                console.log('No reviewers found to notify')
+                // No reviewers found to notify
                 return
             }
 
@@ -163,7 +163,7 @@ export default function KnowledgeEditor() {
             }
 
             if (reviewers.length === 0) {
-                console.log('No active reviewers found to notify')
+                // No active reviewers found to notify
                 return
             }
 
@@ -188,7 +188,7 @@ export default function KnowledgeEditor() {
                     }
                 })
             } else {
-                console.log(`Notified ${reviewers.length} reviewers about document submission`)
+                // Notified reviewers about document submission
             }
         } catch (error) {
             console.error('Failed to notify reviewers:', error)
@@ -516,9 +516,10 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 navigate(`/knowledge/${data.id}`)
             }
             queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
             console.error('Save error:', error)
-            toast.error(`${t('editor.alerts.save_error')} ${error.message}`)
+            toast.error(`${t('editor.alerts.save_error')} ${errorMessage}`)
         } finally {
             setIsSaving(false)
         }
@@ -557,7 +558,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     )}
 
                     {/* Publish (Prop Manager, Admin only) */}
-                    {['property_manager', 'regional_admin', 'corporate_admin', 'super_admin'].includes(primaryRole || '') && (
+                    {['property_manager', 'regional_admin', 'corporate_admin'].includes(primaryRole || '') && (
                         <Button
                             onClick={() => saveArticle('PUBLISHED')}
                             disabled={isSaving || isUploading}
@@ -655,9 +656,10 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                                 if (!formData.title) {
                                                     updateField('title', file.name.replace('.pdf', ''))
                                                 }
-                                            } catch (error: any) {
+                                            } catch (error: unknown) {
+                                                const errorMessage = error instanceof Error ? error.message : 'Unknown upload error'
                                                 console.error('Upload error:', error)
-                                                toast.error(t('editor.alerts.upload_error') + error.message)
+                                                toast.error(t('editor.alerts.upload_error') + errorMessage)
                                             } finally {
                                                 setIsUploading(false)
                                             }

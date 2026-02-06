@@ -68,7 +68,12 @@ export function TrainingRulesList() {
                     <GraduationCap className="h-5 w-5 text-primary" />
                     <h3 className="text-lg font-medium">Training Auto-Assignment Rules</h3>
                 </div>
-                <Button size="sm" onClick={() => toast({ title: 'Coming Soon', description: 'Rule Editor UI is being finalized.' })}>
+                <Button
+                    size="sm"
+                    disabled
+                    title="Rule Editor UI under development"
+                    className="opacity-50 cursor-not-allowed"
+                >
                     <Plus className="h-4 w-4 mr-2" />
                     New Rule
                 </Button>

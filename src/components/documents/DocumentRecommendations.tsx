@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileText, Star, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -13,7 +13,7 @@ export function DocumentRecommendations() {
     queryKey: ['document-recommendations', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      
+
       // Get user's department and role
       const { data: userData } = await supabase
         .from('user_profiles')

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,7 +55,6 @@ export function LoginForm() {
       const { error } = await signIn(email, password)
 
       if (error) {
-        console.log('Login error caught:', error)
         let errorMessage = error.message
         if (errorMessage === 'Invalid login credentials') {
           errorMessage = t('errors.invalid_credentials')

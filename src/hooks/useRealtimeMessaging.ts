@@ -24,8 +24,6 @@ export function useRealtimeMessaging() {
           filter: `recipient_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Real-time message update:', payload)
-          
           // Update local cache with new/updated message
           if (payload.eventType === 'INSERT') {
             queryClient.invalidateQueries({ queryKey: ['messages'] })
@@ -49,7 +47,6 @@ export function useRealtimeMessaging() {
           filter: `sender_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Real-time sent message update:', payload)
           queryClient.invalidateQueries({ queryKey: ['messages'] })
           queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
         }
@@ -63,13 +60,10 @@ export function useRealtimeMessaging() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Real-time notification update:', payload)
           queryClient.invalidateQueries({ queryKey: ['notifications'] })
         }
       )
-      .subscribe((status) => {
-        console.log('Real-time subscription status:', status)
-      })
+      .subscribe()
 
     subscriptionRef.current = channel
 

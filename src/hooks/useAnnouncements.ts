@@ -134,7 +134,7 @@ export function useCreateAnnouncement() {
             if (!audience || audience.type === 'all') {
                 // For 'all', we could notify everyone, but that might be too many notifications
                 // Instead, we'll skip bulk notifications for 'all' to avoid spam
-                console.log('Announcement created for all users - skipping bulk notification')
+                // Announcement created for all users - skipping bulk notification
             } else {
                 const targetUserIds: string[] = []
                 const values = audience.values || []

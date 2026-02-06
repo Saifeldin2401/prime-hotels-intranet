@@ -84,15 +84,15 @@ function CorporateDashboardContent() {
 
   // Memoize handlers to prevent unnecessary re-renders
   const handleReact = useCallback((_itemId: string, _reaction: string) => {
-    // Reaction functionality placeholder - to be implemented
+    // TODO: Implement social feed reactions (Phase 2)
   }, [])
 
   const handleComment = useCallback((_itemId: string, _content: string) => {
-    // Comment functionality placeholder - to be implemented
+    // TODO: Implement social feed comments (Phase 2)
   }, [])
 
   const handleShare = useCallback((_itemId: string) => {
-    // Share functionality placeholder - to be implemented
+    // TODO: Implement social feed sharing (Phase 2)
   }, [])
 
 

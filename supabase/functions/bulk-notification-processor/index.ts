@@ -59,14 +59,16 @@ Deno.serve(async (req) => {
         // We use the service client for this check to ensure we can read roles reliably
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-        const { data: profile } = await supabaseAdmin
-            .from('profiles')
+        // Query user_roles table (profiles.role doesn't exist in schema)
+        const { data: userRoles } = await supabaseAdmin
+            .from('user_roles')
             .select('role')
-            .eq('id', user.id)
-            .single();
+            .eq('user_id', user.id);
 
         const allowedRoles = ['corporate_admin', 'regional_admin', 'property_manager', 'department_head', 'property_hr'];
-        if (!profile || !allowedRoles.includes(profile.role)) {
+        const hasPermission = userRoles?.some(r => allowedRoles.includes(r.role));
+
+        if (!hasPermission) {
             return new Response(JSON.stringify({ error: 'Unauthorized: Insufficient permissions for bulk operations' }), {
                 status: 403,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }

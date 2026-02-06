@@ -176,7 +176,7 @@ export default function TemplateEditor() {
                     <CardContent className="space-y-4">
                         <div className="grid gap-2">
                             <Label htmlFor="title">{t('editor.template_title')}</Label>
-                            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('editor.placeholders.template_title')} />
+                            <Input id="title" name="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('editor.placeholders.template_title')} />
                         </div>
                         <div className="grid gap-2">
                             <Label>{t('editor.target_audience')}</Label>
@@ -355,7 +355,13 @@ export default function TemplateEditor() {
                                 <div className="flex justify-between items-start gap-4">
                                     <div className="grid gap-2 flex-1">
                                         <Label>{t('editor.task_title')}</Label>
-                                        <Input value={task.title} onChange={(e) => handleTaskChange(index, 'title', e.target.value)} placeholder={t('editor.placeholders.task_title')} />
+                                        <Input
+                                            id={`task-title-${index}`}
+                                            name={`task-title-${index}`}
+                                            value={task.title}
+                                            onChange={(e) => handleTaskChange(index, 'title', e.target.value)}
+                                            placeholder={t('editor.placeholders.task_title')}
+                                        />
                                     </div>
                                     <Button type="button" variant="ghost" size="icon" className="text-destructive mt-6" onClick={() => handleRemoveTask(index)}>
                                         <Trash2 className="h-4 w-4" />
@@ -363,7 +369,13 @@ export default function TemplateEditor() {
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>{t('editor.description')}</Label>
-                                    <Textarea value={task.description} onChange={(e) => handleTaskChange(index, 'description', e.target.value)} placeholder={t('editor.placeholders.task_description')} />
+                                    <Textarea
+                                        id={`task-desc-${index}`}
+                                        name={`task-desc-${index}`}
+                                        value={task.description}
+                                        onChange={(e) => handleTaskChange(index, 'description', e.target.value)}
+                                        placeholder={t('editor.placeholders.task_description')}
+                                    />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
@@ -382,7 +394,14 @@ export default function TemplateEditor() {
                                     </div>
                                     <div className="grid gap-2">
                                         <Label>{t('editor.due_after')}</Label>
-                                        <Input type="number" min="0" value={task.due_day_offset} onChange={(e) => handleTaskChange(index, 'due_day_offset', parseInt(e.target.value))} />
+                                        <Input
+                                            type="number"
+                                            id={`task-due-${index}`}
+                                            name={`task-due-${index}`}
+                                            min="0"
+                                            value={task.due_day_offset}
+                                            onChange={(e) => handleTaskChange(index, 'due_day_offset', parseInt(e.target.value))}
+                                        />
                                     </div>
                                 </div>
 
@@ -451,6 +470,8 @@ export default function TemplateEditor() {
                                             <div className="grid gap-2">
                                                 <Label>{t('editor.enter_url')}</Label>
                                                 <Input
+                                                    name={`task-link-${index}`}
+                                                    id={`task-link-${index}`}
                                                     value={task.link_id || ''}
                                                     onChange={(e) => handleTaskChange(index, 'link_id', e.target.value)}
                                                     placeholder="https://..."

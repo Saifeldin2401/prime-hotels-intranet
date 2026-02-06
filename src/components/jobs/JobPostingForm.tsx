@@ -160,10 +160,11 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
             } else {
                 navigate('/jobs')
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : t('messages.error_save')
             toast({
                 title: t('common:error') || 'Error',
-                description: error.message || t('messages.error_save'),
+                description: errorMessage,
                 variant: 'destructive'
             })
         } finally {

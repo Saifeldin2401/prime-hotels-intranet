@@ -163,9 +163,10 @@ Return ONLY valid JSON.`
                 return fallback
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to generate onboarding path'
             console.error('Onboarding path generation error:', err)
-            setError(err.message || 'Failed to generate onboarding path')
+            setError(errorMessage)
             return null
         } finally {
             setLoading(false)

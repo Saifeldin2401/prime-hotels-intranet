@@ -195,7 +195,7 @@ export function useCreateMaintenanceTicket() {
               })
               .eq('id', result.id)
           } else if (triageResult?.triage) {
-            console.log('✅ AI auto-triaged ticket:', triageResult.triage)
+            // AI auto-triaged ticket successfully
             // Status already updated by edge function to 'completed'
             // Invalidate to refresh with AI suggestions
             queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })

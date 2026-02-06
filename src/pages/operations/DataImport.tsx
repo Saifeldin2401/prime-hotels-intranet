@@ -556,8 +556,9 @@ export default function DataImport() {
         try {
             await deleteImportLog.mutateAsync(id)
             toast({ title: 'Import Deleted', description: 'The import session has been removed.' })
-        } catch (err: any) {
-            toast({ variant: 'destructive', title: 'Delete Failed', description: err.message || 'Check your permissions.' })
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Check your permissions.'
+            toast({ variant: 'destructive', title: 'Delete Failed', description: errorMessage })
         } finally {
             setLogToDelete(null)
         }

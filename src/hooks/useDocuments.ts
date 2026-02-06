@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { escapeSearchQuery } from '@/lib/utils'
 import type { Document, DocumentApproval, DocumentVersion } from '@/lib/types'
 

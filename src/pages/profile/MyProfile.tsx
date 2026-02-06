@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -72,7 +72,6 @@ export default function MyProfile() {
     const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         try {
             setUploading(true)
-            console.log('Starting avatar upload...')
 
             if (!event.target.files || event.target.files.length === 0) {
                 throw new Error('You must select an image to upload.')
@@ -83,11 +82,8 @@ export default function MyProfile() {
             }
 
             const file = event.target.files[0]
-            console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type)
-
             const fileExt = file.name.split('.').pop()
             const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`
-            console.log('Upload path:', filePath)
 
             const { error: uploadError, data: uploadData } = await supabase.storage
                 .from('documents')
@@ -101,14 +97,10 @@ export default function MyProfile() {
                 throw uploadError
             }
 
-            console.log('Upload successful:', uploadData)
-
             // Get public URL for the uploaded avatar
             const { data: urlData } = supabase.storage
                 .from('documents')
                 .getPublicUrl(filePath)
-
-            console.log('Public URL:', urlData.publicUrl)
 
             // Update profile with the public URL
             const { error: updateError } = await supabase
@@ -121,15 +113,15 @@ export default function MyProfile() {
                 throw updateError
             }
 
-            console.log('Profile updated successfully')
             setAvatarUrl(urlData.publicUrl)
             await refreshSession()
             toast.success(t('messages.avatar_updated', 'Avatar Updated'), {
                 description: t('messages.avatar_updated_desc', 'Your avatar has been updated successfully.')
             })
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : t('common:messages.error_action_failed', 'Failed to upload avatar')
             console.error('Error uploading avatar:', error)
-            toast.error(error.message || t('common:messages.error_action_failed', 'Failed to upload avatar'))
+            toast.error(errorMessage)
         } finally {
             setUploading(false)
         }

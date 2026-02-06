@@ -1,0 +1,176 @@
+import { lazy } from 'react'
+import { Route } from 'react-router-dom'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { MotionWrapper } from '@/components/ui/MotionWrapper'
+
+const EmployeeReferrals = lazy(() => import('@/pages/hr/EmployeeReferrals'))
+const MyLeaveRequests = lazy(() => import('@/pages/hr/MyLeaveRequests'))
+const PromotionWorkflow = lazy(() => import('@/pages/hr/PromotionWorkflow'))
+const TransferWorkflow = lazy(() => import('@/pages/hr/TransferWorkflow'))
+const PromotionTransferHistory = lazy(() => import('@/pages/hr/PromotionTransferHistory'))
+const RequestDetail = lazy(() => import('@/pages/hr/RequestDetail'))
+const RequestsInbox = lazy(() => import('@/pages/hr/RequestsInbox'))
+const HROperationsCenter = lazy(() => import('@/pages/hr/HROperationsCenter'))
+const MyAttendance = lazy(() => import('@/pages/hr/MyAttendance'))
+const MyPerformance = lazy(() => import('@/pages/hr/MyPerformance'))
+const MyGoals = lazy(() => import('@/pages/hr/MyGoals'))
+const MyPayslips = lazy(() => import('@/pages/hr/MyPayslips'))
+const OnboardingTracker = lazy(() => import('@/pages/onboarding/OnboardingTracker'))
+
+export const HRRoutes = () => (
+    <>
+        <Route
+            path="/hr"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <EmployeeReferrals />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/attendance"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <MyAttendance />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/performance"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <MyPerformance />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/goals"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <MyGoals />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/payslips"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <MyPayslips />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/leave"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <MyLeaveRequests />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/request/:id"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <RequestDetail />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/inbox"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head']}>
+                    <AppLayout>
+                        <RequestsInbox />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/operations"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <HROperationsCenter />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/referrals"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <EmployeeReferrals />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/promotions/new"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <PromotionWorkflow />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/transfers/new"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
+                    <AppLayout>
+                        <TransferWorkflow />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/promotions/history"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <PromotionTransferHistory />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/transfers/history"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <PromotionTransferHistory />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/onboarding"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <OnboardingTracker />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+    </>
+)

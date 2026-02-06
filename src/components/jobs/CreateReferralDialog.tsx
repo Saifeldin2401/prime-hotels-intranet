@@ -188,9 +188,10 @@ export function CreateReferralDialog({
                 onOpenChange(false)
             }, 1500)
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Referral error:', err)
-            setError(err.message || 'Failed to submit referral')
+            const errorMessage = err instanceof Error ? err.message : 'Failed to submit referral'
+            setError(errorMessage)
         } finally {
             setUploading(false)
         }

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { ROLES, type AppRole } from '@/lib/constants'
 
 export type Permission =
@@ -43,36 +43,36 @@ interface PermissionConfig {
 const PERMISSION_CONFIG: PermissionConfig = {
   // Training permissions
   'training.view': { roles: ['all'] },
-  'training.create': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  'training.edit': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  'training.delete': { roles: ['regional_admin', 'regional_hr'] },
-  'training.assign': { roles: ['regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
-  'training.report': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
+  'training.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'training.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'training.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
+  'training.assign': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
+  'training.report': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
 
   // User management permissions
-  'users.view': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  'users.create': { roles: ['regional_admin', 'regional_hr'] },
-  'users.edit': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  'users.delete': { roles: ['regional_admin', 'regional_hr'] },
-  'users.assign_roles': { roles: ['regional_admin', 'regional_hr'] },
+  'users.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'users.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
+  'users.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'users.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
+  'users.assign_roles': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
 
   // Document permissions
   'documents.view': { roles: ['all'] },
-  'documents.create': { roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
-  'documents.edit': { roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
-  'documents.delete': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  'documents.approve': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
+  'documents.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
+  'documents.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
+  'documents.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'documents.approve': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
 
   // Announcement permissions
   'announcements.view': { roles: ['all'] },
-  'announcements.create': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  'announcements.edit': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  'announcements.delete': { roles: ['regional_admin', 'regional_hr', 'property_manager'] },
+  'announcements.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'announcements.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'announcements.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
 
   // System permissions
-  'system.view_logs': { roles: ['regional_admin'] },
-  'system.manage_settings': { roles: ['regional_admin'] },
-  'system.export_data': { roles: ['regional_admin', 'regional_hr'] },
+  'system.view_logs': { roles: ['corporate_admin', 'regional_admin'] },
+  'system.manage_settings': { roles: ['corporate_admin', 'regional_admin'] },
+  'system.export_data': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
 }
 
 export function usePermissions() {

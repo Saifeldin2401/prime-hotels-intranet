@@ -50,7 +50,7 @@ serve(async (req) => {
                     assigned_to_id: template.assigned_to_id,
                     property_id: template.property_id,
                     department_id: template.department_id,
-                    status: 'open',
+                    status: 'todo', // Fixed: was 'open' which is not a valid task_status enum value
                     created_by_id: template.created_by_id || Deno.env.get('SYSTEM_USER_ID'),
                     due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Default 1 day due
                 })

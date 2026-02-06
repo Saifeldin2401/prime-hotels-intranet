@@ -89,8 +89,9 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
 
             await renderTask.promise
             renderTaskRef.current = null
-        } catch (err: any) {
-            if (err?.name !== 'RenderingCancelledException') {
+        } catch (err: unknown) {
+            const error = err as { name?: string }
+            if (error?.name !== 'RenderingCancelledException') {
                 console.error('Error rendering page:', err)
             }
         } finally {

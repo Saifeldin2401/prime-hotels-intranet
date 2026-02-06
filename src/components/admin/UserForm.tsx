@@ -77,7 +77,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
         reportingTo: reportingTo || undefined
       }
 
-      console.log('Creating user with payload:', payload)
+      // Call the edge function
 
       const { data, error: fnError } = await supabase.functions.invoke('create-user', {
         body: payload,
@@ -97,7 +97,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       return response
     },
     onSuccess: (response) => {
-      console.log('User creation success, response:', response)
+      // Success - refresh the user list
 
       const tempPwd = response?.tempPassword || "TempPassword123!"
 
@@ -197,7 +197,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       if (error) throw error
 
       // Filter to only include people with management roles
-      const managerRoles = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']
+      const managerRoles = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
 
       return (data || [])
         .filter((p: any) => {

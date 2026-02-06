@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileText, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatRelativeTime } from '@/lib/utils';
 
@@ -13,7 +13,7 @@ export function RecentlyViewedDocuments({ limit = 5 }: { limit?: number }) {
     queryKey: ['recent-document-views', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      
+
       const { data } = await supabase
         .from('document_access_logs')
         .select('document_id, documents!inner(title, status), created_at')
@@ -21,7 +21,7 @@ export function RecentlyViewedDocuments({ limit = 5 }: { limit?: number }) {
         .eq('action', 'view')
         .order('created_at', { ascending: false })
         .limit(limit);
-      
+
       return data || [];
     },
     enabled: !!user?.id

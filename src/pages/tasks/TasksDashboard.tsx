@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTasks, useTaskStats } from '@/hooks/useTasks'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { TaskKanban } from '@/components/tasks/TaskKanban'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskFilters } from '@/components/tasks/TaskFilters'

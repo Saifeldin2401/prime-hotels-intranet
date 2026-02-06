@@ -106,7 +106,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                 console.error('Documents query error:', error)
                 throw error
             }
-            console.log('Documents fetched:', data)
+            // Documents fetched successfully
             return data || []
         },
         enabled: open

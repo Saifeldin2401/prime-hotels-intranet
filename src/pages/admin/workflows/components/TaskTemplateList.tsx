@@ -65,7 +65,12 @@ export function TaskTemplateList() {
                     <CalendarDays className="h-5 w-5 text-primary" />
                     <h3 className="text-lg font-medium">Recurring Task Templates</h3>
                 </div>
-                <Button size="sm" onClick={() => toast({ title: 'Coming Soon', description: 'Template Creator UI is being finalized.' })}>
+                <Button
+                    size="sm"
+                    disabled
+                    title="Template Creator UI under development"
+                    className="opacity-50 cursor-not-allowed"
+                >
                     <Plus className="h-4 w-4 mr-2" />
                     New Template
                 </Button>

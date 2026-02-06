@@ -57,7 +57,7 @@ import {
 } from 'lucide-react'
 import '@/styles/knowledge-ui.css'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import {
     useKnowledgeArticle,
     useComments,
@@ -171,8 +171,9 @@ export default function KnowledgeViewer() {
 
             toast.success(t('viewer.delete_success'))
             navigate('/knowledge')
-        } catch (error: any) {
-            toast.error(error.message || t('viewer.delete_error'))
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : t('viewer.delete_error')
+            toast.error(errorMessage)
         } finally {
             setIsDeleting(false)
         }

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { useToast } from '@/components/ui/use-toast'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import {
     ChevronLeft,
     ChevronRight,

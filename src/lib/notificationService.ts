@@ -117,7 +117,7 @@ async function sendEmailNotification(toUserId: string, subject: string, htmlBody
     })
 
     if (error) throw error
-    console.log(`Email sent to ${profile.email}`)
+    // Email sent successfully
   } catch (err) {
     console.error('Failed to send email notification:', err)
   }

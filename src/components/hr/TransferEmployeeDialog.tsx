@@ -182,11 +182,10 @@ export function TransferEmployeeDialog({
             setOpen(false);
             form.reset();
             if (onSuccess) onSuccess();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to submit transfer request"
             console.error("Transfer error:", error);
-            toast.error(typeof error === 'object' && error !== null && 'message' in error
-                ? String(error.message)
-                : "Failed to submit transfer request");
+            toast.error(errorMessage);
         }
     };
 

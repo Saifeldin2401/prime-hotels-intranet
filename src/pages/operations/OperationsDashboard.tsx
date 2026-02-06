@@ -25,7 +25,7 @@ import {
     Loader2
 } from 'lucide-react'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import {
     AreaChart,
@@ -219,8 +219,9 @@ export default function OperationsDashboard() {
         try {
             await deleteImportLog.mutateAsync(id)
             toast.success('Import history permanently deleted')
-        } catch (err: any) {
-            toast.error(err.message || 'Delete failed')
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Delete failed'
+            toast.error(errorMessage)
         } finally {
             setLogToDelete(null)
         }

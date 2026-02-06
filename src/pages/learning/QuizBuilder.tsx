@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
 import { learningService } from '@/services/learningService'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import type { LearningQuiz } from '@/types/learning'
 import { useTranslation } from 'react-i18next'
 

@@ -288,7 +288,7 @@ export default function TrainingAssignments() {
                 notificationData
               })
             })
-            console.log(`Queued ${userIdsToNotify.length} notifications for bulk processing`)
+            // Notifications queued for bulk processing
           } catch (err) {
             console.error('Bulk notification error:', err)
           }

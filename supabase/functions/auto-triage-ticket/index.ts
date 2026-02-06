@@ -92,13 +92,42 @@ Deno.serve(async (req: Request) => {
         });
     }
 
+    const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+    };
+
     try {
+        // ===================================
+        // SECURITY: JWT Authentication Required
+        // ===================================
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+            return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
+                status: 401,
+                headers: corsHeaders
+            });
+        }
+
+        // Verify the JWT token
+        const supabaseAuth = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+            global: { headers: { Authorization: authHeader } }
+        });
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+
+        if (authError || !user) {
+            return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+                status: 401,
+                headers: corsHeaders
+            });
+        }
+
         const { ticket_id } = await req.json();
 
         if (!ticket_id) {
             return new Response(JSON.stringify({ error: 'Missing ticket_id' }), {
                 status: 400,
-                headers: { 'Content-Type': 'application/json' }
+                headers: corsHeaders
             });
         }
 

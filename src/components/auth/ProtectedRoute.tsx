@@ -1,6 +1,6 @@
 ﻿import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
 import { ROLES, type AppRole } from '@/lib/constants'
 import type { Permission } from '@/hooks/usePermissions'

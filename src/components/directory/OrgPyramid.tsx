@@ -24,7 +24,7 @@ import {
     Settings
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import type {
     OrgHierarchy,
     OrgProperty,

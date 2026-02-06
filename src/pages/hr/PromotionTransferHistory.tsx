@@ -245,10 +245,11 @@ export default function PromotionTransferHistory() {
             setRecordToCancel(null);
             refetchPromos();
             refetchTransfers();
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to cancel request'
             toast({
                 title: 'Error',
-                description: err.message || 'Failed to cancel request',
+                description: errorMessage,
                 variant: 'destructive'
             });
         }

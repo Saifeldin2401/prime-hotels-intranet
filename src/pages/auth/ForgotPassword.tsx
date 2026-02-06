@@ -36,9 +36,10 @@ export default function ForgotPassword() {
             }
 
             setSuccess(true)
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Password reset error:', err)
-            setError(err.message || 'Failed to send reset email. Please try again.')
+            const errorMessage = err instanceof Error ? err.message : 'Failed to send reset email. Please try again.'
+            setError(errorMessage)
         } finally {
             setLoading(false)
         }

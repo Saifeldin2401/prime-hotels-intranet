@@ -51,9 +51,10 @@ export function AIDocumentSummarizer() {
                 throw new Error('No summary generated from server')
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Summarization error:', err)
-            setError(err.message || 'Failed to generate summary')
+            const errorMessage = err instanceof Error ? err.message : 'Failed to generate summary'
+            setError(errorMessage)
         } finally {
             setLoading(false)
             setProgress('')

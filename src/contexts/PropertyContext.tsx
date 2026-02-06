@@ -21,7 +21,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true)
 
     // System roles that have access to ALL properties (Corporate level)
-    const isCorporateRole = ['super_admin', 'corporate_admin', 'regional_admin'].includes(primaryRole || '')
+    const isCorporateRole = ['corporate_admin', 'regional_admin'].includes(primaryRole || '')
 
     const fetchProperties = async () => {
         if (!user) {

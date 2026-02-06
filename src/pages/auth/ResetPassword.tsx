@@ -118,9 +118,10 @@ export default function ResetPassword() {
                 navigate('/login')
             }, 3000)
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Password update error:', err)
-            setError(err.message || 'Failed to update password. Please try again.')
+            const errorMessage = err instanceof Error ? err.message : 'Failed to update password. Please try again.'
+            setError(errorMessage)
         } finally {
             setLoading(false)
         }

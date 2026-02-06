@@ -120,9 +120,10 @@ Return ONLY valid JSON.`
                 return fallback
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to generate summary'
             console.error('Document summarization error:', err)
-            setError(err.message || 'Failed to generate summary')
+            setError(errorMessage)
             return null
         } finally {
             setLoading(false)

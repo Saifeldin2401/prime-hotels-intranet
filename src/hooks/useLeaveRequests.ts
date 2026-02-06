@@ -140,18 +140,6 @@ export function usePendingLeaveRequests() {
     (rolesList.includes('department_head') && !isRegionalAccess && !isPropertyLevel)
   const canApprove = isRegionalAccess || isPropertyLevel || isDepartmentHead
 
-  // Debug: log to console
-  console.log('[usePendingLeaveRequests] Role check:', {
-    primaryRole,
-    rolesList,
-    isRegionalAccess,
-    isPropertyLevel,
-    isDepartmentHead,
-    canApprove,
-    currentPropertyId: currentProperty?.id,
-    assignedProperties: properties?.map(p => p.id)
-  })
-
   return useQuery({
     queryKey: ['leave-requests', 'pending', user?.id, currentProperty?.id],
     queryFn: async () => {
@@ -177,12 +165,6 @@ export function usePendingLeaveRequests() {
       }
 
       const { data, error } = await query
-
-      console.log('[usePendingLeaveRequests] Query result:', {
-        count: data?.length,
-        error: error?.message,
-        firstItem: data?.[0]
-      })
 
       if (error) throw error
       return data as LeaveRequest[]

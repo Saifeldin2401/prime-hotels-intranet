@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { Button } from '@/components/ui/button'
@@ -68,18 +68,15 @@ export function Header({
             {/* Property Switcher for Multi-Property Users */}
             {isMultiPropertyUser && (
               <div className="hidden md:flex flex-col items-start me-4">
-                <span className="text-[9px] text-hotel-gold-light/70 uppercase tracking-widest font-bold mb-1 ps-1">
-                  {currentProperty?.id === 'all' ? 'Administrative Context' : 'Active Property'}
-                </span>
                 <Select value={currentProperty?.id} onValueChange={switchProperty}>
                   <SelectTrigger className={cn(
-                    "w-[280px] h-10 bg-hotel-navy-dark border-hotel-navy-light/30 text-white hover:bg-hotel-navy focus:ring-hotel-gold transition-all duration-300 rounded-lg shadow-inner",
-                    currentProperty?.id === 'all' && "border-hotel-gold/50 bg-hotel-navy"
+                    "w-[300px] h-11 bg-hotel-navy-dark/80 border-hotel-gold/30 text-white hover:bg-hotel-navy-light/50 focus:ring-hotel-gold focus:ring-2 transition-all duration-200 rounded-lg shadow-lg",
+                    currentProperty?.id === 'all' && "border-hotel-gold bg-hotel-navy-light/30"
                   )}>
-                    <div className="flex items-center gap-2.5 truncate">
+                    <div className="flex items-center gap-3 truncate w-full">
                       <div className={cn(
-                        "p-1.5 rounded-md",
-                        currentProperty?.id === 'all' ? "bg-hotel-gold text-hotel-navy" : "bg-hotel-navy text-hotel-gold"
+                        "p-2 rounded-md shrink-0",
+                        currentProperty?.id === 'all' ? "bg-hotel-gold text-hotel-navy" : "bg-hotel-gold/20 text-hotel-gold"
                       )}>
                         {currentProperty?.id === 'all' ? (
                           <Globe className="h-4 w-4" />
@@ -87,38 +84,167 @@ export function Header({
                           <Building className="h-4 w-4" />
                         )}
                       </div>
-                      <div className="flex flex-col items-start overflow-hidden">
-                        <span className="text-[9px] text-hotel-gold/60 uppercase tracking-widest font-bold leading-none mb-0.5">
+                      <div className="flex flex-col items-start overflow-hidden min-w-0">
+                        <span className="text-[10px] text-hotel-gold/80 uppercase tracking-wider font-semibold leading-none">
                           {currentProperty?.id === 'all' ? 'Administrative Context' : 'Active Property'}
                         </span>
-                        <SelectValue placeholder="Select Property" />
+                        <span className="text-sm font-medium truncate">
+                          {currentProperty?.name || 'Select Property'}
+                        </span>
                       </div>
+                      <ChevronDown className="h-4 w-4 text-hotel-gold/60 ml-auto shrink-0" />
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="max-h-[400px] border-hotel-navy-light/20 bg-white dark:bg-hotel-navy text-foreground dark:text-white shadow-2xl rounded-xl">
-                    <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border mb-1">
-                      Available Properties
+                  <SelectContent className="w-[340px] max-h-[450px] border-hotel-navy/20 bg-white dark:bg-hotel-navy shadow-2xl rounded-xl p-0">
+                    {/* Header */}
+                    <div className="px-4 py-3 bg-gradient-to-r from-hotel-navy to-hotel-navy-light border-b border-hotel-gold/20">
+                      <p className="text-xs font-bold text-hotel-gold uppercase tracking-wider">Available Properties</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Select your working context</p>
                     </div>
-                    {availableProperties.map(prop => (
-                      <SelectItem key={prop.id} value={prop.id} className="cursor-pointer py-3 focus:bg-hotel-navy-light focus:text-white rounded-md mx-1 my-0.5">
-                        <div className="flex items-center gap-3 w-full">
-                          {prop.id === 'all' ? (
-                            <Globe className="h-4 w-4 text-hotel-gold shrink-0" />
-                          ) : (
-                            <Building className="h-4 w-4 text-hotel-gold/60 shrink-0" />
+                    {/* Property List - Dynamically Grouped by Region */}
+                    <div className="py-2">
+                      {/* Administrative/Consolidated View First */}
+                      {availableProperties.filter(p => p.id === 'all').map(prop => (
+                        <SelectItem 
+                          key={prop.id} 
+                          value={prop.id} 
+                          className={cn(
+                            "cursor-pointer mx-2 my-1 rounded-lg border transition-all duration-200",
+                            currentProperty?.id === prop.id 
+                              ? "bg-hotel-navy text-white border-hotel-gold/50 py-3" 
+                              : "hover:bg-hotel-navy/5 border-transparent py-2.5"
                           )}
-                          <div className="flex flex-col">
-                            <span className={cn(
-                              "font-semibold text-sm",
-                              prop.id === 'all' && "text-hotel-gold font-bold"
+                        >
+                          <div className="flex items-center gap-3 w-full">
+                            <div className={cn(
+                              "p-2 rounded-md shrink-0",
+                              currentProperty?.id === prop.id ? "bg-hotel-gold text-hotel-navy" : "bg-hotel-navy/10 text-hotel-navy"
                             )}>
-                              {prop.name}
-                            </span>
-                            {prop.address && <span className="text-[10px] opacity-70 italic">{prop.address}</span>}
+                              <Globe className="h-4 w-4" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className={cn(
+                                "font-semibold text-sm truncate",
+                                currentProperty?.id === prop.id ? "text-white" : "text-foreground"
+                              )}>
+                                {prop.name}
+                              </span>
+                              <span className={cn(
+                                "text-[10px] truncate",
+                                currentProperty?.id === prop.id ? "text-hotel-gold/80" : "text-muted-foreground"
+                              )}>
+                                Corporate Headquarters & Global Operations
+                              </span>
+                            </div>
+                            {currentProperty?.id === prop.id && (
+                              <div className="ml-auto shrink-0">
+                                <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center">
+                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </SelectItem>
-                    ))}
+                        </SelectItem>
+                      ))}
+
+                      {/* Divider if both types exist */}
+                      {availableProperties.some(p => p.id === 'all') && availableProperties.some(p => p.id !== 'all') && (
+                        <div className="my-3 mx-4 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                      )}
+
+                      {/* Dynamic Region Grouping */}
+                      {(() => {
+                        // Extract all unique regions from property addresses
+                        const regionMap = new Map<string, typeof availableProperties>()
+                        const regionOrder = ['Riyadh', 'Jeddah', 'Makkah', 'Madinah', 'Dammam', 'Khobar', 'Tabuk', 'Abha', 'Taif', 'Buraidah', 'Hail', 'Jubail', 'Yanbu', 'Najran', 'Hafar Al-Batin', 'Other']
+                        
+                        availableProperties
+                          .filter(p => p.id !== 'all')
+                          .forEach(prop => {
+                            const address = (prop.address || '').toLowerCase()
+                            // Find matching region from known KSA cities
+                            let region = 'Other'
+                            for (const city of regionOrder) {
+                              if (address.includes(city.toLowerCase())) {
+                                region = city
+                                break
+                              }
+                            }
+                            
+                            if (!regionMap.has(region)) {
+                              regionMap.set(region, [])
+                            }
+                            regionMap.get(region)!.push(prop)
+                          })
+                        
+                        // Sort regions by predefined order, new regions go to end
+                        const sortedRegions = Array.from(regionMap.entries()).sort((a, b) => {
+                          const indexA = regionOrder.indexOf(a[0])
+                          const indexB = regionOrder.indexOf(b[0])
+                          if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0])
+                          if (indexA === -1) return 1
+                          if (indexB === -1) return -1
+                          return indexA - indexB
+                        })
+                        
+                        return sortedRegions.map(([region, props]) => (
+                          <div key={region} className="mb-2">
+                            <p className="px-3 py-1.5 text-[10px] font-bold text-hotel-navy/60 dark:text-hotel-gold/70 uppercase tracking-wider flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-hotel-gold/60" />
+                              {region}
+                            </p>
+                            {props.map(prop => (
+                              <SelectItem 
+                                key={prop.id} 
+                                value={prop.id} 
+                                className={cn(
+                                  "cursor-pointer mx-2 my-0.5 rounded-lg border transition-all duration-200",
+                                  currentProperty?.id === prop.id 
+                                    ? "bg-hotel-navy-light/90 text-white border-hotel-gold/30 py-3" 
+                                    : "hover:bg-slate-50 dark:hover:bg-slate-800/50 border-transparent py-2.5"
+                                )}
+                              >
+                                <div className="flex items-center gap-3 w-full">
+                                  <div className={cn(
+                                    "p-1.5 rounded shrink-0",
+                                    currentProperty?.id === prop.id ? "bg-hotel-gold/20 text-hotel-gold" : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                  )}>
+                                    <Building className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex flex-col min-w-0">
+                                    <span className={cn(
+                                      "font-medium text-sm truncate",
+                                      currentProperty?.id === prop.id ? "text-white" : "text-foreground"
+                                    )}>
+                                      {prop.name}
+                                    </span>
+                                    {prop.address && (
+                                      <span className={cn(
+                                        "text-[10px] truncate",
+                                        currentProperty?.id === prop.id ? "text-white/60" : "text-muted-foreground"
+                                      )}>
+                                        {prop.address}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {currentProperty?.id === prop.id && (
+                                    <div className="ml-auto shrink-0">
+                                      <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center">
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </div>
+                        ))
+                      })()}
+                    </div>
                   </SelectContent>
                 </Select>
               </div>

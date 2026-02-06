@@ -105,14 +105,15 @@ Return ONLY valid JSON.`
                     setAnalysis(parsed)
                     return parsed
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Analysis failed:', err)
                 throw err
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to analyze feedback'
             console.error('Feedback analysis error:', err)
-            setError(err.message || 'Failed to analyze feedback')
+            setError(errorMessage)
             return null
         } finally {
             setLoading(false)

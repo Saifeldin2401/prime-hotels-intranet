@@ -7,7 +7,7 @@
 
 import { useMemo, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useSidebarCounts } from '@/hooks/useSidebarCounts'
 import {
     NAVIGATION_GROUPS,

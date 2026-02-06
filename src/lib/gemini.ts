@@ -59,8 +59,9 @@ async function callHuggingFace(model: string, prompt: string) {
 
     // Support both 'generated_text' (HF style), 'result' (OpenAI style), and 'response' (Edge Function format)
     return (data.response || data.generated_text || data.result) as string
-  } catch (error: any) {
-    console.warn(`Model ${model} call failed via proxy:`, error.message)
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn(`Model ${model} call failed via proxy:`, errorMessage)
     throw error // Re-throw to trigger fallback loop
   }
 }
@@ -135,7 +136,7 @@ export const aiService = {
         if (jsonMatch) {
           return JSON.parse(jsonMatch[0])
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.warn(`⚠️ Model ${model} failed, switch to next...`)
       }
     }
@@ -272,15 +273,16 @@ export const aiService = {
 
     for (const model of FALLBACK_MODELS) {
       try {
-        console.log(`🧠 AI Improving content with model: ${model}`)
+        // AI improving content with specified model
         const generatedText = await callHuggingFace(model, fullPrompt)
 
         if (generatedText && generatedText.trim().length > 0) {
           // Remove any potential quotes or chatty prefixes AI might add
           return generatedText.replace(/^"|"$/g, '').trim()
         }
-      } catch (e: any) {
-        console.warn(`⚠️ AI model ${model} failed:`, e.message)
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : 'Unknown AI error'
+        console.warn(`⚠️ AI model ${model} failed:`, errorMessage)
       }
     }
 

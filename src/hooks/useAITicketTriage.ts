@@ -127,7 +127,7 @@ Do not include any text outside the JSON.`
                 })
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Ticket triage error:', error)
             // Don't show error toast - silent fallback
             const fallbackSuggestion = getFallbackClassification(description)

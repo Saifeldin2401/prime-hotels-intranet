@@ -143,7 +143,7 @@ const HR_STEPS: TourStep[] = [
 ]
 
 /**
- * Steps for ADMIN roles (super_admin, regional_admin)
+ * Steps for ADMIN roles (corporate_admin, regional_admin)
  */
 const ADMIN_STEPS: TourStep[] = [
     {
@@ -197,7 +197,7 @@ export function getTourStepsForRole(role: AppRole | string | undefined): TourSte
     }
 
     // Admin roles
-    if (['super_admin', 'regional_admin'].includes(role || '')) {
+    if (['corporate_admin', 'regional_admin'].includes(role || '')) {
         steps.push(...ADMIN_STEPS)
     }
 

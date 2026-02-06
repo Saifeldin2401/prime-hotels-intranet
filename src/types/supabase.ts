@@ -213,7 +213,7 @@ export type Database = {
             }
         }
         Enums: {
-            app_role: "super_admin" | "corporate_admin" | "regional_admin" | "regional_hr" | "property_manager" | "property_hr" | "department_head" | "manager" | "staff"
+            app_role: "corporate_admin" | "regional_admin" | "regional_hr" | "property_manager" | "property_hr" | "department_head" | "manager" | "staff"
             approval_request_status: "pending" | "approved" | "rejected" | "cancelled"
             content_type: "sop" | "policy" | "how_to" | "checklist" | "quick_ref" | "faq"
             document_status: "draft" | "pending_review" | "approved" | "published" | "archived" | "rejected"

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { useTranslation } from 'react-i18next'
 import { GraduationCap, TrendingUp, Users } from 'lucide-react'

@@ -76,9 +76,10 @@ export function useDepartmentStaff(departmentId: string | undefined, propertyId:
                 }
 
                 setStaff(staffMembers)
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : 'Unknown error'
                 console.error('Error fetching department staff:', err)
-                setError(err.message)
+                setError(errorMessage)
             } finally {
                 setLoading(false)
             }

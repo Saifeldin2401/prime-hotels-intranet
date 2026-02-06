@@ -97,7 +97,7 @@ export default function SubmitTicket() {
   // Apply AI suggestions to form
   const handleApplySuggestion = (s: typeof suggestion) => {
     if (!s) return
-    console.log('Applying AI suggestion:', s)
+    // Apply the AI-suggested values
 
     // Map AI category to form category values
     const categoryMap: Record<string, string> = {
@@ -122,7 +122,7 @@ export default function SubmitTicket() {
     }
     const mappedPriority = priorityMap[s.priority] || 'medium'
 
-    console.log('Setting category to:', mappedCategory, 'priority to:', mappedPriority)
+    // Apply mapped values
 
     // Set category and priority
     form.setValue('category', mappedCategory as any, { shouldValidate: true, shouldDirty: true })

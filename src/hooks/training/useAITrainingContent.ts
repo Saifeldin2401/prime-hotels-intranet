@@ -99,11 +99,12 @@ export const useAITrainingContent = () => {
                 sourceDocumentId: documentId
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Could not generate content'
             console.error('Content generation error:', error)
             toast({
                 title: 'Generation Failed',
-                description: error.message || 'Could not generate content',
+                description: errorMessage,
                 variant: 'destructive'
             })
             return null
@@ -180,11 +181,12 @@ Return a JSON object with:
                 }
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
             console.error('Outline generation error:', error)
             toast({
                 title: 'Outline Generation Failed',
-                description: error.message,
+                description: errorMessage,
                 variant: 'destructive'
             })
             return null
@@ -454,11 +456,12 @@ IMPORTANT:
                 ]
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Could not generate complete training content'
             console.error('Full module generation error:', error)
             toast({
                 title: 'Content Generation Failed',
-                description: error.message || 'Could not generate complete training content',
+                description: errorMessage,
                 variant: 'destructive'
             })
             return null

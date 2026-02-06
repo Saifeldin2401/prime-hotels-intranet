@@ -69,10 +69,11 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                 description: 'Workflow and steps updated successfully',
             })
             onClose()
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to save workflow'
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to save workflow',
+                description: errorMessage,
                 variant: 'destructive'
             })
         }

@@ -543,7 +543,7 @@ export default function TrainingBuilder() {
       } else {
         alert(t('moduleSaved'))
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving training:', error)
       alert(t('error'))
     }
@@ -694,9 +694,10 @@ export default function TrainingBuilder() {
       await saveQuestionsMutation.mutateAsync(savedModuleId)
 
       alert(t('moduleSaved'))
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       console.error('Save failed:', error)
-      alert(t('error') + ': ' + error.message)
+      alert(t('error') + ': ' + errorMessage)
     }
   }
 

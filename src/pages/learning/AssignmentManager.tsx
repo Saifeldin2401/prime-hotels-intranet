@@ -111,7 +111,6 @@ function AssignmentProgressDialog({
 }
 
 const ROLES = [
-    { value: 'super_admin', label: 'Super Admin' },
     { value: 'corporate_admin', label: 'Corporate Admin' },
     { value: 'regional_admin', label: 'Regional Admin' },
     { value: 'regional_hr', label: 'Regional HR' },

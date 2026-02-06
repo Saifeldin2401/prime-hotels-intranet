@@ -152,7 +152,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.operations',
         icon: CheckSquare,
         order: 4,
-        visibleTo: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         collapsible: true
     },
     {
@@ -160,7 +160,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.hr_management',
         icon: Users,
         order: 5,
-        visibleTo: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         collapsible: true
     },
     {
@@ -176,7 +176,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.learning_management',
         icon: GraduationCap,
         order: 6,
-        visibleTo: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         collapsible: true
     },
     {
@@ -184,7 +184,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.question_bank',
         icon: FileQuestion,
         order: 7,
-        visibleTo: ['regional_admin', 'regional_hr', 'property_hr', 'department_head'],
+        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'department_head'],
         collapsible: true
     },
     {
@@ -200,7 +200,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.admin',
         icon: Shield,
         order: 9,
-        visibleTo: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
         collapsible: true
     },
     {
@@ -238,7 +238,6 @@ export const ROUTES: RouteConfig[] = [
             regional_hr: '/dashboard/regional-hr',
             regional_admin: '/dashboard/corporate-admin',
             corporate_admin: '/dashboard/corporate-admin',
-            super_admin: '/dashboard/corporate-admin',
             manager: '/staff-dashboard'
         }
     },
@@ -247,7 +246,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'my_team',
         icon: Users,
         description: 'View and manage your direct reports',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         group: 'home',
         order: 2
     },
@@ -329,7 +328,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'operations_dashboard',
         icon: BarChart3,
         description: 'PMS integration and operational analytics',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'operations',
         order: 0
     },
@@ -338,7 +337,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'operations_analytics',
         icon: Activity,
         description: 'Trend analysis and multi-property comparison',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'operations',
         order: 0.1,
         hideFromNav: true  // Accessible from dashboard
@@ -348,7 +347,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'flash_report',
         icon: FileText,
         description: 'Daily consolidated flash report',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'operations',
         order: 0.2,
         hideFromNav: true
@@ -358,7 +357,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'data_import',
         icon: FileText,
         description: 'Import PMS data via CSV',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'operations',
         order: 0.3,
         hideFromNav: true
@@ -368,7 +367,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'pms_configuration',
         icon: Settings,
         description: 'Configure PMS integrations',
-        allowedRoles: ['regional_admin'],
+        allowedRoles: ['corporate_admin', 'regional_admin'],
         group: 'operations',
         order: 0.4,
         hideFromNav: true
@@ -378,7 +377,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'approvals',
         icon: CheckSquare,
         description: 'Pending items requiring your approval',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         badgeKey: 'pendingApprovals',
         group: 'operations',
         order: 1
@@ -430,7 +429,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'referrals',
         icon: Users,
         description: 'Employee referral program',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
         group: 'hr_management',
         order: 3
     },
@@ -448,7 +447,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'transfers',
         icon: ArrowRightLeft,
         description: 'Initiate employee transfers',
-        allowedRoles: ['regional_admin', 'regional_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr'],
         group: 'hr_management',
         order: 5
     },
@@ -466,7 +465,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'onboarding_tracker',
         icon: CheckSquare,
         description: 'Track new hire onboarding progress',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         group: 'hr_management',
         order: 0.5 // Top priority in HR
     },
@@ -498,7 +497,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'knowledge_review',
         icon: CheckSquare,
         description: 'Review pending content',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
         badgeKey: 'pendingReviews',
         group: 'knowledge_base',
         order: 2
@@ -508,7 +507,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'knowledge_analytics',
         icon: BarChart3,
         description: 'Content usage and insights',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'knowledge_base',
         order: 3
     },
@@ -553,7 +552,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'training_modules',
         icon: BookOpen,
         description: 'Manage training modules',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'learning_management',
         order: 1
     },
@@ -562,7 +561,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'training_builder',
         icon: ListTodo,
         description: 'Create training content',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'learning_management',
         order: 2
     },
@@ -571,7 +570,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'training_assignments',
         icon: Users,
         description: 'Assign training to users',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         group: 'learning_management',
         order: 3
     },
@@ -584,7 +583,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'questions',
         icon: FileQuestion,
         description: 'Manage knowledge questions',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
         group: 'question_bank',
         order: 1
     },
@@ -593,7 +592,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'quizzes',
         icon: CheckSquare,
         description: 'Manage quizzes',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_hr', 'department_head'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'department_head'],
         group: 'question_bank',
         order: 2
     },
@@ -638,7 +637,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'user_management',
         icon: Users,
         description: 'Manage system users',
-        allowedRoles: ['regional_admin', 'regional_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr'],
         group: 'administration',
         order: 1
     },
@@ -647,7 +646,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'job_titles',
         icon: Briefcase,
         description: 'Manage master list of job titles',
-        allowedRoles: ['regional_admin', 'regional_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr'],
         group: 'administration',
         order: 1.5
     },
@@ -656,7 +655,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'org_structure',
         icon: Target,
         description: 'Manage organizational hierarchy and reporting lines',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
         group: 'administration',
         order: 1.7
     },
@@ -665,7 +664,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'property_management',
         icon: Building,
         description: 'Manage hotel properties',
-        allowedRoles: ['regional_admin'],
+        allowedRoles: ['corporate_admin', 'regional_admin'],
         group: 'administration',
         order: 2
     },
@@ -674,7 +673,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'reports',
         icon: BarChart3,
         description: 'Analytics and reports',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'administration',
         order: 3
     },
@@ -683,7 +682,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'system_analytics',
         icon: Activity,
         description: 'System usage and insights',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'administration',
         order: 3.2
     },
@@ -692,7 +691,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'automations',
         icon: Workflow,
         description: 'Manage workflow automations',
-        allowedRoles: ['regional_admin', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager'],
         group: 'administration',
         order: 3.5
     },
@@ -701,7 +700,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'ai_tools',
         icon: Brain,
         description: 'AI-powered HR tools and analytics',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
         group: 'administration',
         order: 3.7
     },
@@ -710,7 +709,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'notification_batches',
         icon: Bell,
         description: 'Monitor bulk notification jobs',
-        allowedRoles: ['regional_admin', 'regional_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr'],
         group: 'administration',
         order: 3.8
     },
@@ -719,7 +718,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'audit_logs',
         icon: ClipboardList,
         description: 'System audit logs',
-        allowedRoles: ['regional_admin'],
+        allowedRoles: ['corporate_admin', 'regional_admin'],
         group: 'administration',
         order: 5
     },
@@ -728,7 +727,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'pii_access_logs',
         icon: Shield,
         description: 'PII access tracking and compliance',
-        allowedRoles: ['regional_admin', 'regional_hr'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr'],
         group: 'administration',
         order: 5.5
     },
@@ -737,7 +736,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'escalation_rules',
         icon: Bell,
         description: 'Configure escalation rules',
-        allowedRoles: ['regional_admin'],
+        allowedRoles: ['corporate_admin', 'regional_admin'],
         group: 'administration',
         order: 6
     },
@@ -746,7 +745,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'onboarding_templates',
         icon: ListTodo,
         description: 'Manage onboarding checklists',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'administration',
         order: 3.6
     },

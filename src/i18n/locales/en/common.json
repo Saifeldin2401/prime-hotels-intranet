@@ -161,7 +161,6 @@
     "numeric": "Must be a number"
   },
   "roles": {
-    "super_admin": "Super Admin",
     "corporate_admin": "Corporate Admin",
     "regional_admin": "Regional Admin",
     "property_manager": "Property Manager",
