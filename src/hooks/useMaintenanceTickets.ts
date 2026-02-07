@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import type { MaintenanceTicket, MaintenanceComment, MaintenanceAttachment } from '@/lib/types'
 import { crudToasts } from '@/lib/toastHelpers'
+import { scanFile } from '@/hooks/useVirusScan'
 
 export function useMyMaintenanceTickets() {
   const { user } = useAuth()
@@ -425,6 +426,12 @@ export function useUploadMaintenanceAttachment() {
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
+      // Perform security scan
+      const scanResult = await scanFile(file)
+      if (!scanResult.safe) {
+        throw new Error(scanResult.message || 'File failed security scan')
+      }
+
       // Upload file to storage
       const fileName = `${ticketId}/${Date.now()}-${file.name}`
       const { error: uploadError } = await supabase.storage
@@ -463,8 +470,13 @@ export function useUploadMaintenanceAttachment() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
       crudToasts.create.success('Attachment')
     },
-    onError: () => {
-      crudToasts.create.error('attachment')
+    onError: (error) => {
+      // Show specific error if it's a security/virus scan error
+      if (error instanceof Error && error.message.includes('Security')) {
+        crudToasts.create.error('attachment', error.message)
+      } else {
+        crudToasts.create.error('attachment')
+      }
     }
   })
 }

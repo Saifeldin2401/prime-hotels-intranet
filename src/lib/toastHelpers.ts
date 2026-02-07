@@ -33,12 +33,12 @@ export function dismissToast(toastId: string | number) {
 // CRUD operation toasts - simple and consistent
 export const crudToasts = {
     create: {
-        success: (item: string) => showSuccessToast(`${item} created`, 'The item has been created successfully.'),
-        error: (item: string) => showErrorToast(`Failed to create ${item}`, 'Please check your input and try again.')
+        success: (item: string, customMessage?: string) => showSuccessToast(`${item} created`, customMessage || 'The item has been created successfully.'),
+        error: (item: string, customMessage?: string) => showErrorToast(`Failed to create ${item}`, customMessage || 'Please check your input and try again.')
     },
     update: {
-        success: (item: string) => showSuccessToast(`${item} updated`, 'Your changes have been saved.'),
-        error: (item: string) => showErrorToast(`Failed to update ${item}`, 'Please try again.')
+        success: (item: string, customMessage?: string) => showSuccessToast(`${item} updated`, customMessage || 'Your changes have been saved.'),
+        error: (item: string, customMessage?: string) => showErrorToast(`Failed to update ${item}`, customMessage || 'Please try again.')
     },
     delete: {
         success: (item: string) => showSuccessToast(`${item} deleted`, 'The item has been removed.'),

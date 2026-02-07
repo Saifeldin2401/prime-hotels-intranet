@@ -1512,16 +1512,140 @@ export default function TrainingBuilder() {
                 setContentBlocks([...contentBlocks, newBlock])
               }}
               onLinkDocument={(docId) => {
-                // Link document - implementation pending
-                // TODO: Implement document linking
+                const sop = availableSOPs?.find(s => s.id === docId)
+                if (!sop) return
+
+                const newBlock: ContentBlockForm = {
+                  id: `sop-${Date.now()}`,
+                  type: 'sop_reference',
+                  title: sop.title,
+                  content: '',
+                  content_url: '',
+                  content_data: { sop_id: docId },
+                  is_mandatory: true,
+                  order: 0
+                }
+
+                // Add to active section or first section
+                const targetSectionId = activeSection || sections[0]?.id
+                if (targetSectionId) {
+                  setSections(prev => prev.map(s =>
+                    s.id === targetSectionId
+                      ? { ...s, items: [...s.items, { ...newBlock, order: s.items.length }] }
+                      : s
+                  ))
+                  toast({
+                    title: t('builder.added'),
+                    description: t('builder.sopAdded', { title: sop.title })
+                  })
+                }
               }}
               onLinkQuiz={(quizId) => {
-                // Link quiz - implementation pending
-                // TODO: Implement quiz linking
+                const quiz = availableQuizzes?.find(q => q.id === quizId)
+                if (!quiz) return
+
+                const newBlock: ContentBlockForm = {
+                  id: `quiz-${Date.now()}`,
+                  type: 'quiz',
+                  title: quiz.title,
+                  content: '',
+                  content_url: '',
+                  content_data: { quiz_id: quizId },
+                  is_mandatory: true,
+                  order: 0
+                }
+
+                const targetSectionId = activeSection || sections[0]?.id
+                if (targetSectionId) {
+                  setSections(prev => prev.map(s =>
+                    s.id === targetSectionId
+                      ? { ...s, items: [...s.items, { ...newBlock, order: s.items.length }] }
+                      : s
+                  ))
+                  toast({
+                    title: t('builder.added'),
+                    description: t('builder.quizAdded', { title: quiz.title })
+                  })
+                }
               }}
-              onAddQuestions={(questionIds) => {
-                // Add questions - implementation pending
-                // TODO: Implement question addition
+              onAddQuestions={async (questionIds) => {
+                if (!questionIds.length) return
+                if (!moduleId) {
+                  toast({
+                    title: t('common:error'),
+                    description: 'Please save the module first.',
+                    variant: 'destructive'
+                  })
+                  return
+                }
+
+                try {
+                  // Create a new quiz from these questions
+                  const { data: quizData, error: quizError } = await supabase
+                    .from('learning_quizzes')
+                    .insert({
+                      title: `${title || t('builder.untitledModule')} - Generated Quiz`,
+                      description: `Created from Knowledge Base questions`,
+                      status: 'published',
+                      training_module_id: moduleId,
+                      passing_score_percentage: 80,
+                      created_by: profile?.id
+                    })
+                    .select()
+                    .single()
+
+                  if (quizError) throw quizError
+
+                  // Link questions
+                  const quizQuestions = questionIds.map((qId, idx) => ({
+                    quiz_id: quizData.id,
+                    question_id: qId,
+                    display_order: idx + 1,
+                    points_override: 1
+                  }))
+
+                  const { error: linkError } = await supabase
+                    .from('learning_quiz_questions')
+                    .insert(quizQuestions)
+
+                  if (linkError) throw linkError
+
+                  // Add quiz block
+                  const newBlock: ContentBlockForm = {
+                    id: `quiz-${Date.now()}`,
+                    type: 'quiz',
+                    title: quizData.title,
+                    content: '',
+                    content_url: '',
+                    content_data: { quiz_id: quizData.id },
+                    is_mandatory: true,
+                    order: 0
+                  }
+
+                  const targetSectionId = activeSection || sections[0]?.id
+                  if (targetSectionId) {
+                    setSections(prev => prev.map(s =>
+                      s.id === targetSectionId
+                        ? { ...s, items: [...s.items, { ...newBlock, order: s.items.length }] }
+                        : s
+                    ))
+
+                    // Refresh quizzes list
+                    queryClient.invalidateQueries({ queryKey: ['available-quizzes'] })
+
+                    toast({
+                      title: t('builder.added'),
+                      description: t('builder.questionsAdded', { count: questionIds.length })
+                    })
+                  }
+
+                } catch (err) {
+                  toast({
+                    title: t('common:error'),
+                    description: 'Failed to create quiz from questions.',
+                    variant: 'destructive'
+                  })
+                }
               }}
               className="h-full"
             />
