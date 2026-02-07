@@ -57,9 +57,11 @@ export function AssignmentDialog({
     // Get unique properties from departments
     const departmentProperties = useMemo(() => {
         const props = new Set<string>()
-        departments.forEach(d => {
-            if (d.propertyName) props.add(d.propertyName)
-        })
+        if (departments && Array.isArray(departments)) {
+            departments.forEach(d => {
+                if (d.propertyName) props.add(d.propertyName)
+            })
+        }
         return Array.from(props).sort()
     }, [departments])
 
@@ -67,8 +69,9 @@ export function AssignmentDialog({
     const listItems = useMemo((): AssignableEntity[] => {
         switch (targetType) {
             case 'users':
-                return users.map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`, details: u.email }))
+                return (users && Array.isArray(users)) ? users.map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`, details: u.email })) : []
             case 'departments':
+                if (!departments || !Array.isArray(departments)) return []
                 // Filter by property if one is selected
                 const filteredDepts = propertyFilter === 'all'
                     ? departments
@@ -79,7 +82,7 @@ export function AssignmentDialog({
                     group: d.propertyName
                 }))
             case 'properties':
-                return properties.map(p => ({ id: p.id, name: p.name }))
+                return (properties && Array.isArray(properties)) ? properties.map(p => ({ id: p.id, name: p.name })) : []
             default:
                 return []
         }

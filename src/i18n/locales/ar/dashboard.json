@@ -45,6 +45,70 @@
             "assigned": "تم التعيين {{date}}",
             "due": "مستحق {{date}}",
             "default_training_title": "تعيين تدريب"
+        },
+        "active_users": {
+            "title": "أعضاء الفريق النشطون",
+            "online": "نشط الآن",
+            "no_active": "لا يوجد مستخدمون نشطون آخرون حالياً."
+        },
+        "dept_kpi": {
+            "title": "أداء الأقسام",
+            "no_data": "لا توجد بيانات متاحة للقسم",
+            "top_depts": "أعلى الأقسام",
+            "rankings": "تصنيفات أداء الأقسام",
+            "tasks": "المهام",
+            "training": "التدريب",
+            "sops": "إجراءات التشغيل"
+        },
+        "knowledge": {
+            "title": "قاعدة المعرفة",
+            "view_all": "عرض الكل",
+            "progress": "تقدم القراءة المطلوبة",
+            "required": "قراءة مطلوبة",
+            "recently_updated": "تم تحديثه مؤخراً",
+            "updated_at": "تم التحديث {{time}}",
+            "all_caught_up": "لقد انتهيت من كل شيء!",
+            "explore": "استكشاف قاعدة المعرفة"
+        },
+        "team_list": {
+            "title": "فريق القسم",
+            "search_team_members": "بحث عن أعضاء الفريق...",
+            "loading_team": "جاري تحميل الفريق...",
+            "no_team_found": "لم يتم العثور على أعضاء في فريقك.",
+            "no_job_title": "لا يوجد مسمى وظيفي",
+            "unknown": "غير معروف",
+            "view": "عرض"
+        },
+        "maintenance_labels": {
+            "critical": "حرج",
+            "urgent": "عاجل"
+        },
+        "role_widget": {
+            "properties": "منشأة",
+            "departments": "قسم"
+        },
+        "quick_actions_widget": {
+            "view": "عرض",
+            "search": "بحث",
+            "go_back": "العودة"
+        },
+        "motivation": {
+            "refresh": "تحديث"
+        },
+        "employee_of_the_month": {
+            "title": "موظف الشهر",
+            "congratulations": "تهانينا!",
+            "no_winner": "لم يتم الإعلان عن فائز لهذا الشهر بعد.",
+            "view_previous": "عرض الفائزين السابقين",
+            "manage": "إدارة موظف الشهر"
+        },
+        "birthdays": {
+            "title": "أعياد الميلاد القادمة",
+            "today": "اليوم!",
+            "tomorrow": "غداً",
+            "in_days": "خلال {{count}} أيام",
+            "no_birthdays": "لا توجد أعياد ميلاد في الأيام السبعة القادمة.",
+            "send_wish": "إرسال تهنئة"
         }
     },
     "analytics": {
@@ -114,6 +178,7 @@
             "access_documents": "الوصول إلى مستنداتك",
             "view_documents_btn": "عرض المستندات",
             "training": "التدريب",
+            "my_training": "تدريبي",
             "complete_training": "أكمل تدريبك",
             "continue_learning_btn": "متابعة التعلم",
             "policies_forms": "السياسات والنماذج",
@@ -156,6 +221,16 @@
     },
     "cards": {
         "training_compliance": "الامتثال التدريبي",
+        "portfolio_trends": "اتجاهات المحفظة",
+        "portfolio_trends_subtitle": "الزخم عبر الامتثال والصيانة والتوظيف",
+        "operational_intelligence": "الذكاء التشغيلي",
+        "operational_intelligence_subtitle": "إشارات عبر الأقسام ومقاييس التنفيذ الأساسية",
+        "workforce_knowledge": "الكوادر البشرية والمعرفة",
+        "workforce_knowledge_subtitle": "عمليات الأفراد، صحة التعلم، وجاهزية الخطوط الأمامية",
+        "insights_compliance": "الرؤى والامتثال",
+        "insights_compliance_subtitle": "الإشارات السلوكية، الذكاء الاصطناعي، ووضع الامتثال",
+        "finance_governance": "المالية والحوكمة",
+        "finance_governance_subtitle": "مؤشرات الصحة المالية وجاهزية حوكمة المحفظة",
         "recruitment": "التوظيف",
         "maintenance_efficiency": "كفاءة الصيانة",
         "total_staff_revenue": "إجمالي الموظفين والإيرادات",
@@ -260,7 +335,46 @@
             "metric": "المقياس",
             "value": "القيمة",
             "period": "الفترة"
-        }
+        },
+        "executive_kpis": "مؤشرات الأداء الرئيسية التنفيذية",
+        "executive_kpis_subtitle": "مقاييس عالية المستوى عبر المحفظة",
+        "executive_control_center": "مركز التحكم التنفيذي",
+        "executive_control_center_subtitle": "إشارات المخاطر الحية، صحة الحوكمة، وتركيز القيادة",
+        "executive_highlights": "أبرز النقاط التنفيذية",
+        "executive_alerts": "تنبيهات تنفيذية",
+        "alert_low_compliance": "مخاطر الامتثال",
+        "alert_low_compliance_desc": "نسبة الامتثال للتدريب أقل من 70٪. المتابعة الفورية مطلوبة.",
+        "alert_maintenance": "تراكم الصيانة",
+        "alert_maintenance_desc": "انخفض معدل الحل عن الهدف. مراجعة المنشآت ذات الحجم الكبير.",
+        "alert_open_issues": "ارتفاع المشكلات المفتوحة",
+        "alert_open_issues_desc": "تجاوزت المشكلات المفتوحة حد الأمان. تصعيد المهام الحرجة.",
+        "alert_vacancies": "ضغط التوظيف",
+        "alert_vacancies_desc": "تجاوزت الشواغر الوظيفية هامش التوظيف المستهدف.",
+        "all_clear": "جميع الأنظمة الحيوية ضمن الهدف.",
+        "strategic_focus": "التركيز الاستراتيجي",
+        "focus_compliance": "رفع مستوى الامتثال للتدريب",
+        "focus_compliance_none": "لم يتم تعيين تدريب بعد",
+        "focus_compliance_note": "إعطاء الأولوية لمهام التدريب المتأخرة",
+        "focus_compliance_note_ok": "الامتثال في المسار الصحيح",
+        "focus_maintenance": "تقليل تراكم الصيانة",
+        "focus_maintenance_none": "لم يتم تسجيل تذاكر صيانة",
+        "focus_maintenance_note": "استهداف فئات المشكلات الرئيسية هذا الأسبوع",
+        "focus_maintenance_note_ok": "لم يتم الكشف عن ارتفاع في التراكم",
+        "focus_staffing": "استقرار التوظيف",
+        "focus_staffing_note": "تسريع طلبات التوظيف المفتوحة",
+        "focus_staffing_note_ok": "الشواغر ضمن الهدف",
+        "corporate_health_snapshot": "لمحة عن صحة الشركة",
+        "risk_index": "مؤشر المخاطر التشغيلية",
+        "risk_index_hint": "الأقل هو الأفضل",
+        "risk_index_scope": "إشارات على مستوى المحفظة",
+        "risk_index_updated": "يتم التحديث كل ساعة",
+        "revenue_run_rate": "معدل تشغيل الإيرادات",
+        "payroll_exposure": "التعرض للرواتب",
+        "budget_utilization": "استخدام الميزانية",
+        "pending_sync": "في انتظار المزامنة",
+        "corporate_dashboard_title": "لوحة تحكم الشركة",
+        "active_properties": "المنشآت النشطة",
+        "avg_staff_per_property": "المتوسط لكل منشأة"
     },
     "my_team": {
         "title": "فريقي",
@@ -276,5 +390,92 @@
         "try_different_search": "حاول استخدام مصطلح بحث مختلف",
         "pending": "معلق",
         "training": "تدريب"
+    },
+    "operations_center": {
+        "task_control": "التحكم في المهام",
+        "pending_tasks": "مهام معلقة",
+        "high_priority": "عالية الأولوية",
+        "review_tasks": "مراجعة المهام",
+        "maintenance_health": "حالة الصيانة",
+        "open_tickets": "تذاكر مفتوحة",
+        "overdue": "متأخرة",
+        "avg_resolution": "متوسط وقت الحل",
+        "review_maintenance": "مراجعة الصيانة",
+        "department_coverage": "تغطية الأقسام",
+        "departments_active": "أقسام نشطة",
+        "manage_teams": "إدارة الفرق",
+        "sla_breaches": "مخالفات اتفاقية مستوى الخدمة",
+        "no_active_breaches": "لا توجد مخالفات نشطة لاتفاقية مستوى الخدمة",
+        "operations_actions": "إجراءات العمليات",
+        "create_task": "إنشاء مهمة",
+        "log_maintenance": "تسجيل صيانة",
+        "view_approvals": "عرض الموافقات",
+        "generate_report": "إنشاء تقرير"
+    },
+    "department_control": {
+        "title": "مركز التحكم في الأقسام",
+        "department_name_placeholder": "اسم القسم",
+        "assign_manager_placeholder": "تعيين مدير",
+        "no_managers": "لا يوجد مديرين متاحين",
+        "create_department": "إنشاء قسم",
+        "loading": "جاري تحميل الأقسام...",
+        "department_badge": "قسم",
+        "manager_assigned_badge": "تم تعيين مدير",
+        "manager_placeholder": "المدير",
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "edit": "تعديل",
+        "remove": "إزالة"
+    },
+    "news_categories": {
+        "general": "عام",
+        "hospitality": "ضيافة",
+        "technology": "تكنولوجيا",
+        "food_and_beverage": "أغذية ومشروبات",
+        "tourism": "سياحة",
+        "marketing": "تسويق",
+        "people": "أفراد",
+        "finance": "مالية",
+        "design": "تصميم",
+        "sustainability": "الاستدامة",
+        "operations": "عمليات"
+    },
+    "ai_insights": {
+        "title": "رؤى الذكاء الاصطناعي",
+        "refresh": "تحديث",
+        "generating": "جاري التوليد...",
+        "no_insights": "لم يتم إنشاء رؤى بعد",
+        "generate_button": "توليد رؤى أسبوعية",
+        "updated": "تم التحديث",
+        "metrics": {
+            "completed": "مكتمل",
+            "overdue": "متأخر",
+            "pending_review": "بانتظار المراجعة",
+            "open_tickets": "تذاكر مفتوحة"
+        }
+    },
+    "feed_types": {
+        "announcement": "إعلان",
+        "kb_update": "تحديث المعرفة",
+        "training": "تدريب",
+        "achievement": "إنجاز",
+        "birthday": "عيد ميلاد",
+        "anniversary": "ذكرى العمل",
+        "new_joiner": "عضو فريق جديد",
+        "event": "حدث",
+        "recognition": "تكريم",
+        "filter": "تصفية"
+    },
+    "widget_common": {
+        "no_recent_activity": "لا يوجد نشاط حديث",
+        "in_progress": "قيد التنفيذ"
+    },
+    "feed_content": {
+        "article_updated": "تم تحديث المقال: {{title}}",
+        "training_completed": "أكمل {{name}} \"{{title}}\"",
+        "happy_birthday": "🎂 عيد ميلاد سعيد {{name}}!",
+        "birthday_in": "عيد ميلاد {{name}} بعد {{days}} أيام",
+        "welcome_team": "مرحباً بـ {{name}} في الفريق!",
+        "joined_as": "انضم كـ {{role}}"
     }
 }

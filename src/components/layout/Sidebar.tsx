@@ -85,9 +85,7 @@ const hrMenu = [
 const trainingMenu = [
   { name: 'training_dashboard', href: '/training/dashboard', icon: LayoutDashboard, roles: ['all'] },
   { name: 'my_training', href: '/learning/my', icon: Target, roles: ['all'] },
-  { name: 'training_modules', href: '/training/modules', icon: BookOpen, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  { name: 'training_builder', href: '/training/builder', icon: Building, roles: ['regional_admin', 'regional_hr', 'property_manager'] },
-  { name: 'training_assignments', href: '/training/assignments', icon: Target, roles: ['regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
+  { name: 'lms_admin', href: '/training/hub', icon: BookOpen, roles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
   { name: 'training_paths', href: '/training/paths', icon: BookOpen, roles: ['all'] },
   { name: 'my_certificates', href: '/training/certificates', icon: Award, roles: ['all'] },
 ]

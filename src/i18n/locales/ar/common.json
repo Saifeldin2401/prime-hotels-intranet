@@ -51,8 +51,16 @@
     "true": "صح",
     "false": "خطأ",
     "no_title": "بدون عنوان",
+    "no_description_provided": "لا يوجد وصف",
+    "no_reason_provided": "لا يوجد سبب",
     "please_login": "يرجى تسجيل الدخول لعرض هذه الصفحة",
     "view_profile": "عرض الملف الشخصي",
+    "visibility": {
+      "all_properties": "جميع المنشآت",
+      "property_specific": "خاص بالمنشأة",
+      "department_specific": "خاص بالقسم",
+      "role_specific": "خاص بالدور"
+    },
     "total": "الإجمالي",
     "noResults": "لا توجد نتائج.",
     "of": "من",
@@ -228,7 +236,11 @@
       "start_training": "بدء التدريب",
       "view_payslip": "عرض قسيمة الراتب",
       "view_review": "عرض التقييم",
-      "view_certificate": "عرض الشهادة"
+      "view_certificate": "عرض الشهادة",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "view": "عرض",
+      "more": "المزيد"
     },
     "defaults": {
       "new_training": "تدريب جديد"
@@ -298,7 +310,9 @@
     "edit": "تعديل",
     "delete": "حذف",
     "refresh": "تحديث",
-    "error": "خطأ"
+    "error": "خطأ",
+    "view": "عرض",
+    "more": "المزيد"
   },
   "priority": {
     "critical": "حرج",

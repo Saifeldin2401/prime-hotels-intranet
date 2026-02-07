@@ -1,10 +1,3 @@
-/**
- * AIDigestWidget - AI-Generated Manager Insights
- * 
- * Displays the latest AI-generated summary of key metrics and insights
- * for managers and department heads.
- */
-
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,7 +23,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { ar, enUS } from 'date-fns/locale'
 import { getUserFriendlyError } from '@/lib/errorMessages'
+import { useTranslation } from 'react-i18next'
 
 interface DigestData {
     id: string
@@ -55,6 +50,7 @@ interface AIDigestWidgetProps {
 }
 
 export function AIDigestWidget({ className }: AIDigestWidgetProps) {
+    const { t, i18n } = useTranslation('dashboard')
     const { user } = useAuth()
     const { toast } = useToast()
     const [digest, setDigest] = useState<DigestData | null>(null)
@@ -77,7 +73,7 @@ export function AIDigestWidget({ className }: AIDigestWidgetProps) {
             if (error && error.code !== 'PGRST116') {
                 const errorDetails = getUserFriendlyError(error)
                 toast({
-                    title: 'Unable to load digest',
+                    title: t('common:errors.load_failed', 'Unable to load digest'),
                     description: errorDetails.message,
                     variant: 'destructive'
                 })
@@ -87,7 +83,7 @@ export function AIDigestWidget({ className }: AIDigestWidgetProps) {
         } catch (err) {
             const errorDetails = getUserFriendlyError(err)
             toast({
-                title: 'Error loading digest',
+                title: t('common:errors.load_failed', 'Error loading digest'),
                 description: errorDetails.message,
                 variant: 'destructive'
             })
@@ -159,7 +155,7 @@ export function AIDigestWidget({ className }: AIDigestWidgetProps) {
                     : 0
             }
 
-            // Generate AI summary
+            // Generate AI summary - Note: Prompt remains in English as it's for the LLM
             const prompt = `You are an executive assistant for a hotel chain. Generate a brief, professional weekly digest summary for a manager based on these metrics:
 
 METRICS:
@@ -172,14 +168,11 @@ METRICS:
 - Training Completion Rate: ${metrics.completion_rate}%
 
 INSTRUCTIONS:
-1. Write a 3-4 sentence professional summary highlighting key insights
+1. Write a 3-4 sentence professional summary highlighting key insights in ${i18n.language === 'ar' ? 'Arabic' : 'English'}
 2. Call out any concerns (high overdue, low completion rate)
 3. Mention positive achievements if any
 4. Be concise and actionable
 5. Use a warm but professional tone
-
-EXAMPLE OUTPUT:
-"This week shows solid progress with ${metrics.training_completed} training completions. However, ${metrics.training_overdue} overdue assignments need attention. Consider following up with team members who have pending training. On the maintenance front, ${metrics.resolved_tickets} tickets were resolved efficiently."
 
 Generate the summary now:`
 
@@ -211,14 +204,14 @@ Generate the summary now:`
 
             setDigest(newDigest)
             toast({
-                title: 'Digest Generated',
-                description: 'Your weekly insights have been updated.',
+                title: t('ai_insights.digest_generated', 'Digest Generated'),
+                description: t('ai_insights.digest_generated_desc', 'Your weekly insights have been updated.'),
             })
 
         } catch (err: unknown) {
             const errorDetails = getUserFriendlyError(err)
             toast({
-                title: 'Generation Failed',
+                title: t('common:errors.operation_failed', 'Generation Failed'),
                 description: errorDetails.message,
                 variant: 'destructive'
             })
@@ -252,10 +245,12 @@ Generate the summary now:`
                             <BrainCircuit className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                            <CardTitle className="text-lg font-bold">AI Insights</CardTitle>
+                            <CardTitle className="text-lg font-bold">
+                                {t('ai_insights.title', 'AI Insights')}
+                            </CardTitle>
                             {digest && (
                                 <p className="text-xs text-muted-foreground">
-                                    Updated {formatDistanceToNow(new Date(digest.created_at), { addSuffix: true })}
+                                    {t('ai_insights.updated')} {formatDistanceToNow(new Date(digest.created_at), { addSuffix: true, locale: i18n.language === 'ar' ? ar : enUS })}
                                 </p>
                             )}
                         </div>
@@ -268,7 +263,7 @@ Generate the summary now:`
                         className="gap-2"
                     >
                         <RefreshCw className={cn("h-4 w-4", generating && "animate-spin")} />
-                        {generating ? 'Generating...' : 'Refresh'}
+                        {generating ? t('ai_insights.generating', 'Generating...') : t('ai_insights.refresh', 'Refresh')}
                     </Button>
                 </div>
             </CardHeader>
@@ -292,14 +287,14 @@ Generate the summary now:`
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                                 <MetricCard
                                     icon={BookOpen}
-                                    label="Completed"
+                                    label={t('ai_insights.metrics.completed', 'Completed')}
                                     value={digest.metrics.training_completed || 0}
                                     color="text-green-600"
                                     bgColor="bg-green-50"
                                 />
                                 <MetricCard
                                     icon={AlertTriangle}
-                                    label="Overdue"
+                                    label={t('ai_insights.metrics.overdue', 'Overdue')}
                                     value={digest.metrics.training_overdue || 0}
                                     color="text-amber-600"
                                     bgColor="bg-amber-50"
@@ -307,14 +302,14 @@ Generate the summary now:`
                                 />
                                 <MetricCard
                                     icon={Clock}
-                                    label="Pending Review"
+                                    label={t('ai_insights.metrics.pending_review', 'Pending Review')}
                                     value={digest.metrics.pending_approvals || 0}
                                     color="text-blue-600"
                                     bgColor="bg-blue-50"
                                 />
                                 <MetricCard
                                     icon={Wrench}
-                                    label="Open Tickets"
+                                    label={t('ai_insights.metrics.open_tickets', 'Open Tickets')}
                                     value={digest.metrics.open_tickets || 0}
                                     color="text-purple-600"
                                     bgColor="bg-purple-50"
@@ -330,11 +325,11 @@ Generate the summary now:`
                         >
                             <Sparkles className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                             <p className="text-sm text-muted-foreground mb-4">
-                                No insights generated yet
+                                {t('ai_insights.no_insights', 'No insights generated yet')}
                             </p>
                             <Button onClick={generateDigest} disabled={generating} className="gap-2">
                                 <Sparkles className="h-4 w-4" />
-                                Generate Weekly Insights
+                                {t('ai_insights.generate_button', 'Generate Weekly Insights')}
                             </Button>
                         </motion.div>
                     )}

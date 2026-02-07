@@ -1,10 +1,9 @@
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useBulkNotifications } from '@/hooks/useBulkNotifications'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -69,7 +68,23 @@ interface LearningAssignment {
 
 type AssignmentStatus = 'active' | 'completed' | 'overdue' | 'due_soon'
 
-export default function TrainingAssignments() {
+interface TrainingAssignmentsPanelProps {
+  embedded?: boolean
+  initialTab?: 'overview' | 'assignments'
+  defaultModuleId?: string
+  autoOpen?: boolean
+  hideCreateButton?: boolean
+  hideHeaderActions?: boolean
+}
+
+export function TrainingAssignmentsPanel({
+  embedded = false,
+  initialTab = 'overview',
+  defaultModuleId,
+  autoOpen = false,
+  hideCreateButton = false,
+  hideHeaderActions = false
+}: TrainingAssignmentsPanelProps) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -80,7 +95,8 @@ export default function TrainingAssignments() {
   // State
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
+  const [showAssignmentDialog, setShowAssignmentDialog] = useState(autoOpen)
+  const [activeTab, setActiveTab] = useState<'overview' | 'assignments'>(initialTab)
 
   // Progress Data
   const { data: progressData, isLoading: isLoadingProgress } = useLearningProgress()
@@ -91,11 +107,23 @@ export default function TrainingAssignments() {
   const [filterProp, setFilterProp] = useState<string | null>(null)
 
   // Form state
-  const [formModuleId, setFormModuleId] = useState('')
+  const [formModuleId, setFormModuleId] = useState(defaultModuleId || '')
   const [formTargetType, setFormTargetType] = useState<'all' | 'users' | 'departments' | 'properties'>('all')
   const [formTargetIds, setFormTargetIds] = useState<string[]>([])
   const [formDeadline, setFormDeadline] = useState('')
   const [propertyFilter, setPropertyFilter] = useState<string>('all')
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab)
+  }, [initialTab])
+
+  useEffect(() => {
+    if (defaultModuleId) setFormModuleId(defaultModuleId)
+  }, [defaultModuleId])
+
+  useEffect(() => {
+    if (autoOpen) setShowAssignmentDialog(true)
+  }, [autoOpen])
 
   // Fetch assignments
   const { data: rawAssignments, isLoading: isLoadingAssignments } = useQuery({
@@ -517,32 +545,36 @@ export default function TrainingAssignments() {
 
   return (
     <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
-      <PageHeader
-        title={t('trainingCenter')}
-        description={t('trainingDescription')}
-        actions={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/notifications')}
-              className="hidden md:flex"
-            >
-              <Bell className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-              {t('batchStatus')}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/training/assignments/rules')}
-              className="hidden md:flex"
-            >
-              <Settings className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-              {t('autoAssignRules')}
-            </Button>
-          </div>
-        }
-      />
+      {!embedded && (
+        <PageHeader
+          title={t('trainingCenter')}
+          description={t('trainingDescription')}
+          actions={
+            hideHeaderActions ? undefined : (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/admin/notifications')}
+                  className="hidden md:flex"
+                >
+                  <Bell className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                  {t('batchStatus')}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/training/assignments/rules')}
+                  className="hidden md:flex"
+                >
+                  <Settings className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                  {t('autoAssignRules')}
+                </Button>
+              </div>
+            )
+          }
+        />
+      )}
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overview' | 'assignments')} className="space-y-6">
         <TabsList className="bg-white p-1 border rounded-lg">
           <TabsTrigger value="overview" className="data-[state=active]:bg-hotel-navy data-[state=active]:text-white">
             <BarChart3 className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
@@ -805,7 +837,10 @@ export default function TrainingAssignments() {
 
         {/* ASSIGNMENTS TAB */}
         <TabsContent value="assignments" className="space-y-6">
-          <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm">
+          <div className={cn(
+            "flex items-center bg-white p-4 rounded-lg border shadow-sm",
+            hideCreateButton ? "justify-start" : "justify-between"
+          )}>
             <div className="relative flex-1 max-w-sm">
               <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
               <Input
@@ -815,10 +850,12 @@ export default function TrainingAssignments() {
                 className={isRTL ? "pr-10 text-right" : "pl-10"}
               />
             </div>
-            <Button onClick={() => setShowAssignmentDialog(true)} className={cn("bg-hotel-navy", isRTL ? "flex-row-reverse" : "")}>
-              <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-              {t('createAssignment')}
-            </Button>
+            {!hideCreateButton && (
+              <Button onClick={() => setShowAssignmentDialog(true)} className={cn("bg-hotel-navy", isRTL ? "flex-row-reverse" : "")}>
+                <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                {t('createAssignment')}
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -874,12 +911,14 @@ export default function TrainingAssignments() {
                 </div>
                 <h3 className="mt-2 text-sm font-semibold text-gray-900">{t('noAssignments')}</h3>
                 <p className="mt-1 text-sm text-gray-500">{t('startAssigning')}</p>
-                <div className="mt-6">
-                  <Button onClick={() => setShowAssignmentDialog(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t('createAssignment')}
-                  </Button>
-                </div>
+                {!hideCreateButton && (
+                  <div className="mt-6">
+                    <Button onClick={() => setShowAssignmentDialog(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      {t('createAssignment')}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1026,4 +1065,8 @@ export default function TrainingAssignments() {
       }
     </div >
   )
+}
+
+export default function TrainingAssignments() {
+  return <TrainingAssignmentsPanel />
 }

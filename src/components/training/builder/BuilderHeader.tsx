@@ -37,7 +37,7 @@ export const BuilderHeader = ({
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
-                        onClick={() => navigate('/training/modules')}
+                        onClick={() => navigate('/training/hub')}
                     >
                         <ChevronLeft className={cn("h-4 w-4", isRTL && "rotate-180")} />
                     </Button>

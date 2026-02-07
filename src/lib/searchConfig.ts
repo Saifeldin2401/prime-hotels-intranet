@@ -52,10 +52,19 @@ export const SYSTEM_PAGES: SearchablePage[] = [
     },
     {
         id: 'page-training',
-        title: 'Training Dashboard',
-        description: 'My learning paths and assigned modules',
-        url: '/training',
+        title: 'My Learning',
+        description: 'Your assigned learning paths and modules',
+        url: '/learning/my',
         keywords: ['learn', 'course', 'education', 'modules', 'assignments'],
+        icon: 'GraduationCap',
+        category: 'Learning'
+    },
+    {
+        id: 'page-lms-admin',
+        title: 'LMS Admin Hub',
+        description: 'Design, build, assign, and track learning programs',
+        url: '/training/hub',
+        keywords: ['training admin', 'builder', 'assignments', 'learning management', 'lms'],
         icon: 'GraduationCap',
         category: 'Learning'
     },

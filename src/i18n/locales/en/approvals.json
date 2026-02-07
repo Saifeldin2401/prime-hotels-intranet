@@ -30,6 +30,7 @@
     "reject_dialog_desc_document": "Please provide a reason for rejecting this document.",
     "reject_dialog_desc_leave": "Please provide a reason for rejecting this request.",
     "reject_reason_placeholder": "Reason for rejection (required)...",
+    "reject_reason_prompt": "Please provide a reason for rejection:",
     "optional_feedback": "Optional feedback...",
     "assign_dialog_title": "Assign Ticket",
     "assign_dialog_desc": "Select a staff member to assign this ticket to.",

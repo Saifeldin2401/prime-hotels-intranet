@@ -20,6 +20,7 @@ import {
     Mail,
     Phone,
     FileText,
+    Loader2,
     CheckCircle,
     XCircle
 } from 'lucide-react'
@@ -28,6 +29,7 @@ import { getSeniorityBadgeColor, getApplicationStatusColor, getRoutingDescriptio
 import type { JobPosting, JobApplication } from '@/lib/types'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 const statusColors = {
     draft: 'bg-gray-100 text-gray-800',
@@ -45,6 +47,7 @@ export default function JobPostingDetail() {
     const { t, i18n } = useTranslation('jobs')
     const [deleteJob, setDeleteJob] = useState(false)
     const [referralJob, setReferralJob] = useState(false) // Added state
+    const [cvLoadingId, setCvLoadingId] = useState<string | null>(null)
     const isRTL = i18n.dir() === 'rtl'
 
     const canManageJobs = (roles || []).some((userRole) =>
@@ -108,7 +111,7 @@ export default function JobPostingDetail() {
         mutationFn: async ({ appId, status }: { appId: string, status: string }) => {
             const { error } = await supabase
                 .from('job_applications')
-                .update({ status })
+                .update({ status, updated_at: new Date().toISOString() })
                 .eq('id', appId)
 
             if (error) throw error
@@ -117,6 +120,31 @@ export default function JobPostingDetail() {
             queryClient.invalidateQueries({ queryKey: ['job-applications', id] })
         }
     })
+
+    const handleOpenCv = async (app: JobApplication) => {
+        try {
+            if (app.cv_url) {
+                window.open(app.cv_url, '_blank', 'noopener,noreferrer')
+                return
+            }
+            if (!app.cv_bucket || !app.cv_path) return
+
+            setCvLoadingId(app.id)
+            const { data, error } = await supabase.storage
+                .from(app.cv_bucket)
+                .createSignedUrl(app.cv_path, 60 * 10)
+
+            if (error || !data?.signedUrl) {
+                throw error || new Error('Failed to generate secure link')
+            }
+            window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+        } catch (err: any) {
+            console.error('Failed to open CV:', err)
+            toast.error(err?.message || 'Unable to open CV')
+        } finally {
+            setCvLoadingId(null)
+        }
+    }
 
     if (isLoading) {
         return (
@@ -344,13 +372,20 @@ export default function JobPostingDetail() {
                                                                     {t('markHired')}
                                                                 </Button>
                                                             )}
-                                                            {app.cv_url && (
-                                                                <a href={app.cv_url} target="_blank" rel="noopener noreferrer">
-                                                                    <Button size="sm" variant="outline">
+                                                            {(app.cv_url || app.cv_path) && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleOpenCv(app)}
+                                                                    disabled={cvLoadingId === app.id}
+                                                                >
+                                                                    {cvLoadingId === app.id ? (
+                                                                        <Loader2 className={`h-4 w-4 animate-spin ${isRTL ? 'ml-1' : 'mr-1'}`} />
+                                                                    ) : (
                                                                         <FileText className={`h-4 w-4 ${isRTL ? 'ml-1' : 'mr-1'}`} />
-                                                                        {t('viewCv')}
-                                                                    </Button>
-                                                                </a>
+                                                                    )}
+                                                                    {t('viewCv')}
+                                                                </Button>
                                                             )}
                                                         </div>
                                                     )}

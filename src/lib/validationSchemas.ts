@@ -13,8 +13,7 @@ const phoneSchema = z.string().optional().or(z.string().regex(/^[\d\s\-\+\(\)]+$
 
 // Date validation
 const dateSchema = z.date({
-  required_error: 'Date is required',
-  invalid_type_error: 'Please select a valid date'
+  message: 'Please select a valid date'
 })
 
 // UUID validation
@@ -27,6 +26,7 @@ export const userSchema = z.object({
   email: emailSchema,
   full_name: z.string().min(2, 'Full name must be at least 2 characters').max(100, 'Full name is too long'),
   phone: phoneSchema,
+  date_of_birth: z.string().min(1, 'Date of birth is required'),
   hire_date: z.date().optional().or(z.string().optional()),
   job_title: z.string().optional(),
   staff_id: z.string().optional(),
@@ -34,7 +34,7 @@ export const userSchema = z.object({
   property_ids: z.array(uuidSchema).min(1, 'At least one property must be selected'),
   department_ids: z.array(uuidSchema).optional(),
   role: z.enum(['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff'], {
-    errorMap: () => ({ message: 'Please select a valid role' })
+    message: 'Please select a valid role'
   }),
   reporting_to: uuidSchema.optional()
 })
@@ -48,7 +48,7 @@ export const leaveRequestSchema = z.object({
   start_date: dateSchema,
   end_date: dateSchema,
   type: z.enum(['annual', 'sick', 'unpaid', 'maternity', 'paternity', 'personal', 'other'], {
-    errorMap: () => ({ message: 'Please select a leave type' })
+    message: 'Please select a leave type'
   }),
   reason: z.string().max(500, 'Reason is too long').optional(),
   property_id: uuidSchema.optional(),

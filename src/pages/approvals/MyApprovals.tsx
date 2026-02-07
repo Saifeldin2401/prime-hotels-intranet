@@ -48,7 +48,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 export default function MyApprovals() {
-  const { t, i18n } = useTranslation('approvals')
+  const { t, i18n } = useTranslation(['approvals', 'common'])
   const isRTL = i18n.dir() === 'rtl'
   const dateLocale = i18n.language.startsWith('ar') ? ar : enUS
   const { user, primaryRole, departments, properties } = useAuth()
@@ -455,7 +455,7 @@ export default function MyApprovals() {
   }
 
   const handleReject = (approvalId: string) => {
-    const reason = prompt('Please provide a reason for rejection:')
+    const reason = prompt(t('reject_reason_prompt'))
     if (reason) {
       rejectMutation.mutate({ approvalId, reason })
     }
@@ -466,7 +466,7 @@ export default function MyApprovals() {
   }
 
   const handleRejectLeave = (leaveRequestId: string) => {
-    const reason = prompt('Please provide a reason for rejection:')
+    const reason = prompt(t('reject_reason_prompt'))
     if (reason) {
       rejectLeaveMutation.mutate({ leaveRequestId, reason })
     }
@@ -597,15 +597,15 @@ export default function MyApprovals() {
                           <FileText className="w-5 h-5 text-blue-500" />
                           <h3 className="font-semibold text-lg">{approval.documents.title}</h3>
                           <Badge className="bg-gray-100 text-gray-800 border border-gray-600 rounded-md text-xs">
-                            {approval.documents.visibility === 'all_properties' && 'All properties'}
-                            {approval.documents.visibility === 'property' && 'Property-specific'}
-                            {approval.documents.visibility === 'department' && 'Department-specific'}
-                            {approval.documents.visibility === 'role' && 'Role-specific'}
+                            {approval.documents.visibility === 'all_properties' && t('common:visibility.all_properties')}
+                            {approval.documents.visibility === 'property' && t('common:visibility.property_specific')}
+                            {approval.documents.visibility === 'department' && t('common:visibility.department_specific')}
+                            {approval.documents.visibility === 'role' && t('common:visibility.role_specific')}
                           </Badge>
                         </div>
 
                         <p className="text-gray-600 mb-3 line-clamp-2">
-                          {approval.documents.description || 'No description provided'}
+                          {approval.documents.description || t('common:no_description_provided')}
                         </p>
 
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
@@ -690,7 +690,7 @@ export default function MyApprovals() {
 
                         <div className="text-gray-600 mb-3">
                           <p className="font-medium">{leave.profiles?.full_name || 'Unknown'}</p>
-                          <p>{leave.reason || 'No reason provided'}</p>
+                          <p>{leave.reason || t('no_reason')}</p>
                         </div>
 
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
@@ -861,7 +861,7 @@ export default function MyApprovals() {
                         </div>
 
                         <p className="text-gray-600 mb-3 line-clamp-2">
-                          {approval.documents.description || 'No description provided'}
+                          {approval.documents.description || t('common:no_description_provided')}
                         </p>
 
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">

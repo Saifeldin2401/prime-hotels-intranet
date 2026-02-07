@@ -18,6 +18,11 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { useTranslation } from 'react-i18next'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { MotivationWidget } from "@/components/dashboard/MotivationWidget"
+import { ActiveUsersWidget } from "@/components/dashboard/ActiveUsersWidget"
+import { NewsWidget } from "@/components/dashboard/NewsWidget"
+import { EmployeeOfMonthWidget } from "@/components/dashboard/EmployeeOfMonthWidget"
+import { BirthdayWidget } from "@/components/dashboard/BirthdayWidget"
 import { ClipboardList, BookOpen, Users, CheckSquare } from 'lucide-react'
 import { useRecentAuditLogs } from '@/hooks/useAuditLogs'
 import { OperationsControlCenter } from '@/components/operations/OperationsControlCenter'
@@ -99,6 +104,28 @@ export function DepartmentHeadDashboard() {
           </>
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="col-span-4">
+          <MotivationWidget />
+        </div>
+        <div className="col-span-3">
+          <ActiveUsersWidget />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-12">
+        <div className="md:col-span-8">
+          <EmployeeOfMonthWidget />
+        </div>
+        <div className="md:col-span-4">
+          <BirthdayWidget />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 mb-6">
+        <NewsWidget />
+      </div>
 
       {/* Department Stats */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">

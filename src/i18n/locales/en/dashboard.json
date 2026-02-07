@@ -16,6 +16,17 @@
         "activity": "Recent Activity",
         "activity_desc": "Latest updates and assignments",
         "view_documents": "View Documents",
+        "view_training": "View Training",
+        "view_announcements": "View Announcements",
+        "manage_users": "Manage Users",
+        "no_role": "No role assigned",
+        "property": "property",
+        "department": "department",
+        "properties": "properties",
+        "departments": "departments",
+        "documents_desc": "Published documents",
+        "training_desc": "{{count}} in progress",
+        "announcements_desc": "Unread announcements",
         "pending_widget": {
             "title": "Pending Items",
             "subtitle": "Items requiring your attention",
@@ -35,17 +46,70 @@
             "due": "Due {{date}}",
             "default_training_title": "Training Assignment"
         },
-        "view_training": "View Training",
-        "view_announcements": "View Announcements",
-        "manage_users": "Manage Users",
-        "no_role": "No role assigned",
-        "property": "property",
-        "department": "department",
-        "properties": "properties",
-        "departments": "departments",
-        "documents_desc": "Published documents",
-        "training_desc": "{{count}} in progress",
-        "announcements_desc": "Unread announcements"
+        "active_users": {
+            "title": "Active Team Members",
+            "online": "Online",
+            "no_active": "No other active users right now."
+        },
+        "dept_kpi": {
+            "title": "Department Performance",
+            "no_data": "No department data available",
+            "top_depts": "Top Departments",
+            "rankings": "Department Performance Rankings",
+            "tasks": "Tasks",
+            "training": "Training",
+            "sops": "SOPs"
+        },
+        "knowledge": {
+            "title": "Knowledge Base",
+            "view_all": "View All",
+            "progress": "Required Reading Progress",
+            "required": "Required Reading",
+            "recently_updated": "Recently Updated",
+            "updated_at": "Updated {{time}}",
+            "all_caught_up": "You're all caught up!",
+            "explore": "Explore Knowledge Base"
+        },
+        "team_list": {
+            "title": "Department Team",
+            "search_team_members": "Search team members...",
+            "loading_team": "Loading team...",
+            "no_team_found": "No team members found in your department(s).",
+            "no_job_title": "No Job Title",
+            "unknown": "Unknown",
+            "view": "View"
+        },
+        "maintenance_labels": {
+            "critical": "critical",
+            "urgent": "urgent"
+        },
+        "role_widget": {
+            "properties": "properties",
+            "departments": "departments"
+        },
+        "quick_actions_widget": {
+            "view": "View",
+            "search": "Search",
+            "go_back": "Go Back"
+        },
+        "motivation": {
+            "refresh": "Refresh"
+        },
+        "employee_of_the_month": {
+            "title": "Employee of the Month",
+            "congratulations": "Congratulations!",
+            "no_winner": "No winner announced yet for this month.",
+            "view_previous": "View Previous Winners",
+            "manage": "Manage EOM"
+        },
+        "birthdays": {
+            "title": "Upcoming Birthdays",
+            "today": "Today!",
+            "tomorrow": "Tomorrow",
+            "in_days": "In {{count}} days",
+            "no_birthdays": "No birthdays in the next 7 days.",
+            "send_wish": "Send Birthday Wish"
+        }
     },
     "analytics": {
         "title": "Analytics Dashboard",
@@ -153,6 +217,16 @@
     },
     "cards": {
         "training_compliance": "Training Compliance",
+        "portfolio_trends": "Portfolio Trends",
+        "portfolio_trends_subtitle": "Momentum across compliance, maintenance, and staffing",
+        "operational_intelligence": "Operational Intelligence",
+        "operational_intelligence_subtitle": "Cross-department signals and core execution metrics",
+        "workforce_knowledge": "Workforce & Knowledge",
+        "workforce_knowledge_subtitle": "People operations, learning health, and frontline readiness",
+        "insights_compliance": "Insights & Compliance",
+        "insights_compliance_subtitle": "Behavioral signals, AI intelligence, and compliance posture",
+        "finance_governance": "Finance & Governance",
+        "finance_governance_subtitle": "Financial health indicators and portfolio governance readiness",
         "recruitment": "Recruitment",
         "maintenance_efficiency": "Maintenance Efficiency",
         "total_staff_revenue": "Total Staff & Revenue",
@@ -257,7 +331,46 @@
             "metric": "Metric",
             "value": "Value",
             "period": "Period"
-        }
+        },
+        "executive_kpis": "Executive KPIs",
+        "executive_kpis_subtitle": "High-level metrics across the portfolio",
+        "executive_control_center": "Executive Control Center",
+        "executive_control_center_subtitle": "Live risk signals, governance health, and leadership focus",
+        "executive_highlights": "Executive Highlights",
+        "executive_alerts": "Executive Alerts",
+        "alert_low_compliance": "Compliance Risk",
+        "alert_low_compliance_desc": "Training compliance is below 70%. Immediate follow-up required.",
+        "alert_maintenance": "Maintenance Backlog",
+        "alert_maintenance_desc": "Resolution rate has dipped below target. Review high volume properties.",
+        "alert_open_issues": "Open Issues Spike",
+        "alert_open_issues_desc": "Open issues are above the safety threshold. Escalate critical tasks.",
+        "alert_vacancies": "Recruitment Pressure",
+        "alert_vacancies_desc": "Open vacancies exceed target staffing buffer.",
+        "all_clear": "All critical systems are within target.",
+        "strategic_focus": "Strategic Focus",
+        "focus_compliance": "Lift training compliance",
+        "focus_compliance_none": "No training assigned yet",
+        "focus_compliance_note": "Prioritize overdue training assignments",
+        "focus_compliance_note_ok": "Compliance on track",
+        "focus_maintenance": "Reduce maintenance backlog",
+        "focus_maintenance_none": "No maintenance tickets recorded",
+        "focus_maintenance_note": "Target top issue categories this week",
+        "focus_maintenance_note_ok": "No backlog spikes detected",
+        "focus_staffing": "Stabilize staffing",
+        "focus_staffing_note": "Accelerate open requisitions",
+        "focus_staffing_note_ok": "Vacancies within target",
+        "corporate_health_snapshot": "Corporate Health Snapshot",
+        "risk_index": "Operational Risk Index",
+        "risk_index_hint": "Lower is better",
+        "risk_index_scope": "Portfolio-wide signals",
+        "risk_index_updated": "Updated hourly",
+        "revenue_run_rate": "Revenue Run Rate",
+        "payroll_exposure": "Payroll Exposure",
+        "budget_utilization": "Budget Utilization",
+        "pending_sync": "Pending Sync",
+        "corporate_dashboard_title": "Corporate Dashboard",
+        "active_properties": "Active Properties",
+        "avg_staff_per_property": "Avg per property"
     },
     "my_team": {
         "title": "My Team",
@@ -273,5 +386,92 @@
         "try_different_search": "Try a different search term",
         "pending": "pending",
         "training": "training"
+    },
+    "operations_center": {
+        "task_control": "Task Control",
+        "pending_tasks": "Pending tasks",
+        "high_priority": "High priority",
+        "review_tasks": "Review Tasks",
+        "maintenance_health": "Maintenance Health",
+        "open_tickets": "Open tickets",
+        "overdue": "Overdue",
+        "avg_resolution": "Avg resolution",
+        "review_maintenance": "Review Maintenance",
+        "department_coverage": "Department Coverage",
+        "departments_active": "Departments active",
+        "manage_teams": "Manage Teams",
+        "sla_breaches": "SLA Breaches",
+        "no_active_breaches": "No active SLA breaches.",
+        "operations_actions": "Operations Actions",
+        "create_task": "Create Task",
+        "log_maintenance": "Log Maintenance",
+        "view_approvals": "View Approvals",
+        "generate_report": "Generate Report"
+    },
+    "department_control": {
+        "title": "Department Control Center",
+        "department_name_placeholder": "Department name",
+        "assign_manager_placeholder": "Assign manager",
+        "no_managers": "No managers available",
+        "create_department": "Create Department",
+        "loading": "Loading departments...",
+        "department_badge": "Department",
+        "manager_assigned_badge": "Manager Assigned",
+        "manager_placeholder": "Manager",
+        "save": "Save",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "remove": "Remove"
+    },
+    "news_categories": {
+        "general": "General",
+        "hospitality": "Hospitality",
+        "technology": "Technology",
+        "food_and_beverage": "Food & Beverage",
+        "tourism": "Tourism",
+        "marketing": "Marketing",
+        "people": "People",
+        "finance": "Finance",
+        "design": "Design",
+        "sustainability": "Sustainability",
+        "operations": "Operations"
+    },
+    "ai_insights": {
+        "title": "AI Insights",
+        "refresh": "Refresh",
+        "generating": "Generating...",
+        "no_insights": "No insights generated yet",
+        "generate_button": "Generate Weekly Insights",
+        "updated": "Updated",
+        "metrics": {
+            "completed": "Completed",
+            "overdue": "Overdue",
+            "pending_review": "Pending Review",
+            "open_tickets": "Open Tickets"
+        }
+    },
+    "feed_types": {
+        "announcement": "Announcement",
+        "kb_update": "KB Update",
+        "training": "Training",
+        "achievement": "Achievement",
+        "birthday": "Birthday",
+        "anniversary": "Work Anniversary",
+        "new_joiner": "New Team Member",
+        "event": "Event",
+        "recognition": "Recognition",
+        "filter": "Filter"
+    },
+    "widget_common": {
+        "no_recent_activity": "No recent activity",
+        "in_progress": "in progress"
+    },
+    "feed_content": {
+        "article_updated": "Article updated: {{title}}",
+        "training_completed": "{{name}} completed \"{{title}}\"",
+        "happy_birthday": "🎂 Happy Birthday {{name}}!",
+        "birthday_in": "{{name}}'s birthday in {{days}} days",
+        "welcome_team": "Welcome {{name}} to the team!",
+        "joined_as": "Joined as {{role}}"
     }
 }

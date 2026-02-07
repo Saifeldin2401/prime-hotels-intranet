@@ -482,13 +482,13 @@ export default function SubmitTicket() {
                     disabled={isSubmitting}
                     loading={isSubmitting}
                     loadingText={selectedFiles.length > 0
-                      ? t('submit_ticket.uploading', { defaultValue: 'Submitting & Uploading...' })
-                      : t('submit_ticket.submitting', { defaultValue: 'Submitting...' })}
+                      ? t('submit_ticket.uploading')
+                      : t('submit_ticket.submitting')}
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     {selectedFiles.length > 0
-                      ? t('submit_ticket.submit_with_files', { defaultValue: 'Submit & Upload' })
-                      : t('submit_ticket.submit', { defaultValue: 'Submit Ticket' })}
+                      ? t('submit_ticket.submit_with_files')
+                      : t('submit_ticket.submit')}
                   </LoadingButton>
                 </div>
               </Form>

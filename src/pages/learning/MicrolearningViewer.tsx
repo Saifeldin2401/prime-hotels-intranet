@@ -16,12 +16,14 @@ import {
 } from 'lucide-react'
 import type { MicrolearningContent } from '@/types/learning'
 import { useAuth } from '@/hooks/useAuth'
+import { useTranslation } from 'react-i18next'
 
 export default function MicrolearningViewer() {
     const { id } = useParams()
     const navigate = useNavigate()
     const { toast } = useToast()
     const { user } = useAuth()
+    const { t } = useTranslation('common')
     const videoRef = useRef<HTMLVideoElement>(null)
     const [progress, setProgress] = useState(0)
     const [completed, setCompleted] = useState(false)
@@ -177,7 +179,7 @@ export default function MicrolearningViewer() {
                                 Description
                             </h3>
                             <p className="text-muted-foreground whitespace-pre-wrap">
-                                {content.description || 'No description provided.'}
+                                {content.description || t('no_description_provided')}
                             </p>
                         </Card>
                     </div>

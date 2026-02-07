@@ -100,6 +100,17 @@ export function useInactivityTimeout({
             return
         }
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                clearAllTimers()
+                return
+            }
+
+            // Treat returning to the tab as activity to keep session stable
+            lastActivityRef.current = Date.now()
+            resetTimers()
+        }
+
         // Set up timers
         resetTimers()
 
@@ -108,12 +119,14 @@ export function useInactivityTimeout({
         events.forEach(event => {
             window.addEventListener(event, handleActivity, { passive: true })
         })
+        document.addEventListener('visibilitychange', handleVisibilityChange)
 
         return () => {
             clearAllTimers()
             events.forEach(event => {
                 window.removeEventListener(event, handleActivity)
             })
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
     }, [enabled, user, resetTimers, handleActivity, clearAllTimers])
 

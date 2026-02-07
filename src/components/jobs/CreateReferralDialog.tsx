@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -14,8 +14,17 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, AlertCircle, CheckCircle, Upload, FileText, X, Link2 } from 'lucide-react'
+import { Loader2, AlertCircle, CheckCircle, Upload, FileText, X, Link2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { logAuditEvent } from '@/lib/auditLog'
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+const ALLOWED_EXTENSIONS = new Set(['pdf', 'doc', 'docx'])
+const ALLOWED_MIME_TYPES = new Set([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+])
 
 interface CreateReferralDialogProps {
     open: boolean
@@ -30,7 +39,7 @@ export function CreateReferralDialog({
     jobId,
     jobTitle
 }: CreateReferralDialogProps) {
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
     const queryClient = useQueryClient()
 
     // Form state
@@ -61,12 +70,31 @@ export function CreateReferralDialog({
         setSuccess(false)
     }
 
+    const validateFile = (candidateFile: File) => {
+        const ext = candidateFile.name.split('.').pop()?.toLowerCase()
+        if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
+            return 'Invalid file type. Please upload a PDF or Word document.'
+        }
+        if (candidateFile.size > MAX_FILE_SIZE) {
+            return 'File size must be less than 10MB'
+        }
+        if (candidateFile.type && !ALLOWED_MIME_TYPES.has(candidateFile.type)) {
+            return 'Unsupported file type. Please upload a PDF or Word document.'
+        }
+        return null
+    }
+
+    const sanitizeFileName = (fileName: string) => {
+        return fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
+    }
+
     // File handling
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0]
-            if (selectedFile.size > 10 * 1024 * 1024) {
-                setError('File size must be less than 10MB')
+            const validationError = validateFile(selectedFile)
+            if (validationError) {
+                setError(validationError)
                 return
             }
             setFile(selectedFile)
@@ -89,8 +117,9 @@ export function CreateReferralDialog({
         setIsDragging(false)
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             const droppedFile = e.dataTransfer.files[0]
-            if (droppedFile.size > 10 * 1024 * 1024) {
-                setError('File size must be less than 10MB')
+            const validationError = validateFile(droppedFile)
+            if (validationError) {
+                setError(validationError)
                 return
             }
             setFile(droppedFile)
@@ -119,6 +148,26 @@ export function CreateReferralDialog({
             setError('Valid email is required')
             return
         }
+        if (!phone.trim()) {
+            setError('Valid phone number is required')
+            return
+        }
+        if (!jobId) {
+            setError('Job selection is required')
+            return
+        }
+        if (!file && !linkedIn.trim()) {
+            setError('Please attach a CV or provide a LinkedIn/portfolio link')
+            return
+        }
+        if (linkedIn.trim()) {
+            try {
+                new URL(linkedIn.trim())
+            } catch {
+                setError('LinkedIn/portfolio link must be a valid URL')
+                return
+            }
+        }
         if (!user?.id) {
             setError('You must be logged in to submit a referral')
             return
@@ -127,36 +176,37 @@ export function CreateReferralDialog({
         try {
             setUploading(true)
             let cvUrl = linkedIn.trim() || null
+            let cvBucket: string | null = null
+            let cvPath: string | null = null
+            let cvFilename: string | null = null
+            let cvMime: string | null = null
+            let cvSize: number | null = null
 
             // Upload file if provided
             if (file) {
-                const fileExt = file.name.split('.').pop()
-                const fileName = `${jobId}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`
+                const fileExt = file.name.split('.').pop()?.toLowerCase()
+                const fallbackMimeMap: Record<string, string> = {
+                    pdf: 'application/pdf',
+                    doc: 'application/msword',
+                    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                }
+                const safeFileName = sanitizeFileName(file.name)
+                const fileName = `referrals/${user.id}/${jobId}/${Date.now()}_${Math.random().toString(36).slice(2, 9)}_${safeFileName}`
 
                 const { error: uploadError } = await supabase.storage
-                    .from('resumes')
-                    .upload(fileName, file)
+                    .from('referral-cvs')
+                    .upload(fileName, file, { contentType: file.type })
 
                 if (uploadError) {
-                    // Try fallback bucket
-                    const { error: fallbackError } = await supabase.storage
-                        .from('job-applications')
-                        .upload(fileName, file)
-
-                    if (fallbackError) {
-                        throw new Error('Failed to upload CV. Please try again.')
-                    }
-
-                    const { data: urlData } = supabase.storage
-                        .from('job-applications')
-                        .getPublicUrl(fileName)
-                    cvUrl = urlData.publicUrl
-                } else {
-                    const { data: urlData } = supabase.storage
-                        .from('resumes')
-                        .getPublicUrl(fileName)
-                    cvUrl = urlData.publicUrl
+                    throw new Error('Failed to upload CV. Please try again.')
                 }
+
+                cvBucket = 'referral-cvs'
+                cvPath = fileName
+                cvFilename = safeFileName
+                cvMime = file.type || (fileExt ? fallbackMimeMap[fileExt] : null) || null
+                cvSize = file.size
+                cvUrl = linkedIn.trim() || null
             }
 
             // Insert referral
@@ -166,12 +216,18 @@ export function CreateReferralDialog({
                     job_posting_id: jobId,
                     applicant_name: name.trim(),
                     applicant_email: email.trim(),
-                    applicant_phone: phone.trim() || null,
+                    applicant_phone: phone.trim(),
                     cv_url: cvUrl,
+                    cv_bucket: cvBucket,
+                    cv_path: cvPath,
+                    cv_filename: cvFilename,
+                    cv_mime: cvMime,
+                    cv_size: cvSize,
                     notes: notes.trim() || null,
                     referred_by: user.id,
                     status: 'received',
-                    routed_to: []
+                    routed_to: [],
+                    referral_source: 'employee'
                 })
 
             if (insertError) {
@@ -181,6 +237,14 @@ export function CreateReferralDialog({
             // Success
             setSuccess(true)
             queryClient.invalidateQueries({ queryKey: ['employee-referrals'] })
+            queryClient.invalidateQueries({ queryKey: ['job-applications', jobId] })
+
+            logAuditEvent({
+                event_type: 'job.referral_submitted',
+                entity_type: 'job_application',
+                description: `Referral submitted for ${name.trim()}`,
+                metadata: { job_posting_id: jobId }
+            }).catch(() => undefined)
 
             // Close after delay
             setTimeout(() => {
@@ -213,6 +277,23 @@ export function CreateReferralDialog({
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Referrer Info */}
+                    <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-2">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                            <User className="h-4 w-4" />
+                            <span className="font-medium text-foreground">Referrer</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                            <div>
+                                <span className="block text-[11px] uppercase tracking-wide">Name</span>
+                                <span className="text-foreground">{profile?.full_name || user?.email || 'Unknown'}</span>
+                            </div>
+                            <div>
+                                <span className="block text-[11px] uppercase tracking-wide">Email</span>
+                                <span className="text-foreground">{profile?.email || user?.email || 'Unknown'}</span>
+                            </div>
+                        </div>
+                    </div>
                     {/* Error Display */}
                     {error && (
                         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
@@ -254,16 +335,16 @@ export function CreateReferralDialog({
                                 disabled={success || uploading}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">Phone</Label>
-                            <Input
-                                id="phone"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                placeholder="+1 234 567 890"
-                                disabled={success || uploading}
-                            />
-                        </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="phone">Phone *</Label>
+                        <Input
+                            id="phone"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="+1 234 567 890"
+                            disabled={success || uploading}
+                        />
+                    </div>
                     </div>
 
                     {/* CV Upload */}
@@ -321,7 +402,7 @@ export function CreateReferralDialog({
                     <div className="space-y-2">
                         <Label htmlFor="linkedin" className="flex items-center gap-2">
                             <Link2 className="h-4 w-4" />
-                            LinkedIn / Portfolio URL
+                            LinkedIn / Portfolio URL (optional)
                         </Label>
                         <Input
                             id="linkedin"

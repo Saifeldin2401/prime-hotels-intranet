@@ -30,6 +30,7 @@
     "reject_dialog_desc_document": "يرجى تقديم سبب لرفض هذا المستند.",
     "reject_dialog_desc_leave": "يرجى تقديم سبب لرفض هذا الطلب.",
     "reject_reason_placeholder": "سبب الرفض (مطلوب)...",
+    "reject_reason_prompt": "يرجى تقديم سبب للرفض:",
     "optional_feedback": "ملاحظات اختيارية...",
     "assign_dialog_title": "تعيين التذكرة",
     "assign_dialog_desc": "اختر موظفاً لتعيين هذه التذكرة له.",

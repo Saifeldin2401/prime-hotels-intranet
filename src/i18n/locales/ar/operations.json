@@ -40,113 +40,113 @@
         "error": "فشل الاستيراد"
     },
     "data_import": {
-        "title": "Data Import Studio",
-        "stage": "{{stage}} Stage",
+        "title": "استوديو استيراد البيانات",
+        "stage": "مرحلة {{stage}}",
         "stages": {
-            "upload": "Upload",
-            "review": "Review",
-            "import": "Import",
-            "complete": "Complete"
+            "upload": "الرفع",
+            "review": "المراجعة",
+            "import": "الاستيراد",
+            "complete": "اكتمال"
         },
         "metrics": {
-            "queue": "Queue",
-            "records": "Records",
-            "quality": "Quality",
-            "warnings": "Warnings"
+            "queue": "قائمة الانتظار",
+            "records": "السجلات",
+            "quality": "الجودة",
+            "warnings": "التحذيرات"
         },
         "pipeline": {
-            "title": "Workflow Pipeline",
+            "title": "خط أنابيب سير العمل",
             "stage_badge": "{{stage}}",
-            "add_files": "Add More Files",
-            "clear_session": "Clear Session",
-            "empty_queue": "No files in queue",
-            "conflict_badge": "CONFLICT"
+            "add_files": "إضافة المزيد من الملفات",
+            "clear_session": "مسح الجلسة",
+            "empty_queue": "لا توجد ملفات في قائمة الانتظار",
+            "conflict_badge": "تعارض"
         },
         "ai_actions": {
-            "title": "AI Smart Actions",
-            "description": "Let AI suggest fixes and improvements for your current batch.",
-            "analyzing": "Analyzing...",
-            "generate": "Generate Insights"
+            "title": "إجراءات الذكاء الاصطناعي الذكية",
+            "description": "دع الذكاء الاصطناعي يقترح الإصلاحات والتحسينات للدفعة الحالية.",
+            "analyzing": "جاري التحليل...",
+            "generate": "توليد الرؤى"
         },
         "warnings": {
-            "title": "Operational Warnings Found",
-            "duplicate_dates": "Duplicate date matches detected in database",
-            "missing_required": "Missing or invalid required fields found",
-            "fixing": "Fixing...",
-            "auto_fix": "Auto-Fix All Warnings"
+            "title": "تم العثور على تحذيرات تشغيلية",
+            "duplicate_dates": "تم اكتشاف تواريخ مكررة في قاعدة البيانات",
+            "missing_required": "تم العثور على حقول مطلوبة مفقودة أو غير صالحة",
+            "fixing": "جاري الإصلاح...",
+            "auto_fix": "إصلاح جميع التحذيرات تلقائياً"
         },
         "upload": {
-            "title": "Drop PMS Reports Here",
-            "description": "Bulk upload Excel or CSV exports from your PMS. AI will automatically organize your data.",
-            "browse": "Browse Local Files",
-            "supported_formats": "Supports XLSX / CSV",
-            "auto_map": "Auto Map Columns",
-            "batch_import": "Batch Import"
+            "title": "إسقاط تقارير PMS هنا",
+            "description": "رفع مجمع لملفات Excel أو CSV المصدرة من نظام PMS الخاص بك. سيقوم الذكاء الاصطناعي بتنظيم بياناتك تلقائياً.",
+            "browse": "تصفح الملفات المحلية",
+            "supported_formats": "يدعم XLSX / CSV",
+            "auto_map": "تعيين الأعمدة تلقائياً",
+            "batch_import": "استيراد مجمع"
         },
         "review": {
-            "rows_extracted": "{{count}} Rows Extracted",
-            "table_view": "Table View",
-            "raw_json": "Raw JSON",
-            "property": "Property",
-            "select_hotel": "Select Hotel...",
-            "match_confidence": "{{percent}}% Match",
-            "thinking": "Thinking...",
-            "no_data": "No data could be extracted from this file.",
-            "delete_file": "Delete File",
-            "select_file_prompt": "Select a file from the Pipeline to inspect and edit data",
-            "valid_files": "Found {{count}} valid files in batch"
+            "rows_extracted": "تم استخراج {{count}} صف",
+            "table_view": "عرض الجدول",
+            "raw_json": "JSON خام",
+            "property": "المنشأة",
+            "select_hotel": "اختر الفندق...",
+            "match_confidence": "{{percent}}% تطابق",
+            "thinking": "جاري التفكير...",
+            "no_data": "لا يمكن استخراج بيانات من هذا الملف.",
+            "delete_file": "حذف الملف",
+            "select_file_prompt": "اختر ملفاً من خط الأنابيب لفحص وتحرير البيانات",
+            "valid_files": "تم العثور على {{count}} ملف صالح في الدفعة"
         },
         "summary": {
-            "title": "Session Summary",
-            "files_ready": "{{count}} Files Ready",
-            "warnings": "{{count}} Warnings",
-            "total_impact": "Total Impact",
-            "database_records": "{{count}} database records"
+            "title": "ملخص الجلسة",
+            "files_ready": "{{count}} ملف جاهز",
+            "warnings": "{{count}} تحذير",
+            "total_impact": "التأثير الإجمالي",
+            "database_records": "{{count}} سجل في قاعدة البيانات"
         },
         "actions": {
-            "cancel_phase": "Cancel Phase",
-            "commit_process": "Commit Process ({{count}})"
+            "cancel_phase": "إلغاء المرحلة",
+            "commit_process": "تنفيذ العملية ({{count}})"
         },
         "import": {
-            "title": "Writing to Database Cloud...",
-            "syncing_records": "Syncing Records",
-            "progress_note": "Verifying data integrity and updating trends..."
+            "title": "جاري الكتابة إلى قاعدة البيانات السحابية...",
+            "syncing_records": "مزامنة السجلات",
+            "progress_note": "جاري التحقق من سلامة البيانات وتحديث الاتجاهات..."
         },
         "complete": {
-            "title": "Import Successful!",
-            "summary": "{{count}} files were successfully processed. Your Operations Dashboard is now up-to-date.",
-            "print_summary": "Print Sync Summary",
-            "new_session": "New Session",
-            "view_dashboard": "View Dashboard"
+            "title": "تم الاستيراد بنجاح!",
+            "summary": "تمت معالجة {{count}} ملف بنجاح. لوحة التحكم التشغيلية محدثة الآن.",
+            "print_summary": "طباعة ملخص المزامنة",
+            "new_session": "جلسة جديدة",
+            "view_dashboard": "عرض لوحة التحكم"
         },
         "history": {
-            "title": "Session History",
-            "description": "Recent data import activity for this property.",
-            "manual_batch": "Manual Batch",
-            "records_label": "{{count}} Records",
-            "redownload": "REDOWNLOAD"
+            "title": "سجل الجلسات",
+            "description": "نشاط استيراد البيانات الأخير لهذه المنشأة.",
+            "manual_batch": "دفعة يدوية",
+            "records_label": "{{count}} سجل",
+            "redownload": "إعادة التحميل"
         },
         "delete": {
-            "title": "Confirm Data Deletion",
-            "description": "This action will permanently remove this import log and delete all associated occupancy and revenue records from the database. This cannot be undone.",
-            "delete_permanently": "Delete Permanently"
+            "title": "تأكيد حذف البيانات",
+            "description": "سيؤدي هذا الإجراء إلى إزالة سجل الاستيراد هذا نهائياً وحذف جميع سجلات الإشغال والإيرادات المرتبطة من قاعدة البيانات. لا يمكن التراجع عن هذا.",
+            "delete_permanently": "حذف نهائياً"
         },
         "errors": {
-            "no_data_extracted": "No data extracted"
+            "no_data_extracted": "لم يتم استخراج بيانات"
         },
         "badges": {
-            "pms_daily": "PMS Daily",
-            "occupancy": "Occupancy",
-            "revenue": "Revenue",
-            "unknown": "Unknown"
+            "pms_daily": "PMS يومي",
+            "occupancy": "الإشغال",
+            "revenue": "الإيرادات",
+            "unknown": "غير معروف"
         },
         "validation": {
-            "no_records": "No records found",
-            "missing_required": "Missing required field: {{field}}",
-            "optional_missing": "Optional field missing: {{field}}",
-            "rooms_sold_invalid": "Rooms sold is not a valid number",
-            "adr_invalid": "ADR is not a valid number",
-            "date_format": "Date format may need adjustment"
+            "no_records": "لم يتم العثور على سجلات",
+            "missing_required": "حقل مطلوب مفقود: {{field}}",
+            "optional_missing": "حقل اختياري مفقود: {{field}}",
+            "rooms_sold_invalid": "الغرف المباعة ليست رقماً صالحاً",
+            "adr_invalid": "ADR ليس رقماً صالحاً",
+            "date_format": "قد يحتاج تنسيق التاريخ إلى تعديل"
         },
         "print": {
             "title": "Data Integration Sync Summary",

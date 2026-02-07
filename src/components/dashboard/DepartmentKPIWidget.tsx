@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { useDepartmentKPIs, useDepartmentComparison } from '@/hooks/useDepartmentKPIs'
 import { TrendingUp, TrendingDown, Minus, Award, ClipboardCheck, GraduationCap, FileCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 interface DepartmentKPIWidgetProps {
     propertyId?: string
@@ -12,6 +13,7 @@ interface DepartmentKPIWidgetProps {
 }
 
 export function DepartmentKPIWidget({ propertyId, className, compact = false }: DepartmentKPIWidgetProps) {
+    const { t } = useTranslation('dashboard')
     const { data: kpis, isLoading } = useDepartmentKPIs(propertyId)
     const { data: comparison } = useDepartmentComparison(propertyId)
 
@@ -19,7 +21,9 @@ export function DepartmentKPIWidget({ propertyId, className, compact = false }: 
         return (
             <Card className={cn('animate-pulse', className)}>
                 <CardHeader>
-                    <CardTitle className="text-sm font-medium">Department Performance</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                        {t('widgets.dept_kpi.title', 'Department Performance')}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="h-40 bg-gray-200 rounded"></div>
@@ -34,11 +38,13 @@ export function DepartmentKPIWidget({ propertyId, className, compact = false }: 
                 <CardHeader>
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                         <Award className="h-4 w-4 text-hotel-gold" />
-                        Department Performance
+                        {t('widgets.dept_kpi.title', 'Department Performance')}
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-gray-500 text-sm">No department data available</p>
+                    <p className="text-gray-500 text-sm">
+                        {t('widgets.dept_kpi.no_data', 'No department data available')}
+                    </p>
                 </CardContent>
             </Card>
         )
@@ -52,7 +58,7 @@ export function DepartmentKPIWidget({ propertyId, className, compact = false }: 
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                         <Award className="h-4 w-4 text-hotel-gold" />
-                        Top Departments
+                        {t('widgets.dept_kpi.top_depts', 'Top Departments')}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -88,7 +94,7 @@ export function DepartmentKPIWidget({ propertyId, className, compact = false }: 
             <CardHeader>
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Award className="h-4 w-4 text-hotel-gold" />
-                    Department Performance Rankings
+                    {t('widgets.dept_kpi.rankings', 'Department Performance Rankings')}
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -97,17 +103,17 @@ export function DepartmentKPIWidget({ propertyId, className, compact = false }: 
                     <div className="text-center">
                         <ClipboardCheck className="h-4 w-4 mx-auto mb-1 text-blue-600" />
                         <p className="text-lg font-bold text-hotel-navy">{avgScore.task_completion_rate}%</p>
-                        <p className="text-xs text-gray-500">Tasks</p>
+                        <p className="text-xs text-gray-500 me-2">{t('widgets.dept_kpi.tasks', 'Tasks')}</p>
                     </div>
                     <div className="text-center">
                         <GraduationCap className="h-4 w-4 mx-auto mb-1 text-green-600" />
                         <p className="text-lg font-bold text-hotel-navy">{avgScore.training_completion_rate}%</p>
-                        <p className="text-xs text-gray-500">Training</p>
+                        <p className="text-xs text-gray-500 me-2">{t('widgets.dept_kpi.training', 'Training')}</p>
                     </div>
                     <div className="text-center">
                         <FileCheck className="h-4 w-4 mx-auto mb-1 text-purple-600" />
                         <p className="text-lg font-bold text-hotel-navy">{avgScore.sop_compliance_rate}%</p>
-                        <p className="text-xs text-gray-500">SOPs</p>
+                        <p className="text-xs text-gray-500 me-2">{t('widgets.dept_kpi.sops', 'SOPs')}</p>
                     </div>
                 </div>
 
@@ -152,9 +158,9 @@ export function DepartmentKPIWidget({ propertyId, className, compact = false }: 
                                     )}
                                 />
                                 <div className="grid grid-cols-3 gap-2 text-xs text-gray-500">
-                                    <span>Tasks: {dept.metrics.task_completion_rate}%</span>
-                                    <span>Training: {dept.metrics.training_completion_rate}%</span>
-                                    <span>SOPs: {dept.metrics.sop_compliance_rate}%</span>
+                                    <span>{t('widgets.dept_kpi.tasks', 'Tasks')}: {dept.metrics.task_completion_rate}%</span>
+                                    <span>{t('widgets.dept_kpi.training', 'Training')}: {dept.metrics.training_completion_rate}%</span>
+                                    <span>{t('widgets.dept_kpi.sops', 'SOPs')}: {dept.metrics.sop_compliance_rate}%</span>
                                 </div>
                             </div>
                         )

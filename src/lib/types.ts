@@ -1,4 +1,4 @@
-import type { AppRole, DocumentStatus, DocumentVisibility, AnnouncementPriority, TrainingProgressStatus } from './constants'
+﻿import type { AppRole, DocumentStatus, DocumentVisibility, AnnouncementPriority, TrainingProgressStatus } from './constants'
 import type { Database } from '@/types/supabase'
 
 export type EntityStatus = Database['public']['Enums']['entity_status']
@@ -10,6 +10,7 @@ export interface Profile {
   phone: string | null
   avatar_url: string | null
   hire_date: string | null
+  date_of_birth: string
   job_title: string | null // Actual hotel job title (e.g., "Front Office Manager", "Room Attendant")
   staff_id: string | null // Human-readable unique employee identifier (e.g., "PH-1001")
   reporting_to: string | null // UUID of supervisor/manager
@@ -358,6 +359,16 @@ export interface TrainingModule {
   validity_period_days: number | null
   certificate_enabled: boolean
   passing_score_percentage: number | null
+  allow_retake?: boolean | null
+  max_attempts?: number | null
+  auto_advance?: boolean | null
+  show_feedback?: boolean | null
+  randomize_questions?: boolean | null
+  show_answers?: boolean | null
+  time_limit_minutes?: number | null
+  audience?: string | null
+  content_language?: string | null
+  template_id?: string | null
 }
 
 export interface TrainingContentBlock {
@@ -732,6 +743,11 @@ export interface JobApplication {
   applicant_email: string
   applicant_phone: string | null
   cv_url: string | null
+  cv_bucket?: string | null
+  cv_path?: string | null
+  cv_filename?: string | null
+  cv_mime?: string | null
+  cv_size?: number | null
   cover_letter: string | null
   status: JobApplicationStatus
   referred_by: string | null

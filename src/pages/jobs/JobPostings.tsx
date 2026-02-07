@@ -23,7 +23,8 @@ import {
     Eye,
     Edit,
     Trash2,
-    Search
+    Search,
+    Users
 } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
 import type { JobPosting } from '@/lib/types'
@@ -130,14 +131,22 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                     title={t('title')}
                     description={t('description')}
                     actions={
-                        canManageJobs ? (
-                            <Link to="/jobs/new">
-                                <Button className="bg-hotel-navy hover:bg-hotel-navy-light">
-                                    <Plus className="h-4 w-4 me-2" />
-                                    {t('create')}
+                        <div className="flex gap-2">
+                            <Link to="/jobs/referrals">
+                                <Button variant="outline">
+                                    <Users className="h-4 w-4 me-2" />
+                                    {t('referrals.my_referrals', { defaultValue: 'My Referrals' })}
                                 </Button>
                             </Link>
-                        ) : null
+                            {canManageJobs && (
+                                <Link to="/jobs/new">
+                                    <Button className="bg-hotel-navy hover:bg-hotel-navy-light">
+                                        <Plus className="h-4 w-4 me-2" />
+                                        {t('create')}
+                                    </Button>
+                                </Link>
+                            )}
+                        </div>
                     }
                 />
             )}

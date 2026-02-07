@@ -145,13 +145,14 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               .limit(Math.ceil(limit / 4))
 
             if (training) {
+              const isTrainingAdmin = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
               results.push(...training.map(module => ({
                 id: module.id,
                 type: 'training' as const,
                 title: module.title,
                 description: module.description,
                 category: module.category,
-                url: `/training/modules/${module.id}`,
+                url: isTrainingAdmin ? `/training/hub/${module.id}?view=builder` : `/learning/training/${module.id}`,
                 metadata: { status: module.status },
                 relevance_score: calculateRelevanceScore(query, module.title, module.description)
               })))

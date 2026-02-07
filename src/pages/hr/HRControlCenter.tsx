@@ -39,6 +39,11 @@ const TOOL_CARDS = [
     key: 'operations',
     icon: Icons.Building,
     path: '/hr/operations'
+  },
+  {
+    key: 'employee_of_the_month',
+    icon: Icons.Trophy,
+    path: '/hr/employee-of-the-month'
   }
 ]
 

@@ -17,8 +17,10 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
     const { currentProperty } = useProperty()
 
     // Fetch departments for current property (or all if viewing 'all')
+    // Normalize property ID to avoid 'all' in query key
+    const normalizedPropertyId = currentProperty?.id && currentProperty.id !== 'all' ? currentProperty.id : undefined
     const { data: departments = [] } = useQuery({
-        queryKey: ['departments', currentProperty?.id],
+        queryKey: ['departments', normalizedPropertyId],
         queryFn: async () => {
             if (!currentProperty?.id) return []
             if (currentProperty.id === 'all') {
@@ -26,6 +28,7 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
                 const { data, error } = await supabase
                     .from('departments')
                     .select('id, name')
+                    .eq('is_deleted', false)
                     .order('name')
                 if (error) throw error
                 return data
@@ -34,6 +37,7 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
                 .from('departments')
                 .select('id, name')
                 .eq('property_id', currentProperty.id)
+                .eq('is_deleted', false)
                 .order('name')
             if (error) throw error
             return data

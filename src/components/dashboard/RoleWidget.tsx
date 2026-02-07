@@ -14,14 +14,14 @@ export function RoleWidget() {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('widgets.role')}</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard:widgets.role')}</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">
                     {t(`common:roles.${primaryRole}`, { defaultValue: ROLES[primaryRole]?.label })}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                    {properties.length} {t('widgets.properties')} • {departments.length} {t('widgets.departments')}
+                    {properties.length} {t('dashboard:widgets.role_widget.properties', 'properties')} • {departments.length} {t('dashboard:widgets.role_widget.departments', 'departments')}
                 </p>
             </CardContent>
         </Card>

@@ -38,7 +38,9 @@ import {
     Languages,
     Loader2,
     Headphones,
-    Gamepad2
+    Gamepad2,
+    Eye,
+    MousePointer2
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
@@ -49,6 +51,8 @@ import { createCertificate, type CertificateData } from '@/lib/certificateServic
 import { sanitizeHtml } from '@/lib/sanitize'
 import type { TrainingModule, TrainingContentBlock } from '@/lib/types'
 import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
+import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleViewer'
+import { SmartObserver } from '@/components/training/SmartObserver'
 import { cn } from '@/lib/utils'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
@@ -79,6 +83,14 @@ export default function TrainingPlayer() {
     const [timeSpentSeconds, setTimeSpentSeconds] = useState(0)
     const [resumeNotice, setResumeNotice] = useState<string | null>(null)
 
+    // Anti-Cheat & Engagement State
+    const [isFocused, setIsFocused] = useState(true)
+    const [isIdle, setIsIdle] = useState(false)
+    const [currentBlockStrictTime, setCurrentBlockStrictTime] = useState(0)
+    const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false)
+    const bottomRef = useRef<HTMLDivElement>(null)
+    const scrollObserver = useRef<IntersectionObserver | null>(null)
+
     const blockStartRef = useRef<number>(Date.now())
     const lastBlockIdRef = useRef<string | null>(null)
     const totalTimeRef = useRef<number>(0)
@@ -87,6 +99,8 @@ export default function TrainingPlayer() {
     const timeByBlockRef = useRef<Record<string, number>>({})
 
     const translateAI = useTranslationAI()
+
+
 
     // Close sidebar on mobile by default
     useEffect(() => {
@@ -124,14 +138,132 @@ export default function TrainingPlayer() {
                 .eq('status', 'published')
                 .limit(1)
 
+            // Fetch referenced content titles (SOPs, Quizzes) to show in sidebar
+            const sopIds = blocks
+                .filter(b => b.type === 'sop_reference' && b.content_data?.sop_id)
+                .map(b => b.content_data!.sop_id as string)
+
+            const quizIds = blocks
+                .filter(b => b.type === 'quiz' && b.content_data?.quiz_id)
+                .map(b => b.content_data!.quiz_id as string)
+
+            const referencedTitles: Record<string, string> = {}
+
+            if (sopIds.length > 0) {
+                const { data: sops } = await supabase
+                    .from('documents')
+                    .select('id, title')
+                    .in('id', sopIds)
+                sops?.forEach(sop => { referencedTitles[sop.id] = sop.title })
+            }
+
+            if (quizIds.length > 0) {
+                const { data: quizzes } = await supabase
+                    .from('learning_quizzes')
+                    .select('id, title')
+                    .in('id', quizIds)
+                quizzes?.forEach(quiz => { referencedTitles[quiz.id] = quiz.title })
+            }
+
             return {
                 module,
                 blocks: blocks as TrainingContentBlock[],
-                linkedQuizId: linkedQuizzes?.[0]?.id
+                linkedQuizId: linkedQuizzes?.[0]?.id,
+                referencedTitles
             }
         },
         enabled: !!id
     })
+
+    const activeBlock = moduleData?.blocks[activeBlockIndex]
+
+    const minTimeRequired = useMemo(() => {
+        if (!activeBlock) return 0
+        // Media blocks handled by their own events
+        if (['video', 'audio', 'interactive', 'quiz'].includes(activeBlock.type)) return 0
+
+        // Word count based calculation (approx 250 wpm)
+        const contentText = activeBlock.content || ''
+        const wordCount = contentText.split(/\s+/).length
+        // Formula: words / (250/60) = words * 0.24 seconds
+        const calculatedSeconds = Math.ceil(wordCount * 0.24)
+
+        // Min 5 seconds for very short content, Cap at 5 mins (300s) to prevent frustration
+        return Math.min(300, Math.max(5, calculatedSeconds))
+    }, [activeBlock])
+
+    const contextRules = useMemo(() => {
+        if (!activeBlock) return { isStrict: true, allowBackgroundPlay: false }
+
+        const isAudio = activeBlock.type === 'audio'
+        const contentText = activeBlock.content || ''
+        const wordCount = contentText.split(/\s+/).length
+        // Relaxed mode for short content (< 150 words) or Audio
+        const isShort = wordCount < 150 && !['video', 'audio', 'quiz', 'interactive'].includes(activeBlock.type)
+
+        return {
+            isStrict: !isShort && !isAudio,
+            allowBackgroundPlay: isAudio
+        }
+    }, [activeBlock])
+
+    // Strict Timer (Pauses on blur/idle unless relaxed)
+    useEffect(() => {
+        if (!activeBlock) return
+
+        // Check if we should pause
+        const shouldPause = () => {
+            if (contextRules.allowBackgroundPlay) return false
+            if (!contextRules.isStrict) return false
+            return !isFocused || isIdle
+        }
+
+        if (shouldPause()) return
+
+        const interval = setInterval(() => {
+            setCurrentBlockStrictTime(prev => prev + 1)
+        }, 1000)
+
+        return () => clearInterval(interval)
+    }, [isFocused, isIdle, activeBlock?.id, contextRules])
+
+    // Reset strict state on block change
+    useEffect(() => {
+        setCurrentBlockStrictTime(0)
+        // If not strict (short content), we assume scroll requirement is met or not needed
+        setHasScrolledToBottom(!contextRules.isStrict)
+        console.log("Block changed, resetting anti-cheat state", contextRules)
+
+        // Small timeout to allow content to render before checking scroll height
+        setTimeout(() => {
+            if (bottomRef.current) {
+                const rect = bottomRef.current.getBoundingClientRect()
+                // If content is already fully visible (short), mark as scrolled
+                const isVisible = rect.top < window.innerHeight
+                if (isVisible) setHasScrolledToBottom(true)
+            }
+        }, 500)
+
+    }, [activeBlock?.id])
+
+    // Scroll Observer
+    useEffect(() => {
+        if (scrollObserver.current) {
+            scrollObserver.current.disconnect()
+        }
+
+        scrollObserver.current = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                setHasScrolledToBottom(true)
+            }
+        }, { threshold: 0.1 })
+
+        if (bottomRef.current) {
+            scrollObserver.current.observe(bottomRef.current)
+        }
+
+        return () => scrollObserver.current?.disconnect()
+    }, [activeBlock?.id, bottomRef.current])
 
     useEffect(() => {
         hasRestoredRef.current = false
@@ -149,7 +281,6 @@ export default function TrainingPlayer() {
         setModuleTitleTranslations({})
     }, [moduleData?.module.id])
 
-    const activeBlock = moduleData?.blocks[activeBlockIndex]
     const totalBlocks = moduleData?.blocks.length || 1
     const isLastBlock = activeBlockIndex === totalBlocks - 1
     const completedCount = new Set([...completedBlocks, ...completedMediaBlocks]).size
@@ -581,7 +712,15 @@ export default function TrainingPlayer() {
     const isGateBlock = !!(activeBlock && ['video', 'audio', 'interactive'].includes(activeBlock.type))
     const isGateCompletionRequired = !!(activeBlock && activeBlock.is_mandatory && isGateBlock)
     const isGateCompleted = !!(activeBlock && completedMediaBlocks.has(activeBlock.id))
-    const canProceedToNext = !isGateCompletionRequired || isGateCompleted
+
+    // Anti-Cheat Gate Logic
+    const isReadingBlock = !!(activeBlock && ['text', 'sop_reference', 'document_link'].includes(activeBlock.type))
+    const isReadingTimeMet = currentBlockStrictTime >= minTimeRequired || completedBlocks.has(activeBlock?.id || '')
+    const isScrollMet = hasScrolledToBottom || completedBlocks.has(activeBlock?.id || '')
+
+    // Combined "Can Proceed" Logic
+    const canProceedToNext = (!isGateCompletionRequired || isGateCompleted) &&
+        (!isReadingBlock || (isReadingTimeMet && isScrollMet))
 
     const renderRichText = (originalHtml: string, translatedHtml?: string) => {
         const originalMarkup = sanitizeHtml(originalHtml)
@@ -857,6 +996,8 @@ export default function TrainingPlayer() {
                         <QuizComponent
                             quizId={block.content_data?.quiz_id as string}
                             certificateEnabled={moduleData.module.certificate_enabled}
+                            translationTarget={translationTarget}
+                            showBilingual={showBilingual}
                             onComplete={(result) => {
                                 setQuizScore(result.score)
                                 if (result.passed) {
@@ -886,32 +1027,16 @@ export default function TrainingPlayer() {
                     />
                 )}
 
-                {block.type === 'sop_reference' && (
-                    <div className="p-8 border-l-4 border-emerald-500 rounded-xl bg-emerald-50/50 shadow-sm">
-                        <div className="flex items-center gap-3 text-emerald-700 font-bold mb-4">
-                            <BookOpen className="h-6 w-6" />
-                            {t('sopReference')}
-                        </div>
-                        <p className="text-slate-700 mb-6 leading-relaxed">
-                            {t('thisSectionReferencesSop', { sopId: block.content_data?.sop_id })}
-                        </p>
-                        <Button
-                            asChild
-                            variant="outline"
-                            className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                        >
-                            <a href={`/documents/${block.content_data?.sop_id}`} target="_blank" rel="noreferrer">
-                                <LinkIcon className="mr-2 h-4 w-4" />
-                                {t('viewSop')}
-                            </a>
-                        </Button>
-                        {block.content && (
-                            <div className="mt-6 pt-6 border-t border-emerald-100">
-                                {renderRichText(block.content, translatedBlockContent)}
-                            </div>
-                        )}
-                    </div>
+                {block.type === 'sop_reference' && block.content_data?.sop_id && (
+                    <EmbeddedArticleViewer
+                        sopId={block.content_data.sop_id as string}
+                        showBilingual={showBilingual}
+                        translationDir={translationDir}
+                        translationTarget={translationTarget}
+                        className="mb-6"
+                    />
                 )}
+
             </motion.div>
         )
     }
@@ -1003,19 +1128,19 @@ export default function TrainingPlayer() {
                         )}
                     >
                         <div className="p-8 border-b border-white/10 bg-hotel-navy/50">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="h-10 w-10 rounded-lg bg-hotel-gold/20 flex items-center justify-center shrink-0">
-                                <BookOpen className="h-5 w-5 text-hotel-gold" />
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="h-10 w-10 rounded-lg bg-hotel-gold/20 flex items-center justify-center shrink-0">
+                                    <BookOpen className="h-5 w-5 text-hotel-gold" />
+                                </div>
+                                <h2 className="font-bold text-lg font-serif leading-tight line-clamp-2">
+                                    {displayModuleTitle || moduleData.module.title}
+                                </h2>
                             </div>
-                            <h2 className="font-bold text-lg font-serif leading-tight line-clamp-2">
-                                {displayModuleTitle || moduleData.module.title}
-                            </h2>
-                        </div>
-                        {showBilingual && translationTarget && moduleTitleTranslations[translationTarget] && (
-                            <div className="text-xs text-white/60 mb-4" dir={translationDir}>
-                                {moduleData.module.title}
-                            </div>
-                        )}
+                            {showBilingual && translationTarget && moduleTitleTranslations[translationTarget] && (
+                                <div className="text-xs text-white/60 mb-4" dir={translationDir}>
+                                    {moduleData.module.title}
+                                </div>
+                            )}
 
                             <div className="space-y-2">
                                 <div className="flex justify-between items-end text-xs mb-1.5">
@@ -1059,13 +1184,13 @@ export default function TrainingPlayer() {
                                             "mt-0.5 shrink-0 transition-colors",
                                             idx === activeBlockIndex ? "text-hotel-gold" : "text-white/40 group-hover:text-white/60"
                                         )}>
-                                        {block.type === 'video' && <VideoIcon className="w-4 h-4" />}
-                                        {block.type === 'audio' && <Headphones className="w-4 h-4" />}
-                                        {block.type === 'interactive' && <Gamepad2 className="w-4 h-4" />}
-                                        {block.type === 'quiz' && <HelpCircle className="w-4 h-4" />}
-                                        {block.type === 'image' && <ImageIcon className="w-4 h-4" />}
-                                        {block.type === 'text' && <FileText className="w-4 h-4" />}
-                                        {block.type === 'document_link' && <LinkIcon className="w-4 h-4" />}
+                                            {block.type === 'video' && <VideoIcon className="w-4 h-4" />}
+                                            {block.type === 'audio' && <Headphones className="w-4 h-4" />}
+                                            {block.type === 'interactive' && <Gamepad2 className="w-4 h-4" />}
+                                            {block.type === 'quiz' && <HelpCircle className="w-4 h-4" />}
+                                            {block.type === 'image' && <ImageIcon className="w-4 h-4" />}
+                                            {block.type === 'text' && <FileText className="w-4 h-4" />}
+                                            {block.type === 'document_link' && <LinkIcon className="w-4 h-4" />}
                                             {block.type === 'sop_reference' && <BookOpen className="w-4 h-4" />}
                                         </div>
                                         <div className={cn(
@@ -1073,13 +1198,21 @@ export default function TrainingPlayer() {
                                             isRTL && "text-right"
                                         )}>
                                             <p className={cn(
-                                                "font-medium leading-tight",
+                                                "font-medium leading-tight line-clamp-2",
                                                 idx === activeBlockIndex ? "text-white" : ""
                                             )}>
-                                                {t('blockTitle', { number: idx + 1 })}
+                                                {block.title ||
+                                                    (block.type === 'sop_reference' && block.content_data?.sop_id ? moduleData.referencedTitles?.[block.content_data.sop_id as string] : '') ||
+                                                    (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : '') ||
+                                                    t('blockTitle', { number: idx + 1 })}
                                             </p>
                                             <p className="text-[10px] text-white/40 uppercase mt-1 tracking-wider">
-                                                {block.type.replace('_', ' ')}
+                                                {(block.title ||
+                                                    (block.type === 'sop_reference' && block.content_data?.sop_id ? moduleData.referencedTitles?.[block.content_data.sop_id as string] : '') ||
+                                                    (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : ''))
+                                                    ? `${t('blockTitle', { number: idx + 1 })} • ${block.type.replace('_', ' ')}`
+                                                    : block.type.replace('_', ' ')
+                                                }
                                             </p>
                                         </div>
                                         {(completedBlocks.has(block.id) || completedMediaBlocks.has(block.id)) && (
@@ -1199,7 +1332,19 @@ export default function TrainingPlayer() {
                 </header>
 
                 {/* Content Area */}
-                <main className="flex-1 overflow-y-auto custom-scrollbar-light bg-white pt-4 pb-12">
+                <SmartObserver
+                    className="flex-1 overflow-y-auto custom-scrollbar-light bg-white pt-4 pb-12 relative"
+                    onFocusChange={setIsFocused}
+                    onIdleChange={setIsIdle}
+                    idleTimeoutMs={60000}
+                >
+                    {/* Anti-Cheat Status Toast/Indicator (Dev/User Feedback) */}
+                    {(!isFocused || isIdle) && (
+                        <div className="absolute top-4 right-4 z-50 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-sm animate-pulse">
+                            {isIdle ? <MousePointer2 className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            {isIdle ? t('sessionPausedIdle', 'Session Paused (Idle)') : t('sessionPausedFocus', 'Session Paused (Focus lost)')}
+                        </div>
+                    )}
                     <div className="max-w-4xl mx-auto py-4 md:py-12 px-4 md:px-12 lg:px-16 min-h-full flex flex-col">
                         <div className="mb-6 space-y-3">
                             {resumeNotice && (
@@ -1270,9 +1415,11 @@ export default function TrainingPlayer() {
                             </motion.div>
                         </AnimatePresence>
 
+                        {/* Scroll Marker for Anti-Cheat */}
+                        <div ref={bottomRef} className="h-4 w-full mt-4" />
                         <div className="h-12 shrink-0" /> {/* Spacer */}
                     </div>
-                </main>
+                </SmartObserver>
 
                 {/* Navigation Bar */}
                 <footer className={cn(
@@ -1321,24 +1468,49 @@ export default function TrainingPlayer() {
                                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                                 : "bg-hotel-navy hover:bg-hotel-navy-light text-white",
                             isRTL ? "flex-row-reverse" : "",
-                            !canProceedToNext && "opacity-60 pointer-events-none"
                         )}
                     >
-                        {isLastBlock ? (
-                            <>
-                                <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ml-2 md:ml-3" : "mr-2 md:mr-3")} />
-                                <span>{t('completeModule')}</span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="hidden xs:inline">{t('nextStep')}</span>
-                                <ChevronRight className={cn(
-                                    "h-4 w-4 md:h-5 md:w-5",
-                                    isRTL ? "mr-2 md:mr-3 rotate-180" : "ml-2 md:ml-3"
-                                )} />
-                                <ChevronRight className="h-4 w-4 xs:hidden" />
-                            </>
-                        )}
+                        {/* Intelligent Button Content */}
+                        {(() => {
+                            if (isLastBlock) {
+                                return (
+                                    <>
+                                        <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ml-2 md:ml-3" : "mr-2 md:mr-3")} />
+                                        <span>{t('completeModule')}</span>
+                                    </>
+                                )
+                            }
+
+                            // Gated States for "Next" Button
+                            if (isReadingBlock && !isScrollMet) {
+                                return (
+                                    <>
+                                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                                        <span>{t('scrollToBottom', 'Read to bottom')}</span>
+                                    </>
+                                )
+                            }
+                            if (isReadingBlock && !isReadingTimeMet) {
+                                const remaining = Math.max(0, minTimeRequired - currentBlockStrictTime)
+                                return (
+                                    <>
+                                        <Clock className="h-4 w-4 mr-2 animate-pulse" />
+                                        <span>{t('readingReq', { seconds: remaining })}</span>
+                                    </>
+                                )
+                            }
+
+                            return (
+                                <>
+                                    <span className="hidden xs:inline">{t('nextStep')}</span>
+                                    <ChevronRight className={cn(
+                                        "h-4 w-4 md:h-5 md:w-5",
+                                        isRTL ? "mr-2 md:mr-3 rotate-180" : "ml-2 md:ml-3"
+                                    )} />
+                                    <ChevronRight className="h-4 w-4 xs:hidden" />
+                                </>
+                            )
+                        })()}
                     </Button>
                 </footer>
             </div>

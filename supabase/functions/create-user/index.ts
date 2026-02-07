@@ -34,7 +34,8 @@ Deno.serve(async (req: Request) => {
             role,
             propertyIds = [],
             departmentIds = [],
-            reportingTo
+            reportingTo,
+            dateOfBirth
         } = body;
 
         if (!email || !fullName) {
@@ -126,7 +127,8 @@ Deno.serve(async (req: Request) => {
                 job_title: jobTitle || null,
                 is_active: true,
                 is_temp_password: true, // FORCE PASSWORD CHANGE ON FIRST LOGIN
-                reporting_to: reportingTo || null
+                reporting_to: reportingTo || null,
+                date_of_birth: dateOfBirth || null
             })
             .eq('id', userId);
 

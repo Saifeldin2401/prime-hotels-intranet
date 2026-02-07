@@ -22,6 +22,7 @@
         "user_info": "معلومات المستخدم",
         "email": "البريد الإلكتروني",
         "full_name": "الاسم الكامل",
+        "date_of_birth": "تاريخ الميلاد",
         "phone": "رقم الهاتف",
         "job_title": "المسمى الوظيفي",
         "select_job_title": "اختر المسمى الوظيفي...",
@@ -56,11 +57,15 @@
             "manager_suggested": "اقتراح مدير",
             "manager_suggested_desc": "تم اقتراح {{name}} ({{jobTitle}}) كمدير مباشر.",
             "auto_assigned": "تعيين تلقائي",
-            "auto_assigned_desc": "تم تحديث القسم والدور بناءً على المسمى الوظيفي."
+            "auto_assigned_desc": "تم تحديث القسم والدور بناءً على المسمى الوظيفي.",
+            "updated_title": "تم تحديث المستخدم",
+            "updated_message": "تم تحديث معلومات المستخدم بنجاح."
         },
         "error": {
             "create_failed": "فشل إنشاء المستخدم",
-            "required_fields": "يرجى ملء جميع الحقول المطلوبة"
+            "update_failed": "فشل التحديث",
+            "required_fields": "يرجى ملء جميع الحقول المطلوبة",
+            "validation_failed": "فشل التحقق من صحة البيانات"
         }
     }
 }

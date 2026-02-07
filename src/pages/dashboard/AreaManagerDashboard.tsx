@@ -17,6 +17,11 @@ import { format } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { MotivationWidget } from "@/components/dashboard/MotivationWidget"
+import { ActiveUsersWidget } from "@/components/dashboard/ActiveUsersWidget"
+import { NewsWidget } from "@/components/dashboard/NewsWidget"
+import { EmployeeOfMonthWidget } from "@/components/dashboard/EmployeeOfMonthWidget"
+import { BirthdayWidget } from "@/components/dashboard/BirthdayWidget"
 import { Building2, ClipboardList, ShieldCheck, Users } from 'lucide-react'
 import { OperationsControlCenter } from '@/components/operations/OperationsControlCenter'
 import { ReportsControlCenter } from '@/components/reports/ReportsControlCenter'
@@ -103,6 +108,28 @@ export function AreaManagerDashboard() {
           </>
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="col-span-4">
+          <MotivationWidget />
+        </div>
+        <div className="col-span-3">
+          <ActiveUsersWidget />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-12">
+        <div className="md:col-span-8">
+          <EmployeeOfMonthWidget />
+        </div>
+        <div className="md:col-span-4">
+          <BirthdayWidget />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 mb-6">
+        <NewsWidget />
+      </div>
 
       {/* Area KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">

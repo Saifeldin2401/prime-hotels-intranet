@@ -56,6 +56,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
   const [reportingTo, setReportingTo] = useState<string | null>(null)
   const [staffId, setStaffId] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
   const [openReportingTo, setOpenReportingTo] = useState(false)
 
   // ... (rest of invalidation)
@@ -63,7 +64,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const createUserMutation = useMutation({
     mutationFn: async () => {
       // ... (mutation logic same as before)
-      if (!email || !fullName || !role) {
+      if (!email || !fullName || !role || !dateOfBirth) {
         throw new Error(t('form.error.required_fields'))
       }
 
@@ -77,7 +78,8 @@ export function UserForm({ user, onClose }: UserFormProps) {
         role,
         propertyIds: selectedProperties,
         departmentIds: selectedDepartments,
-        reportingTo: reportingTo || undefined
+        reportingTo: reportingTo || undefined,
+        dateOfBirth
       }
 
       // Call the edge function
@@ -244,6 +246,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       setIsActive(user.is_active !== false) // Default to true if undefined
       setReportingTo(user.reporting_to || null)
       setStaffId(user.staff_id || '')
+      setDateOfBirth(user.date_of_birth || '')
       // Load user's roles, properties, departments
       loadUserData()
     }
@@ -381,7 +384,8 @@ export function UserForm({ user, onClose }: UserFormProps) {
           phone: phone || null,
           job_title: jobTitle || null,
           is_active: isActive,
-          reporting_to: reportingTo || null
+          reporting_to: reportingTo || null,
+          date_of_birth: dateOfBirth
         })
         .eq('id', user.id)
 
@@ -438,13 +442,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validate form data
     try {
       const formData: UserFormData = {
         email,
         full_name: fullName,
         phone: phone || undefined,
+        date_of_birth: dateOfBirth,
         job_title: jobTitle || undefined,
         role: role as UserFormData['role'],
         property_ids: selectedProperties,
@@ -454,10 +459,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
         hire_date: undefined,
         staff_id: undefined
       }
-      
+
       // Validate using Zod schema
       userSchema.parse(formData)
-      
+
       // If validation passes, proceed with mutation
       if (user) {
         updateUserMutation.mutate()
@@ -539,6 +544,19 @@ export function UserForm({ user, onClose }: UserFormProps) {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">{t('form.date_of_birth', 'Date of Birth')} *</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  required
                 />
               </div>
             </div>
@@ -842,4 +860,3 @@ export function UserForm({ user, onClose }: UserFormProps) {
     </div>
   )
 }
-

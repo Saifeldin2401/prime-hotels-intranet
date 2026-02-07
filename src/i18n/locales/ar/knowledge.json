@@ -6,12 +6,19 @@
     "search_placeholder": "البحث في المقالات والإجراءات والسياسات...",
     "featured": "المميزة",
     "recent": "آخر التحديثات",
+    "categories": "الفئات",
+    "departments": "الأقسام",
+    "searchArticles": "البحث في الإجراءات والسياسات...",
+    "noResults": "لم يتم العثور على مستندات مطابقة.",
     "your_recently_viewed": "شوهدت مؤخراً",
     "browse_by_type": "تصفح حسب النوع",
     "browse_by_dept": "تصفح حسب القسم",
     "personalized": "مخصص لك",
     "view_all": "عرض الكل",
-    "required_reading": "القراءة المطلوبة",
+    "requiredReading": "القراءة الإلزامية",
+    "readConfirmation": "لقد قرأت وفهمت هذا المستند",
+    "required_reading_desc": "مستندات أساسية تحتاج إلى الإقرار بها",
+    "search_results": "نتائج البحث",
     "quick_access_dept": "وصول سريع: {{dept}}",
     "pending_count": "{{count}} معلقة",
     "more_count": "+{{count}} المزيد",
@@ -29,8 +36,9 @@
     "ai_welcome_message": "مرحباً! أنا خبير المعرفة بالذكاء الاصطناعي. اسألني أي شيء عن إجراءات التشغيل القياسية أو السياسات - أنا أدعم جميع اللغات وسأقوم بترجمة المعلومات لك!",
     "review_pending": "مراجعة المعلقات",
     "analytics_action": "عرض التحليلات",
-    "no_dept_content": "لا يتوفر محتوى خاص بالقسم بعد.",
-    "no_dept_content_desc": "سيظهر المحتوى هنا بمجرد تعيينك لقسم.",
+        "no_dept_content": "لا يتوفر محتوى خاص بالقسم بعد.",
+        "no_dept_content_desc": "سيظهر المحتوى هنا بمجرد تعيينك لقسم.",
+        "general_category": "عام",
     "article_count": "{{count}} مقال",
     "article_count_plural": "{{count}} مقالات",
     "content_types": {
@@ -67,7 +75,8 @@
         "tags": "الوسوم",
         "views": "مشاهدات",
         "min_read": "دقائق قراءة",
-        "updated": "تم التحديث"
+        "updated": "تم التحديث",
+        "updated_at": "تم التحديث في {{date}}"
     },
     "feedback": {
         "helpful": "هل كان هذا المقال مفيداً؟",
@@ -158,6 +167,7 @@
         "draft": "مسودة",
         "publish": "نشر",
         "save_draft": "حفظ كمسودة",
+        "submit_for_review": "تقديم للمراجعة",
         "publishing": "جاري النشر...",
         "saving": "جاري الحفظ...",
         "title_label": "العنوان",
@@ -207,7 +217,8 @@
             "user_error": "المستخدم غير معرف",
             "save_success": "تم إنشاء {{type}} بنجاح",
             "update_success": "تم تحديث {{type}} بنجاح",
-            "save_error": "فشل الحفظ: "
+            "save_error": "فشل الحفظ: ",
+            "submitted_for_review": "تم تقديم المستند للمراجعة! تم إشعار المراجعين."
         },
         "visibility": {
             "all_properties": "جميع المنشآت",
@@ -241,12 +252,23 @@
         "description": "مراجعة ونشر مقالات المعرفة",
         "stats": {
             "drafts": "مسودات",
-            "published": "منشور"
+            "published": "منشور",
+            "pending_review": "قيد المراجعة",
+            "rejected": "مرفوض"
+        },
+        "status": {
+            "draft": "مسودة",
+            "pending_review": "قيد المراجعة",
+            "approved": "موافق عليه",
+            "published": "منشور",
+            "rejected": "مرفوض"
         },
         "filters": {
             "status_placeholder": "تصفية حسب الحالة",
             "drafts": "مسودات",
+            "pending_review": "قيد المراجعة",
             "published": "منشورة",
+            "rejected": "مرفوض",
             "all": "الكل"
         },
         "empty_state": {
@@ -256,11 +278,14 @@
         "dialog": {
             "title": "مراجعة المقال",
             "description": "مراجعة \"{{title}}\" واتخاذ إجراء",
+            "view": "عرض",
             "view_full": "عرض المقال كاملاً",
-            "comment_label": "تعليق المراجعة (ملاحظة داخلية - غير محفوظة)",
-            "comment_placeholder": "أضف ملاحظاتك...",
-            "publish": "نشر",
-            "unpublish": "إلغاء النشر (مسودة)"
+            "comment_label": "تعليق المراجعة",
+            "comment_placeholder": "أضف ملاحظات اختيارية للمؤلف...",
+            "publish": "موافقة ونشر",
+            "reject": "رفض",
+            "request_changes": "طلب تغييرات",
+            "unpublish": "إلغاء النشر"
         },
         "messages": {
             "approved": "تمت الموافقة على المقال ونشره!",
@@ -289,6 +314,11 @@
         "preview_doc": "معاينة المستند",
         "download_attachment": "تحميل / عرض المرفق",
         "no_content": "لا يوجد محتوى متاح.",
+        "tldr": "ملخص سريع",
+        "share": "مشاركة المقال",
+        "print": "طباعة المقال",
+        "link_copied": "تم نسخ رابط المقال إلى الحافظة",
+        "shared_success": "تم مشاركة المقال بنجاح",
         "acknowledge_title": "الإقرار على المستند",
         "acknowledge_desc": "قم بتأكيد قراءتك وفهمك لهذا المحتوى.",
         "i_acknowledge": "أقر بذلك",
@@ -425,6 +455,21 @@
         "create_new": "مقال جديد",
         "no_description": "لا يوجد وصف مدخل",
         "view": "عرض",
-        "no_bookmarks": "لا توجد محفوظات بعد"
+        "no_bookmarks": "لا توجد محفوظات بعد",
+        "bookmarks": "المحفوظات",
+        "browsing_dept": "تصفح القسم",
+        "browsing_type": "تصفح {{type}}",
+        "no_bookmarks_desc": "احفظ المقالات التي تستخدمها بشكل متكرر للوصول السريع.",
+        "nav_title": "مكتبة المعرفة",
+        "quick_search": "بحث سريع...",
+        "types": "أنواع المحتوى",
+        "my_dept": "قسمي: {{name}}"
+    },
+    "status": {
+        "draft": "مسودة",
+        "pending_review": "قيد المراجعة",
+        "approved": "موافق عليه",
+        "published": "منشور",
+        "rejected": "مرفوض"
     }
 }

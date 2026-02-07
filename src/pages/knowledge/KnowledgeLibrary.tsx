@@ -293,7 +293,7 @@ export default function KnowledgeLibrary() {
                                                         </div>
 
                                                         <p className="text-sm text-gray-500 line-clamp-2 mb-4">
-                                                            {article.description || t('library.no_description', 'No description provided')}
+                                                            {article.description || t('common:no_description_provided')}
                                                         </p>
 
                                                         <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase font-bold tracking-wider text-gray-400">

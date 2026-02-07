@@ -373,7 +373,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
 
             onOpenChange(false)
             onModuleCreated?.(module.id)
-            navigate(`/training/builder/${module.id}`)
+            navigate(`/training/hub/${module.id}?view=builder`)
 
         } catch (error) {
             console.error('Module creation error:', error)

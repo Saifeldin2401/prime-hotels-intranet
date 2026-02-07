@@ -50,8 +50,16 @@
     "true": "True",
     "false": "False",
     "no_title": "No title",
+    "no_description_provided": "No description provided",
+    "no_reason_provided": "No reason provided",
     "please_login": "Please log in to view this page",
     "view_profile": "View Profile",
+    "visibility": {
+      "all_properties": "All properties",
+      "property_specific": "Property-specific",
+      "department_specific": "Department-specific",
+      "role_specific": "Role-specific"
+    },
     "total": "Total",
     "noResults": "No results.",
     "of": "of",
@@ -227,7 +235,11 @@
       "start_training": "Start Training",
       "view_payslip": "View Payslip",
       "view_review": "View Review",
-      "view_certificate": "View Certificate"
+      "view_certificate": "View Certificate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View",
+      "more": "More"
     },
     "defaults": {
       "new_training": "New Training"
@@ -297,7 +309,9 @@
     "edit": "Edit",
     "delete": "Delete",
     "refresh": "Refresh",
-    "error": "Error"
+    "error": "Error",
+    "view": "View",
+    "more": "More"
   },
   "priority": {
     "critical": "Critical",

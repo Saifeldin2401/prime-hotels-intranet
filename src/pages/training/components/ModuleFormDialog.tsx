@@ -96,20 +96,25 @@ export function ModuleFormDialog({
     const [searchCategoryValue, setSearchCategoryValue] = useState("")
     const [searchDurationValue, setSearchDurationValue] = useState("")
 
-    // Fetch departments for current property
+    // Fetch departments for current property (or all when "All Properties" is selected)
+    const propertyId = currentProperty?.id
+    const isAllProperties = propertyId === 'all'
     const { data: departments = [] } = useQuery({
-        queryKey: ['departments', currentProperty?.id],
+        queryKey: ['departments', isAllProperties ? 'all' : propertyId],
         queryFn: async () => {
-            if (!currentProperty?.id) return []
-            const { data, error } = await supabase
+            if (!propertyId) return []
+            let query = supabase
                 .from('departments')
                 .select('id, name')
-                .eq('property_id', currentProperty.id)
                 .order('name')
+            if (!isAllProperties && propertyId) {
+                query = query.eq('property_id', propertyId)
+            }
+            const { data, error } = await query
             if (error) throw error
             return data
         },
-        enabled: !!currentProperty?.id
+        enabled: !!propertyId
     })
 
     const form = useForm<ModuleFormValues>({

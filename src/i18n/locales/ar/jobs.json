@@ -48,6 +48,7 @@
     },
     "form": {
         "create_title": "إنشاء إعلان وظيفة جديد",
+        "edit": "تعديل",
         "edit_title": "تعديل إعلان الوظيفة",
         "position_title": "المسمى الوظيفي",
         "position_placeholder": "مثال: مدير الاستقبال",

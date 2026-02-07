@@ -6,10 +6,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/hooks/useAuth'
 import {
-    User, Mail, Phone, Building2, Calendar, FileText, Link2,
-    Clock, MessageSquare, CalendarPlus, ExternalLink, Loader2
+    User, Mail, Phone, Building2, FileText, Link2,
+    Clock, MessageSquare, CalendarPlus, ExternalLink, Loader2, History
 } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
 
@@ -19,6 +20,11 @@ interface Referral {
     applicant_email: string
     applicant_phone: string | null
     cv_url: string | null
+    cv_bucket?: string | null
+    cv_path?: string | null
+    cv_filename?: string | null
+    cv_mime?: string | null
+    cv_size?: number | null
     notes: string | null
     status: string
     created_at: string
@@ -42,7 +48,19 @@ const statusColors: Record<string, string> = {
     review: 'bg-yellow-100 text-yellow-800',
     interview: 'bg-purple-100 text-purple-800',
     hired: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800'
+    rejected: 'bg-red-100 text-red-800',
+    shortlisted: 'bg-indigo-100 text-indigo-800',
+    offer: 'bg-emerald-100 text-emerald-800'
+}
+
+const statusLabels: Record<string, string> = {
+    received: 'Submitted',
+    review: 'Under Review',
+    interview: 'Interview',
+    hired: 'Hired',
+    rejected: 'Rejected',
+    shortlisted: 'Shortlisted',
+    offer: 'Offer'
 }
 
 export function CandidateProfileDialog({
@@ -54,12 +72,32 @@ export function CandidateProfileDialog({
     propertyName,
     departmentName
 }: CandidateProfileDialogProps) {
+    const { roles } = useAuth()
     const queryClient = useQueryClient()
     const [hrNotes, setHrNotes] = useState('')
     const [interviewDate, setInterviewDate] = useState('')
     const [interviewTime, setInterviewTime] = useState('')
     const [saving, setSaving] = useState(false)
     const [showScheduleForm, setShowScheduleForm] = useState(false)
+    const [cvLoading, setCvLoading] = useState(false)
+
+    const referralId = referral?.id || null
+    const isHR = roles?.some(r => ['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'corporate_admin'].includes(r.role))
+
+    const { data: history = [] } = useQuery({
+        queryKey: ['referral-history', referralId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('referral_history')
+                .select('id, old_status, new_status, change_note, created_at, changed_by, changer:profiles(id, full_name)')
+                .eq('referral_id', referralId)
+                .order('created_at', { ascending: true })
+
+            if (error) throw error
+            return data || []
+        },
+        enabled: !!referralId
+    })
 
     if (!referral) return null
 
@@ -135,6 +173,36 @@ export function CandidateProfileDialog({
         }
     }
 
+    const formatFileSize = (size?: number | null) => {
+        if (!size) return ''
+        const mb = size / 1024 / 1024
+        return `${mb.toFixed(2)} MB`
+    }
+
+    const handleViewCv = async () => {
+        if (!referral) return
+        if (referral.cv_url) {
+            window.open(referral.cv_url, '_blank', 'noopener,noreferrer')
+            return
+        }
+        if (!referral.cv_bucket || !referral.cv_path) return
+
+        setCvLoading(true)
+        try {
+            const { data, error } = await supabase.storage
+                .from(referral.cv_bucket)
+                .createSignedUrl(referral.cv_path, 60 * 10)
+            if (error || !data?.signedUrl) {
+                throw error || new Error('Failed to generate secure link')
+            }
+            window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+        } catch (err) {
+            console.error('Failed to open CV:', err)
+        } finally {
+            setCvLoading(false)
+        }
+    }
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -152,31 +220,33 @@ export function CandidateProfileDialog({
                     {/* Status & Quick Actions */}
                     <div className="flex items-center justify-between">
                         <Badge className={statusColors[referral.status] || 'bg-gray-100'}>
-                            {referral.status.charAt(0).toUpperCase() + referral.status.slice(1)}
+                            {statusLabels[referral.status] || referral.status}
                         </Badge>
-                        <div className="flex gap-2">
-                            {referral.status === 'received' && (
-                                <Button size="sm" onClick={() => handleStatusChange('review')} disabled={saving}>
-                                    Start Review
-                                </Button>
-                            )}
-                            {referral.status === 'review' && (
-                                <Button size="sm" onClick={() => setShowScheduleForm(true)} disabled={saving}>
-                                    <CalendarPlus className="h-4 w-4 mr-1" />
-                                    Schedule Interview
-                                </Button>
-                            )}
-                            {referral.status === 'interview' && (
-                                <Button size="sm" onClick={() => handleStatusChange('hired')} disabled={saving}>
-                                    Mark Hired
-                                </Button>
-                            )}
-                            {['received', 'review', 'interview'].includes(referral.status) && (
-                                <Button size="sm" variant="outline" onClick={() => handleStatusChange('rejected')} disabled={saving}>
-                                    Reject
-                                </Button>
-                            )}
-                        </div>
+                        {isHR && (
+                            <div className="flex gap-2">
+                                {referral.status === 'received' && (
+                                    <Button size="sm" onClick={() => handleStatusChange('review')} disabled={saving}>
+                                        Start Review
+                                    </Button>
+                                )}
+                                {referral.status === 'review' && (
+                                    <Button size="sm" onClick={() => setShowScheduleForm(true)} disabled={saving}>
+                                        <CalendarPlus className="h-4 w-4 mr-1" />
+                                        Schedule Interview
+                                    </Button>
+                                )}
+                                {referral.status === 'interview' && (
+                                    <Button size="sm" onClick={() => handleStatusChange('hired')} disabled={saving}>
+                                        Mark Hired
+                                    </Button>
+                                )}
+                                {['received', 'review', 'interview'].includes(referral.status) && (
+                                    <Button size="sm" variant="outline" onClick={() => handleStatusChange('rejected')} disabled={saving}>
+                                        Reject
+                                    </Button>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Contact Info */}
@@ -225,24 +295,29 @@ export function CandidateProfileDialog({
                     </div>
 
                     {/* CV/Resume Link */}
-                    {referral.cv_url && (
+                    {(referral.cv_url || referral.cv_path) && (
                         <div className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2">
-                                    {referral.cv_url.includes('linkedin') ? (
+                                    {referral.cv_url?.includes('linkedin') ? (
                                         <Link2 className="h-5 w-5 text-blue-600" />
                                     ) : (
                                         <FileText className="h-5 w-5 text-blue-600" />
                                     )}
-                                    <span className="text-sm font-medium">
-                                        {referral.cv_url.includes('linkedin') ? 'LinkedIn Profile' : 'Resume/CV'}
-                                    </span>
+                                    <div>
+                                        <span className="text-sm font-medium block">
+                                            {referral.cv_url?.includes('linkedin') ? 'LinkedIn Profile' : 'Resume/CV'}
+                                        </span>
+                                        {referral.cv_filename && (
+                                            <span className="text-xs text-muted-foreground">
+                                                {referral.cv_filename} {formatFileSize(referral.cv_size) && `• ${formatFileSize(referral.cv_size)}`}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                                <Button size="sm" variant="outline" asChild>
-                                    <a href={referral.cv_url} target="_blank" rel="noopener noreferrer">
-                                        <ExternalLink className="h-4 w-4 mr-1" />
-                                        View
-                                    </a>
+                                <Button size="sm" variant="outline" onClick={handleViewCv} disabled={cvLoading}>
+                                    {cvLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ExternalLink className="h-4 w-4 mr-1" />}
+                                    View
                                 </Button>
                             </div>
                         </div>
@@ -261,8 +336,37 @@ export function CandidateProfileDialog({
                         </div>
                     )}
 
+                    {/* Status Timeline */}
+                    {history.length > 0 && (
+                        <div className="border rounded-lg p-4">
+                            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                <History className="h-4 w-4" />
+                                Status Timeline
+                            </h4>
+                            <div className="space-y-3">
+                                {history.map((item: any) => (
+                                    <div key={item.id} className="flex items-start gap-3">
+                                        <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {statusLabels[item.new_status] || item.new_status}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {formatRelativeTime(item.created_at)}
+                                                {item.changer?.full_name ? ` • ${item.changer.full_name}` : ''}
+                                            </p>
+                                            {item.change_note && (
+                                                <p className="text-xs text-gray-600 mt-1">{item.change_note}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Interview Scheduling Form */}
-                    {showScheduleForm && (
+                    {isHR && showScheduleForm && (
                         <div className="border rounded-lg p-4 bg-purple-50">
                             <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                                 <CalendarPlus className="h-4 w-4" />
@@ -300,27 +404,29 @@ export function CandidateProfileDialog({
                     )}
 
                     {/* Add HR Note */}
-                    <div className="border rounded-lg p-4">
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4" />
-                            Add HR Note
-                        </h4>
-                        <Textarea
-                            value={hrNotes}
-                            onChange={(e) => setHrNotes(e.target.value)}
-                            placeholder="Add a note about this candidate..."
-                            rows={2}
-                        />
-                        <Button
-                            size="sm"
-                            className="mt-2"
-                            onClick={handleSaveNotes}
-                            disabled={!hrNotes.trim() || saving}
-                        >
-                            {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                            Save Note
-                        </Button>
-                    </div>
+                    {isHR && (
+                        <div className="border rounded-lg p-4">
+                            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4" />
+                                Add HR Note
+                            </h4>
+                            <Textarea
+                                value={hrNotes}
+                                onChange={(e) => setHrNotes(e.target.value)}
+                                placeholder="Add a note about this candidate..."
+                                rows={2}
+                            />
+                            <Button
+                                size="sm"
+                                className="mt-2"
+                                onClick={handleSaveNotes}
+                                disabled={!hrNotes.trim() || saving}
+                            >
+                                {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                                Save Note
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 <DialogFooter>

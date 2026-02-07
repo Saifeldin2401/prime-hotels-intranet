@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDistanceToNow } from 'date-fns'
+import { ar, enUS } from 'date-fns/locale'
 
 type FeedItemType =
     | 'announcement'
@@ -72,16 +73,16 @@ interface FeedItem {
     metadata?: Record<string, any>
 }
 
-const FEED_TYPE_CONFIG: Record<FeedItemType, { icon: any; color: string; label: string }> = {
-    announcement: { icon: Megaphone, color: 'text-blue-600 bg-blue-100', label: 'Announcement' },
-    kb_update: { icon: BookOpen, color: 'text-green-600 bg-green-100', label: 'KB Update' },
-    training: { icon: GraduationCap, color: 'text-purple-600 bg-purple-100', label: 'Training' },
-    achievement: { icon: Trophy, color: 'text-yellow-600 bg-yellow-100', label: 'Achievement' },
-    birthday: { icon: Cake, color: 'text-pink-600 bg-pink-100', label: 'Birthday' },
-    anniversary: { icon: PartyPopper, color: 'text-orange-600 bg-orange-100', label: 'Work Anniversary' },
-    new_joiner: { icon: UserPlus, color: 'text-teal-600 bg-teal-100', label: 'New Team Member' },
-    event: { icon: Calendar, color: 'text-indigo-600 bg-indigo-100', label: 'Event' },
-    recognition: { icon: Star, color: 'text-amber-600 bg-amber-100', label: 'Recognition' },
+const FEED_TYPE_CONFIG: Record<FeedItemType, { icon: any; color: string; labelKey: string }> = {
+    announcement: { icon: Megaphone, color: 'text-blue-600 bg-blue-100', labelKey: 'feed_types.announcement' },
+    kb_update: { icon: BookOpen, color: 'text-green-600 bg-green-100', labelKey: 'feed_types.kb_update' },
+    training: { icon: GraduationCap, color: 'text-purple-600 bg-purple-100', labelKey: 'feed_types.training' },
+    achievement: { icon: Trophy, color: 'text-yellow-600 bg-yellow-100', labelKey: 'feed_types.achievement' },
+    birthday: { icon: Cake, color: 'text-pink-600 bg-pink-100', labelKey: 'feed_types.birthday' },
+    anniversary: { icon: PartyPopper, color: 'text-orange-600 bg-orange-100', labelKey: 'feed_types.anniversary' },
+    new_joiner: { icon: UserPlus, color: 'text-teal-600 bg-teal-100', labelKey: 'feed_types.new_joiner' },
+    event: { icon: Calendar, color: 'text-indigo-600 bg-indigo-100', labelKey: 'feed_types.event' },
+    recognition: { icon: Star, color: 'text-amber-600 bg-amber-100', labelKey: 'feed_types.recognition' },
 }
 
 interface FetchFeedContext {
@@ -89,9 +90,10 @@ interface FetchFeedContext {
     roles: any[]
     departments: any[]
     properties: any[]
+    t: any
 }
 
-async function fetchFeedItems({ user, roles, departments, properties }: FetchFeedContext): Promise<FeedItem[]> {
+async function fetchFeedItems({ user, roles, departments, properties, t }: FetchFeedContext): Promise<FeedItem[]> {
     const items: FeedItem[] = []
     const now = new Date()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -144,7 +146,7 @@ async function fetchFeedItems({ user, roles, departments, properties }: FetchFee
             items.push(...kbUpdates.map((k: any) => ({
                 id: `kb-${k.id}`,
                 type: 'kb_update' as FeedItemType,
-                title: `Article updated: ${k.title}`,
+                title: t('feed_content.article_updated', { title: k.title }),
                 author: k.created_by ? { id: k.created_by.id, name: k.created_by.full_name, avatar: k.created_by.avatar_url } : undefined,
                 link: `/knowledge/${k.id}`,
                 timestamp: new Date(k.updated_at),
@@ -170,7 +172,10 @@ async function fetchFeedItems({ user, roles, departments, properties }: FetchFee
             items.push(...achievements.map((a: any) => ({
                 id: `achievement-${a.id}`,
                 type: 'achievement' as FeedItemType,
-                title: `${a.user?.full_name || 'Someone'} completed "${a.training?.title || 'training'}"`,
+                title: t('feed_content.training_completed', {
+                    name: a.user?.full_name || 'Someone',
+                    title: a.training?.title || 'training'
+                }),
                 author: a.user ? { id: a.user.id, name: a.user.full_name, avatar: a.user.avatar_url } : undefined,
                 link: `/training/certificates`,
                 timestamp: new Date(a.completed_at)
@@ -195,7 +200,9 @@ async function fetchFeedItems({ user, roles, departments, properties }: FetchFee
                         items.push({
                             id: `birthday-${p.id}`,
                             type: 'birthday',
-                            title: daysUntil === 0 ? `🎂 Happy Birthday ${p.full_name}!` : `${p.full_name}'s birthday in ${daysUntil} days`,
+                            title: daysUntil === 0
+                                ? t('feed_content.happy_birthday', { name: p.full_name })
+                                : t('feed_content.birthday_in', { name: p.full_name, days: daysUntil }),
                             author: { id: p.id, name: p.full_name, avatar: p.avatar_url },
                             timestamp: thisYearBday
                         })
@@ -216,8 +223,8 @@ async function fetchFeedItems({ user, roles, departments, properties }: FetchFee
             items.push(...newJoiners.map((j: any) => ({
                 id: `newjoiner-${j.id}`,
                 type: 'new_joiner' as FeedItemType,
-                title: `Welcome ${j.full_name} to the team!`,
-                content: `Joined as ${j.job_title || 'Team Member'}`,
+                title: t('feed_content.welcome_team', { name: j.full_name }),
+                content: t('feed_content.joined_as', { role: j.job_title || 'Team Member' }),
                 author: { id: j.id, name: j.full_name, avatar: j.avatar_url },
                 timestamp: new Date(j.hire_date!)
             })))
@@ -240,15 +247,15 @@ interface ActivityFeedProps {
 }
 
 export default function ActivityFeed({ compact = false, maxItems = 10, filterTypes }: ActivityFeedProps) {
-    const { t } = useTranslation('common')
+    const { t, i18n } = useTranslation('dashboard')
     const { user, roles, departments, properties } = useAuth()
     const [enabledTypes, setEnabledTypes] = useState<FeedItemType[]>(
         filterTypes || ['announcement', 'kb_update', 'training', 'achievement', 'birthday', 'new_joiner']
     )
 
     const { data: allItems, isLoading } = useQuery({
-        queryKey: ['activity-feed', user?.id, roles.length, departments.length, properties.length],
-        queryFn: () => fetchFeedItems({ user, roles, departments, properties }),
+        queryKey: ['activity-feed', user?.id, roles.length, departments.length, properties.length, i18n.language],
+        queryFn: () => fetchFeedItems({ user, roles, departments, properties, t }),
         enabled: !!user?.id,
         staleTime: 1000 * 60 * 5 // 5 minutes
     })
@@ -295,13 +302,13 @@ export default function ActivityFeed({ compact = false, maxItems = 10, filterTyp
             <CardHeader className={cn("flex flex-row items-center justify-between", compact && 'py-3')}>
                 <CardTitle className="text-base flex items-center gap-2">
                     <MessageCircle className="h-5 w-5 text-hotel-gold" />
-                    Activity Feed
+                    {t('widgets.activity_feed', 'Activity Feed')}
                 </CardTitle>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 gap-1">
                             <Filter className="h-4 w-4" />
-                            Filter
+                            {t('feed_types.filter', 'Filter')}
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -312,7 +319,7 @@ export default function ActivityFeed({ compact = false, maxItems = 10, filterTyp
                                 onCheckedChange={() => toggleType(type as FeedItemType)}
                             >
                                 <config.icon className="h-4 w-4 mr-2" />
-                                {config.label}
+                                {t(config.labelKey)}
                             </DropdownMenuCheckboxItem>
                         ))}
                     </DropdownMenuContent>
@@ -322,7 +329,7 @@ export default function ActivityFeed({ compact = false, maxItems = 10, filterTyp
                 {items.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                         <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                        <p>No recent activity</p>
+                        <p>{t('widget_common.no_recent_activity', 'No recent activity')}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -358,7 +365,7 @@ export default function ActivityFeed({ compact = false, maxItems = 10, filterTyp
                                                 {item.title}
                                             </p>
                                             <Badge variant="outline" className={cn("text-xs shrink-0", config.color.replace('bg-', 'border-'))}>
-                                                {config.label}
+                                                {t(config.labelKey)}
                                             </Badge>
                                         </div>
 
@@ -374,7 +381,7 @@ export default function ActivityFeed({ compact = false, maxItems = 10, filterTyp
                                             )}
                                             <span className="flex items-center gap-1">
                                                 <Clock className="h-3 w-3" />
-                                                {formatDistanceToNow(item.timestamp, { addSuffix: true })}
+                                                {formatDistanceToNow(item.timestamp, { addSuffix: true, locale: i18n.language === 'ar' ? ar : enUS })}
                                             </span>
                                         </div>
                                     </div>

@@ -26,6 +26,7 @@ const JobPostings = lazy(() => import('@/pages/jobs/JobPostings'))
 const CreateJobPosting = lazy(() => import('@/pages/jobs/CreateJobPosting'))
 const JobPostingDetail = lazy(() => import('@/pages/jobs/JobPostingDetail'))
 const EditJobPosting = lazy(() => import('@/pages/jobs/EditJobPosting'))
+const EmployeeReferrals = lazy(() => import('@/pages/hr/EmployeeReferrals'))
 const ReportsDashboard = lazy(() => import('@/pages/reports/ReportsDashboard'))
 const DocumentDetail = lazy(() => import('@/pages/documents/DocumentDetail'))
 const DocumentLibrary = lazy(() => import('@/pages/documents/DocumentLibrary'))
@@ -270,6 +271,16 @@ export const MiscRoutes = () => (
                 <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']}>
                     <AppLayout>
                         <EditJobPosting />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/jobs/referrals"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <EmployeeReferrals />
                     </AppLayout>
                 </ProtectedRoute>
             }

@@ -33,6 +33,11 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { LogIn, LogOut, BookOpen } from 'lucide-react'
+import { MotivationWidget } from "@/components/dashboard/MotivationWidget"
+import { ActiveUsersWidget } from "@/components/dashboard/ActiveUsersWidget"
+import { NewsWidget } from "@/components/dashboard/NewsWidget"
+import { EmployeeOfMonthWidget } from "@/components/dashboard/EmployeeOfMonthWidget"
+import { BirthdayWidget } from "@/components/dashboard/BirthdayWidget"
 
 export function StaffDashboard() {
   const { user, profile, primaryRole } = useAuth()
@@ -137,6 +142,30 @@ export function StaffDashboard() {
             </div>
           </div>
         </EnhancedCard>
+      </motion.div>
+
+      <motion.div variants={item}>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <div className="col-span-4">
+            <MotivationWidget />
+          </div>
+          <div className="col-span-3">
+            <ActiveUsersWidget />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-12 mt-4">
+          <div className="md:col-span-8">
+            <EmployeeOfMonthWidget />
+          </div>
+          <div className="md:col-span-4">
+            <BirthdayWidget />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <NewsWidget />
+        </div>
       </motion.div>
 
       {/* Stats Cards */}

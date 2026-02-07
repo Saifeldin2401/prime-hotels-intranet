@@ -122,6 +122,22 @@ export function useSessionTimeout(options: UseSessionTimeoutOptions = {}) {
             window.addEventListener(event, debouncedActivity, { passive: true })
         })
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current)
+                if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current)
+                if (intervalRef.current) clearInterval(intervalRef.current)
+                return
+            }
+
+            // Resume timers when returning to the tab
+            resetActivity()
+            scheduleWarning()
+            scheduleLogout()
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
         // Initial schedule
         scheduleWarning()
         scheduleLogout()
@@ -131,6 +147,7 @@ export function useSessionTimeout(options: UseSessionTimeoutOptions = {}) {
             events.forEach(event => {
                 window.removeEventListener(event, debouncedActivity)
             })
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
             if (warningTimeoutRef.current) {
                 clearTimeout(warningTimeoutRef.current)
             }

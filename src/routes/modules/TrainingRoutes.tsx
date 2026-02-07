@@ -1,13 +1,11 @@
 import { lazy } from 'react'
-import { Route, Navigate } from 'react-router-dom'
+import { Route, Navigate, useParams } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 
-const TrainingModules = lazy(() => import('@/pages/training/TrainingModules'))
+const TrainingHub = lazy(() => import('@/pages/training/TrainingHub'))
 const MyCertificates = lazy(() => import('@/pages/training/MyCertificates'))
-const TrainingBuilder = lazy(() => import('@/pages/training/TrainingBuilder'))
-const TrainingAssignments = lazy(() => import('@/pages/training/TrainingAssignments'))
 const TrainingAssignmentRules = lazy(() => import('@/pages/training/TrainingAssignmentRules'))
 const TrainingPaths = lazy(() => import('@/pages/training/TrainingPaths'))
 const TrainingPlayer = lazy(() => import('@/pages/training/TrainingPlayer'))
@@ -19,16 +17,35 @@ const QuizPlayer = lazy(() => import('@/pages/learning/QuizPlayer'))
 const AssignmentManager = lazy(() => import('@/pages/learning/AssignmentManager'))
 const MicrolearningViewer = lazy(() => import('@/pages/learning/MicrolearningViewer'))
 
+const TrainingBuilderRedirect = () => {
+    const { id } = useParams()
+    return <Navigate to={`/training/hub/${id}?view=builder`} replace />
+}
+
 export const TrainingRoutes = () => (
     <>
         <Route
             path="/training/modules"
+            element={<Navigate to="/training/hub?view=list" replace />}
+        />
+        <Route
+            path="/training/hub"
             element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
                     <AppLayout>
                         <MotionWrapper>
-                            <TrainingModules />
+                            <TrainingHub />
                         </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/training/hub/:id"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+                    <AppLayout>
+                        <TrainingHub />
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -49,33 +66,19 @@ export const TrainingRoutes = () => (
         />
         <Route
             path="/training/builder"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <TrainingBuilder />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
+            element={<Navigate to="/training/hub?view=builder" replace />}
         />
         <Route
             path="/training/builder/:id"
             element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <TrainingBuilder />
-                    </AppLayout>
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
+                    <TrainingBuilderRedirect />
                 </ProtectedRoute>
             }
         />
         <Route
             path="/training/assignments"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'department_head']}>
-                    <AppLayout>
-                        <TrainingAssignments />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
+            element={<Navigate to="/training/hub?view=assignments" replace />}
         />
         <Route
             path="/training/assignments/rules"

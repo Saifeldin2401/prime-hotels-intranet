@@ -3,6 +3,8 @@
  * Maps technical errors to user-friendly messages
  */
 
+import i18n from '@/i18n/i18n'
+
 export interface ErrorDetails {
   message: string
   code?: string
@@ -35,7 +37,7 @@ export function getUserFriendlyError(error: unknown): ErrorDetails {
 
   // Fallback for unknown errors
   return {
-    message: 'An unexpected error occurred. Please try again or contact support if the problem persists.',
+    message: i18n.t('errors:unknown_error'),
     retryable: true,
     action: 'retry'
   }
@@ -97,7 +99,7 @@ function mapSupabaseError(code: string, message: string): ErrorDetails {
   // Check for common error patterns in message
   if (message.includes('JWT')) {
     return {
-      message: 'Your session has expired. Please log in again.',
+      message: i18n.t('errors:unauthorized'),
       code,
       retryable: false,
       action: 'login'
@@ -106,7 +108,7 @@ function mapSupabaseError(code: string, message: string): ErrorDetails {
 
   if (message.includes('network') || message.includes('fetch')) {
     return {
-      message: 'Network error. Please check your internet connection and try again.',
+      message: i18n.t('errors:network_connection'),
       code,
       retryable: true,
       action: 'retry'
@@ -115,7 +117,7 @@ function mapSupabaseError(code: string, message: string): ErrorDetails {
 
   if (message.includes('timeout')) {
     return {
-      message: 'The request took too long. Please try again.',
+      message: i18n.t('errors:timeout'),
       code,
       retryable: true,
       action: 'retry'
@@ -123,7 +125,7 @@ function mapSupabaseError(code: string, message: string): ErrorDetails {
   }
 
   return {
-    message: message || 'An error occurred. Please try again.',
+    message: message || i18n.t('errors:unknown_error'),
     code,
     retryable: true,
     action: 'retry'
@@ -139,7 +141,7 @@ function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
   // Network errors
   if (lowerMessage.includes('network') || lowerMessage.includes('fetch') || lowerMessage.includes('connection')) {
     return {
-      message: 'Unable to connect to the server. Please check your internet connection and try again.',
+      message: i18n.t('errors:network_connection'),
       retryable: true,
       action: 'retry'
     }
@@ -148,7 +150,7 @@ function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
   // Authentication errors
   if (lowerMessage.includes('unauthorized') || lowerMessage.includes('authentication') || lowerMessage.includes('login')) {
     return {
-      message: 'Your session has expired. Please log in again.',
+      message: i18n.t('errors:unauthorized'),
       retryable: false,
       action: 'login'
     }
@@ -157,7 +159,7 @@ function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
   // Permission errors
   if (lowerMessage.includes('permission') || lowerMessage.includes('forbidden') || lowerMessage.includes('access denied')) {
     return {
-      message: 'You do not have permission to perform this action. Please contact your administrator.',
+      message: i18n.t('errors:permission_denied'),
       retryable: false,
       action: 'contact_admin'
     }
@@ -166,7 +168,7 @@ function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
   // Not found errors
   if (lowerMessage.includes('not found') || lowerMessage.includes('does not exist')) {
     return {
-      message: 'The item you are looking for could not be found.',
+      message: i18n.t('errors:not_found'),
       retryable: false,
       action: 'refresh'
     }
@@ -175,7 +177,7 @@ function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
   // Validation errors
   if (lowerMessage.includes('validation') || lowerMessage.includes('invalid') || lowerMessage.includes('required')) {
     return {
-      message: 'Please check your input and try again. Some required fields may be missing or invalid.',
+      message: i18n.t('errors:validation_error'),
       retryable: true,
       action: 'fix_input'
     }
@@ -184,7 +186,7 @@ function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
   // Timeout errors
   if (lowerMessage.includes('timeout') || lowerMessage.includes('timed out')) {
     return {
-      message: 'The request took too long to complete. Please try again.',
+      message: i18n.t('errors:timeout'),
       retryable: true,
       action: 'retry'
     }
@@ -193,7 +195,7 @@ function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
   // Rate limiting
   if (lowerMessage.includes('rate limit') || lowerMessage.includes('too many requests')) {
     return {
-      message: 'Too many requests. Please wait a moment and try again.',
+      message: i18n.t('errors:rate_limit'),
       retryable: true,
       action: 'wait_and_retry'
     }
@@ -224,7 +226,7 @@ function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
 
   // Return original message if no pattern matches, but make it more user-friendly
   return {
-    message: message || 'An unexpected error occurred. Please try again.',
+    message: message || i18n.t('errors:unknown_error'),
     retryable: true,
     action: 'retry'
   }
@@ -250,4 +252,5 @@ export function isRetryableError(error: unknown): boolean {
 export function getErrorAction(error: unknown): string | undefined {
   return getUserFriendlyError(error).action
 }
+
 

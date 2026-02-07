@@ -8,6 +8,8 @@ import { MaintenanceWidget } from '@/components/dashboard/MaintenanceWidget'
 import { QuickActionsWidget } from '@/components/dashboard/QuickActionsWidget'
 import { PendingItemsWidget } from '@/components/dashboard/PendingItemsWidget'
 import { ActivityWidget } from '@/components/dashboard/ActivityWidget'
+import { MotivationWidget } from '@/components/dashboard/MotivationWidget'
+import { ActiveUsersWidget } from '@/components/dashboard/ActiveUsersWidget'
 import { motion } from 'framer-motion'
 import { HeroText } from '@/components/ui/HeroText'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
@@ -33,16 +35,16 @@ export default function Dashboard() {
 
   // Auto-trigger wizard for new users (first-time after password change)
   useEffect(() => {
-    if (shouldShowWizard() && !wizardTriggered.current) {
+    if (user?.id && shouldShowWizard(user.id) && !wizardTriggered.current) {
       wizardTriggered.current = true
       // Small delay to let the page render
       const timer = setTimeout(() => {
         startTour()
-        markWizardCompleted()
+        markWizardCompleted(user.id)
       }, 1000)
       return () => clearTimeout(timer)
     }
-  }, [startTour])
+  }, [startTour, user?.id])
 
   return (
     <div className="space-y-6">
@@ -86,7 +88,8 @@ export default function Dashboard() {
           animate="show"
           className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
         >
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}><RoleWidget /></motion.div>
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}><MotivationWidget /></motion.div>
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}><ActiveUsersWidget /></motion.div>
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}><DocumentsWidget /></motion.div>
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}><TrainingWidget /></motion.div>
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}><AnnouncementsWidget /></motion.div>

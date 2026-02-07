@@ -25,7 +25,7 @@ export function ApprovalDetailsSheet({
     onReject,
     isProcessing
 }: ApprovalDetailsSheetProps) {
-    const { t } = useTranslation('approvals')
+    const { t } = useTranslation(['approvals', 'common'])
     const navigate = useNavigate()
 
     if (!approval) return null
@@ -91,7 +91,7 @@ export function ApprovalDetailsSheet({
                                 </div>
                                 <div className="col-span-2">
                                     <span className="text-muted-foreground">Description:</span>
-                                    <p className="mt-1">{approval.description || 'No description provided.'}</p>
+                                    <p className="mt-1">{approval.description || t('common:no_description_provided')}</p>
                                 </div>
                             </div>
                         </div>

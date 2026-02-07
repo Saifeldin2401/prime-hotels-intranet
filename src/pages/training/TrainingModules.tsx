@@ -610,7 +610,7 @@ export default function TrainingModules() {
                     variant="outline"
                     className={cn("w-full border-gray-200 hover:bg-hotel-navy hover:text-white hover:border-hotel-navy transition-colors group", isRTL ? "flex-row-reverse" : "")}
                     size="sm"
-                    onClick={() => navigate(`/training/builder/${module.id}`)}
+                    onClick={() => navigate(`/training/hub/${module.id}?view=builder`)}
                   >
                     <FileText className={cn("h-4 w-4 transition-transform duration-300", isRTL ? "ml-2 group-hover:-translate-x-1" : "mr-2 group-hover:translate-x-1")} />
                     {t('content')}

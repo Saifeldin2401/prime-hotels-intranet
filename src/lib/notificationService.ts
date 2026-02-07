@@ -57,6 +57,8 @@ export type NotificationType =
   | 'system'
   // Triggers
   | 'trigger_notification'
+  // Employee of the Month
+  | 'employee_of_the_month_winner'
   // Documents
   | 'document_review_pending'
   // Approvals (Dynamic types)
@@ -389,5 +391,11 @@ export const NotificationTemplates = {
   documentAcknowledgmentRequired: (documentTitle: string) => ({
     title: 'Acknowledgment Required',
     message: `Please acknowledge that you have read "${documentTitle}".`,
+  }),
+
+  // Employee of the Month
+  employeeOfMonthWinner: (month: string, year: string) => ({
+    title: '🎉 Employee of the Month!',
+    message: `Congratulations! You have been selected as the Employee of the Month for ${month} ${year}.`,
   }),
 }

@@ -37,17 +37,22 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
     const [availableSkills, setAvailableSkills] = useState<Skill[]>([])
     const [loading, setLoading] = useState(true)
     const [isAdding, setIsAdding] = useState(false)
+    const isValidModuleId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(moduleId)
 
     // New Link State
     const [selectedSkillId, setSelectedSkillId] = useState('')
     const [points, setPoints] = useState(10)
 
     useEffect(() => {
+        if (!isValidModuleId) {
+            setLoading(false)
+            return
+        }
         loadData()
-    }, [moduleId])
+    }, [moduleId, isValidModuleId])
 
     const loadData = async () => {
-        if (!moduleId) {
+        if (!isValidModuleId) {
             setLoading(false)
             return
         }
@@ -73,7 +78,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
     }
 
     const handleAddSkill = async () => {
-        if (!selectedSkillId) return
+        if (!isValidModuleId || !selectedSkillId) return
 
         try {
             await skillsService.linkModuleSkill(moduleId, selectedSkillId, points)
@@ -96,6 +101,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
     }
 
     const handleRemoveSkill = async (skillId: string) => {
+        if (!isValidModuleId) return
         try {
             await skillsService.unlinkModuleSkill(moduleId, skillId)
             toast({
@@ -115,7 +121,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
 
     // Filter out already linked skills
     const unlinkedSkills = availableSkills.filter(
-        s => !moduleSkills.some(ms => ms.skill_id === s.id)
+        s => s?.id && !moduleSkills.some(ms => ms.skill_id === s.id)
     )
 
     if (loading) return <div className={`text-sm text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('skillsManagement.loading')}</div>
@@ -127,7 +133,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
                     <Award className="h-4 w-4 text-hotel-gold" />
                     {t('skillsManagement.title')}
                 </h3>
-                {!readonly && moduleId && (
+                {!readonly && isValidModuleId && (
                     <Dialog open={isAdding} onOpenChange={setIsAdding}>
                         <DialogTrigger asChild>
                             <Button variant="outline" size="sm" className={`h-8 ${isRTL ? 'flex-row-reverse' : ''}`}>

@@ -51,6 +51,12 @@ import arAnalytics from './locales/ar/analytics.json';
 
 import enAiTools from './locales/en/ai_tools.json';
 import arAiTools from './locales/ar/ai_tools.json';
+import enErrors from './locales/en/errors.json';
+import arErrors from './locales/ar/errors.json';
+import enOperations from './locales/en/operations.json';
+import arOperations from './locales/ar/operations.json';
+import enLearning from './locales/en/learning.json';
+import arLearning from './locales/ar/learning.json';
 
 // Define the resources
 const resources = {
@@ -78,6 +84,9 @@ const resources = {
     onboarding: enOnboarding,
     analytics: enAnalytics,
     ai_tools: enAiTools,
+    errors: enErrors,
+    operations: enOperations,
+    learning: enLearning,
   },
   ar: {
     common: arCommon,
@@ -103,6 +112,9 @@ const resources = {
     onboarding: arOnboarding,
     analytics: arAnalytics,
     ai_tools: arAiTools,
+    errors: arErrors,
+    operations: arOperations,
+    learning: arLearning,
   },
 };
 

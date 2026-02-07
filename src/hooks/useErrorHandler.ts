@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 interface ApiError {
   message: string
@@ -13,6 +14,7 @@ interface ErrorState {
 }
 
 export function useErrorHandler() {
+  const { t } = useTranslation('errors')
   const [errorState, setErrorState] = useState<ErrorState>({
     error: null,
     isLoading: false
@@ -30,7 +32,7 @@ export function useErrorHandler() {
       typeof e === 'object' && e !== null && 'message' in e
 
     let apiError: ApiError = {
-      message: customMessage || 'An unexpected error occurred',
+      message: customMessage || t('unknown_error'),
       code: 'UNKNOWN_ERROR'
     }
 
@@ -38,23 +40,23 @@ export function useErrorHandler() {
     if (isErrorWithCode(error)) {
       switch (error.code) {
         case 'PGRST116':
-          apiError = { message: 'Resource not found', code: 'NOT_FOUND' }
+          apiError = { message: t('resource_not_found'), code: 'NOT_FOUND' }
           break
         case 'PGRST301':
-          apiError = { message: 'Access denied', code: 'ACCESS_DENIED' }
+          apiError = { message: t('access_denied'), code: 'ACCESS_DENIED' }
           break
         case '23505':
-          apiError = { message: 'Resource already exists', code: 'DUPLICATE_ENTRY' }
+          apiError = { message: t('duplicate_entry'), code: 'DUPLICATE_ENTRY' }
           break
         case '23503':
-          apiError = { message: 'Referenced resource does not exist', code: 'FOREIGN_KEY' }
+          apiError = { message: t('foreign_key'), code: 'FOREIGN_KEY' }
           break
         case '23514':
-          apiError = { message: 'Invalid data provided', code: 'VALIDATION_ERROR' }
+          apiError = { message: t('validation_error'), code: 'VALIDATION_ERROR' }
           break
         default:
           apiError = {
-            message: error.message || 'Database error occurred',
+            message: error.message || t('database_error'),
             code: error.code
           }
       }
@@ -62,7 +64,7 @@ export function useErrorHandler() {
     // Handle network errors
     else if (isErrorWithName(error) && error.name === 'TypeError' && error.message.includes('fetch')) {
       apiError = {
-        message: 'Network error. Please check your connection.',
+        message: t('network_connection'),
         code: 'NETWORK_ERROR'
       }
     }
@@ -88,7 +90,7 @@ export function useErrorHandler() {
     toast.error(apiError.message)
 
     return apiError
-  }, [])
+  }, [t])
 
   const clearError = useCallback(() => {
     setErrorState({ error: null, isLoading: false })
@@ -125,15 +127,17 @@ export function useErrorHandler() {
   }
 }
 
-// Error messages for common scenarios
+// Error messages for common scenarios - Use i18n directly for non-hook contexts
+import i18n from '@/i18n/i18n'
+
 export const ERROR_MESSAGES = {
-  NETWORK: 'Network error. Please check your internet connection.',
-  UNAUTHORIZED: 'You are not authorized to perform this action.',
-  FORBIDDEN: 'Access denied. You do not have permission for this action.',
-  NOT_FOUND: 'The requested resource was not found.',
-  VALIDATION: 'Please check your input and try again.',
-  SERVER: 'Server error. Please try again later.',
-  UNKNOWN: 'An unexpected error occurred. Please try again.'
+  get NETWORK() { return i18n.t('errors:network_connection') },
+  get UNAUTHORIZED() { return i18n.t('errors:unauthorized') },
+  get FORBIDDEN() { return i18n.t('errors:permission_denied') },
+  get NOT_FOUND() { return i18n.t('errors:not_found') },
+  get VALIDATION() { return i18n.t('errors:validation_error') },
+  get SERVER() { return i18n.t('errors:server_error') },
+  get UNKNOWN() { return i18n.t('errors:unknown_error') }
 }
 
 // Helper function to get user-friendly error messages
@@ -153,32 +157,32 @@ export function getErrorMessage(error: unknown): string {
   // Supabase specific errors
   if (hasCode(error)) {
     switch (error.code) {
-      case 'PGRST116': return 'The requested resource was not found.'
-      case 'PGRST301': return 'You are not authorized to access this resource.'
-      case '23505': return 'This resource already exists.'
-      case '23503': return 'Referenced data not found.'
-      case '23514': return 'Invalid data provided.'
-      default: return error.message || ERROR_MESSAGES.SERVER
+      case 'PGRST116': return i18n.t('errors:resource_not_found')
+      case 'PGRST301': return i18n.t('errors:access_denied')
+      case '23505': return i18n.t('errors:duplicate_entry')
+      case '23503': return i18n.t('errors:foreign_key')
+      case '23514': return i18n.t('errors:validation_error')
+      default: return error.message || i18n.t('errors:server_error')
     }
   }
 
   // HTTP status errors
   if (hasStatus(error)) {
     switch (error.status) {
-      case 401: return ERROR_MESSAGES.UNAUTHORIZED
-      case 403: return ERROR_MESSAGES.FORBIDDEN
-      case 404: return ERROR_MESSAGES.NOT_FOUND
-      case 422: return ERROR_MESSAGES.VALIDATION
-      case 500: return ERROR_MESSAGES.SERVER
-      default: return error.message || ERROR_MESSAGES.UNKNOWN
+      case 401: return i18n.t('errors:unauthorized')
+      case 403: return i18n.t('errors:permission_denied')
+      case 404: return i18n.t('errors:not_found')
+      case 422: return i18n.t('errors:validation_error')
+      case 500: return i18n.t('errors:server_error')
+      default: return error.message || i18n.t('errors:unknown_error')
     }
   }
 
   // Network errors
   if (hasNameAndMessage(error) && error.name === 'TypeError' && error.message.includes('fetch')) {
-    return ERROR_MESSAGES.NETWORK
+    return i18n.t('errors:network_connection')
   }
 
   // Return the error message if available
-  return hasMessage(error) ? error.message : ERROR_MESSAGES.UNKNOWN
+  return hasMessage(error) ? error.message : i18n.t('errors:unknown_error')
 }

@@ -17,6 +17,11 @@ import { KnowledgeComplianceWidget } from '@/components/knowledge/KnowledgeCompl
 import { DepartmentControlCenter } from '@/components/departments/DepartmentControlCenter'
 import { OperationsControlCenter } from '@/components/operations/OperationsControlCenter'
 import { ReportsControlCenter } from '@/components/reports/ReportsControlCenter'
+import { MotivationWidget } from "@/components/dashboard/MotivationWidget"
+import { ActiveUsersWidget } from "@/components/dashboard/ActiveUsersWidget"
+import { NewsWidget } from "@/components/dashboard/NewsWidget"
+import { EmployeeOfMonthWidget } from "@/components/dashboard/EmployeeOfMonthWidget"
+import { BirthdayWidget } from "@/components/dashboard/BirthdayWidget"
 import { AuditsControlCenter } from '@/components/audits/AuditsControlCenter'
 import { Icons } from '@/components/icons'
 import { useProperty } from '@/contexts/PropertyContext'
@@ -216,6 +221,28 @@ function CorporateDashboardContent() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="col-span-4">
+          <MotivationWidget />
+        </div>
+        <div className="col-span-3">
+          <ActiveUsersWidget />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-12">
+        <div className="md:col-span-8">
+          <EmployeeOfMonthWidget />
+        </div>
+        <div className="md:col-span-4">
+          <BirthdayWidget />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1">
+        <NewsWidget />
       </div>
 
       <SectionHeader
@@ -592,7 +619,7 @@ function CorporateDashboardContent() {
           <CardContent className="space-y-3">
             <p className="text-2xl font-bold text-gray-900">—</p>
             <p className="text-xs text-gray-500">{t('cards.revenue_analysis_coming_soon', 'Financial data sync required to view revenue analysis.')}</p>
-            <Badge variant="outline" className="text-xs">Pending Sync</Badge>
+            <Badge variant="outline" className="text-xs">{t('cards.pending_sync')}</Badge>
           </CardContent>
         </Card>
         <Card className="border border-blue-100">
@@ -605,7 +632,7 @@ function CorporateDashboardContent() {
           <CardContent className="space-y-3">
             <p className="text-2xl font-bold text-gray-900">—</p>
             <p className="text-xs text-gray-500">{t('cards.budget_tracking_coming_soon', 'Financial data sync required to view budget overview.')}</p>
-            <Badge variant="outline" className="text-xs">Pending Sync</Badge>
+            <Badge variant="outline" className="text-xs">{t('cards.pending_sync')}</Badge>
           </CardContent>
         </Card>
         <Card className="border border-purple-100">
@@ -618,7 +645,7 @@ function CorporateDashboardContent() {
           <CardContent className="space-y-3">
             <p className="text-2xl font-bold text-gray-900">—</p>
             <p className="text-xs text-gray-500">{t('cards.budget_tracking_coming_soon', 'Financial data sync required to view budget overview.')}</p>
-            <Badge variant="outline" className="text-xs">Pending Sync</Badge>
+            <Badge variant="outline" className="text-xs">{t('cards.pending_sync')}</Badge>
           </CardContent>
         </Card>
       </div>

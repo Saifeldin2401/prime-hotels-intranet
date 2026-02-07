@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -12,30 +12,47 @@ import { formatRelativeTime } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { CandidateProfileDialog } from '@/components/hr/CandidateProfileDialog'
 import {
-  Plus, Users, CheckCircle, DollarSign, Clock, UserPlus,
-  Download, Building2, Eye, ExternalLink
+  Plus, Users, CheckCircle, Clock, UserPlus,
+  Download, Building2, Eye, ExternalLink, FileDown, LineChart
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { toast } from 'sonner'
 
 const statusColors: Record<string, string> = {
   received: 'bg-blue-100 text-blue-800',
   review: 'bg-yellow-100 text-yellow-800',
   interview: 'bg-purple-100 text-purple-800',
   hired: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800'
+  rejected: 'bg-red-100 text-red-800',
+  shortlisted: 'bg-indigo-100 text-indigo-800',
+  offer: 'bg-emerald-100 text-emerald-800'
+}
+
+const statusLabels: Record<string, string> = {
+  received: 'Submitted',
+  review: 'Under Review',
+  interview: 'Interview',
+  hired: 'Hired',
+  rejected: 'Rejected',
+  shortlisted: 'Shortlisted',
+  offer: 'Offer'
 }
 
 export default function EmployeeReferrals() {
   const { t } = useTranslation('hr')
   const { user, roles } = useAuth()
-  const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [jobFilter, setJobFilter] = useState('all')
+  const [referrerFilter, setReferrerFilter] = useState('all')
   const [selectedReferral, setSelectedReferral] = useState<any>(null)
   const [profileOpen, setProfileOpen] = useState(false)
 
   // Main referrals query
   const { data: referrals, isLoading, error } = useQuery({
-    queryKey: ['employee-referrals', statusFilter, user?.id],
+    queryKey: ['employee-referrals', statusFilter, jobFilter, referrerFilter, user?.id],
     queryFn: async () => {
       let query = supabase
         .from('job_applications')
@@ -47,12 +64,18 @@ export default function EmployeeReferrals() {
         query = query.eq('status', statusFilter)
       }
 
+      if (jobFilter !== 'all') {
+        query = query.eq('job_posting_id', jobFilter)
+      }
+
       const canViewAll = roles?.some(r =>
         ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(r.role)
       )
 
       if (!canViewAll && user?.id) {
         query = query.eq('referred_by', user.id)
+      } else if (referrerFilter !== 'all') {
+        query = query.eq('referred_by', referrerFilter)
       }
 
       const { data, error } = await query
@@ -101,41 +124,121 @@ export default function EmployeeReferrals() {
     return (job?.department as any)?.name || ''
   }
 
+  // Check if user is HR
+  const isHR = roles?.some(r => ['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'corporate_admin'].includes(r.role))
+
+  const jobOptions = useMemo(() => {
+    if (!jobPostings) return []
+    return jobPostings.map(j => ({
+      value: j.id,
+      label: j.title
+    }))
+  }, [jobPostings])
+
+  const referrerOptions = useMemo(() => {
+    if (!profiles) return []
+    return profiles
+      .map(p => ({
+        value: p.id,
+        label: p.full_name || p.id
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [profiles])
+
   // Stats
-  const stats = {
-    total: referrals?.length || 0,
-    hired: referrals?.filter(r => r.status === 'hired').length || 0
+  const stats = useMemo(() => {
+    const total = referrals?.length || 0
+    const hired = referrals?.filter(r => r.status === 'hired').length || 0
+    const pending = referrals?.filter(r => r.status && !['hired', 'rejected'].includes(r.status)).length || 0
+    const ratio = total > 0 ? Math.round((hired / total) * 100) : 0
+    return { total, hired, pending, ratio }
+  }, [referrals])
+
+  const topReferrers = useMemo(() => {
+    if (!referrals?.length) return []
+    const counts = new Map<string, number>()
+    referrals.forEach(r => {
+      if (r.referred_by) {
+        counts.set(r.referred_by, (counts.get(r.referred_by) || 0) + 1)
+      }
+    })
+    return [...counts.entries()]
+      .map(([id, count]) => ({ id, count, name: getReferrerName(id) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+  }, [referrals, profiles])
+
+  const topJobs = useMemo(() => {
+    if (!referrals?.length) return []
+    const counts = new Map<string, number>()
+    referrals.forEach(r => {
+      if (r.job_posting_id) {
+        counts.set(r.job_posting_id, (counts.get(r.job_posting_id) || 0) + 1)
+      }
+    })
+    return [...counts.entries()]
+      .map(([id, count]) => ({ id, count, title: getJobTitle(id) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+  }, [referrals, jobPostings])
+
+  const monthlyTrends = useMemo(() => {
+    if (!referrals?.length) return []
+    const map = new Map<string, number>()
+    referrals.forEach(r => {
+      const date = new Date(r.created_at)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      map.set(key, (map.get(key) || 0) + 1)
+    })
+    return [...map.entries()]
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-6)
+  }, [referrals])
+
+  const maxTrendCount = useMemo(() => {
+    if (!monthlyTrends.length) return 1
+    return Math.max(...monthlyTrends.map(t => t.count))
+  }, [monthlyTrends])
+
+  const buildExportRows = () => {
+    if (!referrals?.length) return []
+    return referrals.map(r => ({
+      Name: r.applicant_name,
+      Email: r.applicant_email,
+      Phone: r.applicant_phone || '',
+      Position: getJobTitle(r.job_posting_id),
+      Property: getPropertyName(r.job_posting_id),
+      Department: getDepartmentName(r.job_posting_id),
+      Referrer: getReferrerName(r.referred_by),
+      Status: statusLabels[r.status] || r.status,
+      Date: new Date(r.created_at).toLocaleDateString()
+    }))
   }
 
-  // CSV Export
-  const handleExportCSV = () => {
+  const handleExportExcel = () => {
     if (!referrals?.length) return
+    const rows = buildExportRows()
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Referrals')
+    XLSX.writeFile(workbook, `referrals_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
 
-    const headers = ['Name', 'Email', 'Phone', 'Position', 'Property', 'Department', 'Referrer', 'Status', 'Date']
-    const rows = referrals.map(r => [
-      r.applicant_name,
-      r.applicant_email,
-      r.applicant_phone || '',
-      getJobTitle(r.job_posting_id),
-      getPropertyName(r.job_posting_id),
-      getDepartmentName(r.job_posting_id),
-      getReferrerName(r.referred_by),
-      r.status,
-      new Date(r.created_at).toLocaleDateString()
-    ])
-
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `referrals_${new Date().toISOString().split('T')[0]}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleExportPDF = () => {
+    if (!referrals?.length) return
+    const rows = buildExportRows()
+    const doc = new jsPDF('p', 'pt')
+    doc.setFontSize(14)
+    doc.text('Employee Referrals Report', 40, 40)
+    autoTable(doc, {
+      startY: 60,
+      head: [Object.keys(rows[0])],
+      body: rows.map(row => Object.values(row)),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [26, 38, 57] }
+    })
+    doc.save(`referrals_${new Date().toISOString().split('T')[0]}.pdf`)
   }
 
   // View candidate profile
@@ -144,14 +247,47 @@ export default function EmployeeReferrals() {
     setProfileOpen(true)
   }
 
-  // Filter referrals
-  const filteredReferrals = referrals?.filter(r =>
-    r.applicant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.applicant_email?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const handleOpenCv = async (referral: any) => {
+    try {
+      if (referral.cv_url) {
+        window.open(referral.cv_url, '_blank', 'noopener,noreferrer')
+        return
+      }
+      if (!referral.cv_bucket || !referral.cv_path) return
 
-  // Check if user is HR
-  const isHR = roles?.some(r => ['regional_admin', 'regional_hr', 'property_hr'].includes(r.role))
+      const { data, error } = await supabase.storage
+        .from(referral.cv_bucket)
+        .createSignedUrl(referral.cv_path, 60 * 10)
+
+      if (error || !data?.signedUrl) {
+        throw error || new Error('Failed to generate secure link')
+      }
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    } catch (err: any) {
+      console.error('Failed to open CV:', err)
+      toast.error(err?.message || 'Unable to open CV')
+    }
+  }
+
+  // Filter referrals
+  const filteredReferrals = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!referrals?.length) return []
+    if (!term) return referrals
+    return referrals.filter(r => {
+      const haystack = [
+        r.applicant_name,
+        r.applicant_email,
+        r.applicant_phone,
+        getJobTitle(r.job_posting_id),
+        getReferrerName(r.referred_by)
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(term)
+    })
+  }, [referrals, searchTerm, jobPostings, profiles])
 
   if (isLoading) {
     return (
@@ -182,10 +318,16 @@ export default function EmployeeReferrals() {
         actions={
           <div className="flex gap-2">
             {isHR && referrals && referrals.length > 0 && (
-              <Button variant="outline" onClick={handleExportCSV}>
-                <Download className="h-4 w-4 mr-2" />
-                {t('referrals.export_csv')}
-              </Button>
+              <>
+                <Button variant="outline" onClick={handleExportExcel}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  {t('referrals.export_excel', { defaultValue: 'Export Excel' })}
+                </Button>
+                <Button variant="outline" onClick={handleExportPDF}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('referrals.export_pdf', { defaultValue: 'Export PDF' })}
+                </Button>
+              </>
             )}
             <Link to="/jobs">
               <Button>
@@ -198,7 +340,7 @@ export default function EmployeeReferrals() {
       />
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-4">
         <div className="bg-white border rounded-lg p-4">
           <div className="flex items-center justify-between pb-2">
             <span className="text-sm font-medium text-gray-600">{t('referrals.stats.total')}</span>
@@ -213,11 +355,25 @@ export default function EmployeeReferrals() {
           </div>
           <div className="text-2xl font-bold text-green-600">{stats.hired}</div>
         </div>
+        <div className="bg-white border rounded-lg p-4">
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-sm font-medium text-gray-600">{t('referrals.stats.pending', { defaultValue: 'Pending' })}</span>
+            <Clock className="h-4 w-4 text-amber-500" />
+          </div>
+          <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
+        </div>
+        <div className="bg-white border rounded-lg p-4">
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-sm font-medium text-gray-600">{t('referrals.stats.ratio', { defaultValue: 'Hire Ratio' })}</span>
+            <LineChart className="h-4 w-4 text-blue-500" />
+          </div>
+          <div className="text-2xl font-bold text-blue-600">{stats.ratio}%</div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white border rounded-lg p-4">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 items-center">
           <div className="flex-1 min-w-[200px]">
             <Input
               placeholder={t('referrals.search_placeholder')}
@@ -226,20 +382,113 @@ export default function EmployeeReferrals() {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All Status" />
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder={t('status.all', { defaultValue: 'All Status' })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t('status.all')}</SelectItem>
-              <SelectItem value="received">{t('status.received', { defaultValue: 'Received' })}</SelectItem>
-              <SelectItem value="review">{t('status.review', { defaultValue: 'Review' })}</SelectItem>
+              <SelectItem value="all">{t('status.all', { defaultValue: 'All Status' })}</SelectItem>
+              <SelectItem value="received">{t('status.received', { defaultValue: 'Submitted' })}</SelectItem>
+              <SelectItem value="review">{t('status.review', { defaultValue: 'Under Review' })}</SelectItem>
               <SelectItem value="interview">{t('status.interview', { defaultValue: 'Interview' })}</SelectItem>
-              <SelectItem value="hired">{t('status.hired')}</SelectItem>
-              <SelectItem value="rejected">{t('status.rejected')}</SelectItem>
+              <SelectItem value="shortlisted">{t('status.shortlisted', { defaultValue: 'Shortlisted' })}</SelectItem>
+              <SelectItem value="offer">{t('status.offer', { defaultValue: 'Offer' })}</SelectItem>
+              <SelectItem value="hired">{t('status.hired', { defaultValue: 'Hired' })}</SelectItem>
+              <SelectItem value="rejected">{t('status.rejected', { defaultValue: 'Rejected' })}</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={jobFilter} onValueChange={setJobFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder={t('referrals.filter_job', { defaultValue: 'All Jobs' })} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('referrals.filter_job', { defaultValue: 'All Jobs' })}</SelectItem>
+              {jobOptions.map(job => (
+                <SelectItem key={job.value} value={job.value}>
+                  {job.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isHR && (
+            <Select value={referrerFilter} onValueChange={setReferrerFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={t('referrals.filter_referrer', { defaultValue: 'All Referrers' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('referrals.filter_referrer', { defaultValue: 'All Referrers' })}</SelectItem>
+                {referrerOptions.map(referrer => (
+                  <SelectItem key={referrer.value} value={referrer.value}>
+                    {referrer.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
+
+      {isHR && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="bg-white border rounded-lg p-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-blue-600" />
+              {t('referrals.top_referrers', { defaultValue: 'Top Referrers' })}
+            </h4>
+            <div className="space-y-3">
+              {topReferrers.length === 0 && (
+                <p className="text-sm text-muted-foreground">{t('referrals.no_referrers', { defaultValue: 'No referral data yet.' })}</p>
+              )}
+              {topReferrers.map(ref => (
+                <div key={ref.id} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{ref.name}</span>
+                  <Badge variant="secondary">{ref.count}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white border rounded-lg p-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-emerald-600" />
+              {t('referrals.top_jobs', { defaultValue: 'Top Jobs' })}
+            </h4>
+            <div className="space-y-3">
+              {topJobs.length === 0 && (
+                <p className="text-sm text-muted-foreground">{t('referrals.no_jobs', { defaultValue: 'No referral data yet.' })}</p>
+              )}
+              {topJobs.map(job => (
+                <div key={job.id} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{job.title}</span>
+                  <Badge variant="secondary">{job.count}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white border rounded-lg p-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <LineChart className="h-4 w-4 text-purple-600" />
+              {t('referrals.trends', { defaultValue: 'Referral Trends' })}
+            </h4>
+            {monthlyTrends.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('referrals.no_trends', { defaultValue: 'No trend data yet.' })}</p>
+            ) : (
+              <div className="space-y-2">
+                {monthlyTrends.map(item => (
+                  <div key={item.month} className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500 w-12">{item.month}</span>
+                    <div className="flex-1 h-2 rounded bg-gray-100">
+                      <div
+                        className="h-2 rounded bg-purple-500"
+                        style={{ width: `${Math.min(100, (item.count / maxTrendCount) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-600 w-6 text-right">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Referrals List */}
       <div className="bg-white border rounded-lg">
@@ -284,14 +533,12 @@ export default function EmployeeReferrals() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge className={statusColors[referral.status] || 'bg-gray-100'}>
-                      {t(`status.${referral.status}`, { defaultValue: referral.status })}
+                      {t(`status.${referral.status}`, { defaultValue: statusLabels[referral.status] || referral.status })}
                     </Badge>
                     {/* CV Link */}
-                    {referral.cv_url && (
-                      <Button size="sm" variant="ghost" asChild>
-                        <a href={referral.cv_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
+                    {(referral.cv_url || referral.cv_path) && (
+                      <Button size="sm" variant="ghost" onClick={() => handleOpenCv(referral)}>
+                        <ExternalLink className="h-4 w-4" />
                       </Button>
                     )}
                     {/* View Profile */}

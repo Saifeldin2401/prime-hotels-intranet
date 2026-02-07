@@ -92,15 +92,18 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
     }
 
     // Fetch departments for current property (or all if viewing 'all')
+    // Normalize property ID to avoid 'all' in query key
+    const propertyToQuery = selectedPropertyId || currentProperty?.id
+    const normalizedPropertyId = propertyToQuery && propertyToQuery !== 'all' ? propertyToQuery : undefined
     const { data: departments = [] } = useQuery({
-        queryKey: ['departments', selectedPropertyId || currentProperty?.id],
+        queryKey: ['departments', normalizedPropertyId],
         queryFn: async () => {
-            const propertyToQuery = selectedPropertyId || currentProperty?.id
             if (!propertyToQuery || propertyToQuery === 'all') {
                 // Fetch all departments when no specific property selected
                 const { data, error } = await supabase
                     .from('departments')
                     .select('id, name')
+                    .eq('is_deleted', false)
                     .order('name')
                 if (error) throw error
                 return data
@@ -109,6 +112,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                 .from('departments')
                 .select('id, name')
                 .eq('property_id', propertyToQuery)
+                .eq('is_deleted', false)
                 .order('name')
             if (error) throw error
             return data

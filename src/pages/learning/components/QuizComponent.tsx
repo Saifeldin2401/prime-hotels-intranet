@@ -31,9 +31,19 @@ interface QuizComponentProps {
     onComplete?: (result: any) => void
     onExit?: () => void
     certificateEnabled?: boolean
+    translationTarget?: TranslationTargetLanguage | null
+    showBilingual?: boolean
 }
 
-export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certificateEnabled = true }: QuizComponentProps) {
+export function QuizComponent({
+    quizId,
+    assignmentId,
+    onComplete,
+    onExit,
+    certificateEnabled = true,
+    translationTarget: propTranslationTarget,
+    showBilingual: propShowBilingual
+}: QuizComponentProps) {
     const { toast } = useToast()
     const { user, profile } = useAuth()
     const { t, i18n } = useTranslation(['training', 'common'])
@@ -45,8 +55,8 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
     const [answers, setAnswers] = useState<Record<string, string>>({})
     const [submitted, setSubmitted] = useState(false)
     const [result, setResult] = useState<any>(null)
-    const [translationTarget, setTranslationTarget] = useState<TranslationTargetLanguage | null>(null)
-    const [showBilingual, setShowBilingual] = useState(false)
+    const [translationTarget, setTranslationTarget] = useState<TranslationTargetLanguage | null>(propTranslationTarget || null)
+    const [showBilingual, setShowBilingual] = useState(propShowBilingual || false)
     const [isTranslating, setIsTranslating] = useState(false)
     const [translatedQuestions, setTranslatedQuestions] = useState<Record<string, Partial<Record<TranslationTargetLanguage, {
         text: string
@@ -64,10 +74,28 @@ export function QuizComponent({ quizId, assignmentId, onComplete, onExit, certif
         }
     }, [quizId])
 
+    // Sync props to state if they change (controlled by parent)
     useEffect(() => {
-        setTranslationTarget(null)
-        setShowBilingual(false)
-        setTranslatedQuestions({})
+        if (propTranslationTarget !== undefined) {
+            setTranslationTarget(propTranslationTarget)
+        }
+    }, [propTranslationTarget])
+
+    useEffect(() => {
+        if (propShowBilingual !== undefined) {
+            setShowBilingual(propShowBilingual)
+        }
+    }, [propShowBilingual])
+
+    useEffect(() => {
+        // Only reset if NOT controlled by props, or if props explain it
+        // But generally we want to keep parent state source of truth
+        if (!propTranslationTarget) {
+            // Logic to reset if we switch quiz but not if we just have props
+            // Actually, parent should handle reset on new module/block, so we might just leave this.
+            // But existing behavior resets on quizId change.
+            setTranslatedQuestions({})
+        }
     }, [quizId])
 
     useEffect(() => {

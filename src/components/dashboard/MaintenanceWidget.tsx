@@ -17,8 +17,8 @@ export function MaintenanceWidget() {
             <CardContent>
                 <div className="text-2xl font-bold">{stats?.open || 0}</div>
                 <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>{stats?.critical || 0} {t('analytics.critical')}</span>
-                    <span>{stats?.urgent || 0} {t('analytics.urgent')}</span>
+                    <span>{stats?.critical || 0} {t('widgets.maintenance_labels.critical', 'critical')}</span>
+                    <span>{stats?.urgent || 0} {t('widgets.maintenance_labels.urgent', 'urgent')}</span>
                 </div>
             </CardContent>
         </Card>

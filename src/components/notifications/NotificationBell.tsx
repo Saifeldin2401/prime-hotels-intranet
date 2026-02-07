@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/useAuth'
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
-  const { user } = useAuth()
+  const { roles } = useAuth()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const controls = useAnimation()
@@ -51,8 +51,12 @@ export function NotificationBell() {
       case 'maintenance_assigned':
       case 'maintenance_resolved':
         return '/maintenance'
-      case 'referral_status_update':
-        return '/jobs/referrals'
+      case 'referral_status_update': {
+        const isHR = roles?.some(r =>
+          ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(r.role)
+        )
+        return isHR ? '/hr/referrals' : '/jobs/referrals'
+      }
       case 'message_received':
         return '/messaging'
       case 'system':

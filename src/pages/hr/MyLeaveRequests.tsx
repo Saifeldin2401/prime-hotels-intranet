@@ -163,7 +163,7 @@ export default function MyLeaveRequests() {
             <DialogHeader>
               <DialogTitle>{t('leave_requests.form.title')}</DialogTitle>
               <DialogDescription className="text-slate-500">
-                {t('leave_requests.form.description', { default: 'Submit a new leave request for approval' })}
+                {t('leave_requests.form.description')}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(handleSubmit)}>

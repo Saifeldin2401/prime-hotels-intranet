@@ -43,3 +43,4 @@ BEGIN
   WHERE entity_type IS NOT NULL AND entity_id IS NOT NULL;
 END $$;
 
+

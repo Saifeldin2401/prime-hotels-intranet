@@ -25,6 +25,8 @@ import { Progress } from '@/components/ui/progress'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDistanceToNow } from 'date-fns'
+import { ar, enUS } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
 
 interface RequiredReadingItem {
     id: string
@@ -34,6 +36,7 @@ interface RequiredReadingItem {
 }
 
 export function KnowledgeWidget() {
+    const { t, i18n } = useTranslation('dashboard')
     const { user } = useAuth()
 
     // Fetch required reading for user
@@ -41,7 +44,6 @@ export function KnowledgeWidget() {
         queryKey: ['dashboard-required-reading', user?.id],
         queryFn: async () => {
             // Get required reading assignments for this user
-            // Assuming knowledge_required_reading points to 'documents' now or we can join 'documents' on document_id
             const { data: assignments, error: assignError } = await supabase
                 .from('knowledge_required_reading')
                 .select(`
@@ -53,18 +55,14 @@ export function KnowledgeWidget() {
                 .eq('user_id', user?.id)
                 .is('acknowledged_at', null)
                 .limit(5)
-            // Note: If !document_id mapping fails, it might mean the FK is named differently or missing.
-            // If so, we might need a manual fetch.
 
             if (assignError) {
                 console.warn('Error fetching required reading:', assignError)
-                // Fallback to empty if table issue
             }
 
             // Get recently updated articles in user's department
-            // Simplified: Just get recent PUBLISHED docs
             const { data: recentArticles, error: recentError } = await supabase
-                .from('documents') // Updated table
+                .from('documents')
                 .select('id, title, updated_at')
                 .eq('status', 'PUBLISHED')
                 .order('updated_at', { ascending: false })
@@ -121,12 +119,12 @@ export function KnowledgeWidget() {
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <BookOpen className="h-5 w-5 text-hotel-gold" />
-                        Knowledge Base
+                        {t('widgets.knowledge.title', 'Knowledge Base')}
                     </CardTitle>
                     <Link to="/knowledge">
                         <Button variant="ghost" size="sm" className="h-8 group">
-                            View All
-                            <ArrowRight className="h-4 w-4 ml-1 transition-transform duration-300 group-hover:translate-x-1" />
+                            {t('widgets.knowledge.view_all', 'View All')}
+                            <ArrowRight className={i18n.language === 'ar' ? "h-4 w-4 mr-1 transition-transform duration-300 group-hover:-translate-x-1 rotate-180" : "h-4 w-4 ml-1 transition-transform duration-300 group-hover:translate-x-1"} />
                         </Button>
                     </Link>
                 </div>
@@ -136,7 +134,9 @@ export function KnowledgeWidget() {
                 {data?.stats && data.stats.total > 0 && (
                     <div className="p-3 bg-blue-50 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-blue-700">Required Reading Progress</span>
+                            <span className="text-sm font-medium text-blue-700">
+                                {t('widgets.knowledge.progress', 'Required Reading Progress')}
+                            </span>
                             <span className="text-sm text-blue-600">{data.stats.completed}/{data.stats.total}</span>
                         </div>
                         <Progress value={progress} className="h-2" />
@@ -148,7 +148,7 @@ export function KnowledgeWidget() {
                     <div>
                         <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                             <Bell className="h-4 w-4 text-orange-500" />
-                            Required Reading
+                            {t('widgets.knowledge.required', 'Required Reading')}
                         </h4>
                         <div className="space-y-2">
                             {data.requiredReading.slice(0, 3).map((item) => (
@@ -161,12 +161,12 @@ export function KnowledgeWidget() {
                                         <FileText className="h-4 w-4 text-orange-600" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 truncate">
+                                        <p className="text-sm font-medium text-gray-900 truncate text-start">
                                             {item.title}
                                         </p>
-                                        <p className="text-xs text-gray-500 flex items-center gap-2">
+                                        <p className="text-xs text-gray-500 flex items-center gap-2 text-start">
                                             <Clock className="h-3 w-3" />
-                                            {formatDistanceToNow(new Date(item.created_at || new Date()), { addSuffix: true })}
+                                            {formatDistanceToNow(new Date(item.created_at || new Date()), { addSuffix: true, locale: i18n.language === 'ar' ? ar : enUS })}
                                         </p>
                                     </div>
                                 </Link>
@@ -180,7 +180,7 @@ export function KnowledgeWidget() {
                     <div>
                         <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-green-500" />
-                            Recently Updated
+                            {t('widgets.knowledge.recently_updated', 'Recently Updated')}
                         </h4>
                         <div className="space-y-2">
                             {data.recentUpdates.slice(0, 3).map((article: any) => (
@@ -193,11 +193,11 @@ export function KnowledgeWidget() {
                                         <FileText className="h-4 w-4 text-gray-600 transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-0.5" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 truncate">
+                                        <p className="text-sm font-medium text-gray-900 truncate text-start">
                                             {article.title}
                                         </p>
-                                        <p className="text-xs text-gray-500">
-                                            Updated {formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
+                                        <p className="text-xs text-gray-500 text-start">
+                                            {t('widgets.knowledge.updated_at', { time: formatDistanceToNow(new Date(article.updated_at), { addSuffix: true, locale: i18n.language === 'ar' ? ar : enUS }) })}
                                         </p>
                                     </div>
                                 </Link>
@@ -210,10 +210,12 @@ export function KnowledgeWidget() {
                 {(!data?.requiredReading?.length && !data?.recentUpdates?.length) && (
                     <div className="text-center py-6">
                         <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-green-500" />
-                        <p className="text-sm text-gray-600">You're all caught up!</p>
+                        <p className="text-sm text-gray-600">
+                            {t('widgets.knowledge.all_caught_up', "You're all caught up!")}
+                        </p>
                         <Link to="/knowledge">
                             <Button variant="link" size="sm">
-                                Explore Knowledge Base
+                                {t('widgets.knowledge.explore', 'Explore Knowledge Base')}
                             </Button>
                         </Link>
                     </div>

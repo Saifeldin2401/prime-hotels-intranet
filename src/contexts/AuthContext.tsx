@@ -31,6 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [rolesLoading, setRolesLoading] = useState(true)
   const loadSeqRef = useRef(0)
   const activeUserIdRef = useRef<string | null>(null)
+  const lastUserDataRefreshRef = useRef<number>(0)
+
+  const shouldRefreshUserData = (userId: string) => {
+    if (activeUserIdRef.current !== userId) return true
+    if (!profile || roles.length === 0) return true
+    if (!lastUserDataRefreshRef.current) return true
+    return Date.now() - lastUserDataRefreshRef.current > 5 * 60 * 1000
+  }
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string) => {
     return new Promise<T>((resolve, reject) => {
@@ -177,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Departments loading failed or timed out:', departmentsResult.reason)
       }
 
+      lastUserDataRefreshRef.current = Date.now()
     } catch (error) {
       console.error('Unexpected error loading user data:', error)
     }
@@ -244,15 +253,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         setUser(session.user)
         analytics.identify(session.user.id)
-        setRolesLoading(true)
-        // Set loading to false immediately, load data in background
-        loadingState = false
-        setLoading(false)
-        clearTimeout(timeoutId)
-        // Load user data asynchronously without blocking
-        loadUserData(session.user.id).catch((err) => {
-          console.error('Error in loadUserData (auth change):', err)
-        })
+        // Only refresh user data when user changes or cache is stale
+        if (_event !== 'TOKEN_REFRESHED' || shouldRefreshUserData(session.user.id)) {
+          // Set loading to false immediately, load data in background
+          loadingState = false
+          setLoading(false)
+          clearTimeout(timeoutId)
+          loadUserData(session.user.id).catch((err) => {
+            console.error('Error in loadUserData (auth change):', err)
+          })
+        } else {
+          loadingState = false
+          setLoading(false)
+          clearTimeout(timeoutId)
+        }
       } else {
         setUser(null)
         setProfile(null)

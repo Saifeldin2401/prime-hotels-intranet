@@ -350,6 +350,10 @@
             "operations": {
                 "title": "HR Operations",
                 "description": "Monitor HR operations and escalations."
+            },
+            "employee_of_the_month": {
+                "title": "Employee of the Month",
+                "description": "Recognize and manage monthly top performers."
             }
         },
         "defaults": {

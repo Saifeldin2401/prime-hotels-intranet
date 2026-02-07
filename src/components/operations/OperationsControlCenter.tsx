@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,7 @@ import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { useOperationsSlaBreaches } from '@/hooks/useOperationsSla'
 
 export function OperationsControlCenter() {
+  const { t } = useTranslation('dashboard')
   const { currentProperty } = useProperty()
   const { data: tasks = [] } = useTasks({ status: 'todo' })
   const { data: maintenanceStats } = useMaintenanceStats()
@@ -32,59 +34,59 @@ export function OperationsControlCenter() {
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <EnhancedCard padding="lg">
-          <h4 className="text-sm font-semibold text-foreground mb-2">Task Control</h4>
+          <h4 className="text-sm font-semibold text-foreground mb-2">{t('operations_center.task_control')}</h4>
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Pending tasks</span>
+            <span className="text-muted-foreground">{t('operations_center.pending_tasks')}</span>
             <Badge className="bg-blue-50 text-blue-700 border border-blue-100">{pendingTasks.length}</Badge>
           </div>
           <div className="flex items-center justify-between text-sm mb-3">
-            <span className="text-muted-foreground">High priority</span>
+            <span className="text-muted-foreground">{t('operations_center.high_priority')}</span>
             <Badge className="bg-red-50 text-red-700 border border-red-100">{highPriorityTasks.length}</Badge>
           </div>
           <Button variant="outline" size="sm" className="w-full" onClick={() => (window.location.href = '/tasks')}>
-            Review Tasks
+            {t('operations_center.review_tasks')}
           </Button>
         </EnhancedCard>
 
         <EnhancedCard padding="lg">
-          <h4 className="text-sm font-semibold text-foreground mb-2">Maintenance Health</h4>
+          <h4 className="text-sm font-semibold text-foreground mb-2">{t('operations_center.maintenance_health')}</h4>
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Open tickets</span>
+            <span className="text-muted-foreground">{t('operations_center.open_tickets')}</span>
             <Badge className="bg-orange-50 text-orange-700 border border-orange-100">{maintenance.open}</Badge>
           </div>
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Overdue</span>
+            <span className="text-muted-foreground">{t('operations_center.overdue')}</span>
             <Badge className="bg-red-50 text-red-700 border border-red-100">{maintenance.overdueCount}</Badge>
           </div>
           <div className="flex items-center justify-between text-sm mb-3">
-            <span className="text-muted-foreground">Avg resolution</span>
+            <span className="text-muted-foreground">{t('operations_center.avg_resolution')}</span>
             <span className="text-sm font-semibold">{maintenance.avgResolutionTime || 0}d</span>
           </div>
           <Button variant="outline" size="sm" className="w-full" onClick={() => (window.location.href = '/maintenance')}>
-            Review Maintenance
+            {t('operations_center.review_maintenance')}
           </Button>
         </EnhancedCard>
 
         <EnhancedCard padding="lg">
-          <h4 className="text-sm font-semibold text-foreground mb-2">Department Coverage</h4>
+          <h4 className="text-sm font-semibold text-foreground mb-2">{t('operations_center.department_coverage')}</h4>
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Departments active</span>
+            <span className="text-muted-foreground">{t('operations_center.departments_active')}</span>
             <Badge className="bg-green-50 text-green-700 border border-green-100">{departments.length}</Badge>
           </div>
           <Progress value={departments.length ? Math.min(100, departments.length * 10) : 0} className="mt-2" />
           <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => (window.location.href = '/dashboard/my-team')}>
-            Manage Teams
+            {t('operations_center.manage_teams')}
           </Button>
         </EnhancedCard>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">SLA Breaches</CardTitle>
+          <CardTitle className="text-base">{t('operations_center.sla_breaches')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {activeBreaches.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No active SLA breaches.</p>
+            <p className="text-sm text-muted-foreground">{t('operations_center.no_active_breaches')}</p>
           ) : (
             activeBreaches.slice(0, 6).map((breach) => (
               <div key={breach.id} className="flex items-center justify-between text-sm border rounded-md p-2">
@@ -93,7 +95,7 @@ export function OperationsControlCenter() {
                   <p className="text-xs text-muted-foreground">{new Date(breach.breached_at).toLocaleString()}</p>
                 </div>
                 <Badge variant={breach.severity === 'critical' ? 'destructive' : 'secondary'}>
-                  {breach.severity || 'overdue'}
+                  {breach.severity ? t(`analytics.${breach.severity}`, breach.severity) : t('operations_center.overdue')}
                 </Badge>
               </div>
             ))
@@ -103,13 +105,13 @@ export function OperationsControlCenter() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Operations Actions</CardTitle>
+          <CardTitle className="text-base">{t('operations_center.operations_actions')}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <Button variant="outline" onClick={() => (window.location.href = '/tasks')}>Create Task</Button>
-          <Button variant="outline" onClick={() => (window.location.href = '/maintenance')}>Log Maintenance</Button>
-          <Button variant="outline" onClick={() => (window.location.href = '/approvals')}>View Approvals</Button>
-          <Button variant="outline" onClick={() => (window.location.href = '/reports')}>Generate Report</Button>
+          <Button variant="outline" onClick={() => (window.location.href = '/tasks')}>{t('operations_center.create_task')}</Button>
+          <Button variant="outline" onClick={() => (window.location.href = '/maintenance')}>{t('operations_center.log_maintenance')}</Button>
+          <Button variant="outline" onClick={() => (window.location.href = '/approvals')}>{t('operations_center.view_approvals')}</Button>
+          <Button variant="outline" onClick={() => (window.location.href = '/reports')}>{t('operations_center.generate_report')}</Button>
         </CardContent>
       </Card>
     </div>

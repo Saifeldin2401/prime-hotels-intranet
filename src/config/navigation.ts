@@ -594,31 +594,43 @@ export const ROUTES: RouteConfig[] = [
     // LEARNING MANAGEMENT GROUP (Admin)
     // -------------------------------------------------------------------------
     {
+        path: '/training/hub',
+        title: 'lms_admin',
+        icon: GraduationCap,
+        description: 'Unified LMS admin workspace',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        group: 'learning_management',
+        order: 1
+    },
+    {
         path: '/training/modules',
         title: 'training_modules',
         icon: BookOpen,
-        description: 'Manage training modules',
+        description: 'Legacy modules route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'learning_management',
-        order: 1
+        order: 2,
+        hideFromNav: true
     },
     {
         path: '/training/builder',
         title: 'training_builder',
         icon: ListTodo,
-        description: 'Create training content',
+        description: 'Legacy builder route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'learning_management',
-        order: 2
+        order: 3,
+        hideFromNav: true
     },
     {
         path: '/training/assignments',
         title: 'training_assignments',
         icon: Users,
-        description: 'Assign training to users',
+        description: 'Legacy assignments route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         group: 'learning_management',
-        order: 3
+        order: 4,
+        hideFromNav: true
     },
 
     // -------------------------------------------------------------------------
