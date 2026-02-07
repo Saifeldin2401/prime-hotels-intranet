@@ -368,7 +368,8 @@
         "explanationPlaceholder": "Explain why the correct answer is correct...",
         "pointsLabel": "Points",
         "pts": "pts",
-        "untitledQuestion": "Untitled question"
+        "untitledQuestion": "Untitled question",
+        "addOption": "Addoption"
     },
     "knowledgeBase": {
         "title": "Knowledge Base",
@@ -403,7 +404,8 @@
         "skillRemovedDescription": "Skill unlinked from this module",
         "failedLoad": "Failed to load skills data",
         "failedLink": "Failed to link skill",
-        "failedUnlink": "Failed to unlink skill"
+        "failedUnlink": "Failed to unlink skill",
+        "pts": "Pts"
     },
     "wizard": {
         "title": "Smart Module Wizard",
@@ -435,7 +437,15 @@
         "generating": "Generating...",
         "creating": "Creating...",
         "createModule": "Create Module",
-        "generateOutline": "Generate Outline"
+        "generateOutline": "Generate Outline",
+        "type_quiz": "Type Quiz",
+        "type_text": "Type Text",
+        "type_audio": "Type Audio",
+        "type_video": "Type Video",
+        "type_sop_reference": "Type SOP Reference",
+        "type_document_link": "Type Document Link",
+        "type_image": "Type Image",
+        "type_interactive": "Type Interactive"
     },
     "categories": {
         "front_office": "Front Office",
@@ -724,7 +734,12 @@
         "setupChecklist": "Setup Checklist",
         "tipOne": "Pick a clear course title for easy assignment.",
         "tipTwo": "Choose the audience to prefill defaults.",
-        "tipThree": "Use templates to reduce manual setup."
+        "tipThree": "Use templates to reduce manual setup.",
+        "added": "Added",
+        "preview": "Preview",
+        "untitledContent": "Untitledcontent",
+        "sopAdded": "Sopadded",
+        "quizAdded": "Quizadded"
     },
     "quizzes": {
         "title": "Quizzes",
@@ -783,7 +798,8 @@
             "previous": "Previous",
             "next": "Next",
             "submit": "Submit Quiz",
-            "back_to_learning": "Back to Learning"
+            "back_to_learning": "Back to Learning",
+            "invalid_id": "Invalid Id"
         },
         "builder": {
             "edit_title": "Edit Quiz",
@@ -967,5 +983,80 @@
             "inProgress": "In Progress",
             "avgScore": "Average Score"
         }
-    }
+    },
+    "allDepartments": "All Departments",
+    "allProperties": "All Properties",
+    "attachedDocument": "Attached Document",
+    "averageScore": "Average Score",
+    "certificateGenerationFailed": "Certificate Generation Failed",
+    "common": {
+        "cancel": "Cancel",
+        "error": "An error occurred",
+        "loading": "Loading...",
+        "success": "Operation completed successfully",
+        "confirm_delete": "Are you sure? This action cannot be undone.",
+        "delete": "Delete"
+    },
+    "completionRate": "Completion Rate",
+    "department": "Department",
+    "departmentHead": "Department Head",
+    "documentUploaded": "Document Uploaded",
+    "error": "Error",
+    "false": "False",
+    "filterByProperty": "Filter By Property",
+    "general": {
+        "timezone": {
+            "title": "Time & Region",
+            "description": "Configure your local time and regional preferences",
+            "label": "Timezone",
+            "select_placeholder": "Select your timezone"
+        }
+    },
+    "hours": "Hours",
+    "imageUploaded": "Image Uploaded",
+    "minutes": "Minutes",
+    "moduleQuizPassed": "Module Quiz Passed",
+    "n_a": "N A",
+    "noDepartments": "No Departments",
+    "noLinkProvided": "No Link Provided",
+    "noProperties": "No Properties",
+    "operations": "Operations",
+    "points": "Points",
+    "previous": "Previous",
+    "quizNotPassed": "Quiz Not Passed",
+    "selectAllHotels": "Select All Hotels",
+    "selectDepartment": "Select Department",
+    "selectRole": "Select Role",
+    "test": {
+        "count": "Count",
+        "increment": "Increment",
+        "trainingBuilderTest": "Training Builder Test"
+    },
+    "totalAssignments": "Total Assignments",
+    "true": "True",
+    "uploadFailed": "Upload Failed",
+    "uploadSuccessful": "Upload Successful",
+    "verificationFailed": "Verification Failed",
+    "videoContent": "Video Content",
+    "videoUrlMissing": "Video Url Missing",
+    "noContentYet": "Nocontentyet",
+    "readingReq": "Readingreq",
+    "moduleEmptyDescription": "Moduleemptydescription",
+    "sessionPausedIdle": "Sessionpausedidle",
+    "scrollToBottom": "Scrolltobottom",
+    "openInNewTab": "Openinnewtab",
+    "previewNotAvailable": "Previewnotavailable",
+    "sopReference": "Sopreference",
+    "downloadToView": "Downloadtoview",
+    "sessionPausedFocus": "Sessionpausedfocus",
+    "assignModuleDescription": "Assignmoduledescription",
+    "moduleSavedDescription": "Modulesaveddescription",
+    "quizScoreProceed": "Quizscoreproceed",
+    "specificUsers": "Specificusers",
+    "quizScoreReview": "Quizscorereview",
+    "sopNotFoundOrError": "Sopnotfoundorerror",
+    "departments": "Departments",
+    "errorLoadingSop": "Errorloadingsop",
+    "properties": "Properties",
+    "documentCannotBePreviewed": "Documentcannotbepreviewed"
 }

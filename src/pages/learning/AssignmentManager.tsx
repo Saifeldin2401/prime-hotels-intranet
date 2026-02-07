@@ -476,7 +476,7 @@ export default function AssignmentManager() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>{t('priority')}</Label>
+                                <Label>{t('priority_label')}</Label>
                                 <Select
                                     value={formData.priority}
                                     onValueChange={v => setFormData({ ...formData, priority: v })}
@@ -510,7 +510,7 @@ export default function AssignmentManager() {
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('target')}</th>
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('type')}</th>
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('dueDate')}</th>
-                                <th className="px-6 py-3 font-medium text-muted-foreground">{t('priority')}</th>
+                                <th className="px-6 py-3 font-medium text-muted-foreground">{t('priority_label')}</th>
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('dateAssigned')}</th>
                                 <th className="px-6 py-3 font-medium text-muted-foreground text-right">{t('actions')}</th>
                             </tr>

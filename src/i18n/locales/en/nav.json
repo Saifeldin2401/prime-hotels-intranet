@@ -1,5 +1,6 @@
 {
     "dashboard": "Dashboard",
+    "staff_dashboard": "My Dashboard",
     "my_team": "My Team",
     "home": "Home",
     "my_work": "My Work",
@@ -19,7 +20,9 @@
     "my_tasks": "My Tasks",
     "approvals": "Approvals",
     "hr_inbox": "HR Inbox",
+    "leave_requests": "Leave Requests",
     "maintenance": "Maintenance",
+    "tickets": "Tickets",
     "directory": "Directory",
     "job_titles": "Job Titles",
     "jobs": "Jobs",
@@ -36,6 +39,8 @@
     "training_modules": "Training Modules",
     "training_builder": "Course Builder",
     "training_assignments": "Assignments",
+    "sop_library": "SOP Library",
+    "sops": "Standard Operating Procedures",
     "my_certificates": "Certificates",
     "training_paths": "Training Paths",
     "questions": "Questions",
@@ -59,6 +64,7 @@
     "ai_tools": "AI Tools",
     "onboarding": "Onboarding",
     "my_profile": "My Profile",
+    "profile": "Profile",
     "search": "Search",
     "search_placeholder": "Search documents, staff, tasks...",
     "logout": "Logout",
@@ -81,11 +87,19 @@
         "operations": "Operations",
         "hr_management": "HR Management",
         "my_hr": "My HR",
+        "training": "Training & Learning",
         "communication": "Communication",
         "admin": "Administration",
         "settings": "Settings"
     },
+    "notifications": {
+        "welcome_back": "Welcome back!",
+        "new_notifications": "You have {{count}} new notifications.",
+        "view_all": "View all",
+        "close": "Close"
+    },
     "mobileNav": "Mobile navigation",
     "openMenu": "Open navigation menu",
-    "menu": "Menu"
+    "menu": "Menu",
+    "training": "Training"
 }

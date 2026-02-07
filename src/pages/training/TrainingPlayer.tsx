@@ -119,9 +119,10 @@ export default function TrainingPlayer() {
                 .from('training_modules')
                 .select('*')
                 .eq('id', id)
-                .single()
+                .maybeSingle()
 
             if (moduleError) throw moduleError
+            if (!module) return null
 
             const { data: blocks, error: blocksError } = await supabase
                 .from('training_content_blocks')

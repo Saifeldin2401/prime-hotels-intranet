@@ -96,5 +96,9 @@
         "success": "Settings saved successfully",
         "error": "Failed to save settings",
         "loading": "Loading settings..."
+    },
+    "messages": {
+        "language_updated": "Language Updated",
+        "language_updated_desc": "Language Updated Description"
     }
 }

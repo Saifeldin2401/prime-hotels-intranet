@@ -23,6 +23,7 @@
         "no_assigned_tickets": "No Assigned Tickets",
         "all_caught_up": "You're all caught up on assigned tickets"
     },
+    "loading": "Loading...",
     "new_ticket": "New Ticket",
     "room": "Room",
     "accept": "Accept",
@@ -35,7 +36,12 @@
     "completed": "Completed",
     "cancelled": "Cancelled",
     "all_status": "All Status",
-    "priority": "Priority",
+    "priority": {
+        "critical": "Critical",
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium"
+    },
     "all_priority": "All Priority",
     "critical": "Critical",
     "urgent": "Urgent",
@@ -167,5 +173,7 @@
             "quarterly": "Quarterly",
             "yearly": "Yearly"
         }
-    }
+    },
+    "confirm_delete_schedule": "Confirm Delete Schedule",
+    "priority_label": "Priority"
 }

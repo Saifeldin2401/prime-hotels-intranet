@@ -30,7 +30,12 @@
     "view": "عرض",
     "status": "الحالة",
     "all_status": "كل الحالات",
-    "priority": "الأولوية",
+    "priority": {
+        "critical": "حرج",
+        "high": "مرتفع",
+        "low": "منخفض",
+        "medium": "متوسط"
+    },
     "all_priority": "كل الأولويات",
     "critical": "حرج",
     "urgent": "عاجل",
@@ -168,5 +173,7 @@
             "quarterly": "ربع سنوي",
             "yearly": "سنوي"
         }
-    }
+    },
+    "confirm_delete_schedule": "Confirm ??? Schedule",
+    "priority_label": "????????"
 }

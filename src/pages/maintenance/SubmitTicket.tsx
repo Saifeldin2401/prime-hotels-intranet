@@ -390,11 +390,11 @@ export default function SubmitTicket() {
                     name="priority"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('priority')}</FormLabel>
+                        <FormLabel>{t('priority_label')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder={t('priority')} />
+                              <SelectValue placeholder={t('priority_label')} />
                             </SelectTrigger>
                           </FormControl>
                         <SelectContent>

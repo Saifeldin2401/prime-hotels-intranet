@@ -284,7 +284,7 @@ export default function MaintenanceDashboard() {
           </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="w-full md:w-40 bg-background border-input">
-              <SelectValue placeholder={t('priority')} />
+              <SelectValue placeholder={t('priority_label')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('all_priority')}</SelectItem>

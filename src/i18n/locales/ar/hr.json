@@ -64,7 +64,9 @@
             "total": "إجمالي الإحالات",
             "hired": "تم تعيينهم",
             "bonuses_paid": "إجمالي المكافآت المدفوعة",
-            "pending_bonuses": "مكافآت معلقة"
+            "pending_bonuses": "مكافآت معلقة",
+            "pending": "????",
+            "ratio": "???? ???????"
         },
         "search_placeholder": "بحث في الإحالات...",
         "referred_by": "تمت الإحالة بواسطة {{referrer}} لوظيفة {{position}}",
@@ -74,7 +76,17 @@
             "start_interview": "بدء المقابلة",
             "mark_hired": "تعيين كموظف",
             "reject": "رفض"
-        }
+        },
+        "export_excel": "????? ????",
+        "export_pdf": "????? PDF",
+        "filter_job": "?? ???????",
+        "filter_referrer": "?? ?????????",
+        "top_referrers": "???? ?????????",
+        "top_jobs": "??? ???????",
+        "trends": "??????? ????????",
+        "no_referrers": "?? ???? ?????? ?????? ???.",
+        "no_jobs": "?? ???? ?????? ?????? ???.",
+        "no_trends": "?? ???? ?????? ??????? ???."
     },
     "leave_requests": {
         "title": "طلبات الإجازة الخاصة بي",
@@ -94,7 +106,10 @@
             "total_days": "إجمالي الأيام: {{count}}",
             "cancel": "إلغاء",
             "submit": "تقديم الطلب",
-            "submitting": "جاري التقديم..."
+            "submitting": "جاري التقديم...",
+            "error_title": "???",
+            "success_message": "?? ????? Message",
+            "success_title": "?? ?????"
         },
         "list": {
             "title": "طلبات الإجازة الخاصة بك",
@@ -134,7 +149,9 @@
         "received": "تم الاستلام",
         "review": "مراجعة",
         "pending_approval": "بانتظار الموافقة",
-        "pending_hr_review": "بانتظار مراجعة الموارد البشرية"
+        "pending_hr_review": "بانتظار مراجعة الموارد البشرية",
+        "shortlisted": "????? ???????",
+        "offer": "??? ?????"
     },
     "history": {
         "title": "سجل الترقيات والنقل",

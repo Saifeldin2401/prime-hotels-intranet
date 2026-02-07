@@ -100,7 +100,8 @@
             "congratulations": "Congratulations!",
             "no_winner": "No winner announced yet for this month.",
             "view_previous": "View Previous Winners",
-            "manage": "Manage EOM"
+            "manage": "Manage EOM",
+            "no_employee_found": "No Employee Found"
         },
         "birthdays": {
             "title": "Upcoming Birthdays",
@@ -109,7 +110,9 @@
             "in_days": "In {{count}} days",
             "no_birthdays": "No birthdays in the next 7 days.",
             "send_wish": "Send Birthday Wish"
-        }
+        },
+        "my_tasks": "My Tasks",
+        "activity_feed": "Activity Feed"
     },
     "analytics": {
         "title": "Analytics Dashboard",
@@ -151,7 +154,18 @@
     "actions": {
         "view_all": "View All",
         "create_new": "Create New",
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "view_approvals": "View Approvals",
+        "review_approvals": "Review Approvals",
+        "view_training": "View Training",
+        "review_tasks": "Review Tasks",
+        "view_analytics": "View Analytics",
+        "open_reports_center": "Open Reports Center",
+        "review_maintenance": "Review Maintenance",
+        "review_sops": "Review Sops",
+        "view_reports": "View Reports",
+        "manage_training_paths": "Manage Training Paths",
+        "manage_teams": "Manage Teams"
     },
     "staff": {
         "welcome_back": "Welcome back, {{name}}",
@@ -181,10 +195,14 @@
             "my_training": "My Training",
             "complete_training": "Complete your training",
             "continue_learning_btn": "Continue Learning",
+            "policies_forms": "Policies & Forms",
+            "access_policies": "Access company policies",
             "promote_employee": "Promote Employee",
             "manage_promotions": "Manage promotions",
             "my_requests": "My Requests",
             "submit_requests": "Submit leave or other requests",
+            "support": "Support",
+            "get_help": "Get help",
             "transfer_employee": "Transfer Employee",
             "cross_property_moves": "Cross-property moves"
         },
@@ -370,7 +388,78 @@
         "pending_sync": "Pending Sync",
         "corporate_dashboard_title": "Corporate Dashboard",
         "active_properties": "Active Properties",
-        "avg_staff_per_property": "Avg per property"
+        "avg_staff_per_property": "Avg per property",
+        "maintenance_issues": "Maintenance Issues",
+        "job_title_missing": "Job Title Missing",
+        "quick_actions": {
+            "compliance": "Compliance",
+            "approvals_desc": "Approvals Description",
+            "staff": "Staff",
+            "recruitment": "Recruitment",
+            "team_desc": "Team Description",
+            "leave": "Leave",
+            "leave_desc": "Leave Description",
+            "maintenance_desc": "Maintenance Description",
+            "directory_desc": "Directory Description",
+            "compliance_desc": "Compliance Description",
+            "portfolio": "Portfolio",
+            "team": "Team",
+            "tasks_desc": "Tasks Description",
+            "training": "Training",
+            "directory": "Directory",
+            "portfolio_desc": "Portfolio Description",
+            "training_desc": "Training Description",
+            "approvals": "Approvals",
+            "recruitment_desc": "Recruitment Description",
+            "staff_desc": "Staff Description",
+            "tasks": "Tasks",
+            "maintenance": "Maintenance"
+        },
+        "report_builder": "Report Builder",
+        "department_focus": "Department Focus",
+        "quick_actions_title": "Quick Actions",
+        "audit_activity": "Audit Activity",
+        "training_completion": "Training Completion",
+        "people_insights": "People Insights",
+        "present_today": "Present Today",
+        "no_pending_leave": "No Pending Leave",
+        "executive_badge": "Executive Badge",
+        "audit_readiness": "Audit Readiness",
+        "leave_approvals": "Leave Approvals",
+        "department_performance": "Department Performance",
+        "audit_checklist": "Audit Checklist",
+        "policy_acknowledgments": "Policy Acknowledgments",
+        "hr_reports": "HR Reports",
+        "operations_actions": "Operations Actions",
+        "department_controls_subtitle": "Department Controls Subtitle",
+        "no_audit_logs": "No Audit Logs",
+        "hr_reports_subtitle": "HR Reports Subtitle",
+        "action_needed": "Action Needed",
+        "leave_queue": "Leave Queue",
+        "department_performance_subtitle": "Department Performance Subtitle",
+        "operations_overview": "Operations Overview",
+        "operations_actions_subtitle": "Operations Actions Subtitle",
+        "audit_readiness_subtitle": "Audit Readiness Subtitle",
+        "quick_actions_subtitle": "Quick Actions Subtitle",
+        "no_staff_found": "No Staff Found",
+        "portfolio_coverage": "Portfolio Coverage",
+        "in_review": "In Review",
+        "scheduled_reports": "Scheduled Reports",
+        "scheduled_reports_subtitle": "Scheduled Reports Subtitle",
+        "pending": "Pending",
+        "staff_spotlight": "Staff Spotlight",
+        "no_scheduled_reports": "No Scheduled Reports",
+        "coverage": "Coverage",
+        "inactive_properties": "Inactive Properties",
+        "pending_leave": "Pending Leave",
+        "department_controls": "Department Controls",
+        "training_records": "Training Records",
+        "pending_approvals": "Pending Approvals",
+        "status_unknown": "Status Unknown",
+        "report_builder_subtitle": "Report Builder Subtitle",
+        "operations_snapshot": "Operations Snapshot",
+        "department_focus_subtitle": "Department Focus Subtitle",
+        "operations_playbook": "Operations Playbook"
     },
     "my_team": {
         "title": "My Team",
@@ -448,7 +537,9 @@
             "overdue": "Overdue",
             "pending_review": "Pending Review",
             "open_tickets": "Open Tickets"
-        }
+        },
+        "digest_generated_desc": "Digest Generated Description",
+        "digest_generated": "Digest Generated"
     },
     "feed_types": {
         "announcement": "Announcement",
@@ -460,7 +551,8 @@
         "new_joiner": "New Team Member",
         "event": "Event",
         "recognition": "Recognition",
-        "filter": "Filter"
+        "filter": "Filter",
+        "overdue": "Overdue"
     },
     "widget_common": {
         "no_recent_activity": "No recent activity",
@@ -473,5 +565,6 @@
         "birthday_in": "{{name}}'s birthday in {{days}} days",
         "welcome_team": "Welcome {{name}} to the team!",
         "joined_as": "Joined as {{role}}"
-    }
+    },
+    "subtitle": "Your centralized hub for operational knowledge"
 }

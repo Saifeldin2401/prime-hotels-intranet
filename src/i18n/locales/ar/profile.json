@@ -68,5 +68,13 @@
         "upload_document": "رفع مستند",
         "select_file": "اختر ملفاً",
         "category": "الفئة"
+    },
+    "employment": "Employment",
+    "hire_date": "Hire ?????",
+    "messages": {
+        "profile_updated_desc": "????? ?????? Updated ?????",
+        "profile_updated": "????? ?????? Updated",
+        "avatar_updated": "Avatar Updated",
+        "avatar_updated_desc": "Avatar Updated ?????"
     }
 }

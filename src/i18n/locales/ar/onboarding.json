@@ -9,7 +9,10 @@
         "assigned_manager": "مسندة للمدير",
         "all_set": "أنت جاهز تماماً!",
         "no_active": "لا توجد قوائم تأهيل نشطة مسندة إليك حالياً.",
-        "due": "مستحق في"
+        "due": "مستحق في",
+        "task_reopened": "???? Reopened",
+        "error_permissions": "??? ????????",
+        "task_completed": "???? Completed"
     },
     "editor": {
         "create_title": "إنشاء قالب تأهيل",
@@ -49,7 +52,11 @@
             "mandatory_training_desc": "سيتم تعيين الوحدات المحددة هنا تلقائياً للمستخدم وتتبعها كمهام تأهيل.",
             "no_training_selected": "لم يتم اختيار وحدات تدريب إلزامية.",
             "add_module": "إضافة وحدة تدريبية..."
-        }
+        },
+        "add_module": "????? ????",
+        "mandatory_training_title": "Mandatory ?????",
+        "no_training_selected": "?? ????? Selected",
+        "mandatory_training_desc": "Mandatory ????? ?????"
     },
     "templates": {
         "title": "قوالب التأهيل",
@@ -108,5 +115,8 @@
         "draft": "مسودة",
         "completed": "مكتمل",
         "in_progress": "قيد التنفيذ"
+    },
+    "common": {
+        "template": "Template"
     }
 }

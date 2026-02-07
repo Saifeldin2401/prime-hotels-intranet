@@ -66,6 +66,8 @@
             "update_failed": "Update Failed",
             "required_fields": "Please fill in all required fields",
             "validation_failed": "Validation failed"
-        }
+        },
+        "staff_id_auto": "Staff ID Auto",
+        "staff_id": "Staff ID"
     }
 }

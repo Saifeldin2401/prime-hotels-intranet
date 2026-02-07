@@ -19,6 +19,8 @@
     "quick_access_dept": "Quick Access: {{dept}}",
     "search_results": "Search Results",
     "bookmarks": "Bookmarks",
+    "pending_count": "{{count}} pending",
+    "more_count": "+{{count}} more",
     "article_count": "{{count}} article",
     "article_count_plural": "{{count}} articles",
     "manage": "Manage Knowledge Base",
@@ -27,6 +29,8 @@
     "start_drafting": "Start Drafting",
     "dept_hub_title": "Your Department",
     "dept_hub_desc": "Specialized Knowledge Hub",
+    "no_dept_content": "No department-specific content available yet.",
+    "no_dept_content_desc": "Content will appear here once you are assigned to a department.",
     "explore_dept": "Explore Department",
     "ai_assistant_title": "AI Knowledge Pro",
     "ai_assistant_desc": "Need quick answers? Our AI assistant can help you find protocols and SOP details instantly.",
@@ -164,6 +168,10 @@
         "tags": "Tags",
         "linked_learning": "Linked Learning",
         "views_count_one": "{{count}} view",
+        "views_count_zero": "{{count}} views",
+        "views_count_two": "{{count}} views",
+        "views_count_few": "{{count}} views",
+        "views_count_many": "{{count}} views",
         "views_count_other": "{{count}} views",
         "training_hint": "Practice what you just read with a training module.",
         "start_training": "Start Training",
@@ -186,7 +194,26 @@
             "updated_by": "Updated By",
             "automated": "Suggested",
             "match": "match"
-        }
+        },
+        "match": "Match",
+        "submit_feedback": "Submit Feedback",
+        "unknown_author": "Unknown Author",
+        "translate": "Translate",
+        "feedback_placeholder_neg": "Feedback Placeholder Neg",
+        "translate_ai": "Translate AI",
+        "no_dept": "No Dept",
+        "show_bilingual": "Show Bilingual",
+        "how_can_we_improve": "How Can We Improve",
+        "library": "Library",
+        "show_single": "Show Single",
+        "translation_error": "Translation Error",
+        "feedback_optional": "Feedback Optional",
+        "what_did_you_like": "What Did You Like",
+        "close": "Close",
+        "clear_translation": "Clear Translation",
+        "feedback_placeholder_pos": "Feedback Placeholder Pos",
+        "translation_complete": "Translation Complete",
+        "translated": "Translated"
     },
     "feedback": {
         "helpful": "Was this article helpful?",
@@ -462,6 +489,14 @@
         "nav_title": "Knowledge Library",
         "quick_search": "Quick Search...",
         "types": "Content Types",
-        "my_dept": "My Dept: {{name}}"
-    }
+        "my_dept": "My Dept: {{name}}",
+        "departments": "Departments",
+        "version": "Version",
+        "all_knowledge": "All Knowledge",
+        "pending": "Pending"
+    },
+    "common": {
+        "no_data": "No Data"
+    },
+    "required_reading": "Required Reading"
 }

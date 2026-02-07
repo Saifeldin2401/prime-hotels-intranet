@@ -100,5 +100,6 @@
         "new_notifications": "لديك {{count}} إشعارات جديدة.",
         "view_all": "عرض الكل",
         "close": "إغلاق"
-    }
+    },
+    "training": "التدريب"
 }

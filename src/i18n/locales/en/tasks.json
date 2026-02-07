@@ -61,5 +61,15 @@
     "task": "Task",
     "actions": {
         "cancelled": "Cancelled"
-    }
+    },
+    "cancelled": "Cancelled",
+    "messages": {
+        "task_updated": "Task Updated",
+        "task_created": "Task Created"
+    },
+    "assign_to": "Assign To",
+    "select_property": "Select a property",
+    "property": "Property / Hotel",
+    "no_employees_found": "No Employees Found",
+    "select_assignee": "Select Assignee"
 }

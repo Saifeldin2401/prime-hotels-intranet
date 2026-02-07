@@ -9,7 +9,10 @@
         "assigned_manager": "Assigned to Manager",
         "all_set": "You're all set!",
         "no_active": "There are no active onboarding checklists assigned to you at the moment.",
-        "due": "Due"
+        "due": "Due",
+        "task_reopened": "Task Reopened",
+        "error_permissions": "Error Permissions",
+        "task_completed": "Task Completed"
     },
     "editor": {
         "create_title": "Create Onboarding Template",
@@ -49,7 +52,11 @@
             "mandatory_training_desc": "Modules selected here will be automatically assigned to the user and tracked as onboarding tasks.",
             "no_training_selected": "No mandatory training modules selected.",
             "add_module": "Add training module..."
-        }
+        },
+        "add_module": "Add Module",
+        "mandatory_training_title": "Mandatory Training",
+        "no_training_selected": "No Training Selected",
+        "mandatory_training_desc": "Mandatory Training Description"
     },
     "templates": {
         "title": "Onboarding Templates",
@@ -108,5 +115,8 @@
         "draft": "Draft",
         "completed": "Completed",
         "in_progress": "In Progress"
+    },
+    "common": {
+        "template": "Template"
     }
 }

@@ -66,6 +66,8 @@
             "update_failed": "فشل التحديث",
             "required_fields": "يرجى ملء جميع الحقول المطلوبة",
             "validation_failed": "فشل التحقق من صحة البيانات"
-        }
+        },
+        "staff_id_auto": "Staff ID Auto",
+        "staff_id": "Staff ID"
     }
 }

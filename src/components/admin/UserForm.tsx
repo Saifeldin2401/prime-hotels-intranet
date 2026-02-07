@@ -57,6 +57,8 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [reportingTo, setReportingTo] = useState<string | null>(null)
   const [staffId, setStaffId] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState('')
+
+  const isValidUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
   const [openReportingTo, setOpenReportingTo] = useState(false)
 
   // ... (rest of invalidation)
@@ -282,7 +284,11 @@ export function UserForm({ user, onClose }: UserFormProps) {
       .eq('user_id', user.id)
 
     if (departmentsData) {
-      setSelectedDepartments(departmentsData.map((d) => d.department_id))
+      setSelectedDepartments(
+        departmentsData
+          .map((d) => d.department_id)
+          .filter((id): id is string => typeof id === 'string' && isValidUUID(id))
+      )
     }
 
     // Load reporting_to
@@ -405,10 +411,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
       const { error: delPropErr } = await supabase.from('user_properties').delete().eq('user_id', user.id)
       if (delPropErr) throw delPropErr
 
-      if (selectedProperties.length > 0) {
+      const propertyIdSet = properties?.length ? new Set(properties.map((p) => p.id)) : null
+      const validPropertyIds = Array.from(new Set(
+        selectedProperties.filter((id) => isValidUUID(id) && (!propertyIdSet || propertyIdSet.has(id)))
+      ))
+      if (validPropertyIds.length > 0) {
         const { error: insPropErr } = await supabase
           .from('user_properties')
-          .insert(selectedProperties.map((propertyId) => ({ user_id: user.id, property_id: propertyId })))
+          .insert(validPropertyIds.map((propertyId) => ({ user_id: user.id, property_id: propertyId })))
         if (insPropErr) throw insPropErr
       }
 
@@ -416,10 +426,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
       const { error: delDeptErr } = await supabase.from('user_departments').delete().eq('user_id', user.id)
       if (delDeptErr) throw delDeptErr
 
-      if (selectedDepartments.length > 0) {
+      const departmentIdSet = departments?.length ? new Set(departments.map((d) => d.id)) : null
+      const validDepartmentIds = Array.from(new Set(
+        selectedDepartments.filter((id) => isValidUUID(id) && (!departmentIdSet || departmentIdSet.has(id)))
+      ))
+      if (validDepartmentIds.length > 0) {
         const { error: insDeptErr } = await supabase
           .from('user_departments')
-          .insert(selectedDepartments.map((departmentId) => ({ user_id: user.id, department_id: departmentId })))
+          .insert(validDepartmentIds.map((departmentId) => ({ user_id: user.id, department_id: departmentId })))
         if (insDeptErr) throw insDeptErr
       }
     },

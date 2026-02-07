@@ -157,7 +157,11 @@
             "download": "تحميل",
             "export": "تصدير",
             "delete": "حذف"
-        }
+        },
+        "access_history": "???? ?????",
+        "reason_label": "Reason ?????",
+        "no_logs": "?? Logs",
+        "loading": "???? ???????"
     },
     "notification_batches": {
         "title": "دفعات الإشعارات",
@@ -436,6 +440,48 @@
         "change_warning": "سيؤثر هذا التغيير على:",
         "impact_approvals": "سير عمل الموافقات لهذا الموظف",
         "impact_visibility": "رؤية المدير في التقارير",
-        "impact_notifications": "توجيه الإشعارات"
+        "impact_notifications": "توجيه الإشعارات",
+        "no_managers_found": "?? ???????? Found",
+        "total_employees": "Total ????????",
+        "no_employees_dept": "?? ???????? Dept",
+        "hierarchy_depth": "Hierarchy Depth",
+        "avg_direct_reports": "Avg. Direct ??????",
+        "no_data": "?? Data",
+        "departments": "???????",
+        "staff_id": "Staff ID",
+        "edit_reporting": "????? Reporting",
+        "top_level": "Top Level",
+        "employees": "????????",
+        "view_details": "??? Details",
+        "select_manager": "Select ????"
+    },
+    "common": {
+        "cancel": "إلغاء",
+        "error": "حدث خطأ",
+        "save": "حفظ",
+        "success": "تمت العملية بنجاح"
+    },
+    "report_builder": {
+        "next_run": "?????? Run",
+        "placeholders": {
+            "type": "???",
+            "scope": "Scope",
+            "name": "Name",
+            "description": "Placeholders ?????",
+            "schedule": "Schedule"
+        },
+        "inactive": "Inactive",
+        "actions": {
+            "delete": "???",
+            "disable": "Disable",
+            "create": "?????",
+            "run": "Run",
+            "enable": "Enable"
+        },
+        "run_label": "Run ?????",
+        "no_runs": "?? Runs",
+        "no_description": "?? ?????",
+        "recent_runs": "Recent Runs",
+        "title": "????? Builder"
     }
 }

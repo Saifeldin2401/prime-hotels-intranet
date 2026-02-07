@@ -166,6 +166,8 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
             if (!employee) throw new Error('No employee selected')
             if (!canEditEmployee) throw new Error('You do not have permission to edit this employee')
 
+            const isValidUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+
             // 1. Update or insert user_properties
             if (selectedPropertyId) {
                 await supabase
@@ -173,11 +175,14 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                     .delete()
                     .eq('user_id', employee.id)
 
-                const { error: propError } = await supabase
-                    .from('user_properties')
-                    .insert({ user_id: employee.id, property_id: selectedPropertyId })
+                const propertyExists = properties.some((p: any) => p.id === selectedPropertyId)
+                if (isValidUUID(selectedPropertyId) && propertyExists) {
+                    const { error: propError } = await supabase
+                        .from('user_properties')
+                        .insert({ user_id: employee.id, property_id: selectedPropertyId })
 
-                if (propError) throw propError
+                    if (propError) throw propError
+                }
             }
 
             // 2. Update or insert user_departments
@@ -188,7 +193,8 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                 .delete()
                 .eq('user_id', employee.id)
 
-            if (actualDeptId) {
+            const departmentExists = departments.some((d: any) => d.id === actualDeptId)
+            if (actualDeptId && isValidUUID(actualDeptId) && departmentExists) {
                 const { error: deptError } = await supabase
                     .from('user_departments')
                     .insert({ user_id: employee.id, department_id: actualDeptId })

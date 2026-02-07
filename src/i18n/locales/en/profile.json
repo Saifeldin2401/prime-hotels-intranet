@@ -68,5 +68,13 @@
         "upload_document": "Upload Document",
         "select_file": "Select File",
         "category": "Category"
+    },
+    "employment": "Employment",
+    "hire_date": "Hire Date",
+    "messages": {
+        "profile_updated_desc": "Profile Updated Description",
+        "profile_updated": "Profile Updated",
+        "avatar_updated": "Avatar Updated",
+        "avatar_updated_desc": "Avatar Updated Description"
     }
 }

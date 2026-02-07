@@ -1,17 +1,16 @@
 {
-  "network_connection": "Unable to connect to the server. Please check your internet connection and try again.",
-  "unauthorized": "Your session has expired. Please log in again.",
-  "not_found": "The item you are looking for could not be found.",
-  "permission_denied": "You do not have permission to perform this action. Please contact your administrator.",
-  "validation_error": "Please check your input and try again. Some required fields may be missing or invalid.",
-  "timeout": "The request took too long to complete. Please try again.",
-  "rate_limit": "Too many requests. Please wait a moment and try again.",
-  "server_error": "An error occurred on the server. Please try again later.",
-  "unknown_error": "An unexpected error occurred. Please try again or contact support.",
-  "database_error": "A database error occurred. Please try again.",
-  "duplicate_entry": "This item already exists.",
-  "foreign_key": "Referenced resource does not exist.",
-  "resource_not_found": "Resource not found",
-  "access_denied": "Access denied"
+    "network_connection": "Unable to connect to the server. Please check your internet connection and try again.",
+    "unauthorized": "Your session has expired. Please log in again.",
+    "not_found": "The item you are looking for could not be found.",
+    "permission_denied": "You do not have permission to perform this action. Please contact your administrator.",
+    "validation_error": "Please check your input and try again. Some required fields may be missing or invalid.",
+    "timeout": "The request took too long to complete. Please try again.",
+    "rate_limit": "Too many requests. Please wait a moment and try again.",
+    "server_error": "An error occurred on the server. Please try again later.",
+    "unknown_error": "An unexpected error occurred. Please try again or contact support.",
+    "database_error": "A database error occurred. Please try again.",
+    "duplicate_entry": "This item already exists.",
+    "foreign_key": "Referenced resource does not exist.",
+    "resource_not_found": "Resource not found",
+    "access_denied": "Access denied"
 }
-

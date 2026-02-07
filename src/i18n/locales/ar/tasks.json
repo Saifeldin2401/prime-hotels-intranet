@@ -61,5 +61,15 @@
     "task": "مهمة",
     "actions": {
         "cancelled": "ملغاة"
-    }
+    },
+    "cancelled": "ملغاة",
+    "messages": {
+        "task_updated": "???? Updated",
+        "task_created": "???? Created"
+    },
+    "assign_to": "Assign To",
+    "select_property": "Select a ?????",
+    "property": "????? / Hotel",
+    "no_employees_found": "?? ???????? Found",
+    "select_assignee": "Select Assignee"
 }

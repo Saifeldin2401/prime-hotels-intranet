@@ -36,9 +36,9 @@
     "ai_welcome_message": "مرحباً! أنا خبير المعرفة بالذكاء الاصطناعي. اسألني أي شيء عن إجراءات التشغيل القياسية أو السياسات - أنا أدعم جميع اللغات وسأقوم بترجمة المعلومات لك!",
     "review_pending": "مراجعة المعلقات",
     "analytics_action": "عرض التحليلات",
-        "no_dept_content": "لا يتوفر محتوى خاص بالقسم بعد.",
-        "no_dept_content_desc": "سيظهر المحتوى هنا بمجرد تعيينك لقسم.",
-        "general_category": "عام",
+    "no_dept_content": "لا يتوفر محتوى خاص بالقسم بعد.",
+    "no_dept_content_desc": "سيظهر المحتوى هنا بمجرد تعيينك لقسم.",
+    "general_category": "عام",
     "article_count": "{{count}} مقال",
     "article_count_plural": "{{count}} مقالات",
     "content_types": {
@@ -354,7 +354,26 @@
             "updated_by": "تم تحديثه بواسطة",
             "automated": "مقترح",
             "match": "تطابق"
-        }
+        },
+        "match": "Match",
+        "submit_feedback": "Submit Feedback",
+        "unknown_author": "Unknown Author",
+        "translate": "Translate",
+        "feedback_placeholder_neg": "Feedback ?? ?????? Neg",
+        "translate_ai": "Translate AI",
+        "no_dept": "?? Dept",
+        "show_bilingual": "Show Bilingual",
+        "how_can_we_improve": "How Can We Improve",
+        "library": "Library",
+        "show_single": "Show Single",
+        "translation_error": "Translation ???",
+        "feedback_optional": "Feedback ???????",
+        "what_did_you_like": "What Did You Like",
+        "close": "Close",
+        "clear_translation": "??? Translation",
+        "feedback_placeholder_pos": "Feedback ?? ?????? Pos",
+        "translation_complete": "Translation Complete",
+        "translated": "Translated"
     },
     "search_page": {
         "title": "البحث في قاعدة المعرفة",
@@ -463,7 +482,11 @@
         "nav_title": "مكتبة المعرفة",
         "quick_search": "بحث سريع...",
         "types": "أنواع المحتوى",
-        "my_dept": "قسمي: {{name}}"
+        "my_dept": "قسمي: {{name}}",
+        "departments": "???????",
+        "version": "Version",
+        "all_knowledge": "???? ???????",
+        "pending": "??? ????????"
     },
     "status": {
         "draft": "مسودة",
@@ -471,5 +494,9 @@
         "approved": "موافق عليه",
         "published": "منشور",
         "rejected": "مرفوض"
-    }
+    },
+    "common": {
+        "no_data": "?? Data"
+    },
+    "required_reading": "Required Reading"
 }

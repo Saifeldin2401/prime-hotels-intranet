@@ -52,7 +52,9 @@
         "approve_error_leave": "فشل في الموافقة على طلب الإجازة.",
         "reject_error_doc": "فشل في رفض المستند.",
         "reject_error_leave": "فشل في رفض طلب الإجازة.",
-        "assign_error": "فشل في تعيين التذكرة."
+        "assign_error": "فشل في تعيين التذكرة.",
+        "request_approved": "Request ?????",
+        "request_rejected": "Request ?????"
     },
     "unknown_user": "مستخدم غير معروف",
     "no_reason": "لم يتم تقديم سبب",
@@ -88,5 +90,11 @@
             "select_delegate": "يرجى اختيار شخص للتفويض.",
             "not_configured": "تعذر حفظ التفويض. يرجى التواصل مع الدعم."
         }
-    }
+    },
+    "request": "Request",
+    "search_placeholder": "??? by name, ???, or ???...",
+    "action": {
+        "cancel": "?????"
+    },
+    "all": "????"
 }

@@ -13,7 +13,9 @@
         "drop_file": "انقر للرفع أو اسحب وأفلت الملف",
         "resume_url": "رابط LinkedIn / معرض الأعمال (اختياري)",
         "notes": "ملاحظات / توصية",
-        "submit": "تقديم الإحالة"
+        "submit": "تقديم الإحالة",
+        "my_referrals": "???????",
+        "refer_candidate": "Refer Candidate"
     },
     "create_new": "إنشاء وظيفة جديدة",
     "search_placeholder": "بحث في الوظائف...",
@@ -39,7 +41,8 @@
         "closed": "مغلق",
         "draft": "مسودة",
         "filled": "تم ملؤها",
-        "cancelled": "ملغاة"
+        "cancelled": "ملغاة",
+        "status": "??????"
     },
     "sections": {
         "basic_info": "المعلومات الأساسية",
@@ -100,7 +103,8 @@
         "confirm_delete": "هل أنت متأكد من حذف هذا الإعلان؟",
         "loading": "جاري تحميل بيانات الوظيفة...",
         "not_found_title": "الوظيفة غير موجودة",
-        "not_found_desc": "إعلان الوظيفة الذي تبحث عنه غير موجود."
+        "not_found_desc": "إعلان الوظيفة الذي تبحث عنه غير موجود.",
+        "department_auto_selected": "????? Auto Selected"
     },
     "description": "إدارة الوظائف الشاغرة والتوظيف",
     "allStatus": "جميع الحالات",
@@ -127,5 +131,13 @@
     "markHired": "تعيين كموظف",
     "viewCv": "عرض السيرة الذاتية",
     "noApplications": "لا يوجد متقدمين بعد",
-    "noApplicationsDesc": "ستظهر الطلبات هنا بمجرد تقدم المرشحين."
+    "noApplicationsDesc": "ستظهر الطلبات هنا بمجرد تقدم المرشحين.",
+    "edit": "تعديل الإعلان",
+    "employmentType": "Employment ?????",
+    "jobDescription": "????? ?????",
+    "jobDetails": "????? ????????",
+    "posted": "?????",
+    "publish": "نشر",
+    "requirements": "?????????",
+    "responsibilities": "??????????"
 }

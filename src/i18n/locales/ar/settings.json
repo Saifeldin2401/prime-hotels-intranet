@@ -96,5 +96,9 @@
         "success": "تم حفظ الإعدادات بنجاح",
         "error": "فشل حفظ الإعدادات",
         "loading": "جاري تحميل الإعدادات..."
+    },
+    "messages": {
+        "language_updated": "????? Updated",
+        "language_updated_desc": "????? Updated ?????"
     }
 }

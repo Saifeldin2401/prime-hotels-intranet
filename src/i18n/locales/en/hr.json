@@ -19,7 +19,18 @@
             "announcement_new": "New Announcement",
             "approval_required": "Approval Required",
             "request_approved": "Request Approved",
-            "request_rejected": "Request Rejected"
+            "request_rejected": "Request Rejected",
+            "request_submitted": "Request Submitted",
+            "comment_added": "Comment Added",
+            "request_returned": "Request Returned",
+            "request_closed": "Request Closed",
+            "training_deadline": "Training Deadline",
+            "document_published": "Document Published",
+            "document_acknowledgment_required": "Document Acknowledgment Required",
+            "escalation_alert": "Escalation Alert",
+            "referral_status_update": "Referral Status Update",
+            "maintenance_assigned": "Maintenance Assigned",
+            "maintenance_resolved": "Maintenance Resolved"
         },
         "sort": {
             "created": "Created",
@@ -46,6 +57,8 @@
     "referrals": {
         "title": "Employee Referrals",
         "export_csv": "Export CSV",
+        "export_excel": "Export Excel",
+        "export_pdf": "Export PDF",
         "view": "View",
         "new_referral": "New Referral",
         "description": "Manage employee referral program and track referral bonuses",
@@ -53,12 +66,22 @@
             "total": "Total Referrals",
             "hired": "Hired",
             "bonuses_paid": "Total Bonuses Paid",
-            "pending_bonuses": "Pending Bonuses"
+            "pending_bonuses": "Pending Bonuses",
+            "pending": "Pending",
+            "ratio": "Hire Ratio"
         },
+        "filter_job": "All Jobs",
+        "filter_referrer": "All Referrers",
         "search_placeholder": "Search referrals...",
         "referred_by": "Referred by {{referrer}} for {{position}}",
         "notes": "Notes",
         "no_referrals": "No referrals found",
+        "top_referrers": "Top Referrers",
+        "top_jobs": "Top Jobs",
+        "trends": "Referral Trends",
+        "no_referrers": "No referral data yet.",
+        "no_jobs": "No referral data yet.",
+        "no_trends": "No trend data yet.",
         "actions": {
             "start_interview": "Start Interview",
             "mark_hired": "Mark Hired",
@@ -83,7 +106,10 @@
             "total_days": "Total days: {{count}}",
             "cancel": "Cancel",
             "submit": "Submit Request",
-            "submitting": "Submitting..."
+            "submitting": "Submitting...",
+            "error_title": "Error",
+            "success_message": "Success Message",
+            "success_title": "Success"
         },
         "list": {
             "title": "Your Leave Requests",
@@ -116,6 +142,8 @@
         "hired": "Hired",
         "interviewing": "Interviewing",
         "interview": "Interviewing",
+        "shortlisted": "Shortlisted",
+        "offer": "Offer",
         "cancelled": "Cancelled",
         "paid": "Paid",
         "all": "All Status",

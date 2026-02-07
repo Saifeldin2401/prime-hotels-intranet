@@ -21,6 +21,9 @@
         "audit_trail": "Audit Trail",
         "loading": "Loading audit logs...",
         "no_logs": "No audit logs found matching your criteria",
+        "by": "By",
+        "ip": "IP",
+        "before": "Before",
         "after": "After",
         "export_headers": {
             "date": "Date",
@@ -154,7 +157,11 @@
             "download": "Download",
             "export": "Export",
             "delete": "Delete"
-        }
+        },
+        "access_history": "Access History",
+        "reason_label": "Reason Label",
+        "no_logs": "No Logs",
+        "loading": "Loading"
     },
     "notification_batches": {
         "title": "Notification Batches",
@@ -433,6 +440,48 @@
         "change_warning": "This change will affect:",
         "impact_approvals": "Approval workflows for this employee",
         "impact_visibility": "Manager visibility in reports",
-        "impact_notifications": "Notification routing"
+        "impact_notifications": "Notification routing",
+        "no_managers_found": "No Managers Found",
+        "total_employees": "Total Employees",
+        "no_employees_dept": "No Employees Dept",
+        "hierarchy_depth": "Hierarchy Depth",
+        "avg_direct_reports": "Avg. Direct Reports",
+        "no_data": "No Data",
+        "departments": "Departments",
+        "staff_id": "Staff ID",
+        "edit_reporting": "Edit Reporting",
+        "top_level": "Top Level",
+        "employees": "Employees",
+        "view_details": "View Details",
+        "select_manager": "Select Manager"
+    },
+    "common": {
+        "cancel": "Cancel",
+        "error": "An error occurred",
+        "save": "Save",
+        "success": "Operation completed successfully"
+    },
+    "report_builder": {
+        "next_run": "Next Run",
+        "placeholders": {
+            "type": "Type",
+            "scope": "Scope",
+            "name": "Name",
+            "description": "Placeholders Description",
+            "schedule": "Schedule"
+        },
+        "inactive": "Inactive",
+        "actions": {
+            "delete": "Delete",
+            "disable": "Disable",
+            "create": "Create",
+            "run": "Run",
+            "enable": "Enable"
+        },
+        "run_label": "Run Label",
+        "no_runs": "No Runs",
+        "no_description": "No Description",
+        "recent_runs": "Recent Runs",
+        "title": "Report Builder"
     }
 }

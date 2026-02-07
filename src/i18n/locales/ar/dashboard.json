@@ -100,7 +100,8 @@
             "congratulations": "تهانينا!",
             "no_winner": "لم يتم الإعلان عن فائز لهذا الشهر بعد.",
             "view_previous": "عرض الفائزين السابقين",
-            "manage": "إدارة موظف الشهر"
+            "manage": "إدارة موظف الشهر",
+            "no_employee_found": "?? ???? Found"
         },
         "birthdays": {
             "title": "أعياد الميلاد القادمة",
@@ -109,7 +110,9 @@
             "in_days": "خلال {{count}} أيام",
             "no_birthdays": "لا توجد أعياد ميلاد في الأيام السبعة القادمة.",
             "send_wish": "إرسال تهنئة"
-        }
+        },
+        "my_tasks": "My ??????",
+        "activity_feed": "Activity Feed"
     },
     "analytics": {
         "title": "لوحة التحليلات",
@@ -151,7 +154,18 @@
     "actions": {
         "view_all": "عرض الكل",
         "create_new": "إنشاء جديد",
-        "refresh": "تحديث"
+        "refresh": "تحديث",
+        "view_approvals": "??? Approvals",
+        "review_approvals": "?????? Approvals",
+        "view_training": "??? ?????",
+        "review_tasks": "?????? ??????",
+        "view_analytics": "??? ?????????",
+        "open_reports_center": "Open ?????? Center",
+        "review_maintenance": "?????? ???????",
+        "review_sops": "?????? Sops",
+        "view_reports": "??? ??????",
+        "manage_training_paths": "Manage ????? Paths",
+        "manage_teams": "Manage Teams"
     },
     "staff": {
         "welcome_back": "مرحباً بعودتك، {{name}}",
@@ -374,7 +388,78 @@
         "pending_sync": "في انتظار المزامنة",
         "corporate_dashboard_title": "لوحة تحكم الشركة",
         "active_properties": "المنشآت النشطة",
-        "avg_staff_per_property": "المتوسط لكل منشأة"
+        "avg_staff_per_property": "المتوسط لكل منشأة",
+        "maintenance_issues": "??????? Issues",
+        "job_title_missing": "????? ??????? Missing",
+        "quick_actions": {
+            "compliance": "??????",
+            "approvals_desc": "Approvals ?????",
+            "staff": "Staff",
+            "recruitment": "Recruitment",
+            "team_desc": "Team ?????",
+            "leave": "Leave",
+            "leave_desc": "Leave ?????",
+            "maintenance_desc": "??????? ?????",
+            "directory_desc": "Directory ?????",
+            "compliance_desc": "?????? ?????",
+            "portfolio": "Portfolio",
+            "team": "Team",
+            "tasks_desc": "?????? ?????",
+            "training": "?????",
+            "directory": "Directory",
+            "portfolio_desc": "Portfolio ?????",
+            "training_desc": "????? ?????",
+            "approvals": "Approvals",
+            "recruitment_desc": "Recruitment ?????",
+            "staff_desc": "Staff ?????",
+            "tasks": "??????",
+            "maintenance": "???????"
+        },
+        "report_builder": "????? Builder",
+        "department_focus": "??? Focus",
+        "quick_actions_title": "???? ?????????",
+        "audit_activity": "????? Activity",
+        "training_completion": "????? Completion",
+        "people_insights": "People Insights",
+        "present_today": "Present Today",
+        "no_pending_leave": "?? ??? ???????? Leave",
+        "executive_badge": "Executive Badge",
+        "audit_readiness": "????? Readiness",
+        "leave_approvals": "Leave Approvals",
+        "department_performance": "??? Performance",
+        "audit_checklist": "????? Checklist",
+        "policy_acknowledgments": "????? Acknowledgments",
+        "hr_reports": "HR ??????",
+        "operations_actions": "Operations ?????????",
+        "department_controls_subtitle": "??? Controls ??????? ??????",
+        "no_audit_logs": "?? ????? Logs",
+        "hr_reports_subtitle": "HR ?????? ??????? ??????",
+        "action_needed": "????? Needed",
+        "leave_queue": "Leave Queue",
+        "department_performance_subtitle": "??? Performance ??????? ??????",
+        "operations_overview": "Operations ???? ????",
+        "operations_actions_subtitle": "Operations ????????? ??????? ??????",
+        "audit_readiness_subtitle": "????? Readiness ??????? ??????",
+        "quick_actions_subtitle": "???? ????????? ??????? ??????",
+        "no_staff_found": "?? Staff Found",
+        "portfolio_coverage": "Portfolio Coverage",
+        "in_review": "In ??????",
+        "scheduled_reports": "Scheduled ??????",
+        "scheduled_reports_subtitle": "Scheduled ?????? ??????? ??????",
+        "pending": "??? ????????",
+        "staff_spotlight": "Staff Spotlight",
+        "no_scheduled_reports": "?? Scheduled ??????",
+        "coverage": "Coverage",
+        "inactive_properties": "Inactive ???????",
+        "pending_leave": "??? ???????? Leave",
+        "department_controls": "??? Controls",
+        "training_records": "????? Records",
+        "pending_approvals": "??? ???????? Approvals",
+        "status_unknown": "?????? Unknown",
+        "report_builder_subtitle": "????? Builder ??????? ??????",
+        "operations_snapshot": "Operations ????",
+        "department_focus_subtitle": "??? Focus ??????? ??????",
+        "operations_playbook": "Operations Playbook"
     },
     "my_team": {
         "title": "فريقي",
@@ -452,7 +537,9 @@
             "overdue": "متأخر",
             "pending_review": "بانتظار المراجعة",
             "open_tickets": "تذاكر مفتوحة"
-        }
+        },
+        "digest_generated_desc": "Digest Generated ?????",
+        "digest_generated": "Digest Generated"
     },
     "feed_types": {
         "announcement": "إعلان",
@@ -464,7 +551,8 @@
         "new_joiner": "عضو فريق جديد",
         "event": "حدث",
         "recognition": "تكريم",
-        "filter": "تصفية"
+        "filter": "تصفية",
+        "overdue": "Overdue"
     },
     "widget_common": {
         "no_recent_activity": "لا يوجد نشاط حديث",
@@ -477,5 +565,6 @@
         "birthday_in": "عيد ميلاد {{name}} بعد {{days}} أيام",
         "welcome_team": "مرحباً بـ {{name}} في الفريق!",
         "joined_as": "انضم كـ {{role}}"
-    }
+    },
+    "subtitle": "Your centralized hub for operational ???????"
 }
