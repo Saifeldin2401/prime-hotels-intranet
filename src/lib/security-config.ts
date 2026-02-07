@@ -1,4 +1,5 @@
 // Comprehensive security configuration for Prime Hotels Intranet
+import * as Sentry from "@sentry/react";
 
 export const securityConfig = {
   // Authentication security
@@ -70,7 +71,7 @@ export const securityConfig = {
       'style-src': ["'self'", "'unsafe-inline'"], // Needed for Tailwind
       'img-src': ["'self'", "data:", "https:"],
       'font-src': ["'self'"],
-      'connect-src': ["'self'", "https://api.supabase.co"],
+      'connect-src': ["'self'", "https://api.supabase.co", "https://o4508792767840256.ingest.de.sentry.io", "https://*.sentry.io"],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"]
@@ -210,10 +211,13 @@ export const securityUtils = {
 
   // Centralized exception logging
   logException: (error: Error, context?: Record<string, any>) => {
-    // In a real app, integrate with Sentry/LogRocket here
-    // Example: Sentry.captureException(error, { extra: context })
+    // Integrate with Sentry
+    if (import.meta.env.VITE_SENTRY_DSN) {
+      Sentry.captureException(error, { extra: context });
+    }
 
     // For now, structured console logging
+
     const timestamp = new Date().toISOString()
     const logData = { error: { name: error.name, message: error.message, stack: error.stack }, context, timestamp }
 

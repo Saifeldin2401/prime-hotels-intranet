@@ -98,6 +98,7 @@ export default function PublicHome() {
                             >
                                 {t('login_button')}
                             </Button>
+
                         </motion.div>
                     </motion.div>
                 </div>

@@ -8,5 +8,6 @@ declare module '*.json' {
 declare namespace NodeJS {
   interface ProcessEnv {
     NODE_ENV: 'development' | 'production' | 'test';
+    VITE_SENTRY_DSN: string;
   }
 }

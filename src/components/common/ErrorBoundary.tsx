@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { analytics } from '@/services/analyticsService'
+import * as Sentry from "@sentry/react"
 
 interface Props {
   children: ReactNode
@@ -34,6 +35,12 @@ export class ErrorBoundary extends Component<Props, State> {
       componentStack: errorInfo.componentStack,
       url: window.location.href
     }, 'error')
+
+    // Capture error in Sentry
+    if (import.meta.env.VITE_SENTRY_DSN) {
+      Sentry.captureException(error, { extra: errorInfo as unknown as Record<string, unknown> });
+    }
+
 
     this.setState({
       error,

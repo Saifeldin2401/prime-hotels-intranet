@@ -31,12 +31,31 @@ export const userSchema = z.object({
   job_title: z.string().optional(),
   staff_id: z.string().optional(),
   is_active: z.boolean().default(true),
-  property_ids: z.array(uuidSchema).min(1, 'At least one property must be selected'),
-  department_ids: z.array(uuidSchema).optional(),
-  role: z.enum(['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff'], {
+  property_ids: z.array(uuidSchema).default([]),
+  department_ids: z.array(uuidSchema).default([]),
+  role: z.enum(['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager', 'staff'], {
     message: 'Please select a valid role'
   }),
   reporting_to: uuidSchema.optional()
+}).superRefine((data, ctx) => {
+  const propertyRequiredRoles = new Set(['property_manager', 'property_hr', 'department_head', 'manager', 'staff'])
+  const departmentRequiredRoles = new Set(['department_head', 'manager', 'staff'])
+
+  if (propertyRequiredRoles.has(data.role) && data.property_ids.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Select at least one property',
+      path: ['property_ids']
+    })
+  }
+
+  if (departmentRequiredRoles.has(data.role) && data.department_ids.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Select at least one department',
+      path: ['department_ids']
+    })
+  }
 })
 
 export type UserFormData = z.infer<typeof userSchema>
@@ -272,4 +291,3 @@ export const profileUpdateSchema = z.object({
 })
 
 export type ProfileUpdateFormData = z.infer<typeof profileUpdateSchema>
-
