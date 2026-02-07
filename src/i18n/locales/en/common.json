@@ -310,5 +310,15 @@
     "shift": "Shift",
     "meeting": "Meeting",
     "training": "Training"
+  },
+  "session_timeout": {
+    "title": "Session Timeout Warning",
+    "description": "Your session will expire due to inactivity.",
+    "time_remaining": "Time remaining:",
+    "guidance": "Click \"Stay Signed In\" to continue your session, or you will be automatically signed out.",
+    "sign_out": "Sign Out Now",
+    "stay_signed_in": "Stay Signed In",
+    "seconds": "{{count}} seconds",
+    "minutes": "{{count}} minutes"
   }
 }

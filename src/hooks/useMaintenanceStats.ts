@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 
 export function useMaintenanceStats() {
-  const { user, roles, properties } = useAuth()
+  const { user, roles, properties, primaryRole } = useAuth()
   const { currentProperty } = useProperty()
 
   return useQuery({
@@ -13,7 +13,7 @@ export function useMaintenanceStats() {
     queryFn: async () => {
       if (!user?.id) return null
 
-      const userRole = roles[0]?.role
+      const userRole = primaryRole || roles[0]?.role
       const canManageAll = ['regional_admin', 'regional_hr'].includes(userRole || '')
 
       let baseQuery = supabase.from('maintenance_tickets').select('*')
@@ -98,7 +98,7 @@ export function useMaintenanceStats() {
 }
 
 export function useMaintenanceTrends(days = 30) {
-  const { user, roles, properties } = useAuth()
+  const { user, roles, properties, primaryRole } = useAuth()
   const { currentProperty } = useProperty()
 
   return useQuery({
@@ -106,7 +106,7 @@ export function useMaintenanceTrends(days = 30) {
     queryFn: async () => {
       if (!user?.id) return null
 
-      const userRole = roles[0]?.role
+      const userRole = primaryRole || roles[0]?.role
       const canManageAll = ['regional_admin', 'regional_hr'].includes(userRole || '')
 
       const startDate = new Date()

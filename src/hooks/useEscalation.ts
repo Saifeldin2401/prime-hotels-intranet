@@ -166,27 +166,31 @@ export function useOverdueItemsCount() {
         queryKey: ['overdue-items-count'],
         queryFn: async () => {
             const now = new Date()
+            const nowIso = now.toISOString()
             const threshold24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
             const threshold48h = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString()
 
             // Count overdue tasks (24h threshold)
             const { count: overdueTasks } = await supabase
                 .from('tasks')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'pending')
-                .lt('created_at', threshold24h)
+                .select('id', { count: 'exact', head: true })
+                .eq('is_deleted', false)
+                .in('status', ['todo', 'in_progress', 'review'])
+                .or(`due_date.lt.${nowIso},and(due_date.is.null,created_at.lt.${threshold24h})`)
 
             // Count overdue maintenance tickets (48h threshold)
             const { count: overdueTickets } = await supabase
                 .from('maintenance_tickets')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
+                .eq('is_deleted', false)
                 .eq('status', 'open')
                 .lt('created_at', threshold48h)
 
             // Count overdue leave requests (48h threshold)
             const { count: overdueLeaves } = await supabase
                 .from('leave_requests')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
+                .eq('is_deleted', false)
                 .eq('status', 'pending')
                 .lt('created_at', threshold48h)
 

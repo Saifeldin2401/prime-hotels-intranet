@@ -52,6 +52,7 @@ import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRender
 import { cn } from '@/lib/utils'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { getUserFriendlyError } from '@/lib/errorMessages'
 
 export default function TrainingPlayer() {
     const { t, i18n } = useTranslation('training')
@@ -222,7 +223,8 @@ export default function TrainingPlayer() {
             try {
                 await skillsService.awardModuleSkills(user.id, moduleData.module.id)
             } catch (skillError) {
-                console.error('Failed to award skills:', skillError)
+                // Silently fail - skills are optional, don't block completion
+                // Error is logged but doesn't prevent certificate generation
             }
 
             // Grant certificate when quiz score meets or exceeds passing score
@@ -244,16 +246,23 @@ export default function TrainingPlayer() {
                     }
                     await createCertificate(certificateData)
                 } catch (certError) {
-                    console.error('Certificate generation failed:', certError)
+                    // Certificate generation is optional - don't block completion
+                    // Error is logged but doesn't prevent training completion
+                    const errorDetails = getUserFriendlyError(certError)
+                    toast({
+                        title: t('certificateGenerationFailed'),
+                        description: errorDetails.message,
+                        variant: 'destructive'
+                    })
                 }
             }
 
             setIsFinished(true)
         } catch (error) {
-            console.error('Completion error:', error)
+            const errorDetails = getUserFriendlyError(error)
             toast({
                 title: t('error'),
-                description: t('failedToRecordCompletion'),
+                description: errorDetails.message,
                 variant: 'destructive'
             })
         }
@@ -308,7 +317,8 @@ export default function TrainingPlayer() {
                 localStorage.removeItem(storageKey)
             }
         } catch (error) {
-            console.error('Failed to persist training progress:', error)
+            // Progress persistence failure is non-critical - continue silently
+            // Progress is saved to localStorage as fallback
             if (storageKey) {
                 localStorage.setItem(storageKey, JSON.stringify({
                     assignment_id: assignmentId || null,
@@ -369,7 +379,8 @@ export default function TrainingPlayer() {
                     time_spent_seconds: blockTime
                 }, { onConflict: 'user_id,block_id' })
         } catch (error) {
-            console.warn('Failed to record block completion:', error)
+            // Block completion recording is non-critical - continue silently
+            // Main progress tracking will still work
         }
     }, [user, moduleData, activeBlock?.id])
 
@@ -419,11 +430,10 @@ export default function TrainingPlayer() {
                     : undefined
             })
         } catch (error) {
-            console.error('Translation failed:', error)
-            const errorMessage = error instanceof Error ? error.message : t('translationFailed', 'Translation failed')
+            const errorDetails = getUserFriendlyError(error)
             toast({
                 title: t('translationFailed', 'Translation failed'),
-                description: errorMessage,
+                description: errorDetails.message,
                 variant: 'destructive'
             })
             setTranslationTarget(null)

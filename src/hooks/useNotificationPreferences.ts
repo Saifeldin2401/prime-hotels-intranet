@@ -29,7 +29,17 @@ export function useNotificationPreferences() {
                             approval_email: true,
                             training_email: true,
                             announcement_email: true,
-                            maintenance_email: true
+                            maintenance_email: true,
+                            browser_push_enabled: false,
+                            approval_push: false,
+                            training_push: false,
+                            announcement_push: false,
+                            maintenance_push: false,
+                            quiet_hours_enabled: false,
+                            quiet_hours_start: '22:00:00',
+                            quiet_hours_end: '08:00:00',
+                            daily_digest_enabled: false,
+                            notification_sounds_enabled: true
                         })
                         .select()
                         .single()

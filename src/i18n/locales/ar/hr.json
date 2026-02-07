@@ -422,6 +422,7 @@
             "period_end": "نهاية الفترة",
             "payment_date": "تاريخ الدفع",
             "currency": "العملة",
+            "currency_placeholder": "ر.س",
             "basic_salary": "الراتب الأساسي",
             "gross_salary": "إجمالي الراتب",
             "deductions": "الخصومات",

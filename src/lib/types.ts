@@ -14,6 +14,10 @@ export interface Profile {
   staff_id: string | null // Human-readable unique employee identifier (e.g., "PH-1001")
   reporting_to: string | null // UUID of supervisor/manager
   is_active: boolean
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  nationality: string | null
+  blood_group: string | null
   created_at: string
   updated_at: string
   is_temp_password?: boolean
@@ -521,6 +525,17 @@ export interface NotificationPreference {
   announcement_email: boolean
   maintenance_email: boolean
   browser_push_enabled: boolean
+  approval_push: boolean
+  training_push: boolean
+  announcement_push: boolean
+  maintenance_push: boolean
+  quiet_hours_enabled: boolean
+  quiet_hours_start: string | null
+  quiet_hours_end: string | null
+  daily_digest_enabled: boolean
+  notification_sounds_enabled: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export interface AuditLog {

@@ -10,12 +10,18 @@ echo.
 
 cd /d "%~dp0"
 
-REM Set environment variables
-set "VITE_SUPABASE_URL=https://htsvjfrofcpkfzvjpwvx.supabase.co"
-set "VITE_SUPABASE_ANON_KEY=sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj"
-set "VITE_RESEND_API_KEY="
-
-echo [1/3] Environment variables configured
+REM Set environment variables from .env file if it exists
+echo [1/3] Checking environment configuration...
+if exist ".env" (
+    echo    Using .env file for configuration
+) else (
+    echo    WARNING: No .env file found!
+    echo    Please create a .env file with your Supabase credentials.
+    echo    See README.md for instructions.
+    echo.
+    REM The original script had a pause here and listed required variables.
+    REM This has been removed as per instructions to simplify the .env check.
+)
 echo.
 
 echo [2/3] Checking dependencies...
@@ -40,8 +46,8 @@ echo   URL: http://localhost:5173
 echo ========================================
 echo.
 echo Login Credentials:
-echo   Email: admin@prime.com
-echo   Password: Reem1977
+echo   Use the Admin credentials you created
+echo   or see README.md for details
 echo.
 echo ========================================
 echo   Press Ctrl+C to stop the server

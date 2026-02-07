@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Award, CheckCircle2, ShieldCheck, ShieldAlert } from 'lucide-react'
+import { Award, CheckCircle2, ShieldCheck, ShieldAlert, BookOpen, UserCheck, Star, Zap, Settings as SettingsIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -7,17 +7,18 @@ import { skillsService, type UserSkill } from '@/services/skillsService'
 import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 
-export function UserSkillsDisplay() {
+export function UserSkillsDisplay({ userId }: { userId?: string }) {
     const { user } = useAuth()
     const { t } = useTranslation('profile')
     const [skills, setSkills] = useState<UserSkill[]>([])
     const [loading, setLoading] = useState(true)
+    const targetUserId = userId || user?.id
 
     const loadSkills = useCallback(async () => {
         try {
             setLoading(true)
-            if (user) {
-                const data = await skillsService.getUserSkills(user.id)
+            if (targetUserId) {
+                const data = await skillsService.getUserSkills(targetUserId)
                 setSkills(data)
             }
         } catch (error) {
@@ -25,13 +26,13 @@ export function UserSkillsDisplay() {
         } finally {
             setLoading(false)
         }
-    }, [user])
+    }, [targetUserId])
 
     useEffect(() => {
-        if (user) {
+        if (targetUserId) {
             loadSkills()
         }
-    }, [user, loadSkills])
+    }, [targetUserId, loadSkills])
 
     if (loading) {
         return <div className="text-center py-8 text-gray-500">Loading skills...</div>
@@ -58,10 +59,10 @@ export function UserSkillsDisplay() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Award className="w-5 h-5 text-hotel-gold" />
-                    Skills & Competencies
+                    {t('skills_and_competencies')}
                 </CardTitle>
                 <CardDescription>
-                    Your verified skills and proficiency levels based on training completion.
+                    {userId ? t('team_member_skills_desc') : t('my_skills_desc')}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -69,9 +70,14 @@ export function UserSkillsDisplay() {
                     {skills.map((userSkill) => (
                         <div key={userSkill.id} className="bg-slate-50 p-4 rounded-lg border">
                             <div className="flex justify-between items-start mb-2">
-                                <div>
-                                    <h4 className="font-semibold text-lg">{userSkill.skill?.name || 'Unknown Skill'}</h4>
-                                    <p className="text-xs text-gray-500">{userSkill.skill?.category}</p>
+                                <div className="flex gap-3">
+                                    <div className="mt-1 p-2 bg-hotel-gold/10 rounded-full text-hotel-gold">
+                                        {getSkillIcon(userSkill.skill?.category)}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-lg">{userSkill.skill?.name || 'Unknown Skill'}</h4>
+                                        <p className="text-xs text-gray-500">{userSkill.skill?.category}</p>
+                                    </div>
                                 </div>
                                 {userSkill.verified ? (
                                     <Badge variant="default" className="bg-green-600 hover:bg-green-700">
@@ -92,7 +98,7 @@ export function UserSkillsDisplay() {
                                 </div>
                                 <Progress value={(userSkill.proficiency_level / 5) * 100} className="h-2" />
                                 <p className="text-xs text-gray-500 mt-1">
-                                    {getProficiencyLabel(userSkill.proficiency_level)}
+                                    {getProficiencyLabel(userSkill.proficiency_level, t)}
                                 </p>
                             </div>
                         </div>
@@ -103,13 +109,23 @@ export function UserSkillsDisplay() {
     )
 }
 
-function getProficiencyLabel(level: number): string {
+function getSkillIcon(category?: string) {
+    switch (category?.toLowerCase()) {
+        case 'onboarding': return <BookOpen className="w-4 h-4" />
+        case 'compliance': return <UserCheck className="w-4 h-4" />
+        case 'skills': return <Zap className="w-4 h-4" />
+        case 'leadership': return <Star className="w-4 h-4" />
+        default: return <SettingsIcon className="w-4 h-4" />
+    }
+}
+
+function getProficiencyLabel(level: number, t: any): string {
     switch (level) {
-        case 1: return 'Novice - Basic understanding'
-        case 2: return 'Advanced Beginner - Can perform with guidance'
-        case 3: return 'Competent - Capable of independent work'
-        case 4: return 'Proficient - High level of competence'
-        case 5: return 'Expert - Recognized authority'
-        default: return 'Unknown'
+        case 1: return t('proficiency_novice')
+        case 2: return t('proficiency_beginner')
+        case 3: return t('proficiency_competent')
+        case 4: return t('proficiency_proficient')
+        case 5: return t('proficiency_expert')
+        default: return t('proficiency_unknown')
     }
 }

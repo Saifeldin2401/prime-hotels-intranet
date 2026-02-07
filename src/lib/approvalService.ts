@@ -40,14 +40,21 @@ export async function getApproverForRequest(
   propertyId: string | null
 ): Promise<Profile | null> {
   // 1. Check for temporary approvers first
-  const { data: tempApprovers } = await supabase
+  const nowIso = new Date().toISOString()
+  let tempQuery = supabase
     .from('temporary_approvers')
     .select('delegate_id')
     .eq('scope_type', propertyId ? 'property' : 'all')
-    .eq('scope_id', propertyId)
-    .lte('start_at', new Date().toISOString())
-    .gte('end_at', new Date().toISOString())
+    .lte('start_at', nowIso)
+    .gte('end_at', nowIso)
+    .order('start_at', { ascending: false })
     .limit(1)
+
+  tempQuery = propertyId
+    ? tempQuery.eq('scope_id', propertyId)
+    : tempQuery.is('scope_id', null)
+
+  const { data: tempApprovers } = await tempQuery
 
   if (tempApprovers && tempApprovers.length > 0) {
     const { data: delegate } = await supabase

@@ -226,6 +226,47 @@
         "title": "Reports & Analytics",
         "description": "Overview of system activity, tasks, maintenance, and communications.",
         "export_overview": "Export Overview",
+        "report_builder": {
+            "title": "Report Builder",
+            "placeholders": {
+                "name": "Report name",
+                "description": "Description",
+                "type": "Type",
+                "scope": "Scope",
+                "schedule": "Schedule"
+            },
+            "types": {
+                "operations": "Operations",
+                "hr": "HR",
+                "training": "Training",
+                "audits": "Audits"
+            },
+            "scopes": {
+                "global": "Global",
+                "property": "Property",
+                "department": "Department"
+            },
+            "schedule": {
+                "none": "No schedule",
+                "hourly": "Hourly",
+                "daily": "Daily",
+                "weekly": "Weekly",
+                "monthly": "Monthly"
+            },
+            "actions": {
+                "create": "Create Report",
+                "run": "Run",
+                "enable": "Enable",
+                "disable": "Disable",
+                "delete": "Delete"
+            },
+            "inactive": "Inactive",
+            "no_description": "No description",
+            "next_run": "Next run:",
+            "recent_runs": "Recent Runs",
+            "no_runs": "No report runs yet.",
+            "run_label": "Run {{id}}"
+        },
         "cards": {
             "total_tasks": "Total Tasks",
             "completed": "Completed",

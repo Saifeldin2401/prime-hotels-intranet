@@ -5,12 +5,12 @@ import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 
 export function useDashboardStats() {
-    const { profile } = useAuth()
+    const { user, profile } = useAuth()
 
     return useQuery({
-        queryKey: ['dashboard-stats', profile?.id],
+        queryKey: ['dashboard-stats', user?.id],
         queryFn: async () => {
-            const userId = profile?.id
+            const userId = profile?.id || user?.id
             if (!userId) return null
 
             const [
@@ -18,14 +18,17 @@ export function useDashboardStats() {
                 trainingProgressResult,
                 announcementsResult,
                 readAnnouncementsResult,
-                pendingApprovalsResult,
+                pendingRequestsResult,
+                pendingDocumentsResult,
+                pendingLegacyApprovalsResult,
                 unreadNotificationsResult
             ] = await Promise.all([
                 // 1. Documents Count
                 supabase
                     .from('documents')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'PUBLISHED'),
+                    .select('id', { count: 'exact', head: true })
+                    .eq('status', 'PUBLISHED')
+                    .eq('is_deleted', false),
 
                 // 2. Training Progress
                 supabase
@@ -46,17 +49,32 @@ export function useDashboardStats() {
                     .select('announcement_id')
                     .eq('user_id', userId),
 
-                // 5. Pending Approvals
+                // 5. Pending Requests (workflow)
+                supabase
+                    .from('requests')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('current_assignee_id', userId)
+                    .in('status', ['pending_supervisor_approval', 'pending_hr_review']),
+
+                // 6. Pending Document Approvals
+                supabase
+                    .from('document_approvals')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('approver_id', userId)
+                    .eq('status', 'pending')
+                    .eq('is_active', true),
+
+                // 7. Legacy Approval Requests (if still used)
                 supabase
                     .from('approval_requests')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('current_approver_id', userId)
                     .eq('status', 'pending'),
 
-                // 6. Unread Notifications
+                // 8. Unread Notifications
                 supabase
                     .from('notifications')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('user_id', userId)
                     .is('read_at', null)
             ])
@@ -73,7 +91,9 @@ export function useDashboardStats() {
             const readIds = new Set(readAnnouncements.map(r => r.announcement_id))
             const unreadAnnouncements = announcements.filter(a => !readIds.has(a.id)).length
 
-            const pendingApprovals = pendingApprovalsResult.count || 0
+            const pendingApprovals = (pendingRequestsResult.count || 0) +
+                (pendingDocumentsResult.count || 0) +
+                (pendingLegacyApprovalsResult.count || 0)
             const unreadNotifications = unreadNotificationsResult.count || 0
 
             return {
@@ -85,7 +105,7 @@ export function useDashboardStats() {
                 unreadNotifications,
             }
         },
-        enabled: !!profile?.id,
+        enabled: !!user?.id,
     })
 }
 

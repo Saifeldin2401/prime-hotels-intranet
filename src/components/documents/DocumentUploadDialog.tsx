@@ -23,6 +23,10 @@ import {
 } from '@/components/ui/select'
 import { DOCUMENT_VISIBILITY_OPTIONS } from '@/lib/constants'
 import type { DocumentVisibility, DocumentStatus } from '@/lib/constants'
+import { documentSchema } from '@/lib/validationSchemas'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { useToast } from '@/components/ui/use-toast'
+import { LoadingButton } from '@/components/loading'
 
 interface DocumentUploadDialogProps {
   open: boolean
@@ -32,6 +36,7 @@ interface DocumentUploadDialogProps {
 export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialogProps) {
   const { profile, properties, departments } = useAuth()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -118,8 +123,12 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
       resetForm()
     },
     onError: (error) => {
-      console.error('Upload error:', error)
-      alert('Failed to upload document: ' + error.message)
+      const errorDetails = getUserFriendlyError(error)
+      toast({
+        title: 'Upload Failed',
+        description: errorDetails.message,
+        variant: 'destructive'
+      })
     },
     onSettled: () => {
       setUploading(false)
@@ -138,11 +147,33 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file) {
-      alert('Please select a file')
-      return
+
+    // Validate form data
+    try {
+      if (!file) {
+        throw new Error('Please select a file to upload')
+      }
+
+      // Validate using Zod schema
+      documentSchema.parse({
+        title,
+        description: description || undefined,
+        file,
+        requires_acknowledgment: requiresAcknowledgment,
+        visibility,
+        property_id: selectedProperty || undefined,
+        department_id: selectedDepartment || undefined
+      })
+
+      uploadMutation.mutate()
+    } catch (error) {
+      const errorDetails = getUserFriendlyError(error)
+      toast({
+        title: 'Validation Error',
+        description: errorDetails.message,
+        variant: 'destructive'
+      })
     }
-    uploadMutation.mutate()
   }
 
   return (
@@ -263,9 +294,14 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={uploading || !file || !title}>
-              {uploading ? 'Uploading...' : 'Upload Document'}
-            </Button>
+            <LoadingButton
+              type="submit"
+              disabled={!file || !title}
+              loading={uploading}
+              loadingText="Uploading..."
+            >
+              Upload Document
+            </LoadingButton>
           </DialogFooter>
         </form>
       </DialogContent>

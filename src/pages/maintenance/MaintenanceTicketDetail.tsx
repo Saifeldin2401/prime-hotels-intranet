@@ -37,7 +37,7 @@ const statusColors: Record<string, string> = {
 export default function MaintenanceTicketDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { user, roles } = useAuth()
+    const { user, roles, primaryRole } = useAuth()
     const { t, i18n } = useTranslation('maintenance')
     const isRTL = i18n.dir() === 'rtl'
 
@@ -48,7 +48,7 @@ export default function MaintenanceTicketDetail() {
 
     const [newComment, setNewComment] = useState('')
 
-    const userRole = roles[0]?.role
+    const userRole = primaryRole || roles[0]?.role
     const canManageTickets = ['regional_admin', 'regional_hr', 'property_manager', 'department_head', 'staff'].includes(userRole || '')
 
     if (isLoading) {

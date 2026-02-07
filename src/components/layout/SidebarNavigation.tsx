@@ -23,8 +23,41 @@ import {
   ChevronDown,
   LogOut,
   Globe,
-  Building
+  Building,
+  User,
+  Settings,
+  Bell,
+  ChevronsUpDown,
+  Sparkles
 } from 'lucide-react'
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub as DropdownSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog as AlertDialogRoot,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger as AlertDialogTriggerRoot,
+} from "@/components/ui/alert-dialog"
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { useTranslation } from 'react-i18next'
@@ -275,40 +308,150 @@ export function SidebarNavigation({
             )}
           </div>
 
-          {/* User Profile Summary */}
+          {/* User Profile Summary - Enhanced with Avatar & Quick Actions */}
           {!collapsed && (
-            <div className="px-4 py-5">
-              <div className="p-3 rounded-xl bg-hotel-navy-dark border border-hotel-navy-light">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "h-9 w-9 rounded-full flex items-center justify-center border-2 border-hotel-navy shadow-sm transition-colors",
-                    currentProperty?.id === 'all' ? "bg-hotel-navy text-hotel-gold border-hotel-gold/30" : "bg-hotel-gold text-hotel-navy"
-                  )}>
-                    {currentProperty?.id === 'all' ? (
-                      <Globe className="h-5 w-5" />
-                    ) : (
-                      <span className="font-bold text-sm">
-                        {profile?.full_name?.[0] || 'U'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate font-serif">
-                      {profile?.full_name || 'Guest User'}
-                    </p>
-                    <div className="flex flex-col">
-                      <p className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-medium truncate">
-                        {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
-                      </p>
-                      {currentProperty && (
-                        <p className="text-[9px] text-white/50 truncate italic mt-0.5">
-                          {currentProperty.name}
-                        </p>
-                      )}
+            <div className="px-4 py-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full relative h-auto py-3 px-3 rounded-xl bg-hotel-navy-dark/50 hover:bg-hotel-navy-light border border-white/5 hover:border-hotel-gold/20 shadow-sm transition-all duration-200 group flex items-center gap-3 justify-start"
+                  >
+                    <div className="relative">
+                      <Avatar className="h-10 w-10 border-2 border-hotel-gold/20 group-hover:border-hotel-gold transition-colors shadow-sm">
+                        <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
+                        <AvatarFallback className="bg-hotel-navy text-hotel-gold font-bold">
+                          {profile?.full_name
+                            ? profile.full_name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
+                            : 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
                     </div>
-                  </div>
-                </div>
-              </div>
+
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-semibold text-white truncate font-serif tracking-wide group-hover:text-hotel-gold transition-colors">
+                        {profile?.full_name || 'Guest User'}
+                      </p>
+                      <div className="flex flex-col gap-0.5">
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium truncate">
+                          {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
+                        </p>
+                        {currentProperty && (
+                          <div className="flex items-center gap-1 text-[9px] text-hotel-gold/80 italic truncate">
+                            {currentProperty.id === 'all' ? <Globe className="w-2.5 h-2.5" /> : <Building className="w-2.5 h-2.5" />}
+                            <span>{currentProperty.name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronsUpDown className="h-4 w-4 text-white/40 group-hover:text-white transition-colors" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[240px] bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-xl"
+                  align="start"
+                  side="right"
+                  sideOffset={8}
+                >
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none text-hotel-gold">{profile?.full_name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {profile?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuGroup>
+                    <DropdownSub>
+                      <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                          <span>Status</span>
+                        </div>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-2xl">
+                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
+                          <div className="w-2 h-2 rounded-full bg-green-500 me-2" />
+                          Online
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
+                          <div className="w-2 h-2 rounded-full bg-amber-500 me-2" />
+                          Away
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
+                          <div className="w-2 h-2 rounded-full bg-red-500 me-2" />
+                          Busy
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownSub>
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
+                      onSelect={() => navigate('/profile')}
+                    >
+                      <User className="mr-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
+                      <span>{t('nav.my_profile', 'My Profile')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
+                      onSelect={() => navigate('/settings')}
+                    >
+                      <Settings className="mr-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
+                      <span>{t('nav.settings', 'Settings')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
+                      onSelect={() => navigate('/notifications')}
+                    >
+                      <Bell className="mr-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
+                      <span>{t('notifications', 'Notifications')}</span>
+                      <Badge className="ml-auto h-4 px-1 bg-hotel-gold text-hotel-navy text-[10px]">New</Badge>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
+                      onSelect={() => navigate('/training/certificates')}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4 text-hotel-gold" />
+                      <span>{t('my_awards', 'My Awards')}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <AlertDialogRoot>
+                    <AlertDialogTriggerRoot asChild>
+                      <DropdownMenuItem
+                        className="focus:bg-red-900/30 focus:text-red-400 text-red-400 cursor-pointer"
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>{t('nav.logout', 'Sign out')}</span>
+                      </DropdownMenuItem>
+                    </AlertDialogTriggerRoot>
+                    <AlertDialogContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-hotel-gold font-serif">Confirm Sign Out</AlertDialogTitle>
+                        <AlertDialogDescription className="text-white/70">
+                          Are you sure you want to sign out of PRIME Connect? You will need to log back in to access your dashboard.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleSignOut}
+                          className="bg-red-600 text-white hover:bg-red-700 border-none"
+                        >
+                          Sign Out
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialogRoot>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
 

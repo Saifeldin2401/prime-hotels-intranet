@@ -180,6 +180,7 @@ export function useTask(taskId: string) {
             author:profiles(id, full_name, avatar_url)
           )
         `)
+        .eq('is_deleted', false)
         .eq('id', taskId)
         .single()
 

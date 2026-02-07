@@ -411,6 +411,7 @@
             "period_end": "Period End",
             "payment_date": "Payment Date",
             "currency": "Currency",
+            "currency_placeholder": "SAR",
             "basic_salary": "Basic Salary",
             "gross_salary": "Gross Salary",
             "deductions": "Deductions",

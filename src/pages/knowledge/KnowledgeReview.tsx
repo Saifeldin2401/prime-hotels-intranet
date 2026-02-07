@@ -84,35 +84,56 @@ export default function KnowledgeReview() {
 
     // Fetch articles for review - default to PENDING_REVIEW
     const { data: pendingArticles, isLoading } = useQuery({
-        queryKey: ['knowledge-review-queue', statusFilter, userDepts?.[0]?.id, primaryRole],
+        queryKey: ['knowledge-review-queue', statusFilter, user?.id, primaryRole, userDepts?.[0]?.id],
         queryFn: async () => {
-            let query = supabase
-                .from('documents')
-                .select(`
-                    *,
-                    author:created_by(id, full_name),
-                    department:departments(id, name)
-                `)
-                .eq('is_deleted', false)
-                .order('updated_at', { ascending: false })
+            if (!user?.id) return []
 
-            // Role-based filtering: Department heads only see their own department's pending items
+            let query = supabase
+                .from('document_approvals')
+                .select(`
+                    id,
+                    status,
+                    document:documents(
+                        *,
+                        author:profiles!documents_created_by_fkey(id, full_name),
+                        department:departments(id, name)
+                    )
+                `)
+                .eq('approver_id', user.id)
+                .eq('document.is_deleted', false)
+                .order('created_at', { ascending: false })
+
+            // Role-based filtering: Department heads only see their own department's items
             if (primaryRole === 'department_head' && userDepts?.[0]?.id) {
-                query = query.eq('department_id', userDepts[0].id)
+                query = query.eq('document.department_id', userDepts[0].id)
             }
 
             if (statusFilter !== 'all') {
-                query = query.eq('status', statusFilter)
+                query = query.eq('document.status', statusFilter)
             } else {
-                query = query.in('status', ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'PUBLISHED', 'REJECTED'])
+                query = query.in('document.status', ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'PUBLISHED', 'REJECTED'])
+            }
+
+            if (statusFilter === 'PENDING_REVIEW') {
+                query = query.eq('status', 'pending')
             }
 
             const { data, error } = await query.limit(50)
             if (error) throw error
 
-            return data as KnowledgeArticle[]
+            const seen = new Set<string>()
+            const documents = (data || [])
+                .map((row: any) => row.document)
+                .filter(Boolean)
+                .filter((doc: any) => {
+                    if (seen.has(doc.id)) return false
+                    seen.add(doc.id)
+                    return true
+                })
+
+            return documents as KnowledgeArticle[]
         },
-        enabled: !!profile
+        enabled: !!profile && !!user?.id
     })
 
     // Review action mutation
@@ -145,18 +166,32 @@ export default function KnowledgeReview() {
 
             if (updateError) throw updateError
 
-            // Save review record to document_approvals
-            const approvalRecord: any = {
-                document_id: selectedArticle.id,
-                approver_id: user.id,
+            const approvalUpdate: any = {
                 status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'pending',
                 feedback: reviewComment.trim() || null,
                 approved_at: action === 'approve' ? new Date().toISOString() : null,
+                rejected_at: action === 'reject' ? new Date().toISOString() : null,
+                updated_at: new Date().toISOString()
             }
 
-            const { error: approvalError } = await supabase
+            const { data: updatedRows, error: approvalError } = await supabase
                 .from('document_approvals')
-                .insert(approvalRecord)
+                .update(approvalUpdate)
+                .eq('document_id', selectedArticle.id)
+                .eq('approver_id', user.id)
+                .select('id')
+
+            if (!approvalError && (!updatedRows || updatedRows.length === 0)) {
+                const approvalInsert = {
+                    document_id: selectedArticle.id,
+                    approver_id: user.id,
+                    status: approvalUpdate.status,
+                    feedback: approvalUpdate.feedback,
+                    approved_at: approvalUpdate.approved_at,
+                    rejected_at: approvalUpdate.rejected_at
+                }
+                await supabase.from('document_approvals').insert(approvalInsert)
+            }
 
             if (approvalError) {
                 console.error('Failed to save approval record:', approvalError)
@@ -166,9 +201,9 @@ export default function KnowledgeReview() {
             // Notify the document author about the review outcome
             if (selectedArticle.created_by && selectedArticle.created_by !== user.id) {
                 const actionConfig = {
-                    approve: { type: 'document_approved', emoji: '✅', text: 'approved and published', titleSuffix: 'Published' },
-                    reject: { type: 'document_rejected', emoji: '❌', text: 'rejected', titleSuffix: 'Rejected' },
-                    changes: { type: 'document_changes_requested', emoji: '📝', text: 'returned with requested changes', titleSuffix: 'Needs Changes' }
+                    approve: { type: 'document_approved', text: 'approved and published', titleSuffix: 'Published' },
+                    reject: { type: 'document_rejected', text: 'rejected', titleSuffix: 'Rejected' },
+                    changes: { type: 'document_changes_requested', text: 'returned with requested changes', titleSuffix: 'Needs Changes' }
                 }
                 const config = actionConfig[action]
 
@@ -179,7 +214,7 @@ export default function KnowledgeReview() {
                 await createNotification({
                     userId: selectedArticle.created_by,
                     type: config.type,
-                    title: `${config.emoji} Document ${config.titleSuffix}`,
+                    title: `Document ${config.titleSuffix}`,
                     message: `Your document "${selectedArticle.title}" has been ${config.text}${reviewComment.trim() ? `. Feedback: "${reviewComment.trim()}"` : '.'}`,
                     link: targetLink,
                     metadata: {

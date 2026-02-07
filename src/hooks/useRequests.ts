@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { escapeSearchQuery } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
 
 export type RequestStatus =
   | 'draft'
@@ -16,24 +18,15 @@ export type RequestStepStatus = 'waiting' | 'pending' | 'approved' | 'rejected' 
 export type RequestEventType =
   | 'created'
   | 'submitted'
-  | 'status_changed'
   | 'approved'
   | 'rejected'
+  | 'returned'
   | 'forwarded'
+  | 'comment_added'
   | 'returned_for_correction'
   | 'closed'
-  | 'comment_added'
   | 'attachment_added'
-
-export interface RequestProfileLite {
-  id: string
-  full_name: string | null
-  email: string
-  phone?: string | null
-  job_title?: string | null
-  hire_date?: string | null
-  reporting_to?: string | null
-}
+  | 'status_changed'
 
 export interface RequestRow {
   id: string
@@ -46,28 +39,61 @@ export interface RequestRow {
   status: RequestStatus
   submitted_at: string | null
   closed_at: string | null
-  metadata: Record<string, unknown>
+  metadata: any
   created_at: string
   updated_at: string
-
-  requester?: RequestProfileLite
-  supervisor?: RequestProfileLite | null
-  current_assignee?: RequestProfileLite | null
+  property_id: string | null
+  requester?: {
+    id: string
+    full_name: string
+    email: string
+    phone: string | null
+    job_title: string | null
+    hire_date: string | null
+    reporting_to: string | null
+    department_id?: string
+    property_id?: string
+  }
+  supervisor?: {
+    id: string
+    full_name: string
+    email: string
+    phone: string | null
+    job_title: string | null
+  }
+  current_assignee?: {
+    id: string
+    full_name: string
+    email: string
+    phone: string | null
+    job_title: string | null
+  }
+  property?: {
+    id: string
+    name: string
+  }
 }
 
 export interface RequestStepRow {
   id: string
   request_id: string
   step_order: number
+  step_name: string
   assignee_id: string | null
-  assignee_role: string | null
   status: RequestStepStatus
   acted_at: string | null
+  completed_at: string | null
+  metadata: any
   comment: string | null
   created_by: string | null
   created_at: string
-
-  assignee?: RequestProfileLite | null
+  assignee?: {
+    id: string
+    full_name: string
+    email: string
+    phone: string | null
+    job_title: string | null
+  }
 }
 
 export interface RequestCommentRow {
@@ -77,30 +103,38 @@ export interface RequestCommentRow {
   comment: string
   visibility: 'all' | 'internal'
   created_at: string
-
-  author?: RequestProfileLite | null
+  author?: {
+    id: string
+    full_name: string
+    email: string
+    phone: string | null
+    job_title: string | null
+  }
 }
 
 export interface RequestEventRow {
   id: string
   request_id: string
-  actor_id: string | null
   event_type: RequestEventType
-  payload: Record<string, unknown>
+  actor_id: string | null
+  payload: any
   created_at: string
-
-  actor?: RequestProfileLite | null
+  actor?: {
+    id: string
+    full_name: string
+    email: string
+  }
 }
 
 export interface RequestAttachmentRow {
   id: string
   request_id: string
-  uploaded_by: string | null
-  storage_bucket: string
+  uploader_id: string
+  file_name: string
+  file_path?: string // Keeping for backward compat if needed, but adding storage_path
   storage_path: string
-  file_name: string | null
-  file_type: string | null
-  file_size: number | null
+  file_type: string
+  file_size: number
   created_at: string
 }
 
@@ -116,9 +150,10 @@ export function useRequest(requestId?: string) {
         .select(
           `
           *,
-          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to),
+          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to, department_id, property_id),
           supervisor:profiles!requests_supervisor_id_fkey(id, full_name, email, phone, job_title),
-          current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email, phone, job_title)
+          current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email, phone, job_title),
+          property:properties(id, name)
         `.trim()
         )
         .eq('id', requestId)
@@ -234,7 +269,7 @@ export function useRequestAction() {
     }) => {
       const { requestId, action, comment, forwardTo, visibility } = params
 
-      const { error } = await supabase.rpc('request_apply_action', {
+      const { data, error } = await supabase.rpc('request_apply_action', {
         p_request_id: requestId,
         p_action: action === 'add_comment' ? 'add_comment' : action,
         p_comment: comment ?? null,
@@ -243,6 +278,11 @@ export function useRequestAction() {
       })
 
       if (error) throw error
+
+      const result = Array.isArray(data) ? data[0] : data
+      if (result && result.success === false) {
+        throw new Error(result.message || 'Request action failed')
+      }
     },
     onSuccess: async (_data, variables) => {
       await Promise.all([
@@ -259,9 +299,6 @@ export function useRequestAction() {
   })
 }
 
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
-
 /**
  * Smart Requests Inbox
  * 
@@ -270,6 +307,7 @@ import { useProperty } from '@/contexts/PropertyContext'
  * - Property Manager / Property HR: See requests for their assigned properties
  * - Department Head: See requests for their managed departments
  * - Staff: See only their own requests
+ * - DELEGATION: See requests for anyone who has delegated to the user
  */
 export function useRequestsInbox(filters?: {
   status?: RequestStatus[]
@@ -292,32 +330,57 @@ export function useRequestsInbox(filters?: {
     queryFn: async () => {
       if (!user?.id) return []
 
+      // 1. Fetch active delegations for this user
+      const { data: delegations } = await supabase
+        .from('temporary_approvers')
+        .select('delegator_id')
+        .eq('delegate_id', user.id)
+        .eq('status', 'active')
+        .lte('start_at', new Date().toISOString())
+        .gte('end_at', new Date().toISOString())
+
+      const delegatorIds = delegations?.map(d => d.delegator_id) || []
+      const idList = [user.id, ...delegatorIds]
+
+      // 2. Build the main query
       let query = supabase
         .from('requests')
         .select(
           `
           *,
-          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to),
+          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to, department_id, property_id),
           supervisor:profiles!requests_supervisor_id_fkey(id, full_name, email, phone, job_title),
-          current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email, phone, job_title)
+          current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email, phone, job_title),
+          property:properties(id, name)
         `.trim()
         )
         .order('created_at', { ascending: false })
 
       // SMART ROUTING based on role and context
-      // NOTE: The 'requests' table uses requester_id and current_assignee_id for routing
-      // It does NOT have property_id or department_id columns
       if (isRegionalAccess) {
-        // Regional admin/hr sees ALL requests - no additional filter needed
+        // Regional admin/hr sees ALL requests
       } else if (isPropertyLevel || isDepartmentHead) {
         // Property/Department level sees requests assigned to them OR where they are supervisor
-        query = query.or(`requester_id.eq.${user.id},current_assignee_id.eq.${user.id},supervisor_id.eq.${user.id}`)
+        // Include delegators in the ID search
+        const formattedIdList = idList.map(id => `'${id}'`).join(',')
+        query = query.or(`requester_id.in.(${formattedIdList}),current_assignee_id.in.(${formattedIdList}),supervisor_id.in.(${formattedIdList})`)
       } else {
-        // Regular staff: only see requests where they are the requester or assignee
-        query = query.or(`requester_id.eq.${user.id},current_assignee_id.eq.${user.id}`)
+        // Regular staff: only see requests where they (or their delegators) are requester or assignee
+        const formattedIdList = idList.map(id => `'${id}'`).join(',')
+        query = query.or(`requester_id.in.(${formattedIdList}),current_assignee_id.in.(${formattedIdList})`)
       }
 
-      // Apply additional filters
+      // 3. Strict Property Scoping (Global Filter)
+      if (currentProperty && currentProperty.id !== 'all') {
+        query = query.eq('property_id', currentProperty.id)
+      } else if (!isRegionalAccess) {
+        const propIds = properties?.map(p => p.id) || []
+        if (propIds.length > 0) {
+          query = query.in('property_id', propIds)
+        }
+      }
+
+      // 4. Apply additional filters
       if (filters?.status && filters.status.length > 0) {
         query = query.in('status', filters.status)
       }
@@ -344,4 +407,3 @@ export function useRequestsInbox(filters?: {
     },
   })
 }
-

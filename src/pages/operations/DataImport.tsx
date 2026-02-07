@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+﻿import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import {
@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import i18n from "@/i18n/i18n"
 
 // ========== TYPES ==========
 interface ValidationError {
@@ -136,23 +137,50 @@ function parseCSV(text: string): string[][] {
 
 function calculateQualityScore(records: Record<string, string>[]): { score: number, issues: string[], fieldConfidence: Record<string, number> } {
     const issues: string[] = []; const fieldConfidence: Record<string, number> = {}; let totalScore = 100
-    if (records.length === 0) return { score: 0, issues: ['No records found'], fieldConfidence: {} }
+    if (records.length === 0) {
+        return {
+            score: 0,
+            issues: [i18n.t('operations:data_import.validation.no_records', { defaultValue: 'No records found' })],
+            fieldConfidence: {}
+        }
+    }
     const firstRecord = records[0]
     const requiredFields = ['business_date', 'rooms_sold']
     requiredFields.forEach(field => {
         const hasField = firstRecord[field] && String(firstRecord[field]).trim() !== ''
         fieldConfidence[field] = hasField ? 100 : 0
-        if (!hasField) { issues.push(`Missing required field: ${field}`); totalScore -= 20 }
+        if (!hasField) {
+            issues.push(i18n.t('operations:data_import.validation.missing_required', {
+                defaultValue: 'Missing required field: {{field}}',
+                field
+            }))
+            totalScore -= 20
+        }
     })
     const optionalFields = ['adr', 'room_revenue', 'fb_revenue', 'occupancy']
     optionalFields.forEach(field => {
         const hasField = firstRecord[field] && String(firstRecord[field]).trim() !== ''
         fieldConfidence[field] = hasField ? 100 : 50
-        if (!hasField) { issues.push(`Optional field missing: ${field}`); totalScore -= 5 }
+        if (!hasField) {
+            issues.push(i18n.t('operations:data_import.validation.optional_missing', {
+                defaultValue: 'Optional field missing: {{field}}',
+                field
+            }))
+            totalScore -= 5
+        }
     })
-    if (firstRecord.rooms_sold && isNaN(parseInt(String(firstRecord.rooms_sold)))) { issues.push('Rooms sold is not a valid number'); totalScore -= 15; fieldConfidence['rooms_sold'] = 30 }
-    if (firstRecord.adr && isNaN(parseFloat(String(firstRecord.adr)))) { issues.push('ADR is not a valid number'); totalScore -= 10; fieldConfidence['adr'] = 30 }
-    if (firstRecord.business_date && !/^\d{4}-\d{2}-\d{2}$/.test(String(firstRecord.business_date))) { issues.push('Date format may need adjustment'); totalScore -= 10; fieldConfidence['business_date'] = 70 }
+    if (firstRecord.rooms_sold && isNaN(parseInt(String(firstRecord.rooms_sold)))) {
+        issues.push(i18n.t('operations:data_import.validation.rooms_sold_invalid', { defaultValue: 'Rooms sold is not a valid number' }))
+        totalScore -= 15; fieldConfidence['rooms_sold'] = 30
+    }
+    if (firstRecord.adr && isNaN(parseFloat(String(firstRecord.adr)))) {
+        issues.push(i18n.t('operations:data_import.validation.adr_invalid', { defaultValue: 'ADR is not a valid number' }))
+        totalScore -= 10; fieldConfidence['adr'] = 30
+    }
+    if (firstRecord.business_date && !/^\d{4}-\d{2}-\d{2}$/.test(String(firstRecord.business_date))) {
+        issues.push(i18n.t('operations:data_import.validation.date_format', { defaultValue: 'Date format may need adjustment' }))
+        totalScore -= 10; fieldConfidence['business_date'] = 70
+    }
     return { score: Math.max(0, totalScore), issues, fieldConfidence }
 }
 
@@ -290,14 +318,14 @@ export default function DataImport() {
         await downloadReport(
             {
                 reportType: 'import_summary',
-                title: 'Data Integration Sync Summary',
-                hotelName: currentProperty?.name || 'PRIME Hotels',
+                title: t('data_import.print.title', { defaultValue: 'Data Integration Sync Summary' }),
+                hotelName: currentProperty?.name || t('data_import.print.default_hotel', { defaultValue: 'PRIME Hotels' }),
                 period: {
                     start: new Date().toISOString(),
                     end: new Date().toISOString()
                 },
                 generatedBy: {
-                    name: profile?.full_name || user?.email || 'System',
+                    name: profile?.full_name || user?.email || t('data_import.print.system', { defaultValue: 'System' }),
                     role: profile?.job_title || undefined
                 },
                 orientation: 'portrait',
@@ -306,19 +334,19 @@ export default function DataImport() {
             {
                 kpis: [
                     {
-                        title: 'Sync Impact',
+                        title: t('data_import.print.kpis.title', { defaultValue: 'Sync Impact' }),
                         items: [
-                            { label: 'Files Processed', value: fileQueue.length },
-                            { label: 'Total Records Sync', value: sessionStats.totalRecords },
-                            { label: 'Avg Quality Score', value: sessionStats.avgQuality, unit: '%' },
-                            { label: 'Warnings Resolved', value: sessionStats.warnings },
+                            { label: t('data_import.print.kpis.files_processed', { defaultValue: 'Files Processed' }), value: fileQueue.length },
+                            { label: t('data_import.print.kpis.total_records', { defaultValue: 'Total Records Sync' }), value: sessionStats.totalRecords },
+                            { label: t('data_import.print.kpis.avg_quality', { defaultValue: 'Avg Quality Score' }), value: sessionStats.avgQuality, unit: '%' },
+                            { label: t('data_import.print.kpis.warnings', { defaultValue: 'Warnings Resolved' }), value: sessionStats.warnings },
                         ]
                     }
                 ],
                 tables: [
                     {
-                        title: 'File Pipeline Details',
-                        headers: ['Filename', 'Status', 'Records', 'Quality'],
+                        title: t('data_import.print.tables.pipeline', { defaultValue: 'File Pipeline Details' }),
+                        headers: [t('data_import.print.tables.headers.filename', { defaultValue: 'Filename' }), t('data_import.print.tables.headers.status', { defaultValue: 'Status' }), t('data_import.print.tables.headers.records', { defaultValue: 'Records' }), t('data_import.print.tables.headers.quality', { defaultValue: 'Quality' })],
                         rows: fileQueue.map(f => [
                             f.file.name,
                             f.status.toUpperCase(),
@@ -328,9 +356,9 @@ export default function DataImport() {
                     }
                 ],
                 notes: [
-                    'All data has been verified against corporate standards.',
-                    'Financial metrics updated across reporting dashboards.',
-                    'Market segments and occupancy trends synchronized.'
+                    t('data_import.print.notes.verified', { defaultValue: 'All data has been verified against corporate standards.' }),
+                    t('data_import.print.notes.financial', { defaultValue: 'Financial metrics updated across reporting dashboards.' }),
+                    t('data_import.print.notes.trends', { defaultValue: 'Market segments and occupancy trends synchronized.' })
                 ]
             },
             logo || undefined
@@ -348,6 +376,7 @@ export default function DataImport() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [importProgress, setImportProgress] = useState(0)
     const [currentFileIndex, setCurrentFileIndex] = useState(0)
+    const stageLabel = t(`data_import.stages.${currentStep}`, { defaultValue: currentStep })
 
     // Recent imports History
     const { data: recentImports } = useDataImportLogs(currentProperty?.id)
@@ -408,7 +437,11 @@ export default function DataImport() {
                         duplicateWarning: !!existing?.length
                     } as FileQueueItem : f))
                 } else {
-                    setFileQueue(prev => prev.map(f => f.id === item.id ? { ...f, status: 'error', error: 'No data extracted' } as FileQueueItem : f))
+                    setFileQueue(prev => prev.map(f => f.id === item.id ? {
+                        ...f,
+                        status: 'error',
+                        error: t('data_import.errors.no_data_extracted', { defaultValue: 'No data extracted' })
+                    } as FileQueueItem : f))
                 }
             } catch (err) {
                 setFileQueue(prev => prev.map(f => f.id === item.id ? { ...f, status: 'error', error: String(err) } as FileQueueItem : f))
@@ -508,13 +541,24 @@ export default function DataImport() {
                             completed_at: new Date().toISOString()
                         }).eq('id', importLogId)
                     }
-                    toast({ variant: 'destructive', title: 'Import Failed', description: `Error processing records for ${fileItem.file.name}` })
+                    toast({
+                        variant: 'destructive',
+                        title: t('data_import.toasts.import_failed', { defaultValue: 'Import Failed' }),
+                        description: t('data_import.toasts.import_failed_desc', { defaultValue: 'Error processing records for {{file}}', file: fileItem.file.name })
+                    })
                 }
             }
         }
         queryClient.invalidateQueries({ queryKey: ['daily-occupancy'] }); queryClient.invalidateQueries({ queryKey: ['daily-revenue'] }); queryClient.invalidateQueries({ queryKey: ['data-import-logs'] })
         setImportProgress(100)
-        setCurrentStep('complete'); toast({ title: '🎉 Import Complete', description: `${total} records synchronized successfully across properties` })
+        setCurrentStep('complete')
+        toast({
+            title: t('data_import.toasts.import_complete', { defaultValue: 'Import Complete' }),
+            description: t('data_import.toasts.import_complete_desc', {
+                defaultValue: '{{count}} records synchronized successfully across properties',
+                count: total
+            })
+        })
     }
 
     const updateRecord = (fileId: string, recordIndex: number, field: string, value: string) => {
@@ -555,10 +599,10 @@ export default function DataImport() {
     const handleDeleteLog = async (id: string) => {
         try {
             await deleteImportLog.mutateAsync(id)
-            toast({ title: 'Import Deleted', description: 'The import session has been removed.' })
+            toast({ title: t('data_import.toasts.import_deleted', { defaultValue: 'Import Deleted' }), description: t('data_import.toasts.import_deleted_desc', { defaultValue: 'The import session has been removed.' }) })
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : 'Check your permissions.'
-            toast({ variant: 'destructive', title: 'Delete Failed', description: errorMessage })
+            const errorMessage = err instanceof Error ? err.message : t('data_import.toasts.delete_failed_fallback', { defaultValue: 'Check your permissions.' })
+            toast({ variant: 'destructive', title: t('data_import.toasts.delete_failed', { defaultValue: 'Delete Failed' }), description: errorMessage })
         } finally {
             setLogToDelete(null)
         }
@@ -573,10 +617,10 @@ export default function DataImport() {
 
     const getFormatBadge = (format?: string) => {
         switch (format) {
-            case 'pms_daily': return <Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">PMS Daily</Badge>
-            case 'occupancy': return <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">Occupancy</Badge>
-            case 'revenue': return <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Revenue</Badge>
-            default: return <Badge variant="outline">Unknown</Badge>
+            case 'pms_daily': return <Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">{t('data_import.badges.pms_daily', { defaultValue: 'PMS Daily' })}</Badge>
+            case 'occupancy': return <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">{t('data_import.badges.occupancy', { defaultValue: 'Occupancy' })}</Badge>
+            case 'revenue': return <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none">{t('data_import.badges.revenue', { defaultValue: 'Revenue' })}</Badge>
+            default: return <Badge variant="outline">{t('data_import.badges.unknown', { defaultValue: 'Unknown' })}</Badge>
         }
     }
 
@@ -597,13 +641,20 @@ export default function DataImport() {
         const readyFiles = fileQueue.filter(f => f.status === 'success')
 
         if (readyFiles.length > 0) {
-            insights.push(`Analyzed ${readyFiles.length} reports for ${currentProperty?.name || 'this property'}.`)
+            insights.push(t('data_import.ai_insights.analyzed', {
+                defaultValue: 'Analyzed {{count}} reports for {{property}}.',
+                count: readyFiles.length,
+                property: currentProperty?.name || t('data_import.ai_insights.this_property', { defaultValue: 'this property' })
+            }))
 
             // 1. Data Integrity & Completeness
             const totalRecords = readyFiles.reduce((sum, f) => sum + (f.extractedData?.summary.totalRecords || 0), 0)
             const missingRev = readyFiles.filter(f => f.extractedData?.summary.totalRevenue === 0)
             if (missingRev.length > 0) {
-                insights.push(`⚠️ ${missingRev.length} files show zero revenue. Verify if this is correct or check column mappings.`)
+                insights.push(t('data_import.ai_insights.zero_revenue', {
+                    defaultValue: '{{count}} files show zero revenue. Verify if this is correct or check column mappings.',
+                    count: missingRev.length
+                }))
             }
 
             // 2. Occupancy Heuristics
@@ -612,7 +663,10 @@ export default function DataImport() {
                 return rec && parseFloat(String(rec.occupancy)) >= 95
             })
             if (highOcc.length > 0) {
-                insights.push(`🔥 High occupancy detected on ${highOcc.length} dates. AI suggests reviewing staffing levels for these periods.`)
+                insights.push(t('data_import.ai_insights.high_occupancy', {
+                    defaultValue: 'High occupancy detected on {{count}} dates. AI suggests reviewing staffing levels for these periods.',
+                    count: highOcc.length
+                }))
             }
 
             // 3. Date Continuity Check
@@ -624,9 +678,13 @@ export default function DataImport() {
                     if (dayDiff > 1) diffs.push(dayDiff)
                 }
                 if (diffs.length > 0) {
-                    insights.push(`📅 Notice: Gaps detected in report dates. Ensure you aren't missing daily reports for a continuous trend.`)
+                    insights.push(t('data_import.ai_insights.gaps_detected', {
+                        defaultValue: 'Gaps detected in report dates. Ensure you are not missing daily reports for a continuous trend.'
+                    }))
                 } else if (readyFiles.length > 1) {
-                    insights.push(`✅ Date continuity looks perfect. This batch provides a solid sequence for trend analysis.`)
+                    insights.push(t('data_import.ai_insights.continuity_ok', {
+                        defaultValue: 'Date continuity looks perfect. This batch provides a solid sequence for trend analysis.'
+                    }))
                 }
             }
 
@@ -635,29 +693,39 @@ export default function DataImport() {
             if (adrs.length > 1) {
                 const max = Math.max(...adrs); const min = Math.min(...adrs)
                 if (max > min * 1.5) {
-                    insights.push(`📈 Significant ADR variance detected (${min} to ${max}). AI confirms dynamic pricing is active.`)
+                    insights.push(t('data_import.ai_insights.adr_variance', {
+                        defaultValue: 'Significant ADR variance detected ({{min}} to {{max}}). AI confirms dynamic pricing is active.',
+                        min,
+                        max
+                    }))
                 }
             }
 
             // 5. PMS Specific Context
             const pmsDocs = readyFiles.filter(f => f.extractedData?.detectedFormat === 'pms_daily')
             if (pmsDocs.length > 0) {
-                insights.push(`🤖 PMS-Direct extraction is active. Data confidence is high (98%+) for ${pmsDocs.length} files.`)
+                insights.push(t('data_import.ai_insights.pms_direct', {
+                    defaultValue: 'PMS-Direct extraction is active. Data confidence is high (98%+) for {{count}} files.',
+                    count: pmsDocs.length
+                }))
             }
 
             // 6. Impact Prediction
             if (totalRecords > 0) {
-                insights.push(`✨ Importing this batch will update your Operations Dashboard for ${totalRecords} distinct business dates.`)
+                insights.push(t('data_import.ai_insights.import_impact', {
+                    defaultValue: 'Importing this batch will update your Operations Dashboard for {{count}} distinct business dates.',
+                    count: totalRecords
+                }))
             }
         } else {
-            insights.push("No valid data found to analyze. Please upload PMS reports to begin.")
+            insights.push(t('data_import.ai_insights.no_valid_data', { defaultValue: 'No valid data found to analyze. Please upload PMS reports to begin.' }))
         }
 
         setAIInsights(insights)
         setIsGeneratingAI(false)
         toast({
-            title: "🔮 Studio Intelligence Deep-Scan Complete",
-            description: `Generated ${insights.length} contextual insights for your data.`
+            title: t('data_import.ai_insights.scan_complete', { defaultValue: 'Studio Intelligence Deep-Scan Complete' }),
+            description: t('data_import.ai_insights.scan_complete_desc', { defaultValue: 'Generated {{count}} contextual insights for your data.', count: insights.length })
         })
     }
 
@@ -711,8 +779,12 @@ export default function DataImport() {
 
         setIsFixing(false)
         toast({
-            title: "🛠️ Studio Optimization Complete",
-            description: `Resolved ${resolvedConflicts} conflicts and optimized data in ${fixedFiles} files.`
+            title: t('data_import.toasts.optimization_complete', { defaultValue: 'Studio Optimization Complete' }),
+            description: t('data_import.toasts.optimization_complete_desc', {
+                defaultValue: 'Resolved {{conflicts}} conflicts and optimized data in {{files}} files.',
+                conflicts: resolvedConflicts,
+                files: fixedFiles
+            })
         })
     }
 
@@ -726,28 +798,30 @@ export default function DataImport() {
                             <div className="bg-primary/10 p-1.5 rounded-lg">
                                 <Zap className="h-5 w-5 text-primary" />
                             </div>
-                            <h1 className="text-2xl font-bold tracking-tight">Data Import Studio</h1>
+                            <h1 className="text-2xl font-bold tracking-tight">{t('data_import.title', { defaultValue: 'Data Import Studio' })}</h1>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                             <Building2 className="h-4 w-4" />
                             <span>{currentProperty?.name}</span>
                             <ChevronRight className="h-3 w-3" />
-                            <span className="capitalize">{currentStep} Stage</span>
+                            <span className="capitalize">
+                                {t('data_import.stage', { defaultValue: '{{stage}} Stage', stage: stageLabel })}
+                            </span>
                         </div>
                     </div>
 
                     {fileQueue.length > 0 && (
                         <div className="flex items-center gap-6 bg-slate-50 p-3 rounded-xl border">
                             <div className="text-center px-4 border-r">
-                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Queue</p>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">{t('data_import.metrics.queue', { defaultValue: 'Queue' })}</p>
                                 <p className="text-lg font-bold">{sessionStats.readyFiles}/{sessionStats.totalFiles}</p>
                             </div>
                             <div className="text-center px-4 border-r">
-                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Records</p>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">{t('data_import.metrics.records', { defaultValue: 'Records' })}</p>
                                 <p className="text-lg font-bold">{sessionStats.totalRecords}</p>
                             </div>
                             <div className="text-center px-4 border-r">
-                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Quality</p>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">{t('data_import.metrics.quality', { defaultValue: 'Quality' })}</p>
                                 <div className="flex items-center gap-1">
                                     <p className={cn("text-lg font-bold", sessionStats.avgQuality > 80 ? "text-green-600" : "text-yellow-600")}>
                                         {sessionStats.avgQuality}%
@@ -756,7 +830,7 @@ export default function DataImport() {
                                 </div>
                             </div>
                             <div className="text-center px-4">
-                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Warnings</p>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">{t('data_import.metrics.warnings', { defaultValue: 'Warnings' })}</p>
                                 <div className="flex items-center gap-1 justify-center">
                                     <p className={cn("text-lg font-bold", sessionStats.warnings > 0 ? "text-orange-500" : "text-slate-400")}>
                                         {sessionStats.warnings}
@@ -775,8 +849,10 @@ export default function DataImport() {
                     <Card className="shadow-sm overflow-hidden">
                         <CardHeader className="bg-slate-50/50 pb-4">
                             <CardTitle className="text-sm font-bold flex items-center justify-between">
-                                Workflow Pipeline
-                                <Badge variant="outline" className="font-mono text-[10px]">{currentStep.toUpperCase()}</Badge>
+                                {t('data_import.pipeline.title', { defaultValue: 'Workflow Pipeline' })}
+                                <Badge variant="outline" className="font-mono text-[10px]">
+                                    {t('data_import.pipeline.stage_badge', { defaultValue: '{{stage}}', stage: stageLabel })}
+                                </Badge>
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -787,7 +863,7 @@ export default function DataImport() {
                                     disabled={isProcessing || currentStep === 'import'}
                                 >
                                     <FileUp className="h-4 w-4" />
-                                    Add More Files
+                                    {t('data_import.pipeline.add_files', { defaultValue: 'Add More Files' })}
                                 </Button>
                                 <input id="file-input" type="file" accept=".csv,.xlsx,.xls" onChange={handleFileSelect} className="hidden" multiple />
 
@@ -799,7 +875,7 @@ export default function DataImport() {
                                         disabled={isProcessing}
                                     >
                                         <Trash2 className="h-4 w-4" />
-                                        Clear Session
+                                        {t('data_import.pipeline.clear_session', { defaultValue: 'Clear Session' })}
                                     </Button>
                                 )}
                             </div>
@@ -811,7 +887,7 @@ export default function DataImport() {
                                             <div className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <Layers className="h-6 w-6 opacity-20" />
                                             </div>
-                                            <p className="text-xs">No files in queue</p>
+                                            <p className="text-xs">{t('data_import.pipeline.empty_queue', { defaultValue: 'No files in queue' })}</p>
                                         </div>
                                     ) : (
                                         fileQueue.map((item, idx) => (
@@ -829,7 +905,11 @@ export default function DataImport() {
                                                         <p className="text-xs font-bold truncate mb-1">{item.file.name}</p>
                                                         <div className="flex items-center gap-1.5 flex-wrap">
                                                             {getFormatBadge(item.extractedData?.detectedFormat)}
-                                                            {item.duplicateWarning && <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[10px]">CONFLICT</Badge>}
+                                                            {item.duplicateWarning && (
+                                                                <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[10px]">
+                                                                    {t('data_import.pipeline.conflict_badge', { defaultValue: 'CONFLICT' })}
+                                                                </Badge>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="mt-1">
@@ -849,8 +929,10 @@ export default function DataImport() {
                     <Card className="bg-primary/5 border-primary/20">
                         <CardContent className="p-4 flex flex-col items-center text-center">
                             <Wand2 className="h-10 w-10 text-primary opacity-20 mb-3" />
-                            <h4 className="text-sm font-bold mb-1">AI Smart Actions</h4>
-                            <p className="text-[11px] text-muted-foreground mb-4">Let AI suggest fixes and improvements for your current batch.</p>
+                            <h4 className="text-sm font-bold mb-1">{t('data_import.ai_actions.title', { defaultValue: 'AI Smart Actions' })}</h4>
+                            <p className="text-[11px] text-muted-foreground mb-4">
+                                {t('data_import.ai_actions.description', { defaultValue: 'Let AI suggest fixes and improvements for your current batch.' })}
+                            </p>
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -863,7 +945,9 @@ export default function DataImport() {
                                 ) : (
                                     <Sparkles className="h-3 w-3 mr-2 text-primary group-hover:animate-pulse" />
                                 )}
-                                {isGeneratingAI ? "Analyzing..." : "Generate Insights"}
+                                {isGeneratingAI
+                                    ? t('data_import.ai_actions.analyzing', { defaultValue: 'Analyzing...' })
+                                    : t('data_import.ai_actions.generate', { defaultValue: 'Generate Insights' })}
                             </Button>
 
                             {/* AI Results Display */}
@@ -886,16 +970,20 @@ export default function DataImport() {
                                             <div className="flex items-center gap-2">
                                                 <AlertTriangle className="h-4 w-4 text-orange-600" />
                                                 <div className="flex-1">
-                                                    <p className="text-xs font-bold text-orange-800">Operational Warnings Found</p>
+                                                    <p className="text-xs font-bold text-orange-800">
+                                                        {t('data_import.warnings.title', { defaultValue: 'Operational Warnings Found' })}
+                                                    </p>
                                                     <div className="mt-1 space-y-1">
                                                         {fileQueue.some(f => f.duplicateWarning) && (
                                                             <div className="flex items-center gap-1 text-[10px] text-orange-700 font-medium">
-                                                                <Database className="h-3 w-3" /> Duplicate Date Matches detected in Database
+                                                                <Database className="h-3 w-3" />
+                                                                {t('data_import.warnings.duplicate_dates', { defaultValue: 'Duplicate date matches detected in database' })}
                                                             </div>
                                                         )}
                                                         {fileQueue.some(f => f.extractedData?.qualityIssues.length) && (
                                                             <div className="flex items-center gap-1 text-[10px] text-orange-700 font-medium">
-                                                                <FileX className="h-3 w-3" /> Missing or invalid required fields found
+                                                                <FileX className="h-3 w-3" />
+                                                                {t('data_import.warnings.missing_required', { defaultValue: 'Missing or invalid required fields found' })}
                                                             </div>
                                                         )}
                                                     </div>
@@ -913,7 +1001,9 @@ export default function DataImport() {
                                                 ) : (
                                                     <RefreshCw className="h-3 w-3 mr-2" />
                                                 )}
-                                                {isFixing ? 'Fixing...' : 'Auto-Fix All Warnings'}
+                                                {isFixing
+                                                    ? t('data_import.warnings.fixing', { defaultValue: 'Fixing...' })
+                                                    : t('data_import.warnings.auto_fix', { defaultValue: 'Auto-Fix All Warnings' })}
                                             </Button>
                                         </div>
                                     </Alert>
@@ -937,22 +1027,22 @@ export default function DataImport() {
                             <div className="bg-primary/10 p-6 rounded-full mb-6 group-hover:scale-110 transition-transform">
                                 <Upload className="h-12 w-12 text-primary" />
                             </div>
-                            <h3 className="text-2xl font-bold mb-2">Drop PMS Reports Here</h3>
+                            <h3 className="text-2xl font-bold mb-2">{t('data_import.upload.title', { defaultValue: 'Drop PMS Reports Here' })}</h3>
                             <p className="text-muted-foreground mb-8 max-w-sm text-center">
-                                Bulk upload Excel or CSV exports from your PMS. AI will automatically organize your data.
+                                {t('data_import.upload.description', { defaultValue: 'Bulk upload Excel or CSV exports from your PMS. AI will automatically organize your data.' })}
                             </p>
                             <div className="flex items-center gap-4">
-                                <Button size="lg" className="rounded-2xl px-8 shadow-lg">Browse Local Files</Button>
+                                <Button size="lg" className="rounded-2xl px-8 shadow-lg">{t('data_import.upload.browse', { defaultValue: 'Browse Local Files' })}</Button>
                             </div>
                             <div className="mt-12 flex gap-8">
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground opacity-60">
-                                    <FileSpreadsheet className="h-4 w-4" />支持 XLSX / CSV
+                                    <FileSpreadsheet className="h-4 w-4" />{t('data_import.upload.supported_formats', { defaultValue: 'Supports XLSX / CSV' })}
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground opacity-60">
-                                    <Sparkles className="h-4 w-4" />Auto Map Columns
+                                    <Sparkles className="h-4 w-4" />{t('data_import.upload.auto_map', { defaultValue: 'Auto Map Columns' })}
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground opacity-60">
-                                    <Database className="h-4 w-4" />Batch Import
+                                    <Database className="h-4 w-4" />{t('data_import.upload.batch_import', { defaultValue: 'Batch Import' })}
                                 </div>
                             </div>
                         </div>
@@ -973,15 +1063,19 @@ export default function DataImport() {
                                                 <CardDescription className="flex items-center gap-2">
                                                     {getFormatBadge(selectedFile.extractedData?.detectedFormat)}
                                                     <span>•</span>
-                                                    <span>{selectedFile.extractedData?.summary.totalRecords} Rows Extracted</span>
+                                                    <span>{t('data_import.review.rows_extracted', { defaultValue: '{{count}} Rows Extracted', count: selectedFile.extractedData?.summary.totalRecords || 0 })}</span>
                                                 </CardDescription>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-[200px]">
                                                 <TabsList className="grid grid-cols-2 h-9">
-                                                    <TabsTrigger value="table" className="text-xs">Table View</TabsTrigger>
-                                                    <TabsTrigger value="json" className="text-xs">Raw JSON</TabsTrigger>
+                                                    <TabsTrigger value="table" className="text-xs">
+                                                        {t('data_import.review.table_view', { defaultValue: 'Table View' })}
+                                                    </TabsTrigger>
+                                                    <TabsTrigger value="json" className="text-xs">
+                                                        {t('data_import.review.raw_json', { defaultValue: 'Raw JSON' })}
+                                                    </TabsTrigger>
                                                 </TabsList>
                                             </Tabs>
                                             <Button variant="outline" size="icon" onClick={() => setSelectedFileId(null)}>
@@ -995,14 +1089,16 @@ export default function DataImport() {
                                                 <ScrollArea className="h-[450px]">
                                                     <Table>
                                                         <TableHeader>
-                                                            <TableRow className="bg-muted/30">
-                                                                <TableHead className="w-[40px]"></TableHead>
-                                                                <TableHead className="w-[180px]">Property</TableHead>
-                                                                {Object.keys(selectedFile.extractedData.records[0] || {})
-                                                                    .filter(k => k !== 'detected_property_id' && k !== 'detected_confidence' && k !== 'id' && k !== 'property_id')
-                                                                    .map(key => (
-                                                                        <TableHead key={key} className="capitalize">{key.replace(/_/g, ' ')}</TableHead>
-                                                                    ))}
+                                                                <TableRow className="bg-muted/30">
+                                                                    <TableHead className="w-[40px]"></TableHead>
+                                                                    <TableHead className="w-[180px]">
+                                                                        {t('data_import.review.property', { defaultValue: 'Property' })}
+                                                                    </TableHead>
+                                                                    {Object.keys(selectedFile.extractedData.records[0] || {})
+                                                                        .filter(k => k !== 'detected_property_id' && k !== 'detected_confidence' && k !== 'id' && k !== 'property_id')
+                                                                        .map(key => (
+                                                                            <TableHead key={key} className="capitalize">{key.replace(/_/g, ' ')}</TableHead>
+                                                                        ))}
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -1025,7 +1121,9 @@ export default function DataImport() {
                                                                                 value={record.property_id || record.detected_property_id || ''}
                                                                                 onChange={(e) => updateRecord(selectedFile.id, idx, 'property_id', e.target.value)}
                                                                             >
-                                                                                <option value="">Select Hotel...</option>
+                                                                                <option value="">
+                                                                                    {t('data_import.review.select_hotel', { defaultValue: 'Select Hotel...' })}
+                                                                                </option>
                                                                                 {properties.map(p => (
                                                                                     <option key={p.id} value={p.id}>{p.name}</option>
                                                                                 ))}
@@ -1033,7 +1131,10 @@ export default function DataImport() {
                                                                             {record.detected_confidence < 90 && record.detected_property_id && (
                                                                                 <span className="text-[10px] text-orange-500 flex items-center gap-1 font-medium">
                                                                                     <AlertTriangle className="w-3 h-3" />
-                                                                                    {record.detected_confidence}% Match
+                                                                                    {t('data_import.review.match_confidence', {
+                                                                                        defaultValue: '{{percent}}% Match',
+                                                                                        percent: record.detected_confidence
+                                                                                    })}
                                                                                 </span>
                                                                             )}
                                                                         </div>
@@ -1064,7 +1165,9 @@ export default function DataImport() {
                                             )
                                         ) : (
                                             <div className="p-12 text-center text-muted-foreground">
-                                                {selectedFile.status === 'processing' ? 'Thinking...' : 'No data could be extracted from this file.'}
+                                                {selectedFile.status === 'processing'
+                                                    ? t('data_import.review.thinking', { defaultValue: 'Thinking...' })
+                                                    : t('data_import.review.no_data', { defaultValue: 'No data could be extracted from this file.' })}
                                             </div>
                                         )}
                                     </CardContent>
@@ -1077,15 +1180,23 @@ export default function DataImport() {
                                             ))}
                                         </div>
                                         <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => removeFile(fileQueue.indexOf(selectedFile))}>
-                                            <Trash2 className="h-3 w-3 mr-2" /> Delete File
+                                            <Trash2 className="h-3 w-3 mr-2" />
+                                            {t('data_import.review.delete_file', { defaultValue: 'Delete File' })}
                                         </Button>
                                     </div>
                                 </Card>
                             ) : (
                                 <div className="h-[500px] border-2 border-dashed rounded-3xl flex flex-col items-center justify-center bg-white text-muted-foreground">
                                     <Search className="h-12 w-12 opacity-10 mb-4" />
-                                    <p className="text-lg">Select a file from the Pipeline to inspect and edit data</p>
-                                    <p className="text-xs mt-1">Found {sessionStats.readyFiles} valid files in batch</p>
+                                    <p className="text-lg">
+                                        {t('data_import.review.select_file_prompt', { defaultValue: 'Select a file from the Pipeline to inspect and edit data' })}
+                                    </p>
+                                    <p className="text-xs mt-1">
+                                        {t('data_import.review.valid_files', {
+                                            defaultValue: 'Found {{count}} valid files in batch',
+                                            count: sessionStats.readyFiles
+                                        })}
+                                    </p>
                                 </div>
                             )}
 
@@ -1093,29 +1204,48 @@ export default function DataImport() {
                             <div className="bg-white p-6 rounded-3xl border shadow-xl flex items-center justify-between">
                                 <div className="flex items-center gap-8">
                                     <div>
-                                        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Session Summary</p>
+                                        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">
+                                            {t('data_import.summary.title', { defaultValue: 'Session Summary' })}
+                                        </p>
                                         <div className="flex items-center gap-4">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full bg-green-500" />
-                                                <span className="text-sm font-bold">{sessionStats.readyFiles} Files Ready</span>
+                                                <span className="text-sm font-bold">
+                                                    {t('data_import.summary.files_ready', {
+                                                        defaultValue: '{{count}} Files Ready',
+                                                        count: sessionStats.readyFiles
+                                                    })}
+                                                </span>
                                             </div>
                                             {sessionStats.warnings > 0 && (
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-orange-500" />
-                                                    <span className="text-sm font-bold">{sessionStats.warnings} Warnings</span>
+                                                    <span className="text-sm font-bold">
+                                                        {t('data_import.summary.warnings', {
+                                                            defaultValue: '{{count}} Warnings',
+                                                            count: sessionStats.warnings
+                                                        })}
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                     <div className="h-8 w-px bg-slate-200" />
                                     <div>
-                                        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Total Impact</p>
-                                        <p className="text-sm font-bold">{sessionStats.totalRecords} database records</p>
+                                        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">
+                                            {t('data_import.summary.total_impact', { defaultValue: 'Total Impact' })}
+                                        </p>
+                                        <p className="text-sm font-bold">
+                                            {t('data_import.summary.database_records', {
+                                                defaultValue: '{{count}} database records',
+                                                count: sessionStats.totalRecords
+                                            })}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button variant="outline" size="lg" className="rounded-2xl px-6" onClick={() => setCurrentStep('upload')}>
-                                        Cancel Phase
+                                        {t('data_import.actions.cancel_phase', { defaultValue: 'Cancel Phase' })}
                                     </Button>
                                     <Button
                                         size="lg"
@@ -1124,7 +1254,10 @@ export default function DataImport() {
                                         disabled={sessionStats.readyFiles === 0}
                                     >
                                         <Zap className="h-4 w-4 mr-2" />
-                                        Commit Process ({sessionStats.totalRecords})
+                                        {t('data_import.actions.commit_process', {
+                                            defaultValue: 'Commit Process ({{count}})',
+                                            count: sessionStats.totalRecords
+                                        })}
                                     </Button>
                                 </div>
                             </div>
@@ -1137,15 +1270,17 @@ export default function DataImport() {
                                 <Activity className="h-24 w-24 text-primary animate-pulse opacity-20" />
                                 <Database className="h-12 w-12 text-primary absolute inset-0 m-auto mt-6" />
                             </div>
-                            <h3 className="text-2xl font-bold mb-4">Writing to Database Cloud...</h3>
+                            <h3 className="text-2xl font-bold mb-4">
+                                {t('data_import.import.title', { defaultValue: 'Writing to Database Cloud...' })}
+                            </h3>
                             <div className="w-full max-w-md space-y-3">
                                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                    <span>Syncing Records</span>
+                                    <span>{t('data_import.import.syncing_records', { defaultValue: 'Syncing Records' })}</span>
                                     <span>{importProgress}%</span>
                                 </div>
                                 <Progress value={importProgress} className="h-4 rounded-full" />
                                 <p className="text-center text-xs text-muted-foreground italic">
-                                    Verifying data integrity and updating trends...
+                                    {t('data_import.import.progress_note', { defaultValue: 'Verifying data integrity and updating trends...' })}
                                 </p>
                             </div>
                         </Card>
@@ -1156,21 +1291,27 @@ export default function DataImport() {
                             <div className="bg-green-100 p-6 rounded-full mb-8">
                                 <CheckCircle className="h-16 w-16 text-green-600" />
                             </div>
-                            <h3 className="text-3xl font-bold mb-2">Import Successful!</h3>
+                            <h3 className="text-3xl font-bold mb-2">
+                                {t('data_import.complete.title', { defaultValue: 'Import Successful!' })}
+                            </h3>
                             <p className="text-muted-foreground mb-12 text-center max-w-sm">
-                                {sessionStats.totalFiles} files were successfully processed. Your Operations Dashboard is now up-to-date.
+                                {t('data_import.complete.summary', {
+                                    defaultValue: '{{count}} files were successfully processed. Your Operations Dashboard is now up-to-date.',
+                                    count: sessionStats.totalFiles
+                                })}
                             </p>
                             <div className="flex gap-4">
                                 <Button variant="outline" size="lg" className="rounded-2xl px-8 border-slate-200" onClick={handlePrintSummary}>
                                     <Printer className="h-4 w-4 mr-2" />
-                                    Print Sync Summary
+                                    {t('data_import.complete.print_summary', { defaultValue: 'Print Sync Summary' })}
                                 </Button>
                                 <Button variant="outline" size="lg" className="rounded-2xl px-8" onClick={resetImport}>
-                                    New Session
+                                    {t('data_import.complete.new_session', { defaultValue: 'New Session' })}
                                 </Button>
                                 <Button asChild size="lg" className="rounded-2xl px-8 shadow-lg shadow-primary/20">
                                     <a href="/operations">
-                                        <TrendingUp className="h-4 w-4 mr-2" /> View Dashboard
+                                        <TrendingUp className="h-4 w-4 mr-2" />
+                                        {t('data_import.complete.view_dashboard', { defaultValue: 'View Dashboard' })}
                                     </a>
                                 </Button>
                             </div>
@@ -1188,8 +1329,10 @@ export default function DataImport() {
                 </SheetTrigger>
                 <SheetContent className="bg-white dark:bg-slate-950">
                     <SheetHeader>
-                        <SheetTitle>Session History</SheetTitle>
-                        <SheetDescription>Recent data import activity for this property.</SheetDescription>
+                        <SheetTitle>{t('data_import.history.title', { defaultValue: 'Session History' })}</SheetTitle>
+                        <SheetDescription>
+                            {t('data_import.history.description', { defaultValue: 'Recent data import activity for this property.' })}
+                        </SheetDescription>
                     </SheetHeader>
                     <div className="mt-8 space-y-4">
                         {recentImports?.map((log: any) => (
@@ -1209,14 +1352,21 @@ export default function DataImport() {
                                     <Badge variant="outline" className="text-[10px]">{log.status.toUpperCase()}</Badge>
                                     <span className="text-[10px] text-muted-foreground pr-6">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
                                 </div>
-                                <p className="text-sm font-bold truncate">{log.file_name || 'Manual Batch'}</p>
+                                <p className="text-sm font-bold truncate">
+                                    {log.file_name || t('data_import.history.manual_batch', { defaultValue: 'Manual Batch' })}
+                                </p>
                                 <div className="flex items-center justify-between mt-3">
                                     <div className="flex items-center gap-1.5">
                                         <Database className="h-3 w-3 text-muted-foreground" />
-                                        <span className="text-xs font-bold">{log.records_processed || 0} Records</span>
+                                        <span className="text-xs font-bold">
+                                            {t('data_import.history.records_label', {
+                                                defaultValue: '{{count}} Records',
+                                                count: log.records_processed || 0
+                                            })}
+                                        </span>
                                     </div>
                                     <Button variant="ghost" size="sm" className="h-7 text-[10px] opacity-0 group-hover:opacity-100">
-                                        REDOWNLOAD
+                                        {t('data_import.history.redownload', { defaultValue: 'REDOWNLOAD' })}
                                     </Button>
                                 </div>
                             </div>
@@ -1231,15 +1381,17 @@ export default function DataImport() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-600">
                             <AlertCircle className="h-5 w-5" />
-                            Confirm Data Deletion
+                            {t('data_import.delete.title', { defaultValue: 'Confirm Data Deletion' })}
                         </DialogTitle>
                         <DialogDescription className="py-2">
-                            This action will permanently remove this import log and **delete all associated occupancy and revenue records** from the database. This cannot be undone.
+                            {t('data_import.delete.description', {
+                                defaultValue: 'This action will permanently remove this import log and delete all associated occupancy and revenue records from the database. This cannot be undone.'
+                            })}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="gap-2 sm:gap-0">
                         <Button variant="outline" onClick={() => setLogToDelete(null)} disabled={deleteImportLog.isPending}>
-                            Cancel
+                            {t('common:common.cancel', { defaultValue: 'Cancel' })}
                         </Button>
                         <Button
                             variant="destructive"
@@ -1252,7 +1404,7 @@ export default function DataImport() {
                             ) : (
                                 <Trash2 className="h-4 w-4 mr-2" />
                             )}
-                            Delete Permanently
+                            {t('data_import.delete.delete_permanently', { defaultValue: 'Delete Permanently' })}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

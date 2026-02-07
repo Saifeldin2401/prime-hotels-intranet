@@ -298,26 +298,30 @@ export function useDocumentVersions(documentId: string) {
 }
 
 export function usePendingApprovals() {
-  const { user, primaryRole } = useAuth()
+  const { user } = useAuth()
 
   return useQuery({
-    queryKey: ['pending-approvals', primaryRole],
-    enabled: !!user && !!primaryRole,
+    queryKey: ['pending-approvals', user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
-      // Find approvals where the role matches the user's primary role (simplification)
-      // In a real app we'd check all user roles
       const { data, error } = await supabase
         .from('document_approvals')
         .select(`
           *,
-          document:documents(*)
+          document:documents(
+            *,
+            profiles:created_by(full_name)
+          )
         `)
         .eq('status', 'pending')
-        .eq('approver_role', primaryRole)
+        .eq('approver_id', user?.id)
+        .eq('is_active', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as (DocumentApproval & { document: Document })[]
+      return data as (DocumentApproval & {
+        document: Document & { profiles?: { full_name: string } }
+      })[]
     },
   })
 }

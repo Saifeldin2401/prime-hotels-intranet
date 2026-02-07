@@ -64,7 +64,7 @@ const categoryIcons: Record<string, any> = {
 }
 
 export default function MaintenanceDashboard() {
-  const { roles } = useAuth()
+  const { roles, primaryRole } = useAuth()
   const { t, i18n } = useTranslation('maintenance')
   const isRTL = i18n.dir() === 'rtl'
   const navigate = useNavigate()
@@ -78,7 +78,7 @@ export default function MaintenanceDashboard() {
   const updateMutation = useUpdateMaintenanceTicket()
   const completeMutation = useCompleteMaintenanceTicket()
 
-  const userRole = roles[0]?.role
+  const userRole = primaryRole || roles[0]?.role
   const canManageTickets = ['regional_admin', 'regional_hr', 'property_manager', 'department_head'].includes(userRole || '')
 
   const filteredTickets = (tickets: MaintenanceTicket[]) => {

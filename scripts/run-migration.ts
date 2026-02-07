@@ -11,7 +11,12 @@
 import { createClient } from '@supabase/supabase-js'
 
 // You need to set these environment variables or replace them directly
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co'
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+
+if (!supabaseUrl) {
+  console.error('Error: Missing VITE_SUPABASE_URL environment variable.')
+  process.exit(1)
+}
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'YOUR_SERVICE_ROLE_KEY_HERE'
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -102,7 +107,8 @@ CREATE POLICY "Users can delete own employee-documents files" ON storage.objects
     // You need to use the Supabase Dashboard SQL Editor or REST API
     console.log('\n⚠️  IMPORTANT: Supabase JS client cannot run DDL statements.')
     console.log('\nPlease run this SQL in your Supabase Dashboard:')
-    console.log('1. Go to: https://supabase.com/dashboard/project/htsvjfrofcpkfzvjpwvx/sql')
+    console.log(`1. Go to: https://supabase.com/dashboard/project/${supabaseUrl.split('//')[1]?.split('.')[0]}/sql`)
+    console.log('   Or use your Supabase project dashboard')
     console.log('2. Click "New Query"')
     console.log('3. Copy the SQL from: supabase/migrations/20250211000000_create_conversations.sql')
     console.log('4. Paste and run it\n')

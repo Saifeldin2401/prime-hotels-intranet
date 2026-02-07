@@ -60,5 +60,32 @@
     "request_no_label": "طلب رقم {{no}}",
     "assigned_to": "مفوض إلى: {{name}}",
     "unassigned": "غير مفوض",
-    "view_details": "عرض التفاصيل"
+    "view_details": "عرض التفاصيل",
+    "delegate": {
+        "title": "تفويض الاعتماد",
+        "description": "نقل هذا الاعتماد إلى شخص مخوّل آخر.",
+        "select_person": "تفويض إلى",
+        "select_person_placeholder": "اختر شخصًا",
+        "no_delegates": "لا يوجد أشخاص متاحون للتفويض.",
+        "expiry": "ينتهي التفويض بعد",
+        "expiry_options": {
+            "1": "يوم واحد",
+            "3": "3 أيام",
+            "7": "7 أيام",
+            "14": "14 يومًا",
+            "30": "30 يومًا"
+        },
+        "expires_on": "ينتهي في {{date}}",
+        "reason": "السبب (اختياري)",
+        "reason_placeholder": "مثال: خارج المكتب، إجازة...",
+        "button": "تفويض",
+        "confirm": "تفويض",
+        "success_title": "تم التفويض",
+        "success_message": "تم تفويض الاعتماد بنجاح.",
+        "error_title": "فشل التفويض",
+        "errors": {
+            "select_delegate": "يرجى اختيار شخص للتفويض.",
+            "not_configured": "تعذر حفظ التفويض. يرجى التواصل مع الدعم."
+        }
+    }
 }

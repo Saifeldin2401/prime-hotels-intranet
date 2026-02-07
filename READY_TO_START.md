@@ -2,8 +2,8 @@
 
 ## 🎉 Your Admin User is Set Up!
 
-- **Email**: admin@prime.com
-- **Password**: Reem1977
+- **Email**: Your Admin Email
+- **Password**: Your Admin Password
 - **Role**: Regional Admin ✅
 - **Property**: Prime Hotel - Main ✅
 
@@ -17,18 +17,16 @@ RUN_ME.bat
 
 ### Option 2: PowerShell
 ```powershell
-cd prime-hotels
-.\start-dev.ps1
+    # Check .env first
+    cd prime-hotels
+   .\start-dev.ps1
 ```
 
 ### Option 3: Manual
 ```powershell
 cd prime-hotels
 
-# Set environment variables
-$env:VITE_SUPABASE_URL = "https://htsvjfrofcpkfzvjpwvx.supabase.co"
-$env:VITE_SUPABASE_ANON_KEY = "sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj"
-
+# Ensure .env is set
 # Start dev server
 npm run dev
 ```
@@ -37,9 +35,7 @@ npm run dev
 
 Once the server starts:
 1. Open: **http://localhost:5173**
-2. Login with:
-   - Email: `admin@prime.com`
-   - Password: `Reem1977`
+2. Login with your Admin credentials
 
 ## ✨ What You Can Do
 

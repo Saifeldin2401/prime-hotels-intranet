@@ -144,9 +144,35 @@ export function usePendingLeaveRequests() {
     queryKey: ['leave-requests', 'pending', user?.id, currentProperty?.id],
     queryFn: async () => {
       if (!user?.id) return []
+      if (!canApprove) return []
 
-      // Let RLS handle access control - just filter by status and property if selected
-      let query = supabase
+      // 1) Workflow-based pending approvals assigned to the current user
+      const { data: workflowRows, error: workflowError } = await supabase
+        .from('requests')
+        .select(`
+          id,
+          status,
+          created_at,
+          leave_request:leave_requests!workflow_request_id(
+            *,
+            requester:profiles!requester_id(id, full_name, email),
+            property:properties(id, name),
+            department:departments(id, name)
+          )
+        `)
+        .eq('entity_type', 'leave_request')
+        .in('status', ['pending_supervisor_approval', 'pending_hr_review'])
+        .eq('current_assignee_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (workflowError) throw workflowError
+
+      const workflowItems = (workflowRows || [])
+        .map((row: any) => row.leave_request)
+        .filter(Boolean)
+
+      // 2) Legacy pending leave requests without workflow linkage (fallback)
+      let legacyQuery = supabase
         .from('leave_requests')
         .select(`
           *,
@@ -157,17 +183,45 @@ export function usePendingLeaveRequests() {
         `)
         .eq('status', 'pending')
         .eq('is_deleted', false)
+        .is('workflow_request_id', null)
         .order('created_at', { ascending: false })
 
-      // Only apply property filter if a specific property is selected
-      if (currentProperty && currentProperty.id !== 'all') {
-        query = query.eq('property_id', currentProperty.id)
+      if (isRegionalAccess) {
+        if (currentProperty && currentProperty.id !== 'all') {
+          legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
+        }
+      } else if (isPropertyLevel) {
+        if (currentProperty && currentProperty.id !== 'all') {
+          legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
+        } else if (properties && properties.length > 0) {
+          legacyQuery = legacyQuery.in('property_id', properties.map(p => p.id))
+        } else {
+          legacyQuery = legacyQuery.eq('requester_id', user.id)
+        }
+      } else if (isDepartmentHead) {
+        if (departments && departments.length > 0) {
+          legacyQuery = legacyQuery.in('department_id', departments.map(d => d.id))
+        } else {
+          legacyQuery = legacyQuery.eq('requester_id', user.id)
+        }
+        if (currentProperty && currentProperty.id !== 'all') {
+          legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
+        }
+      } else {
+        legacyQuery = legacyQuery.eq('requester_id', user.id)
       }
 
-      const { data, error } = await query
+      const { data: legacyRows, error: legacyError } = await legacyQuery
+      if (legacyError) throw legacyError
 
-      if (error) throw error
-      return data as LeaveRequest[]
+      const combined = [...workflowItems, ...(legacyRows || [])]
+      const seen = new Set<string>()
+      return combined.filter((item: any) => {
+        if (!item?.id) return false
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        return true
+      }) as LeaveRequest[]
     },
     enabled: !!user?.id
   })
@@ -245,6 +299,31 @@ export function useApproveLeaveRequest() {
     mutationFn: async ({ requestId }: { requestId: string }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
+      const { data: workflowLink, error: workflowError } = await supabase
+        .from('leave_requests')
+        .select('id, workflow_request_id')
+        .eq('id', requestId)
+        .single()
+
+      if (workflowError) throw workflowError
+
+      if (workflowLink?.workflow_request_id) {
+        const { data, error } = await supabase.rpc('request_apply_action', {
+          p_request_id: workflowLink.workflow_request_id,
+          p_action: 'approve',
+          p_comment: null,
+          p_forward_to: null,
+          p_visibility: 'all'
+        })
+
+        if (error) throw error
+        const result = Array.isArray(data) ? data[0] : data
+        if (result && result.success === false) {
+          throw new Error(result.message || 'Approval failed')
+        }
+        return { id: requestId } as LeaveRequest
+      }
+
       const notificationPayload = {
         type: 'leave_request',
         title: 'Leave Request Approved',
@@ -289,6 +368,31 @@ export function useRejectLeaveRequest() {
 
       if (!reason || reason.trim().length === 0) {
         throw new Error('Rejection reason is required')
+      }
+
+      const { data: workflowLink, error: workflowError } = await supabase
+        .from('leave_requests')
+        .select('id, workflow_request_id')
+        .eq('id', requestId)
+        .single()
+
+      if (workflowError) throw workflowError
+
+      if (workflowLink?.workflow_request_id) {
+        const { data, error } = await supabase.rpc('request_apply_action', {
+          p_request_id: workflowLink.workflow_request_id,
+          p_action: 'reject',
+          p_comment: reason,
+          p_forward_to: null,
+          p_visibility: 'all'
+        })
+
+        if (error) throw error
+        const result = Array.isArray(data) ? data[0] : data
+        if (result && result.success === false) {
+          throw new Error(result.message || 'Rejection failed')
+        }
+        return { id: requestId, rejectionReason: reason } as LeaveRequest & { rejectionReason: string }
       }
 
       const notificationPayload = {

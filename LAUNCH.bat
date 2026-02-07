@@ -21,10 +21,22 @@ echo.
 
 REM Set environment variables
 echo [2/4] Setting environment variables...
-set "VITE_SUPABASE_URL=https://htsvjfrofcpkfzvjpwvx.supabase.co"
-set "VITE_SUPABASE_ANON_KEY=sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj"
-set "VITE_RESEND_API_KEY="
-echo    Done
+if exist ".env" (
+    echo    Using .env file configuration
+    echo    Done
+) else (
+    echo    ERROR: No .env file found!
+    echo    Please create a .env file with your Supabase credentials.
+    echo    See README.md for setup instructions.
+    echo.
+    echo    Required variables:
+    echo      VITE_SUPABASE_URL=your_supabase_project_url
+    echo      VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+    echo      VITE_RESEND_API_KEY=your_resend_api_key
+    echo.
+    pause
+    exit /b 1
+)
 echo.
 
 REM Verify node_modules
@@ -47,8 +59,8 @@ echo.
 echo   URL: http://localhost:5173
 echo.
 echo   Login:
-echo     Email: admin@prime.com
-echo     Password: Reem1977
+echo     Use the Admin credentials you created
+echo     or see README.md for default credentials
 echo.
 echo ========================================
 echo   Wait for "Local: http://localhost:5173"

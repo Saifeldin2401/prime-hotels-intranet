@@ -71,10 +71,10 @@ export const announcementSchema = z.object({
 export const maintenanceTicketSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   description: z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description too long'),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']),
-  category: z.enum(['plumbing', 'electrical', 'hvac', 'general', 'internet', 'security']),
-  location: z.string().min(1, 'Location is required').max(100, 'Location too long'),
-  property_id: z.string().uuid('Invalid property ID'),
+  priority: z.enum(['low', 'medium', 'high', 'urgent', 'critical']),
+  category: z.enum(['plumbing', 'electrical', 'hvac', 'appliance', 'structural', 'cosmetic', 'safety', 'other']),
+  location: z.string().max(200, 'Location too long').optional(),
+  property_id: z.string().uuid('Invalid property ID').optional(),
   assigned_to: z.string().uuid('Invalid assignee ID').optional(),
   estimated_cost: z.number().min(0, 'Invalid cost').optional()
 })

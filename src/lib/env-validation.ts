@@ -78,7 +78,7 @@ export const securityHeaders = {
     "style-src 'self' 'unsafe-inline'", // Needed for Tailwind
     "img-src 'self' data: https:",
     "font-src 'self'",
-    "connect-src 'self' https://api.supabase.co https://htsvjfrofcpkfzvjpwvx.supabase.co",
+    `connect-src 'self' https://api.supabase.co ${import.meta.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co'}`,
     "frame-ancestors 'none'"
   ].join('; '),
   'X-Content-Type-Options': 'nosniff',

@@ -229,6 +229,47 @@
         "title": "التقارير والتحليلات",
         "description": "نظرة عامة على نشاط النظام والمهام والصيانة والتواصل.",
         "export_overview": "تصدير نظرة عامة",
+        "report_builder": {
+            "title": "منشئ التقارير",
+            "placeholders": {
+                "name": "اسم التقرير",
+                "description": "الوصف",
+                "type": "النوع",
+                "scope": "النطاق",
+                "schedule": "الجدولة"
+            },
+            "types": {
+                "operations": "العمليات",
+                "hr": "الموارد البشرية",
+                "training": "التدريب",
+                "audits": "التدقيق"
+            },
+            "scopes": {
+                "global": "عام",
+                "property": "المنشأة",
+                "department": "القسم"
+            },
+            "schedule": {
+                "none": "بدون جدولة",
+                "hourly": "كل ساعة",
+                "daily": "يوميًا",
+                "weekly": "أسبوعيًا",
+                "monthly": "شهريًا"
+            },
+            "actions": {
+                "create": "إنشاء تقرير",
+                "run": "تشغيل",
+                "enable": "تفعيل",
+                "disable": "تعطيل",
+                "delete": "حذف"
+            },
+            "inactive": "غير نشط",
+            "no_description": "بدون وصف",
+            "next_run": "التشغيل التالي:",
+            "recent_runs": "آخر العمليات",
+            "no_runs": "لا توجد عمليات تشغيل بعد.",
+            "run_label": "تشغيل {{id}}"
+        },
         "cards": {
             "total_tasks": "إجمالي المهام",
             "completed": "مكتمل",

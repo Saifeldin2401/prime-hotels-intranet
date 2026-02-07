@@ -11,11 +11,11 @@ const buttonVariants = cva(
       variant: {
         default: "bg-[#0B1C3E] text-white hover:bg-[#1a3a6e] shadow-sm",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-red-700 shadow-sm",
+          "bg-red-600 text-white hover:bg-red-700 shadow-sm",
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm", // bg-background is solid white in light mode
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary-foreground hover:text-secondary shadow-sm",
+          "bg-[#C5A065] text-[#0B1C3E] hover:bg-[#b08d55] shadow-sm",
         ghost: "bg-muted text-secondary-foreground hover:bg-muted shadow-sm", // Changed from transparent to solid muted
         link: "text-primary underline-offset-4 hover:underline",
         gold: "bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm",

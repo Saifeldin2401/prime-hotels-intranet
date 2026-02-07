@@ -787,6 +787,16 @@ export const ROUTES: RouteConfig[] = [
         order: 6
     },
     {
+        path: '/admin/routing-health',
+        title: 'routing_health',
+        icon: Activity,
+        description: 'Monitor and repair request routing issues',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
+        group: 'administration',
+        order: 7
+    },
+
+    {
         path: '/admin/onboarding/templates',
         title: 'onboarding_templates',
         icon: ListTodo,

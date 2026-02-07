@@ -37,7 +37,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showMobileSearch, setShowMobileSearch] = useState(false)
 
@@ -92,8 +91,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           <Header
             sidebarCollapsed={sidebarCollapsed}
             setSidebarCollapsed={setSidebarCollapsed}
-            userMenuOpen={userMenuOpen}
-            setUserMenuOpen={setUserMenuOpen}
             handleLogout={handleLogout}
           />
         </div>

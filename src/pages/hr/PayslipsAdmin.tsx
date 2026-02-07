@@ -26,7 +26,7 @@ const defaultForm = {
   period_start: '',
   period_end: '',
   payment_date: '',
-  currency: 'USD',
+  currency: 'SAR',
   basic_salary: '',
   gross_salary: '',
   deductions: '',
@@ -371,7 +371,7 @@ export default function PayslipsAdmin() {
               <Input
                 value={form.currency}
                 onChange={(event) => setForm(prev => ({ ...prev, currency: event.target.value }))}
-                placeholder="USD"
+                placeholder={t('hr_admin.fields.currency_placeholder', { defaultValue: 'SAR' })}
               />
             </div>
 

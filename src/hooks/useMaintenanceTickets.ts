@@ -42,11 +42,12 @@ export function useMyMaintenanceTickets() {
 }
 
 export function useAssignedMaintenanceTickets() {
-  const { user, roles, properties } = useAuth()
+  const { user, roles, properties, primaryRole, departments } = useAuth()
   const { currentProperty } = useProperty()
 
   return useQuery({
-    queryKey: ['maintenance-tickets', 'assigned', user?.id, properties, currentProperty?.id],
+    queryKey: ['maintenance-tickets', 'assigned', user?.id, properties, currentProperty?.id, departments],
+    enabled: !!user?.id,
     queryFn: async () => {
       if (!user?.id) return []
 
@@ -59,7 +60,7 @@ export function useAssignedMaintenanceTickets() {
           department:departments(id, name),
           assigned_to:profiles!assigned_to_id(id, full_name, email)
         `)
-        .eq('is_deleted', false) // Exclude soft-deleted tickets
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       // Filter by current property if selected (and not 'all')
@@ -68,25 +69,33 @@ export function useAssignedMaintenanceTickets() {
       }
 
       // Filter based on user role and access
-      const userRole = roles[0]?.role || 'staff'
+      const userRole = primaryRole || roles[0]?.role || 'staff'
 
-      if (userRole === 'department_head' || userRole === 'property_manager') {
-        // Staff can see tickets assigned to them or for their properties
-        if (properties && properties.length > 0) {
-          const propertyIds = properties.map(p => p.id).join(',')
-          // Use proper OR syntax ensuring valid SQL generation
-          // Note: The property_id filter above acts as an AND, so we are refining the scope further
-          query = query.or(`assigned_to_id.eq.${user.id},property_id.in.(${propertyIds})`)
+      if (userRole === 'department_head') {
+        // Department heads see tickets for their department(s) within their property
+        const deptIds = departments?.map(d => d.id) || []
+        const propIds = properties?.map(p => p.id) || []
+
+        if (deptIds.length > 0) {
+          query = query.in('department_id', deptIds)
+        } else if (propIds.length > 0) {
+          query = query.in('property_id', propIds)
         } else {
-          // If no properties, only see assigned to self
+          query = query.eq('assigned_to_id', user.id)
+        }
+      } else if (userRole === 'property_manager' || userRole === 'property_hr') {
+        // Property level roles see all tickets for their assigned property/properties
+        const propIds = properties?.map(p => p.id) || []
+        if (propIds.length > 0) {
+          query = query.in('property_id', propIds)
+        } else {
           query = query.eq('assigned_to_id', user.id)
         }
       } else if (userRole === 'regional_admin' || userRole === 'regional_hr') {
-        // Regional staff can see all tickets (filtered by property above if selected)
-        // No additional filter needed
+        // Regional staff - already handled by currentProperty filter if active
       } else {
-        // Regular staff can only see their own reported tickets (though this hook is typically for assigned, we fallback to reported)
-        query = query.eq('reported_by_id', user.id)
+        // Staff see only assigned to them
+        query = query.eq('assigned_to_id', user.id)
       }
 
       const { data, error } = await query
@@ -97,16 +106,15 @@ export function useAssignedMaintenanceTickets() {
       }
       return data as MaintenanceTicket[]
     },
-    enabled: !!user?.id
   })
 }
-
 
 export function useMaintenanceTicket(ticketId: string) {
   const { user } = useAuth()
 
   return useQuery({
     queryKey: ['maintenance-tickets', 'single', ticketId],
+    enabled: !!ticketId && !!user?.id,
     queryFn: async () => {
       if (!ticketId || !user?.id) return null
 
@@ -133,7 +141,6 @@ export function useMaintenanceTicket(ticketId: string) {
       if (error) throw error
       return data as MaintenanceTicket
     },
-    enabled: !!ticketId && !!user?.id
   })
 }
 

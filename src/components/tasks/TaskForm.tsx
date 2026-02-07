@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
+import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useCreateTask, useUpdateTask } from '@/hooks/useTasks'
@@ -16,19 +16,36 @@ import { Label } from '@/components/ui/label'
 import { Loader2, Building2, MapPin, User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { taskSchema, type TaskFormData } from '@/lib/validationSchemas'
 
-const taskSchema = z.object({
-    title: z.string().min(1, 'Title is required').max(200),
-    description: z.string().optional(),
-    status: z.enum(['todo', 'in_progress', 'review', 'completed', 'cancelled']),
-    priority: z.enum(['low', 'medium', 'high', 'urgent']),
+
+// Adapt the schema for form use (dates as strings, optional fields)
+// Define form schema explicitly since we can't extend a refined schema
+const taskFormSchema = z.object({
+    title: z.string().min(3, 'Title must be at least 3 characters').max(200, 'Title is too long'),
+    description: z.string().max(2000, 'Description is too long').optional(),
+    status: z.enum(['todo', 'in_progress', 'review', 'completed', 'cancelled']).default('todo'),
+    priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
     assigned_to_id: z.string().optional().nullable(),
-    due_date: z.string().optional().nullable(),
-    estimated_hours: z.string().optional(),
+    property_id: z.string().optional().nullable(),
     department_id: z.string().optional().nullable(),
+    tags: z.array(z.string()).optional(),
+    // Form-specific transformations
+    due_date: z.union([z.string(), z.date()]).optional().transform((val) => {
+        if (!val) return undefined;
+        return new Date(val);
+    }),
+    start_date: z.union([z.string(), z.date()]).optional().transform((val) => {
+        if (!val) return undefined;
+        return new Date(val);
+    }),
+    estimated_hours: z.union([z.string(), z.number()]).optional().transform((val) => {
+        if (!val) return undefined;
+        const num = parseFloat(val.toString());
+        return isNaN(num) ? undefined : num;
+    })
 })
-
-type TaskFormData = z.infer<typeof taskSchema>
 
 interface TaskFormProps {
     task?: Task
@@ -159,20 +176,25 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
         enabled: true
     })
 
-    const form = useForm<TaskFormData>({
-        resolver: zodResolver(taskSchema),
+    // Use any here for defaultValues to bypass strict type checking against the schema
+    // because the schema transforms strings to dates, but input values are strings.
+    const form = useForm<any>({
+        resolver: zodResolver(taskFormSchema),
         defaultValues: task ? {
             title: task.title,
             description: task.description || '',
-            status: task.status as any,
-            priority: task.priority as any,
+            status: task.status,
+            priority: task.priority,
             assigned_to_id: task.assigned_to_id,
-            due_date: task.due_date?.split('T')[0],
+            due_date: task.due_date ? task.due_date.split('T')[0] : '',
             estimated_hours: task.estimated_hours?.toString() || '',
             department_id: task.department_id || null,
         } : {
-            status: 'todo' as any,
-            priority: 'medium' as any,
+            status: 'todo',
+            priority: 'medium',
+            description: '',
+            title: '',
+            estimated_hours: ''
         },
     })
 
@@ -182,7 +204,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
         try {
             const submitData = {
                 ...values,
-                estimated_hours: values.estimated_hours ? parseFloat(values.estimated_hours) : null,
+                estimated_hours: values.estimated_hours || null,
                 department_id: selectedDepartmentId === 'none' ? null : selectedDepartmentId,
                 assigned_to_id: selectedAssigneeId === 'none' ? null : selectedAssigneeId,
             }
@@ -201,9 +223,8 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             }
             onSuccess?.()
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : t('messages.save_failed', 'Failed to save task')
-            console.error('Error saving task:', error)
-            toast.error(errorMessage)
+            const errorDetails = getUserFriendlyError(error)
+            toast.error(errorDetails.message)
         }
     }
 

@@ -160,6 +160,7 @@ export function useSidebarCounts() {
             let tasksQuery = supabase
                 .from('tasks')
                 .select('id', { count: 'exact', head: true })
+                .eq('is_deleted', false)
                 .neq('status', 'completed')
                 .neq('status', 'cancelled')
                 .lt('due_date', new Date().toISOString())

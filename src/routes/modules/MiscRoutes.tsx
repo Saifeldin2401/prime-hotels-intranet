@@ -21,6 +21,7 @@ const MaintenanceDashboard = lazy(() => import('@/pages/maintenance/MaintenanceD
 const SubmitTicket = lazy(() => import('@/pages/maintenance/SubmitTicket'))
 const MaintenanceTicketDetail = lazy(() => import('@/pages/maintenance/MaintenanceTicketDetail'))
 const OnboardingDashboard = lazy(() => import('@/pages/onboarding/OnboardingDashboard'))
+const Notifications = lazy(() => import('@/pages/notifications/Notifications'))
 const JobPostings = lazy(() => import('@/pages/jobs/JobPostings'))
 const CreateJobPosting = lazy(() => import('@/pages/jobs/CreateJobPosting'))
 const JobPostingDetail = lazy(() => import('@/pages/jobs/JobPostingDetail'))
@@ -216,6 +217,18 @@ export const MiscRoutes = () => (
                     <AppLayout>
                         <MotionWrapper>
                             <OnboardingDashboard />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/notifications"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <Notifications />
                         </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>

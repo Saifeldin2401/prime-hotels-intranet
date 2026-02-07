@@ -96,13 +96,13 @@ export default function RequestDetail() {
         .select(
           `
           *,
-          requester:profiles!leave_requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to),
+          requester:profiles!requester_id(id, full_name, email, phone, job_title, hire_date, reporting_to),
           property:properties(id, name),
           department:departments(id, name)
         `.trim()
         )
         .eq('id', request.entity_id)
-        .single()
+        .maybeSingle()
 
       if (error) throw error
       return data as unknown as LeaveRequest

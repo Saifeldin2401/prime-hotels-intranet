@@ -22,6 +22,8 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
     const { t } = useTranslation()
     const [category, setCategory] = useState<string>('other')
     const [title, setTitle] = useState('')
+    const [expiryDate, setExpiryDate] = useState('')
+    const [documentNumber, setDocumentNumber] = useState('')
     const [isDragging, setIsDragging] = useState(false)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -66,7 +68,9 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
             await uploadDocument.mutateAsync({
                 file,
                 category,
-                title: title || file.name
+                title: title || file.name,
+                expiry_date: expiryDate,
+                document_number: documentNumber
             })
 
             toast({
@@ -78,6 +82,8 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
             setFile(null)
             setTitle('')
             setCategory('other')
+            setExpiryDate('')
+            setDocumentNumber('')
             onOpenChange(false)
         } catch (error) {
             console.error('Upload failed:', error)
@@ -117,12 +123,30 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="cv">CV / Resume</SelectItem>
-                                <SelectItem value="certificate">Certificate</SelectItem>
-                                <SelectItem value="contract">Contract</SelectItem>
                                 <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="documentNumber">{t('profile.employee_documents.document_number')}</Label>
+                            <Input
+                                id="documentNumber"
+                                placeholder="e.g. A1234567"
+                                value={documentNumber}
+                                onChange={(e) => setDocumentNumber(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="expiryDate">{t('profile.employee_documents.expiry_date')}</Label>
+                            <Input
+                                id="expiryDate"
+                                type="date"
+                                value={expiryDate}
+                                onChange={(e) => setExpiryDate(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2">

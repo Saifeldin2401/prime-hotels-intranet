@@ -39,6 +39,7 @@ import { useTranslation } from 'react-i18next'
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { KnowledgeBaseSidebar, SmartModuleWizard } from '@/components/training'
 import { ModuleSkillsEditor } from '@/components/training/ModuleSkillsEditor'
+import { getUserFriendlyError } from '@/lib/errorMessages'
 import { BuilderHeader } from '@/components/training/builder/BuilderHeader'
 import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
 import { BuilderCanvas } from '@/components/training/builder/BuilderCanvas'
@@ -423,10 +424,10 @@ export default function TrainingBuilder() {
         description: type === 'image' ? t('imageUploaded') : t('documentUploaded')
       })
     } catch (error) {
-      console.error('Upload failed:', error)
+      const errorDetails = getUserFriendlyError(error)
       toast({
         title: t('uploadFailed'),
-        description: t('tryAgain'),
+        description: errorDetails.message,
         variant: 'destructive'
       })
     } finally {
@@ -530,8 +531,12 @@ export default function TrainingBuilder() {
             .from('training_content_blocks')
             .insert(allBlocks)
           if (blocksError) {
-            console.error('Error saving blocks:', blocksError)
-            alert(`Error saving blocks: ${blocksError.message}`)
+            const errorDetails = getUserFriendlyError(blocksError)
+            toast({
+              title: t('error'),
+              description: errorDetails.message,
+              variant: 'destructive'
+            })
             throw blocksError
           }
         }
@@ -542,15 +547,28 @@ export default function TrainingBuilder() {
           .select('*', { count: 'exact', head: true })
           .eq('training_module_id', currentModuleId)
 
-        if (verifyError) console.error('Verification failed:', verifyError)
-        console.log('VERIFIED SAVED BLOCKS COUNT:', count)
-        alert(t('moduleSaved') + ` (${count} items saved)`)
+        if (verifyError) {
+          const errorDetails = getUserFriendlyError(verifyError)
+          toast({
+            title: t('verificationFailed'),
+            description: errorDetails.message,
+            variant: 'destructive'
+          })
+        }
+        toast({
+          title: t('moduleSaved'),
+          description: t('moduleSavedDescription', { count: count || 0, defaultValue: `${count || 0} items saved` })
+        })
       } else {
         alert(t('moduleSaved'))
       }
     } catch (error: unknown) {
-      console.error('Error saving training:', error)
-      alert(t('error'))
+      const errorDetails = getUserFriendlyError(error)
+      toast({
+        title: t('error'),
+        description: errorDetails.message,
+        variant: 'destructive'
+      })
     }
   }
 
@@ -686,11 +704,8 @@ export default function TrainingBuilder() {
 
   const handleSave = async () => {
     try {
-      console.log('Starting save process...')
       // First save the module
       const savedModuleId = await saveModuleMutation.mutateAsync()
-
-      console.log('Module saved:', savedModuleId)
 
       // Then save content blocks using the NEW ID
       await saveContentBlocksMutation.mutateAsync(savedModuleId)
@@ -698,11 +713,17 @@ export default function TrainingBuilder() {
       // Then save questions using the NEW ID
       await saveQuestionsMutation.mutateAsync(savedModuleId)
 
-      alert(t('moduleSaved'))
+      toast({
+        title: t('moduleSaved'),
+        description: t('moduleSavedDescription', { defaultValue: 'Your training module has been saved successfully.' })
+      })
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error('Save failed:', error)
-      alert(t('error') + ': ' + errorMessage)
+      const errorDetails = getUserFriendlyError(error)
+      toast({
+        title: t('error'),
+        description: errorDetails.message,
+        variant: 'destructive'
+      })
     }
   }
 
@@ -1377,7 +1398,12 @@ export default function TrainingBuilder() {
                       .single()
 
                     if (quizError) {
-                      console.error('Error creating quiz:', quizError)
+                      const errorDetails = getUserFriendlyError(quizError)
+                      toast({
+                        title: t('error'),
+                        description: errorDetails.message,
+                        variant: 'destructive'
+                      })
                       throw quizError
                     }
 
@@ -1441,10 +1467,10 @@ export default function TrainingBuilder() {
                       description: t('builder.questionsAdded', { count })
                     })
                   } catch (error) {
-                    console.error('Error creating quiz block:', error)
+                    const errorDetails = getUserFriendlyError(error)
                     toast({
                       title: t('common:error'),
-                      description: 'Failed to create quiz block',
+                      description: errorDetails.message,
                       variant: 'destructive'
                     })
                   }
@@ -1486,15 +1512,16 @@ export default function TrainingBuilder() {
                 setContentBlocks([...contentBlocks, newBlock])
               }}
               onLinkDocument={(docId) => {
-                // Link document
-                console.log('Link document:', docId)
+                // Link document - implementation pending
+                // TODO: Implement document linking
               }}
               onLinkQuiz={(quizId) => {
-                // Link quiz
-                console.log('Link quiz:', quizId)
+                // Link quiz - implementation pending
+                // TODO: Implement quiz linking
               }}
               onAddQuestions={(questionIds) => {
-                console.log('Add questions:', questionIds)
+                // Add questions - implementation pending
+                // TODO: Implement question addition
               }}
               className="h-full"
             />

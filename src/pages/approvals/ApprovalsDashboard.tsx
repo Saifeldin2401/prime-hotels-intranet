@@ -1,429 +1,281 @@
 import { useState } from 'react'
-import {
-    usePendingApprovals,
-    useApproveDocument,
-    useRejectDocument
-} from '@/hooks/useDocuments'
-import {
-    usePendingLeaveRequests,
-    useApproveLeaveRequest,
-    useRejectLeaveRequest
-} from '@/hooks/useLeaveRequests'
-import { useRequestsInbox, type RequestStatus } from '@/hooks/useRequests'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { ApprovalCard } from '@/components/approvals/ApprovalCard'
+import { ApprovalDetailsSheet } from '@/components/approvals/ApprovalDetailsSheet'
+import { useUnifiedApprovals, type ApprovalItem } from '@/hooks/useUnifiedApprovals'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FileText, CheckCircle, Loader2, Calendar, Clock, AlertCircle, XCircle, Award } from 'lucide-react'
-import { format } from 'date-fns'
-import { useNavigate } from 'react-router-dom'
-import { useToast } from '@/components/ui/use-toast'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import {
+    Loader2,
+    Search,
+    CheckCircle,
+    Filter,
+    SortAsc,
+    LayoutList,
+    LayoutGrid,
+    Inbox,
+    FileText,
+    Calendar,
+    Wrench,
+    ListTodo
+} from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
 
 export default function ApprovalsDashboard() {
-    const navigate = useNavigate()
-    const { toast } = useToast()
     const { t, i18n } = useTranslation('approvals')
+    const { toast } = useToast()
     const isRTL = i18n.dir() === 'rtl'
 
-    // Unified requests hook (with smart routing)
-    const { data: pendingRequests = [], isLoading: requestsLoading } = useRequestsInbox({
-        status: ['pending_supervisor_approval', 'pending_hr_review']
+    // Use the unified hook
+    const {
+        approvals,
+        isLoading,
+        isActionPending,
+        approveDocument,
+        rejectDocument,
+        approveLeave,
+        rejectLeave,
+        requestAction
+    } = useUnifiedApprovals()
+
+    // Local State
+    const [searchTerm, setSearchTerm] = useState('')
+    const [priorityFilter, setPriorityFilter] = useState<string>('all')
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+    const [selectedApproval, setSelectedApproval] = useState<ApprovalItem | null>(null)
+    const [sheetOpen, setSheetOpen] = useState(false)
+
+    // Filtering Logic
+    const filteredApprovals = approvals.filter(item => {
+        const matchesSearch =
+            item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.requester?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+
+        const matchesPriority = priorityFilter === 'all' || item.priority === priorityFilter
+
+        return matchesSearch && matchesPriority
     })
 
-    // Legacy hooks for backward compatibility
-    const { data: pendingApprovals = [], isLoading: documentsLoading } = usePendingApprovals()
-    const approveDocument = useApproveDocument()
-    const rejectDocument = useRejectDocument()
+    // Categorized lists
+    const requests = filteredApprovals.filter(i => i.type === 'request')
+    const documents = filteredApprovals.filter(i => i.type === 'document')
+    const leaves = filteredApprovals.filter(i => i.type === 'leave')
+    const maintenance = filteredApprovals.filter(i => i.type === 'maintenance')
 
-    // Smart-routed pending leave requests
-    const { data: pendingLeaves = [], isLoading: leavesLoading } = usePendingLeaveRequests()
-    const approveLeave = useApproveLeaveRequest()
-    const rejectLeave = useRejectLeaveRequest()
+    // Handlers
+    const handleOpenDetails = (item: ApprovalItem) => {
+        setSelectedApproval(item)
+        setSheetOpen(true)
+    }
 
-    const isLoading = requestsLoading || documentsLoading || leavesLoading
+    const handleQuickApprove = async (id: string, type: string) => {
+        try {
+            if (type === 'document') {
+                await approveDocument.mutateAsync({ approvalId: id })
+                toast({ title: t('toast.document_approved', 'Document approved') })
+            } else if (type === 'leave') {
+                await approveLeave.mutateAsync({ requestId: id })
+                toast({ title: t('toast.leave_approved', 'Leave request approved') })
+            } else if (type === 'request') {
+                // Determine next step based on role - specific logic can be complex,
+                // but generalized approval usually means moving forward.
+                // Assuming 'approve' action for now.
+                await requestAction.mutateAsync({
+                    requestId: id,
+                    action: 'approve',
+                    comment: 'Approved via Quick Action'
+                })
+                toast({ title: t('toast.request_approved', 'Request approved') })
+            }
+            // Close sheet if open and matches
+            if (sheetOpen && selectedApproval?.id === id) setSheetOpen(false)
+        } catch (error) {
+            toast({ title: t('toast.error', 'Action failed'), variant: "destructive" })
+        }
+    }
 
-    const [selectedApproval, setSelectedApproval] = useState<string | null>(null)
-    const [actionType, setActionType] = useState<'document' | 'leave' | null>(null)
-    const [rejectReason, setRejectReason] = useState('')
-    const [showRejectDialog, setShowRejectDialog] = useState(false)
-    const [showApproveDialog, setShowApproveDialog] = useState(false)
-    const [feedback, setFeedback] = useState('')
+    const handleQuickReject = async (id: string, type: string, reason: string = '') => {
+        try {
+            if (type === 'document') {
+                await rejectDocument.mutateAsync({ approvalId: id, reason })
+                toast({ title: t('toast.document_rejected', 'Document rejected') })
+            } else if (type === 'leave') {
+                await rejectLeave.mutateAsync({ requestId: id, reason })
+                toast({ title: t('toast.leave_rejected', 'Leave request rejected') })
+            } else if (type === 'request') {
+                await requestAction.mutateAsync({
+                    requestId: id,
+                    action: 'reject',
+                    comment: reason || 'Rejected via Quick Action'
+                })
+                toast({ title: t('toast.request_rejected', 'Request rejected') })
+            }
+            if (sheetOpen && selectedApproval?.id === id) setSheetOpen(false)
+        } catch (error) {
+            toast({ title: t('toast.error', 'Action failed'), variant: "destructive" })
+        }
+    }
 
     if (isLoading) {
-        return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+        return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
     }
-
-    const getStatusBadge = (status: RequestStatus) => {
-        const statusConfig = {
-            pending_supervisor_approval: { label: 'Pending Supervisor', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-4 h-4" /> },
-            pending_hr_review: { label: 'Pending HR', color: 'bg-blue-100 text-blue-800', icon: <Clock className="w-4 h-4" /> },
-            approved: { label: 'Approved', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
-            rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4" /> },
-            returned_for_correction: { label: 'Returned', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4" /> },
-            draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800', icon: <FileText className="w-4 h-4" /> },
-            closed: { label: 'Closed', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4" /> },
-        }
-        const config = statusConfig[status] || statusConfig.draft
-        return (
-            <Badge className={cn(config.color, "rounded-md")}>
-                {config.icon}
-                <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{config.label}</span>
-            </Badge>
-        )
-    }
-
-    const getEntityBadge = (entityType: string) => {
-        const entityConfig = {
-            leave_request: { label: 'Leave Request', icon: <Calendar className="w-4 h-4" /> },
-            document: { label: 'Document', icon: <FileText className="w-4 h-4" /> },
-            transfer: { label: 'Transfer', icon: <FileText className="w-4 h-4" /> },
-            promotion: { label: 'Promotion', icon: <Award className="w-4 h-4" /> },
-        }
-        const config = entityConfig[entityType as keyof typeof entityConfig] || { label: entityType, icon: <FileText className="w-4 h-4" /> }
-        return (
-            <Badge variant="outline" className="rounded-md">
-                {config.icon}
-                <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{config.label}</span>
-            </Badge>
-        )
-    }
-
-    const initiateAction = (id: string, action: 'approve' | 'reject', type: 'document' | 'leave') => {
-        setSelectedApproval(id)
-        setActionType(type)
-        if (action === 'approve') setShowApproveDialog(true)
-        else setShowRejectDialog(true)
-    }
-
-    const handleDocumentApprove = async () => {
-        if (!selectedApproval) return
-        try {
-            await approveDocument.mutateAsync({ approvalId: selectedApproval, feedback })
-            toast({ title: t('toast.document_approved'), description: t('toast.document_approved_desc') })
-            closeDialogs()
-        } catch (error) {
-            console.error('Error approving document:', error)
-            toast({ title: t('toast.error'), description: t('toast.approve_error_doc'), variant: "destructive" })
-        }
-    }
-
-    const handleLeaveApprove = async () => {
-        if (!selectedApproval) return
-        try {
-            await approveLeave.mutateAsync({ requestId: selectedApproval })
-            toast({ title: t('toast.leave_approved'), description: t('toast.leave_approved_desc') })
-            closeDialogs()
-        } catch (error) {
-            console.error('Error approving leave:', error)
-            toast({ title: t('toast.error'), description: t('toast.approve_error_leave'), variant: "destructive" })
-        }
-    }
-
-    const handleDocumentReject = async () => {
-        if (!selectedApproval) return
-        try {
-            await rejectDocument.mutateAsync({ approvalId: selectedApproval, reason: rejectReason })
-            toast({ title: t('toast.document_rejected'), description: t('toast.document_rejected_desc') })
-            closeDialogs()
-        } catch (error) {
-            console.error('Error rejecting document:', error)
-            toast({ title: t('toast.error'), description: t('toast.reject_error_doc'), variant: "destructive" })
-        }
-    }
-
-    const handleLeaveReject = async () => {
-        if (!selectedApproval) return
-        try {
-            await rejectLeave.mutateAsync({ requestId: selectedApproval, reason: rejectReason })
-            toast({ title: t('toast.leave_rejected'), description: t('toast.leave_rejected_desc') })
-            closeDialogs()
-        } catch (error) {
-            console.error('Error rejecting leave:', error)
-            toast({ title: t('toast.error'), description: t('toast.reject_error_leave'), variant: "destructive" })
-        }
-    }
-
-    const closeDialogs = () => {
-        setShowApproveDialog(false)
-        setShowRejectDialog(false)
-        setSelectedApproval(null)
-        setFeedback('')
-        setRejectReason('')
-        setActionType(null)
-    }
-
-    const onApprove = () => {
-        if (actionType === 'document') handleDocumentApprove()
-        else if (actionType === 'leave') handleLeaveApprove()
-    }
-
-    const onReject = () => {
-        if (actionType === 'document') handleDocumentReject()
-        else if (actionType === 'leave') handleLeaveReject()
-    }
-
-    const isPending = approveDocument.isPending || rejectDocument.isPending || approveLeave.isPending || rejectLeave.isPending
 
     return (
-        <div className="container mx-auto py-6 space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="container mx-auto py-8 space-y-8 animate-in fade-in duration-500 max-w-7xl">
+            {/* Header Section */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-                    <p className="text-gray-600">{t('description')}</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+                        <Inbox className="w-8 h-8 text-primary" />
+                        {t('title', 'Approvals Center')}
+                    </h1>
+                    <p className="text-gray-500 mt-2 text-lg">{t('description', 'Review and manage your pending tasks and requests.')}</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                    <div className="relative flex-1 sm:w-80">
+                        <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
+                        <Input
+                            placeholder={t('search_placeholder', 'Search by title, requester...')}
+                            className={cn("pl-10 h-10 bg-white", isRTL && "pr-10 pl-3")}
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="w-full sm:w-[150px] h-10 bg-white">
+                            <div className="flex items-center gap-2">
+                                <Filter className="w-4 h-4 text-gray-500" />
+                                <SelectValue placeholder="Priority" />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Priorities</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="critical">Critical</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <div className="hidden sm:flex border rounded-md bg-white">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-10 w-10 rounded-none rounded-l-md", viewMode === 'grid' && "bg-muted text-primary")}
+                            onClick={() => setViewMode('grid')}
+                        >
+                            <LayoutGrid className="w-4 h-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-10 w-10 rounded-none rounded-r-md", viewMode === 'list' && "bg-muted text-primary")}
+                            onClick={() => setViewMode('list')}
+                        >
+                            <LayoutList className="w-4 h-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
-            <Tabs defaultValue="unified" className="w-full">
-                <TabsList>
-                    <TabsTrigger value="unified">{t('unified_tab')} ({pendingRequests.length})</TabsTrigger>
-                    <TabsTrigger value="documents">{t('documents_tab')} ({pendingApprovals.length})</TabsTrigger>
-                    <TabsTrigger value="leaves">{t('leaves_tab')} ({pendingLeaves.length})</TabsTrigger>
+            {/* Main Content Tabs */}
+            <Tabs defaultValue="all" className="w-full">
+                <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide h-14 p-1 bg-white border rounded-xl shadow-sm mb-6 gap-2">
+                    <TabsTrigger value="all" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                        <ListTodo className="w-4 h-4 mr-2" />
+                        {t('all', 'All')}
+                        <Badge variant="secondary" className="ml-2 bg-gray-100">{filteredApprovals.length}</Badge>
+                    </TabsTrigger>
+
+                    <TabsTrigger value="requests" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                        <Inbox className="w-4 h-4 mr-2" />
+                        {t('unified_tab', 'HR Requests')}
+                        <Badge variant="secondary" className="ml-2 bg-gray-100">{requests.length}</Badge>
+                    </TabsTrigger>
+
+                    <TabsTrigger value="documents" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                        <FileText className="w-4 h-4 mr-2" />
+                        {t('documents_tab', 'Documents')}
+                        <Badge variant="secondary" className="ml-2 bg-gray-100">{documents.length}</Badge>
+                    </TabsTrigger>
+
+                    <TabsTrigger value="leaves" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {t('leaves_tab', 'Leaves')}
+                        <Badge variant="secondary" className="ml-2 bg-gray-100">{leaves.length}</Badge>
+                    </TabsTrigger>
+
+                    <TabsTrigger value="maintenance" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                        <Wrench className="w-4 h-4 mr-2" />
+                        {t('maintenance_tab', 'Maintenance')}
+                        <Badge variant="secondary" className="ml-2 bg-gray-100">{maintenance.length}</Badge>
+                    </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="unified" className="space-y-4">
-                    {pendingRequests.length === 0 ? (
-                        <div className="text-center py-12 border rounded-lg bg-muted/20">
-                            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium">{t('all_caught_up')}</h3>
-                            <p className="text-gray-600">{t('no_pending_requests')}</p>
-                        </div>
-                    ) : (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {pendingRequests.map((request) => (
-                                <Card key={request.id}>
-                                    <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex flex-col gap-1 mb-2">
-                                                {getEntityBadge(request.entity_type)}
-                                                {getStatusBadge(request.status)}
-                                            </div>
-                                            <span className="text-xs text-gray-600">
-                                                {format(new Date(request.created_at), 'MMM d')}
-                                            </span>
-                                        </div>
-                                        <CardTitle className="text-base line-clamp-1">
-                                            {request.requester?.full_name || 'Unknown Employee'}
-                                        </CardTitle>
-                                        <CardDescription className="line-clamp-2">
-                                            {t('request_no_label', { no: request.request_no })} • {request.current_assignee?.full_name ? t('assigned_to', { name: request.current_assignee.full_name }) : t('unassigned')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="flex justify-end gap-2 mt-4">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => navigate(`/hr/request/${request.id}`)}
-                                            >
-                                                {t('view_details')}
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </TabsContent>
+                {/* Tab Content Areas */}
+                {['all', 'requests', 'documents', 'leaves', 'maintenance'].map(tabValue => {
+                    const items = tabValue === 'all' ? filteredApprovals :
+                        tabValue === 'requests' ? requests :
+                            tabValue === 'documents' ? documents :
+                                tabValue === 'leaves' ? leaves : maintenance
 
-                <TabsContent value="documents" className="space-y-4">
-                    {pendingApprovals.length === 0 ? (
-                        <div className="text-center py-12 border rounded-lg bg-muted/20">
-                            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium">{t('all_caught_up_documents')}</h3>
-                            <p className="text-gray-600">{t('all_caught_up_documents_desc')}</p>
-                        </div>
-                    ) : (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {pendingApprovals.map((approval) => (
-                                <Card key={approval.id}>
-                                    <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-start">
-                                            <Badge className="bg-gray-100 text-gray-800 border border-gray-600 rounded-md mb-2">{t('document_badge')}</Badge>
-                                            <span className="text-xs text-gray-600">
-                                                {format(new Date(approval.created_at), 'MMM d')}
-                                            </span>
+                    return (
+                        <TabsContent key={tabValue} value={tabValue} className="space-y-6">
+                            {items.length === 0 ? (
+                                <EmptyState type={tabValue} />
+                            ) : (
+                                <div className={cn(
+                                    viewMode === 'grid'
+                                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                                        : "flex flex-col gap-4 max-w-4xl mx-auto"
+                                )}>
+                                    {items.map((item) => (
+                                        <div key={`${item.type}-${item.id}`} className={cn(viewMode === 'list' && "w-full")}>
+                                            <ApprovalCard
+                                                {...item}
+                                                // Only pass handlers if direct action is allowed on card (though detail view handles it too)
+                                                onApprove={item.actions.canApprove ? () => handleQuickApprove(item.id, item.type) : undefined}
+                                                onReject={item.actions.canApprove ? () => handleQuickReject(item.id, item.type) : undefined}
+                                                onView={() => handleOpenDetails(item)}
+                                                isActionPending={isActionPending}
+                                            />
                                         </div>
-                                        <CardTitle className="text-base line-clamp-1" title={approval.document?.title}>
-                                            {approval.document?.title || t('untitled_document')}
-                                        </CardTitle>
-                                        <CardDescription className="line-clamp-2">
-                                            {approval.document?.description || t('no_description')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="flex justify-between items-center mt-4 gap-2">
-                                            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="sm" onClick={() => navigate(`/documents/${approval.document_id}`)}>
-                                                <FileText className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-                                                {t('view')}
-                                            </Button>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    onClick={() => initiateAction(approval.id, 'reject', 'document')}
-                                                >
-                                                    {t('reject')}
-                                                </Button>
-                                                <Button
-                                                    variant="default"
-                                                    size="sm"
-                                                    className="bg-green-600 hover:bg-green-700"
-                                                    onClick={() => initiateAction(approval.id, 'approve', 'document')}
-                                                >
-                                                    {t('approve')}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </TabsContent>
-
-                <TabsContent value="leaves" className="space-y-4">
-                    {pendingLeaves.length === 0 ? (
-                        <div className="text-center py-12 border rounded-lg bg-muted/20">
-                            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium">{t('no_pending_leaves')}</h3>
-                            <p className="text-gray-600">{t('no_pending_leaves_desc')}</p>
-                        </div>
-                    ) : (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {pendingLeaves.map((leave) => (
-                                <Card key={leave.id}>
-                                    <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-start">
-                                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 mb-2">
-                                                {leave.type.replace('_', ' ').toUpperCase()}
-                                            </Badge>
-                                            <span className="text-xs text-gray-600">
-                                                {format(new Date(leave.created_at), 'MMM d')}
-                                            </span>
-                                        </div>
-                                        <CardTitle className="text-base">
-                                            {leave.requester?.full_name || t('unknown_user')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            <div className="flex items-center gap-1 mt-1">
-                                                <Calendar className="w-3 h-3" />
-                                                {format(new Date(leave.start_date), 'MMM d')} - {format(new Date(leave.end_date), 'MMM d, yyyy')}
-                                            </div>
-                                            {/* Show Property and Department */}
-                                            <div className="flex flex-wrap gap-1 mt-2">
-                                                {leave.property?.name && (
-                                                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-700 border-purple-200">
-                                                        🏨 {leave.property.name}
-                                                    </Badge>
-                                                )}
-                                                {leave.department?.name && (
-                                                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-green-50 text-green-700 border-green-200">
-                                                        🏢 {leave.department.name}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {/* Show routing info */}
-                                        {leave.department?.name && (
-                                            <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
-                                                <p className="text-xs font-medium text-amber-800">
-                                                    📋 Requires approval from <span className="font-semibold">{leave.department.name}</span> manager
-                                                </p>
-                                            </div>
-                                        )}
-                                        <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[2.5rem]">
-                                            {leave.reason ? `"${leave.reason}"` : t('no_reason')}
-                                        </p>
-                                        <div className="flex justify-end gap-2">
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => initiateAction(leave.id, 'reject', 'leave')}
-                                            >
-                                                {t('reject')}
-                                            </Button>
-                                            <Button
-                                                variant="default" // primary
-                                                size="sm"
-                                                className="bg-green-600 hover:bg-green-700"
-                                                onClick={() => initiateAction(leave.id, 'approve', 'leave')}
-                                            >
-                                                {t('approve')}
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </TabsContent>
+                                    ))}
+                                </div>
+                            )}
+                        </TabsContent>
+                    )
+                })}
             </Tabs>
 
-            {/* Approve Dialog */}
-            <Dialog open={showApproveDialog} onOpenChange={closeDialogs}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{actionType === 'document' ? t('approve_dialog_title_document') : t('approve_dialog_title_leave')}</DialogTitle>
-                        <DialogDescription>
-                            {actionType === 'document'
-                                ? t('approve_dialog_desc_document')
-                                : t('approve_dialog_desc_leave')}
-                        </DialogDescription>
-                    </DialogHeader>
-                    {actionType === 'document' && (
-                        <div className="space-y-2 py-2">
-                            <Textarea
-                                placeholder={t('optional_feedback')}
-                                value={feedback}
-                                onChange={(e) => setFeedback(e.target.value)}
-                            />
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={closeDialogs}>{t('cancel')}</Button>
-                        <Button onClick={onApprove} disabled={isPending}>
-                            {isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                            {t('approve')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* Side Sheet for Details */}
+            <ApprovalDetailsSheet
+                approval={selectedApproval}
+                open={sheetOpen}
+                onOpenChange={setSheetOpen}
+                onApprove={(id) => handleQuickApprove(id, selectedApproval?.type || '')}
+                onReject={(id, reason) => handleQuickReject(id, selectedApproval?.type || '', reason)}
+                isProcessing={isActionPending}
+            />
+        </div>
+    )
+}
 
-            {/* Reject Dialog */}
-            <Dialog open={showRejectDialog} onOpenChange={closeDialogs}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{actionType === 'document' ? t('reject_dialog_title_document') : t('reject_dialog_title_leave')}</DialogTitle>
-                        <DialogDescription>
-                            {actionType === 'document' ? t('reject_dialog_desc_document') : t('reject_dialog_desc_leave')}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-2 py-2">
-                        <Textarea
-                            placeholder={t('reject_reason_placeholder')}
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={closeDialogs}>{t('cancel')}</Button>
-                        <Button
-                            variant="destructive"
-                            onClick={onReject}
-                            disabled={isPending || !rejectReason.trim()}
-                        >
-                            {isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                            {t('reject')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+function EmptyState({ type = 'all' }: { type?: string }) {
+    const { t } = useTranslation('approvals')
+    return (
+        <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl bg-gray-50/50">
+            <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                <CheckCircle className="w-12 h-12 text-primary/20" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">{t(`no_${type}_title`, 'All caught up!')}</h3>
+            <p className="text-gray-500 max-w-sm mt-2">{t(`no_${type}_desc`, 'You have no pending items in this category.')}</p>
         </div>
     )
 }

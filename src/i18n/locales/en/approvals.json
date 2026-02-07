@@ -60,5 +60,32 @@
     "request_no_label": "Request #{{no}}",
     "assigned_to": "Assigned to: {{name}}",
     "unassigned": "Unassigned",
-    "view_details": "View Details"
+    "view_details": "View Details",
+    "delegate": {
+        "title": "Delegate Approval",
+        "description": "Transfer this approval to another authorized person.",
+        "select_person": "Delegate To",
+        "select_person_placeholder": "Select a person",
+        "no_delegates": "No delegates available.",
+        "expiry": "Delegation Expires In",
+        "expiry_options": {
+            "1": "1 day",
+            "3": "3 days",
+            "7": "7 days",
+            "14": "14 days",
+            "30": "30 days"
+        },
+        "expires_on": "Expires on {{date}}",
+        "reason": "Reason (Optional)",
+        "reason_placeholder": "e.g., Out of office, vacation...",
+        "button": "Delegate",
+        "confirm": "Delegate",
+        "success_title": "Approval Delegated",
+        "success_message": "The approval has been delegated successfully.",
+        "error_title": "Delegation Failed",
+        "errors": {
+            "select_delegate": "Please select a delegate.",
+            "not_configured": "Delegation could not be saved. Please contact support."
+        }
+    }
 }

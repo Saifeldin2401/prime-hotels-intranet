@@ -50,6 +50,7 @@
     "audit_logs": "Audit Logs",
     "pii_access_logs": "PII Access Logs",
     "escalation_rules": "Escalation",
+    "routing_health": "Routing Health",
     "onboarding_tracker": "Onboarding Tracker",
     "promotion_history": "Promotion History",
     "onboarding_templates": "Onboarding Templates",

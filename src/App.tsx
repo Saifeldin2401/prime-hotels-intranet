@@ -8,6 +8,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { router } from '@/routes/router'
+import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,9 +26,11 @@ function App() {
         <ThemeProvider>
           <AuthProvider>
             <PropertyProvider>
-              <NotificationProvider>
-                <RouterProvider router={router} />
-              </NotificationProvider>
+              <UserSettingsProvider>
+                <NotificationProvider>
+                  <RouterProvider router={router} />
+                </NotificationProvider>
+              </UserSettingsProvider>
             </PropertyProvider>
           </AuthProvider>
           {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}

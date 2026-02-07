@@ -14,7 +14,29 @@
         "light": "Light",
         "dark": "Dark",
         "system": "System",
-        "select_placeholder": "Select theme"
+        "select_placeholder": "Select theme",
+        "accessibility": {
+            "title": "Accessibility",
+            "reduced_motion": "Reduced Motion",
+            "reduced_motion_desc": "Minimize animations for a smoother experience",
+            "high_contrast": "High Contrast",
+            "high_contrast_desc": "Increase text contrast for better readability",
+            "large_text": "Large Text",
+            "large_text_desc": "Increase font size for better visibility"
+        },
+        "shortcuts": {
+            "title": "Shortcuts & Productivity",
+            "enable": "Enable Keyboard Shortcuts",
+            "enable_desc": "Use rapid keys for common actions across the app"
+        }
+    },
+    "general": {
+        "timezone": {
+            "title": "Time & Region",
+            "description": "Configure your local time and regional preferences",
+            "label": "Timezone",
+            "select_placeholder": "Select your timezone"
+        }
     },
     "language": {
         "title": "Language Settings",
@@ -43,7 +65,29 @@
             "enable_all_emails": "Enable All Emails",
             "enable_all_emails_desc": "Master switch for all email notifications",
             "browser_notifications_desc_detailed": "Receive notifications even when looking at other tabs",
-            "permission_error": "Please enable notifications in your browser settings."
+            "permission_error": "Please enable notifications in your browser settings.",
+            "channels": {
+                "email": "Email",
+                "push": "Push",
+                "both": "Both"
+            }
+        },
+        "sounds": {
+            "title": "Notification Sounds",
+            "enable": "Sound Alerts",
+            "enable_desc": "Play a subtle sound for new browser notifications"
+        },
+        "scheduling": {
+            "title": "Quiet Hours",
+            "description": "Silence notifications during specific hours",
+            "enable": "Do Not Disturb",
+            "from": "From",
+            "to": "To"
+        },
+        "digest": {
+            "title": "Daily Digest",
+            "enable": "Enable Summary",
+            "description": "Receive a single email summary instead of multiple alerts"
         }
     },
     "actions": {

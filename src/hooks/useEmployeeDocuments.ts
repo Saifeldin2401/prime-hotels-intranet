@@ -10,6 +10,9 @@ export interface EmployeeDocument {
     file_path: string
     file_type: string
     file_size: number
+    expiry_date: string | null
+    document_number: string | null
+    status: 'active' | 'expired' | 'expiring_soon' | 'pending_verification'
     created_at: string
     updated_at: string
 }
@@ -42,11 +45,15 @@ export function useUploadEmployeeDocument() {
         mutationFn: async ({
             file,
             category,
-            title
+            title,
+            expiry_date,
+            document_number
         }: {
             file: File,
             category: string,
-            title?: string
+            title?: string,
+            expiry_date?: string,
+            document_number?: string
         }) => {
             if (!user) throw new Error('User must be authenticated')
 
@@ -70,7 +77,10 @@ export function useUploadEmployeeDocument() {
                     category,
                     file_path: filePath,
                     file_type: file.type,
-                    file_size: file.size
+                    file_size: file.size,
+                    expiry_date: expiry_date || null,
+                    document_number: document_number || null,
+                    status: 'active'
                 })
                 .select()
                 .single()

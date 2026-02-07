@@ -5,10 +5,18 @@ echo ========================================
 echo.
 
 echo [1/3] Setting environment variables...
-set VITE_SUPABASE_URL=https://htsvjfrofcpkfzvjpwvx.supabase.co
-set VITE_SUPABASE_ANON_KEY=sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj
-set VITE_RESEND_API_KEY=
-echo ✅ Environment variables set
+echo ⚠️  Please set your environment variables in a .env file or here:
+echo     VITE_SUPABASE_URL=your_supabase_project_url
+echo     VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+echo     VITE_RESEND_API_KEY=your_resend_api_key
+echo.
+if exist ".env" (
+    echo ✅ Using .env file for environment variables
+) else (
+    echo ⚠️  No .env file found. Please create one with your Supabase credentials.
+    echo     See README.md for instructions.
+    pause
+)
 echo.
 
 echo [2/3] Checking dependencies...

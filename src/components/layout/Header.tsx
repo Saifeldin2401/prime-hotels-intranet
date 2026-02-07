@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { useNavigate } from 'react-router-dom'
 import {
   Menu,
   User,
@@ -22,27 +23,60 @@ import {
   Settings,
   Sparkles,
   Building,
-  Globe
+  Globe,
+  ChevronsUpDown,
+  Bell
 } from 'lucide-react'
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub as DropdownSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog as AlertDialogRoot,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger as AlertDialogTriggerRoot,
+} from "@/components/ui/alert-dialog"
+import { Badge } from '@/components/ui/badge'
 
 interface HeaderProps {
   sidebarCollapsed: boolean
   setSidebarCollapsed: (value: boolean) => void
-  userMenuOpen: boolean
-  setUserMenuOpen: (value: boolean) => void
   handleLogout: () => void
 }
 
 export function Header({
   sidebarCollapsed,
   setSidebarCollapsed,
-  userMenuOpen,
-  setUserMenuOpen,
   handleLogout
 }: HeaderProps) {
-  const { user, profile, primaryRole } = useAuth()
+  const navigate = useNavigate()
+  const { user, profile, primaryRole, signOut } = useAuth()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const { t } = useTranslation(['common', 'nav'])
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/login')
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full transition-all duration-300">
@@ -105,13 +139,13 @@ export function Header({
                     <div className="py-2">
                       {/* Administrative/Consolidated View First */}
                       {availableProperties.filter(p => p.id === 'all').map(prop => (
-                        <SelectItem 
-                          key={prop.id} 
-                          value={prop.id} 
+                        <SelectItem
+                          key={prop.id}
+                          value={prop.id}
                           className={cn(
                             "cursor-pointer mx-2 my-1 rounded-lg border transition-all duration-200",
-                            currentProperty?.id === prop.id 
-                              ? "bg-hotel-navy text-white border-hotel-gold/50 py-3" 
+                            currentProperty?.id === prop.id
+                              ? "bg-hotel-navy text-white border-hotel-gold/50 py-3"
                               : "hover:bg-hotel-navy/5 border-transparent py-2.5"
                           )}
                         >
@@ -159,7 +193,7 @@ export function Header({
                         // Extract all unique regions from property addresses
                         const regionMap = new Map<string, typeof availableProperties>()
                         const regionOrder = ['Riyadh', 'Jeddah', 'Makkah', 'Madinah', 'Dammam', 'Khobar', 'Tabuk', 'Abha', 'Taif', 'Buraidah', 'Hail', 'Jubail', 'Yanbu', 'Najran', 'Hafar Al-Batin', 'Other']
-                        
+
                         availableProperties
                           .filter(p => p.id !== 'all')
                           .forEach(prop => {
@@ -172,13 +206,13 @@ export function Header({
                                 break
                               }
                             }
-                            
+
                             if (!regionMap.has(region)) {
                               regionMap.set(region, [])
                             }
                             regionMap.get(region)!.push(prop)
                           })
-                        
+
                         // Sort regions by predefined order, new regions go to end
                         const sortedRegions = Array.from(regionMap.entries()).sort((a, b) => {
                           const indexA = regionOrder.indexOf(a[0])
@@ -188,7 +222,7 @@ export function Header({
                           if (indexB === -1) return -1
                           return indexA - indexB
                         })
-                        
+
                         return sortedRegions.map(([region, props]) => (
                           <div key={region} className="mb-2">
                             <p className="px-3 py-1.5 text-[10px] font-bold text-hotel-navy/60 dark:text-hotel-gold/70 uppercase tracking-wider flex items-center gap-2">
@@ -196,13 +230,13 @@ export function Header({
                               {region}
                             </p>
                             {props.map(prop => (
-                              <SelectItem 
-                                key={prop.id} 
-                                value={prop.id} 
+                              <SelectItem
+                                key={prop.id}
+                                value={prop.id}
                                 className={cn(
                                   "cursor-pointer mx-2 my-0.5 rounded-lg border transition-all duration-200",
-                                  currentProperty?.id === prop.id 
-                                    ? "bg-hotel-navy-light/90 text-white border-hotel-gold/30 py-3" 
+                                  currentProperty?.id === prop.id
+                                    ? "bg-hotel-navy-light/90 text-white border-hotel-gold/30 py-3"
                                     : "hover:bg-slate-50 dark:hover:bg-slate-800/50 border-transparent py-2.5"
                                 )}
                               >
@@ -258,73 +292,153 @@ export function Header({
             {/* Divider */}
             <div className="h-8 w-px bg-hotel-navy-dark mx-1" />
 
-            {/* User Menu */}
-            <div id="user-menu" className="relative ms-1">
-              <Button
-                variant="ghost"
-                className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark transition-all duration-200"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-              >
-                <div className="hidden md:flex flex-col items-end">
-                  <span className="text-sm font-medium text-white leading-none mb-1">
-                    {profile?.full_name || user?.email?.split('@')[0]}
-                  </span>
-                  <span className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-semibold">
-                    {/* Display job title or translated primary role */}
-                    {profile?.job_title || (primaryRole ? t(`roles.${primaryRole}`) : t('roles.staff'))}
-                  </span>
-                </div>
-
-                <div className="h-9 w-9 rounded-full bg-hotel-gold flex items-center justify-center text-hotel-navy font-bold shadow-sm border-2 border-hotel-navy ring-2 ring-hotel-gold/30">
-                  {profile?.full_name?.[0] || user?.email?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
-                </div>
-                <ChevronDown className={`h-4 w-4 text-hotel-gold-light transition-transform duration-200 ${userMenuOpen ? 'transform rotate-180' : ''}`} />
-              </Button>
-
-              {userMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setUserMenuOpen(false)}
-                    aria-hidden="true"
-                  />
-                  <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-950 rounded-xl shadow-xl ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-200 border border-border">
-                    <div className="p-4 bg-hotel-navy text-white rounded-t-xl">
-                      <p className="text-sm font-semibold">{profile?.full_name || 'User'}</p>
-                      <p className="text-xs text-white/70 truncate">{user?.email}</p>
+            {/* User Menu - Enhanced Premium Dropdown */}
+            <div id="user-menu" className="ms-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark transition-all duration-200 group"
+                  >
+                    <div className="hidden md:flex flex-col items-end">
+                      <span className="text-sm font-medium text-white leading-none mb-1 group-hover:text-hotel-gold transition-colors">
+                        {profile?.full_name || user?.email?.split('@')[0]}
+                      </span>
+                      <span className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-semibold opacity-80 group-hover:opacity-100 transition-opacity">
+                        {/* Display job title or translated primary role */}
+                        {profile?.job_title || (primaryRole ? t(`roles.${primaryRole}`) : t('roles.staff'))}
+                      </span>
                     </div>
 
-                    <div className="py-2">
-                      <a
-                        href="/profile"
-                        className="flex items-center px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
-                      >
-                        <User className="me-3 h-4 w-4 text-hotel-gold transition-transform duration-300 group-hover:scale-110" />
-                        <span>My Profile</span>
-                      </a>
-                      <a
-                        href="/settings"
-                        className="flex items-center px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
-                      >
-                        <Settings className="me-3 h-4 w-4 text-hotel-gold transition-transform duration-300 group-hover:rotate-90" />
-                        <span>Settings</span>
-                      </a>
-                      <div className="h-px bg-border my-2 mx-4" />
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-start flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium group"
-                      >
-                        <LogOut className="me-3 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                        <span>Log Out</span>
-                      </button>
+                    <div className="relative">
+                      <Avatar className="h-9 w-9 border-2 border-hotel-gold/30 group-hover:border-hotel-gold transition-all duration-300 shadow-sm ring-2 ring-hotel-navy/50">
+                        <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
+                        <AvatarFallback className="bg-hotel-gold text-hotel-navy font-bold">
+                          {profile?.full_name
+                            ? profile.full_name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
+                            : (user?.email?.[0]?.toUpperCase() || 'U')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
                     </div>
-                  </div>
-                </>
-              )}
+                    <ChevronDown className="h-4 w-4 text-hotel-gold-light transition-transform duration-300 group-data-[state=open]:rotate-180" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                  className="w-64 bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-2xl rounded-xl p-1"
+                  align="end"
+                  side="bottom"
+                  sideOffset={12}
+                >
+                  <DropdownMenuLabel className="font-normal p-4">
+                    <div className="flex flex-col space-y-2">
+                      <p className="text-sm font-semibold text-hotel-gold font-serif tracking-wide">{profile?.full_name || 'User'}</p>
+                      <p className="text-xs text-white/60 truncate font-mono">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-white/10 mx-2" />
+
+                  <DropdownMenuGroup>
+                    <DropdownSub>
+                      <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                          <span>Status</span>
+                        </div>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-2xl min-w-[150px]">
+                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
+                          <div className="w-2 h-2 rounded-full bg-green-500 me-2" />
+                          Online
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
+                          <div className="w-2 h-2 rounded-full bg-amber-500 me-2" />
+                          Away
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
+                          <div className="w-2 h-2 rounded-full bg-red-500 me-2" />
+                          Busy
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownSub>
+
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
+                      onSelect={() => navigate('/profile')}
+                    >
+                      <User className="mr-3 h-4 w-4 text-hotel-gold transition-transform group-hover:scale-110" />
+                      <span>{t('nav.my_profile', 'My Profile')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
+                      onSelect={() => navigate('/settings')}
+                    >
+                      <Settings className="mr-3 h-4 w-4 text-hotel-gold transition-transform group-hover:rotate-90" />
+                      <span>{t('nav.settings', 'Settings')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
+                      onSelect={() => navigate('/notifications')}
+                    >
+                      <Bell className="mr-3 h-4 w-4 text-hotel-gold transition-transform group-hover:rotate-12" />
+                      <span>{t('notifications', 'Notifications')}</span>
+                      <Badge className="ml-auto h-4 px-1 bg-hotel-gold text-hotel-navy text-[10px]">99+</Badge>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator className="bg-white/10 mx-2" />
+
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
+                      onSelect={() => navigate('/training/certificates')}
+                    >
+                      <Sparkles className="mr-3 h-4 w-4 text-hotel-gold" />
+                      <span>{t('my_awards', 'My Awards')}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator className="bg-white/10 mx-2" />
+
+                  <AlertDialogRoot>
+                    <AlertDialogTriggerRoot asChild>
+                      <DropdownMenuItem
+                        className="focus:bg-red-900/30 focus:text-red-400 text-red-400 cursor-pointer group m-1"
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        <LogOut className="mr-3 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        <span>{t('nav.logout', 'Sign out')}</span>
+                      </DropdownMenuItem>
+                    </AlertDialogTriggerRoot>
+                    <AlertDialogContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-hotel-gold font-serif">Confirm Sign Out</AlertDialogTitle>
+                        <AlertDialogDescription className="text-white/70">
+                          Are you sure you want to sign out? Your current session will be ended.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleSignOut}
+                          className="bg-red-600 text-white hover:bg-red-700 border-none"
+                        >
+                          Sign Out
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialogRoot>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
       </div>
-    </header>
+    </header >
   )
 }

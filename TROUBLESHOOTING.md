@@ -14,8 +14,9 @@
 2. Run these commands one by one:
 
 ```powershell
-$env:VITE_SUPABASE_URL = "https://htsvjfrofcpkfzvjpwvx.supabase.co"
-$env:VITE_SUPABASE_ANON_KEY = "sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj"
+# Set environment variables from your .env file or Supabase dashboard
+$env:VITE_SUPABASE_URL = "YOUR_SUPABASE_URL"
+$env:VITE_SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"
 npm run dev
 ```
 
@@ -33,15 +34,16 @@ taskkill /PID <PID_NUMBER> /F
 **Solution:** Make sure environment variables are set before running `npm run dev`:
 
 ```powershell
-$env:VITE_SUPABASE_URL = "https://htsvjfrofcpkfzvjpwvx.supabase.co"
-$env:VITE_SUPABASE_ANON_KEY = "sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj"
+# Set environment variables from your .env file or Supabase dashboard
+$env:VITE_SUPABASE_URL = "YOUR_SUPABASE_URL"
+$env:VITE_SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"
 ```
 
 Or create a `.env` file in the `prime-hotels` folder:
 ```env
-VITE_SUPABASE_URL=https://htsvjfrofcpkfzvjpwvx.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj
-VITE_RESEND_API_KEY=
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_RESEND_API_KEY=your_resend_api_key
 ```
 
 ### Issue: "Cannot find module" errors

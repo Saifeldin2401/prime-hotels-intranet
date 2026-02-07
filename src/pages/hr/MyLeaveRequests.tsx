@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useMyLeaveRequests, useSubmitLeaveRequest, useCancelLeaveRequest } from '@/hooks/useLeaveRequests'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -13,11 +15,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { format } from 'date-fns'
-import { CalendarIcon, Plus, X } from 'lucide-react'
+import { CalendarIcon, Plus, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { leaveRequestSchema, type LeaveRequestFormData } from '@/lib/validationSchemas'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { useToast } from '@/components/ui/use-toast'
+import { LoadingButton } from '@/components/loading'
 
 const leaveTypeKeys = [
   'annual',
@@ -40,40 +46,54 @@ export default function MyLeaveRequests() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation('hr')
+  const { toast } = useToast()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const isRTL = i18n.dir() === 'rtl'
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
-  const [formData, setFormData] = useState({
-    start_date: undefined as Date | undefined,
-    end_date: undefined as Date | undefined,
-    type: '' as 'annual' | 'sick' | 'unpaid' | 'maternity' | 'paternity' | 'personal' | 'other' | undefined,
-    reason: ''
+
+  const form = useForm<LeaveRequestFormData>({
+    resolver: zodResolver(leaveRequestSchema),
+    defaultValues: {
+      start_date: undefined,
+      end_date: undefined,
+      type: undefined,
+      reason: '',
+      property_id: undefined,
+      department_id: undefined
+    }
   })
 
   const { data: leaveRequests, isLoading } = useMyLeaveRequests()
   const submitMutation = useSubmitLeaveRequest()
   const cancelMutation = useCancelLeaveRequest()
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!formData.start_date || !formData.end_date || !formData.type) {
-      return
-    }
-
+  const handleSubmit = (data: LeaveRequestFormData) => {
     submitMutation.mutate({
-      start_date: formData.start_date.toISOString().split('T')[0],
-      end_date: formData.end_date.toISOString().split('T')[0],
-      type: formData.type!,
-      reason: formData.reason || undefined
+      start_date: data.start_date instanceof Date
+        ? data.start_date.toISOString().split('T')[0]
+        : new Date(data.start_date).toISOString().split('T')[0],
+      end_date: data.end_date instanceof Date
+        ? data.end_date.toISOString().split('T')[0]
+        : new Date(data.end_date).toISOString().split('T')[0],
+      type: data.type,
+      reason: data.reason || undefined
     }, {
-      onSuccess: (data) => {
+      onSuccess: () => {
         setIsDialogOpen(false)
-        setFormData({ start_date: undefined, end_date: undefined, type: undefined, reason: '' })
+        form.reset()
+        toast({
+          title: t('leave_requests.form.success_title', { defaultValue: 'Leave Request Submitted' }),
+          description: t('leave_requests.form.success_message', { defaultValue: 'Your leave request has been submitted for approval.' })
+        })
       },
       onError: (error) => {
-        console.error('Error submitting leave request:', error)
+        const errorDetails = getUserFriendlyError(error)
+        toast({
+          title: t('leave_requests.form.error_title', { defaultValue: 'Submission Failed' }),
+          description: errorDetails.message,
+          variant: 'destructive'
+        })
       }
     })
   }
@@ -146,13 +166,13 @@ export default function MyLeaveRequests() {
                 {t('leave_requests.form.description', { default: 'Submit a new leave request for approval' })}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={form.handleSubmit(handleSubmit)}>
               <div className="px-5 sm:px-6 py-5 space-y-5">
                 {/* Date Selection */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="start_date" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {t('leave_requests.form.start_date')}
+                      {t('leave_requests.form.start_date')} *
                     </Label>
                     <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                       <PopoverTrigger asChild>
@@ -161,29 +181,35 @@ export default function MyLeaveRequests() {
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-start font-normal h-11 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                            !formData.start_date && "text-slate-400"
+                            !form.watch('start_date') && "text-slate-400",
+                            form.formState.errors.start_date && "border-red-500"
                           )}
                         >
                           <CalendarIcon className="h-4 w-4 me-2 text-slate-400" />
-                          {formData.start_date ? format(formData.start_date, "PPP") : t('leave_requests.form.pick_date')}
+                          {form.watch('start_date')
+                            ? format(form.watch('start_date') as Date, "PPP")
+                            : t('leave_requests.form.pick_date')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={formData.start_date}
+                          selected={form.watch('start_date') as Date | undefined}
                           onSelect={(date) => {
-                            setFormData(prev => ({ ...prev, start_date: date }))
+                            form.setValue('start_date', date, { shouldValidate: true })
                             setStartDateOpen(false)
                           }}
                           initialFocus
                         />
                       </PopoverContent>
                     </Popover>
+                    {form.formState.errors.start_date && (
+                      <p className="text-sm text-red-600">{form.formState.errors.start_date.message}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="end_date" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {t('leave_requests.form.end_date')}
+                      {t('leave_requests.form.end_date')} *
                     </Label>
                     <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                       <PopoverTrigger asChild>
@@ -192,35 +218,49 @@ export default function MyLeaveRequests() {
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-start font-normal h-11 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                            !formData.end_date && "text-slate-400"
+                            !form.watch('end_date') && "text-slate-400",
+                            form.formState.errors.end_date && "border-red-500"
                           )}
                         >
                           <CalendarIcon className="h-4 w-4 me-2 text-slate-400" />
-                          {formData.end_date ? format(formData.end_date, "PPP") : t('leave_requests.form.pick_date')}
+                          {form.watch('end_date')
+                            ? format(form.watch('end_date') as Date, "PPP")
+                            : t('leave_requests.form.pick_date')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={formData.end_date}
+                          selected={form.watch('end_date') as Date | undefined}
                           onSelect={(date) => {
-                            setFormData(prev => ({ ...prev, end_date: date }))
+                            form.setValue('end_date', date, { shouldValidate: true })
                             setEndDateOpen(false)
                           }}
                           initialFocus
-                          disabled={(date) => formData.start_date ? date < formData.start_date : false}
+                          disabled={(date) => {
+                            const startDate = form.watch('start_date') as Date | undefined
+                            return startDate ? date < startDate : false
+                          }}
                         />
                       </PopoverContent>
                     </Popover>
+                    {form.formState.errors.end_date && (
+                      <p className="text-sm text-red-600">{form.formState.errors.end_date.message}</p>
+                    )}
                   </div>
                 </div>
 
                 {/* Duration Display */}
-                {formData.start_date && formData.end_date && (
+                {form.watch('start_date') && form.watch('end_date') && (
                   <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 rounded-lg">
                     <CalendarIcon className="h-4 w-4 text-blue-500" />
                     <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      {t('leave_requests.form.total_days', { count: calculateDays(formData.start_date, formData.end_date) })}
+                      {t('leave_requests.form.total_days', {
+                        count: calculateDays(
+                          form.watch('start_date') as Date,
+                          form.watch('end_date') as Date
+                        )
+                      })}
                     </span>
                   </div>
                 )}
@@ -228,13 +268,16 @@ export default function MyLeaveRequests() {
                 {/* Leave Type */}
                 <div className="space-y-2">
                   <Label htmlFor="type" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t('leave_requests.form.type')}
+                    {t('leave_requests.form.type')} *
                   </Label>
                   <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as LeaveRequest['type'] }))}
+                    value={form.watch('type') || ''}
+                    onValueChange={(value) => form.setValue('type', value as LeaveRequestFormData['type'], { shouldValidate: true })}
                   >
-                    <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700">
+                    <SelectTrigger className={cn(
+                      "h-11 border-slate-200 dark:border-slate-700",
+                      form.formState.errors.type && "border-red-500"
+                    )}>
                       <SelectValue placeholder={t('leave_requests.form.select_type')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -245,6 +288,9 @@ export default function MyLeaveRequests() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.type && (
+                    <p className="text-sm text-red-600">{form.formState.errors.type.message}</p>
+                  )}
                 </div>
 
                 {/* Reason */}
@@ -253,13 +299,17 @@ export default function MyLeaveRequests() {
                     {t('leave_requests.form.reason')}
                   </Label>
                   <Textarea
-                    id="reason"
+                    {...form.register('reason')}
                     placeholder={t('leave_requests.form.reason_placeholder')}
-                    value={formData.reason}
-                    onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
                     rows={3}
-                    className="resize-none border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className={cn(
+                      "resize-none border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500",
+                      form.formState.errors.reason && "border-red-500"
+                    )}
                   />
+                  {form.formState.errors.reason && (
+                    <p className="text-sm text-red-600">{form.formState.errors.reason.message}</p>
+                  )}
                 </div>
               </div>
 
@@ -267,18 +317,24 @@ export default function MyLeaveRequests() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
+                  onClick={() => {
+                    setIsDialogOpen(false)
+                    form.reset()
+                  }}
                   className="border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  disabled={submitMutation.isPending}
                 >
                   {t('leave_requests.form.cancel')}
                 </Button>
-                <Button
+                <LoadingButton
                   type="submit"
-                  disabled={submitMutation.isPending || !formData.start_date || !formData.end_date || !formData.type}
+                  disabled={!form.formState.isValid}
+                  loading={submitMutation.isPending}
+                  loadingText={t('leave_requests.form.submitting')}
                   className="bg-hotel-navy hover:bg-hotel-navy-light text-white shadow-sm"
                 >
-                  {submitMutation.isPending ? t('leave_requests.form.submitting') : t('leave_requests.form.submit')}
-                </Button>
+                  {t('leave_requests.form.submit')}
+                </LoadingButton>
               </DialogFooter>
             </form>
           </DialogContent>

@@ -39,6 +39,168 @@
         "success": "Import completed successfully",
         "error": "Import failed"
     },
+    "data_import": {
+        "title": "Data Import Studio",
+        "stage": "{{stage}} Stage",
+        "stages": {
+            "upload": "Upload",
+            "review": "Review",
+            "import": "Import",
+            "complete": "Complete"
+        },
+        "metrics": {
+            "queue": "Queue",
+            "records": "Records",
+            "quality": "Quality",
+            "warnings": "Warnings"
+        },
+        "pipeline": {
+            "title": "Workflow Pipeline",
+            "stage_badge": "{{stage}}",
+            "add_files": "Add More Files",
+            "clear_session": "Clear Session",
+            "empty_queue": "No files in queue",
+            "conflict_badge": "CONFLICT"
+        },
+        "ai_actions": {
+            "title": "AI Smart Actions",
+            "description": "Let AI suggest fixes and improvements for your current batch.",
+            "analyzing": "Analyzing...",
+            "generate": "Generate Insights"
+        },
+        "warnings": {
+            "title": "Operational Warnings Found",
+            "duplicate_dates": "Duplicate date matches detected in database",
+            "missing_required": "Missing or invalid required fields found",
+            "fixing": "Fixing...",
+            "auto_fix": "Auto-Fix All Warnings"
+        },
+        "upload": {
+            "title": "Drop PMS Reports Here",
+            "description": "Bulk upload Excel or CSV exports from your PMS. AI will automatically organize your data.",
+            "browse": "Browse Local Files",
+            "supported_formats": "Supports XLSX / CSV",
+            "auto_map": "Auto Map Columns",
+            "batch_import": "Batch Import"
+        },
+        "review": {
+            "rows_extracted": "{{count}} Rows Extracted",
+            "table_view": "Table View",
+            "raw_json": "Raw JSON",
+            "property": "Property",
+            "select_hotel": "Select Hotel...",
+            "match_confidence": "{{percent}}% Match",
+            "thinking": "Thinking...",
+            "no_data": "No data could be extracted from this file.",
+            "delete_file": "Delete File",
+            "select_file_prompt": "Select a file from the Pipeline to inspect and edit data",
+            "valid_files": "Found {{count}} valid files in batch"
+        },
+        "summary": {
+            "title": "Session Summary",
+            "files_ready": "{{count}} Files Ready",
+            "warnings": "{{count}} Warnings",
+            "total_impact": "Total Impact",
+            "database_records": "{{count}} database records"
+        },
+        "actions": {
+            "cancel_phase": "Cancel Phase",
+            "commit_process": "Commit Process ({{count}})"
+        },
+        "import": {
+            "title": "Writing to Database Cloud...",
+            "syncing_records": "Syncing Records",
+            "progress_note": "Verifying data integrity and updating trends..."
+        },
+        "complete": {
+            "title": "Import Successful!",
+            "summary": "{{count}} files were successfully processed. Your Operations Dashboard is now up-to-date.",
+            "print_summary": "Print Sync Summary",
+            "new_session": "New Session",
+            "view_dashboard": "View Dashboard"
+        },
+        "history": {
+            "title": "Session History",
+            "description": "Recent data import activity for this property.",
+            "manual_batch": "Manual Batch",
+            "records_label": "{{count}} Records",
+            "redownload": "REDOWNLOAD"
+        },
+        "delete": {
+            "title": "Confirm Data Deletion",
+            "description": "This action will permanently remove this import log and delete all associated occupancy and revenue records from the database. This cannot be undone.",
+            "delete_permanently": "Delete Permanently"
+        },
+        "errors": {
+            "no_data_extracted": "No data extracted"
+        },
+        "badges": {
+            "pms_daily": "PMS Daily",
+            "occupancy": "Occupancy",
+            "revenue": "Revenue",
+            "unknown": "Unknown"
+        },
+        "validation": {
+            "no_records": "No records found",
+            "missing_required": "Missing required field: {{field}}",
+            "optional_missing": "Optional field missing: {{field}}",
+            "rooms_sold_invalid": "Rooms sold is not a valid number",
+            "adr_invalid": "ADR is not a valid number",
+            "date_format": "Date format may need adjustment"
+        },
+        "print": {
+            "title": "Data Integration Sync Summary",
+            "default_hotel": "PRIME Hotels",
+            "system": "System",
+            "kpis": {
+                "title": "Sync Impact",
+                "files_processed": "Files Processed",
+                "total_records": "Total Records Sync",
+                "avg_quality": "Avg Quality Score",
+                "warnings": "Warnings Resolved"
+            },
+            "tables": {
+                "pipeline": "File Pipeline Details",
+                "headers": {
+                    "filename": "Filename",
+                    "status": "Status",
+                    "records": "Records",
+                    "quality": "Quality"
+                }
+            },
+            "notes": {
+                "verified": "All data has been verified against corporate standards.",
+                "financial": "Financial metrics updated across reporting dashboards.",
+                "trends": "Market segments and occupancy trends synchronized."
+            }
+        },
+        "ai_insights": {
+            "analyzed": "Analyzed {{count}} reports for {{property}}.",
+            "this_property": "this property",
+            "zero_revenue": "{{count}} files show zero revenue. Verify if this is correct or check column mappings.",
+            "high_occupancy": "High occupancy detected on {{count}} dates. AI suggests reviewing staffing levels for these periods.",
+            "gaps_detected": "Gaps detected in report dates. Ensure you are not missing daily reports for a continuous trend.",
+            "continuity_ok": "Date continuity looks perfect. This batch provides a solid sequence for trend analysis.",
+            "adr_variance": "Significant ADR variance detected ({{min}} to {{max}}). AI confirms dynamic pricing is active.",
+            "pms_direct": "PMS-Direct extraction is active. Data confidence is high (98%+) for {{count}} files.",
+            "import_impact": "Importing this batch will update your Operations Dashboard for {{count}} distinct business dates.",
+            "no_valid_data": "No valid data found to analyze. Please upload PMS reports to begin.",
+            "scan_complete": "Studio Intelligence Deep-Scan Complete",
+            "scan_complete_desc": "Generated {{count}} contextual insights for your data."
+        },
+        "toasts": {
+            "import_failed": "Import Failed",
+            "import_failed_desc": "Error processing records for {{file}}",
+            "import_deleted": "Import Deleted",
+            "import_deleted_desc": "The import session has been removed.",
+            "delete_failed": "Delete Failed",
+            "delete_failed_fallback": "Check your permissions.",
+            "optimization_complete": "Studio Optimization Complete",
+            "optimization_complete_desc": "Resolved {{conflicts}} conflicts and optimized data in {{files}} files.",
+            "import_complete": "Import Complete",
+            "import_complete_desc": "{{count}} records synchronized successfully across properties"
+        }
+    },
     "no_data": "No data available",
     "no_imports": "No import history available",
     "coming_soon": "Coming soon..."

@@ -87,6 +87,7 @@ export default function MyApprovals() {
         `)
         .eq('status', 'pending')
         .eq('is_active', true)
+        .eq('approver_id', user.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -158,6 +159,14 @@ export default function MyApprovals() {
         `)
         .eq('status', 'pending')
 
+      // Apply property scoping when available
+      const userPropertyIds = properties?.map(p => p.id) || []
+      if (userPropertyIds.length > 0) {
+        query = query.in('property_id', userPropertyIds)
+      } else if (primaryRole !== 'regional_hr' && primaryRole !== 'regional_admin') {
+        return []
+      }
+
       // Apply role-based filtering
       if (primaryRole === 'department_head') {
         // Department heads can approve leave for their departments
@@ -198,7 +207,7 @@ export default function MyApprovals() {
       if (!user || !primaryRole) return []
 
       // Property managers can approve critical maintenance tickets
-      const { data, error } = await supabase
+      let query = supabase
         .from('maintenance_tickets')
         .select(`
           *,
@@ -211,7 +220,15 @@ export default function MyApprovals() {
         `)
         .eq('status', 'open')
         .in('priority', ['high', 'critical'])
-        .order('created_at', { ascending: false })
+
+      const userPropertyIds = properties?.map(p => p.id) || []
+      if (userPropertyIds.length > 0) {
+        query = query.in('property_id', userPropertyIds)
+      } else if (primaryRole !== 'regional_hr' && primaryRole !== 'regional_admin') {
+        return []
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
       return data as (MaintenanceTicket & {
@@ -258,8 +275,7 @@ export default function MyApprovals() {
   const approveMutation = useMutation({
     mutationFn: async (approvalId: string) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to approve documents')
-
-      const { error } = await supabase.rpc('approve_document_atomic', {
+      const { data, error } = await supabase.rpc('approve_document_atomic', {
         p_approval_id: approvalId,
         p_approver_id: user.id,
         p_feedback: null,
@@ -268,7 +284,7 @@ export default function MyApprovals() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['document-approvals-pending'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
       queryClient.invalidateQueries({ queryKey: ['document-approvals-completed'] })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       crudToasts.approve.success('Document')
@@ -291,7 +307,7 @@ export default function MyApprovals() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['document-approvals-pending'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
       queryClient.invalidateQueries({ queryKey: ['document-approvals-completed'] })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       crudToasts.reject.success('Document')

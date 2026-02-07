@@ -73,6 +73,7 @@
     "audit_logs": "سجلات التدقيق",
     "pii_access_logs": "سجلات الوصول للبيانات الشخصية",
     "escalation_rules": "قواعد التصعيد",
+    "routing_health": "صحة التوجيه",
     "my_training": "تدريبي",
     "my_certificates": "شهاداتي",
     "my_requests": "طلباتي",

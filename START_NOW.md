@@ -5,8 +5,8 @@
 1. **Go to**: https://supabase.com/dashboard/project/htsvjfrofcpkfzvjpwvx/auth/users
 2. **Click**: "Add User" → "Create new user"
 3. **Enter**:
-   - Email: `admin@prime.com`
-   - Password: `Reem1977`
+   - Email: `your-email@example.com`
+   - Password: `YourStrongPassword`
    - ✅ Check **"Auto Confirm User"**
 4. **Click**: "Create User"
 
@@ -34,8 +34,8 @@ cd prime-hotels
 ## Step 4: Login
 
 - **URL**: http://localhost:5173
-- **Email**: admin@prime.com
-- **Password**: Reem1977
+- **Email**: Your Admin Email
+- **Password**: Your Admin Password
 
 ---
 

@@ -8,11 +8,12 @@ import { FileText, Download, Trash2, Plus, Loader2, AlertCircle } from 'lucide-r
 import { format } from 'date-fns'
 import { useToast } from '@/components/ui/use-toast'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 // import { PageHeader } from '@/components/layout/PageHeader'
 
-export default function EmployeeDocuments() {
+export default function EmployeeDocuments({ userId }: { userId?: string }) {
     const [isUploaderOpen, setIsUploaderOpen] = useState(false)
-    const { data: documents, isLoading } = useEmployeeDocuments()
+    const { data: documents, isLoading } = useEmployeeDocuments(userId)
     const deleteDocument = useDeleteEmployeeDocument()
     const downloadDocument = useDownloadEmployeeDocument()
     const { toast } = useToast()
@@ -109,13 +110,44 @@ export default function EmployeeDocuments() {
                                                 <Badge variant="secondary" className={categoryColors[doc.category] || categoryColors.other}>
                                                     {doc.category.toUpperCase()}
                                                 </Badge>
-                                                <span className="text-xs text-gray-500">
-                                                    {format(new Date(doc.created_at), 'MMM d, yyyy')}
-                                                </span>
-                                                <span className="text-xs text-gray-300">•</span>
+                                                {doc.document_number && (
+                                                    <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                                        {doc.document_number}
+                                                    </span>
+                                                )}
+                                                <span className="text-xs text-gray-400">•</span>
                                                 <span className="text-xs text-gray-500">
                                                     {(doc.file_size / 1024 / 1024).toFixed(2)} MB
                                                 </span>
+                                            </div>
+                                            <div className="flex items-center gap-3 mt-1.5">
+                                                <span className="text-xs text-gray-500 flex items-center gap-1">
+                                                    <FileText className="w-3 h-3" />
+                                                    {t('employee_documents.uploaded_title')}: {format(new Date(doc.created_at), 'MMM d, yyyy')}
+                                                </span>
+                                                {doc.expiry_date && (
+                                                    <span className={cn(
+                                                        "text-xs flex items-center gap-1 font-medium",
+                                                        doc.status === 'expired' ? "text-red-600" :
+                                                            doc.status === 'expiring_soon' ? "text-amber-600" :
+                                                                "text-gray-500"
+                                                    )}>
+                                                        <AlertCircle className="w-3 h-3" />
+                                                        {t('employee_documents.expiry_date')}: {format(new Date(doc.expiry_date), 'MMM d, yyyy')}
+                                                    </span>
+                                                )}
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "text-[10px] uppercase h-4 px-1.5",
+                                                        doc.status === 'active' ? "border-green-200 text-green-700 bg-green-50" :
+                                                            doc.status === 'expired' ? "border-red-200 text-red-700 bg-red-50" :
+                                                                doc.status === 'expiring_soon' ? "border-amber-200 text-amber-700 bg-amber-50" :
+                                                                    "border-gray-200 text-gray-700 bg-gray-50"
+                                                    )}
+                                                >
+                                                    {t(`employee_documents.${doc.status}`)}
+                                                </Badge>
                                             </div>
                                         </div>
                                     </div>

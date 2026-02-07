@@ -119,19 +119,16 @@ export function useRealtimeMessaging() {
           event: '*',
           schema: 'public',
           table: 'messages',
+          // Only listen for broadcast messages without a recipient.
+          filter: 'recipient_id=is.null'
         },
         (payload) => {
-          const row: any = (payload.new || payload.old) ?? null
-          if (!row) return
-
-          if (row.recipient_id === null) {
-            if (payload.eventType === 'INSERT') {
-              void playSound()
-            }
-            queryClient.invalidateQueries({ queryKey: ['messages'] })
-            queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
-            queryClient.invalidateQueries({ queryKey: ['notifications'] })
+          if (payload.eventType === 'INSERT') {
+            void playSound()
           }
+          queryClient.invalidateQueries({ queryKey: ['messages'] })
+          queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
+          queryClient.invalidateQueries({ queryKey: ['notifications'] })
         }
       )
       .on(

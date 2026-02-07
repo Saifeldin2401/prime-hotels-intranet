@@ -36,16 +36,9 @@ export function useCheckIn() {
             if (!user) throw new Error('User not authenticated')
 
             const { data: result, error } = await supabase
-                .from('attendance')
-                .insert({
-                    employee_id: user.id,
-                    date: new Date().toISOString().split('T')[0],
-                    check_in: new Date().toISOString(),
-                    status: 'present',
-                    ...data
+                .rpc('attendance_check_in', {
+                    p_notes: data.notes ?? null
                 })
-                .select()
-                .single()
 
             if (error) throw error
             return result
@@ -63,14 +56,10 @@ export function useCheckOut() {
     return useMutation({
         mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
             const { data, error } = await supabase
-                .from('attendance')
-                .update({
-                    check_out: new Date().toISOString(),
-                    notes
+                .rpc('attendance_check_out', {
+                    p_attendance_id: id,
+                    p_notes: notes ?? null
                 })
-                .eq('id', id)
-                .select()
-                .single()
 
             if (error) throw error
             return data

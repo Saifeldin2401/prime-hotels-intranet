@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
+import { maintenanceTicketSchema, type MaintenanceTicketFormData } from '@/lib/validationSchemas'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { LoadingButton } from '@/components/loading'
 import {
   Form,
   FormControl,
@@ -30,34 +33,34 @@ import { crudToasts } from '@/lib/toastHelpers'
 import { AITriageSuggestions } from '@/components/maintenance/AITriageSuggestions'
 
 const categories = [
-  { value: 'plumbing', label: 'Plumbing' },
-  { value: 'electrical', label: 'Electrical' },
-  { value: 'hvac', label: 'HVAC' },
-  { value: 'appliance', label: 'Appliance' },
-  { value: 'structural', label: 'Structural' },
-  { value: 'cosmetic', label: 'Cosmetic' },
-  { value: 'safety', label: 'Safety' },
-  { value: 'other', label: 'Other' }
+  { value: 'plumbing' },
+  { value: 'electrical' },
+  { value: 'hvac' },
+  { value: 'appliance' },
+  { value: 'structural' },
+  { value: 'cosmetic' },
+  { value: 'safety' },
+  { value: 'other' }
 ] as const
 
 const priorities = [
-  { value: 'low', label: 'Low', color: 'bg-blue-100 text-blue-800' },
-  { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-800' },
-  { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-800' },
-  { value: 'critical', label: 'Critical', color: 'bg-purple-100 text-purple-800' }
+  { value: 'low', color: 'bg-blue-100 text-blue-800' },
+  { value: 'medium', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'high', color: 'bg-orange-100 text-orange-800' },
+  { value: 'urgent', color: 'bg-red-100 text-red-800' },
+  { value: 'critical', color: 'bg-purple-100 text-purple-800' }
 ] as const
 
-const ticketSchema = z.object({
-  title: z.string().min(5, 'Title must be at least 5 characters').max(100, 'Title matches max length of 100'),
-  description: z.string().min(5, 'Please provide more detail (at least 5 characters)'),
-  category: z.enum(['plumbing', 'electrical', 'hvac', 'appliance', 'structural', 'cosmetic', 'safety', 'other']),
-  priority: z.enum(['low', 'medium', 'high', 'urgent', 'critical']),
-  room_number: z.string().optional(),
-  property_id: z.string().optional(),
-})
+const categoryEnum = z.enum(['plumbing', 'electrical', 'hvac', 'appliance', 'structural', 'cosmetic', 'safety', 'other'])
+const maxFileSizeBytes = 5 * 1024 * 1024
+const allowedFilePrefixes = ['image/']
+const allowedFileTypes = ['application/pdf']
 
-type TicketFormValues = z.infer<typeof ticketSchema>
+type TicketFormValues = z.infer<typeof maintenanceTicketSchema> & {
+  room_number?: string
+  property_id?: string | ''
+  category?: z.infer<typeof categoryEnum> | ''
+}
 
 export default function SubmitTicket() {
   const { user, properties } = useAuth()
@@ -65,6 +68,29 @@ export default function SubmitTicket() {
   const { t } = useTranslation('maintenance')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const ticketSchema = useMemo(() => (
+    maintenanceTicketSchema.extend({
+      room_number: z.string().optional(),
+      property_id: z.string().uuid().optional().or(z.literal('')),
+      category: categoryEnum.optional().or(z.literal(''))
+    }).superRefine((data, ctx) => {
+      if (!data.category) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t('submit_ticket.validation_category_required', { defaultValue: 'Category is required.' }),
+          path: ['category']
+        })
+      }
+      if (properties.length > 1 && !data.property_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t('submit_ticket.validation_property_required', { defaultValue: 'Property is required.' }),
+          path: ['property_id']
+        })
+      }
+    })
+  ), [properties.length, t])
 
   const form = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
@@ -118,6 +144,7 @@ export default function SubmitTicket() {
       'low': 'low',
       'medium': 'medium',
       'high': 'high',
+      'urgent': 'urgent',
       'critical': 'critical'
     }
     const mappedPriority = priorityMap[s.priority] || 'medium'
@@ -144,7 +171,31 @@ export default function SubmitTicket() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
-      setSelectedFiles(prev => [...prev, ...newFiles])
+      const acceptedFiles: File[] = []
+
+      newFiles.forEach(file => {
+        const isAllowedType = allowedFilePrefixes.some(prefix => file.type.startsWith(prefix)) || allowedFileTypes.includes(file.type)
+        if (!isAllowedType) {
+          crudToasts.create.error(t('submit_ticket.file_type_invalid', {
+            defaultValue: '{{name}} is not a supported file type.',
+            name: file.name
+          }))
+          return
+        }
+        if (file.size > maxFileSizeBytes) {
+          crudToasts.create.error(t('submit_ticket.file_too_large', {
+            defaultValue: '{{name}} exceeds the 5MB limit.',
+            name: file.name
+          }))
+          return
+        }
+        acceptedFiles.push(file)
+      })
+
+      if (acceptedFiles.length > 0) {
+        setSelectedFiles(prev => [...prev, ...acceptedFiles])
+      }
+      e.target.value = ''
     }
   }
 
@@ -176,8 +227,8 @@ export default function SubmitTicket() {
               description: 'Initial attachment'
             })
           } catch (error) {
-            console.error('Failed to upload file:', file.name, error)
-            crudToasts.create.error(`upload attachment ${file.name}`)
+            const errorDetails = getUserFriendlyError(error)
+            crudToasts.create.error(`upload attachment ${file.name}: ${errorDetails.message}`)
             // Continue uploading other files even if one fails
           }
         }
@@ -186,8 +237,8 @@ export default function SubmitTicket() {
       // 3. Navigate back
       navigate('/maintenance')
     } catch (error) {
-      console.error('Ticket submission failed:', error)
-      // Toast is already handled by useCreateMaintenanceTicket hook
+      const errorDetails = getUserFriendlyError(error)
+      crudToasts.create.error(`ticket submission: ${errorDetails.message}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -243,7 +294,7 @@ export default function SubmitTicket() {
                           <SelectContent>
                             {categories.map(category => (
                               <SelectItem key={category.value} value={category.value}>
-                                {category.label}
+                                {t(`categories.${category.value}`, { defaultValue: category.value })}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -282,7 +333,7 @@ export default function SubmitTicket() {
 
                 <div className="space-y-4">
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    {t('attachments') || 'Attachments'}
+                    {t('submit_ticket.attachments', { defaultValue: t('attachments') || 'Attachments' })}
                   </label>
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-4">
@@ -293,7 +344,7 @@ export default function SubmitTicket() {
                         className="w-full md:w-auto"
                       >
                         <Upload className="w-4 h-4 mr-2" />
-                        {t('upload_files') || 'Upload Files'}
+                        {t('submit_ticket.upload_files', { defaultValue: 'Upload Files' })}
                       </Button>
                       <Input
                         id="file-upload"
@@ -304,7 +355,7 @@ export default function SubmitTicket() {
                         accept="image/*,application/pdf"
                       />
                       <span className="text-sm text-muted-foreground">
-                        {t('max_file_size') || 'Max 5MB per file'}
+                        {t('submit_ticket.max_file_size', { defaultValue: 'Max 5MB per file' })}
                       </span>
                     </div>
 
@@ -346,17 +397,17 @@ export default function SubmitTicket() {
                               <SelectValue placeholder={t('priority')} />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            {priorities.map(priority => (
-                              <SelectItem key={priority.value} value={priority.value}>
-                                <div className="flex items-center space-x-2 gap-2">
-                                  <Badge className={priority.color}>
-                                    {priority.label}
-                                  </Badge>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
+                        <SelectContent>
+                          {priorities.map(priority => (
+                            <SelectItem key={priority.value} value={priority.value}>
+                              <div className="flex items-center space-x-2 gap-2">
+                                <Badge className={priority.color}>
+                                  {t(priority.value, { defaultValue: priority.value })}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
@@ -368,11 +419,11 @@ export default function SubmitTicket() {
                     name="room_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('room_number')}</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 101" {...field} />
-                        </FormControl>
-                        <FormMessage />
+                      <FormLabel>{t('room_number')}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t('submit_ticket.room_placeholder', { defaultValue: 'e.g., 101' })} {...field} />
+                      </FormControl>
+                      <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -426,19 +477,19 @@ export default function SubmitTicket() {
                   >
                     {t('cancel')}
                   </Button>
-                  <Button
+                  <LoadingButton
                     type="submit"
                     disabled={isSubmitting}
+                    loading={isSubmitting}
+                    loadingText={selectedFiles.length > 0
+                      ? t('submit_ticket.uploading', { defaultValue: 'Submitting & Uploading...' })
+                      : t('submit_ticket.submitting', { defaultValue: 'Submitting...' })}
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Upload className="mr-2 h-4 w-4 animate-spin" />
-                        {selectedFiles.length > 0 ? t('uploading') || 'Submitting & Uploading...' : t('submitting')}
-                      </>
-                    ) : (
-                      t('submit')
-                    )}
-                  </Button>
+                    <Upload className="mr-2 h-4 w-4" />
+                    {selectedFiles.length > 0
+                      ? t('submit_ticket.submit_with_files', { defaultValue: 'Submit & Upload' })
+                      : t('submit_ticket.submit', { defaultValue: 'Submit Ticket' })}
+                  </LoadingButton>
                 </div>
               </Form>
             </CardContent>
@@ -455,7 +506,7 @@ export default function SubmitTicket() {
               {priorities.map(priority => (
                 <div key={priority.value} className="flex items-start space-x-3 gap-3">
                   <Badge className={priority.color} variant="secondary">
-                    {priority.label}
+                    {t(priority.value, { defaultValue: priority.value })}
                   </Badge>
                   <div className="text-sm text-gray-600">
                     {priority.value === 'critical' && t('submit_ticket.guideline_critical')}

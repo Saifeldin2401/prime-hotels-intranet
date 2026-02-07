@@ -14,27 +14,28 @@ import {
   useUpdateReportDefinition
 } from '@/hooks/useReports'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
+import { useTranslation } from 'react-i18next'
 
 const REPORT_TYPES = [
-  { value: 'operations', label: 'Operations' },
-  { value: 'hr', label: 'HR' },
-  { value: 'training', label: 'Training' },
-  { value: 'audits', label: 'Audits' }
-]
+  { value: 'operations', labelKey: 'report_builder.types.operations' },
+  { value: 'hr', labelKey: 'report_builder.types.hr' },
+  { value: 'training', labelKey: 'report_builder.types.training' },
+  { value: 'audits', labelKey: 'report_builder.types.audits' }
+] as const
 
 const SCOPE_TYPES = [
-  { value: 'global', label: 'Global' },
-  { value: 'property', label: 'Property' },
-  { value: 'department', label: 'Department' }
-]
+  { value: 'global', labelKey: 'report_builder.scopes.global' },
+  { value: 'property', labelKey: 'report_builder.scopes.property' },
+  { value: 'department', labelKey: 'report_builder.scopes.department' }
+] as const
 
 const SCHEDULE_OPTIONS = [
-  { value: 'none', label: 'No schedule' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' }
-]
+  { value: 'none', labelKey: 'report_builder.schedule.none' },
+  { value: 'hourly', labelKey: 'report_builder.schedule.hourly' },
+  { value: 'daily', labelKey: 'report_builder.schedule.daily' },
+  { value: 'weekly', labelKey: 'report_builder.schedule.weekly' },
+  { value: 'monthly', labelKey: 'report_builder.schedule.monthly' }
+] as const
 
 function toCsv(rows: any[]) {
   if (!rows || rows.length === 0) return ''
@@ -104,6 +105,7 @@ function downloadCsv(filename: string, content: string) {
 }
 
 export function ReportsControlCenter() {
+  const { t } = useTranslation('admin')
   const { data: reports = [] } = useReportDefinitions()
   const { data: runs = [] } = useReportRuns()
   const createReport = useCreateReportDefinition()
@@ -155,43 +157,49 @@ export function ReportsControlCenter() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Report Builder</CardTitle>
+          <CardTitle className="text-base">{t('report_builder.title', { defaultValue: 'Report Builder' })}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 lg:grid-cols-6 gap-3">
-          <Input placeholder="Report name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
+          <Input placeholder={t('report_builder.placeholders.name', { defaultValue: 'Report name' })} value={name} onChange={(e) => setName(e.target.value)} />
+          <Input placeholder={t('report_builder.placeholders.description', { defaultValue: 'Description' })} value={description} onChange={(e) => setDescription(e.target.value)} />
           <Select value={reportType} onValueChange={setReportType}>
             <SelectTrigger>
-              <SelectValue placeholder="Type" />
+              <SelectValue placeholder={t('report_builder.placeholders.type', { defaultValue: 'Type' })} />
             </SelectTrigger>
             <SelectContent>
               {REPORT_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                <SelectItem key={type.value} value={type.value}>
+                  {t(type.labelKey, { defaultValue: type.value })}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={scopeType} onValueChange={setScopeType}>
             <SelectTrigger>
-              <SelectValue placeholder="Scope" />
+              <SelectValue placeholder={t('report_builder.placeholders.scope', { defaultValue: 'Scope' })} />
             </SelectTrigger>
             <SelectContent>
               {SCOPE_TYPES.map((scope) => (
-                <SelectItem key={scope.value} value={scope.value}>{scope.label}</SelectItem>
+                <SelectItem key={scope.value} value={scope.value}>
+                  {t(scope.labelKey, { defaultValue: scope.value })}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={scheduleFrequency} onValueChange={setScheduleFrequency}>
             <SelectTrigger>
-              <SelectValue placeholder="Schedule" />
+              <SelectValue placeholder={t('report_builder.placeholders.schedule', { defaultValue: 'Schedule' })} />
             </SelectTrigger>
             <SelectContent>
               {SCHEDULE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                <SelectItem key={opt.value} value={opt.value}>
+                  {t(opt.labelKey, { defaultValue: opt.value })}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button onClick={handleCreate} disabled={!name.trim()}>
-            Create Report
+            {t('report_builder.actions.create', { defaultValue: 'Create Report' })}
           </Button>
         </CardContent>
       </Card>
@@ -202,23 +210,37 @@ export function ReportsControlCenter() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-base font-semibold">{report.name}</p>
-                <p className="text-xs text-muted-foreground">{report.description || 'No description'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {report.description || t('report_builder.no_description', { defaultValue: 'No description' })}
+                </p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Badge variant="secondary">{report.report_type}</Badge>
                   <Badge variant="outline">{report.scope_type}</Badge>
                   {report.schedule_frequency && <Badge className="bg-blue-50 text-blue-700 border border-blue-100">{report.schedule_frequency}</Badge>}
-                  {!report.is_active && <Badge variant="destructive">Inactive</Badge>}
+                  {!report.is_active && (
+                    <Badge variant="destructive">
+                      {t('report_builder.inactive', { defaultValue: 'Inactive' })}
+                    </Badge>
+                  )}
                 </div>
                 {report.next_run_at && (
-                  <p className="text-xs text-muted-foreground mt-1">Next run: {new Date(report.next_run_at).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('report_builder.next_run', { defaultValue: 'Next run:' })} {new Date(report.next_run_at).toLocaleString()}
+                  </p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Button size="sm" onClick={() => handleRun(report.id, report.report_type)}>Run</Button>
-                <Button size="sm" variant="outline" onClick={() => updateReport.mutate({ id: report.id, is_active: !report.is_active })}>
-                  {report.is_active ? 'Disable' : 'Enable'}
+                <Button size="sm" onClick={() => handleRun(report.id, report.report_type)}>
+                  {t('report_builder.actions.run', { defaultValue: 'Run' })}
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => deleteReport.mutate(report.id)}>Delete</Button>
+                <Button size="sm" variant="outline" onClick={() => updateReport.mutate({ id: report.id, is_active: !report.is_active })}>
+                  {report.is_active
+                    ? t('report_builder.actions.disable', { defaultValue: 'Disable' })
+                    : t('report_builder.actions.enable', { defaultValue: 'Enable' })}
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => deleteReport.mutate(report.id)}>
+                  {t('report_builder.actions.delete', { defaultValue: 'Delete' })}
+                </Button>
               </div>
             </div>
           </EnhancedCard>
@@ -227,15 +249,17 @@ export function ReportsControlCenter() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Recent Runs</CardTitle>
+          <CardTitle className="text-base">{t('report_builder.recent_runs', { defaultValue: 'Recent Runs' })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {runs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No report runs yet.</p>
+            <p className="text-sm text-muted-foreground">{t('report_builder.no_runs', { defaultValue: 'No report runs yet.' })}</p>
           ) : runs.slice(0, 6).map((run) => (
             <div key={run.id} className="flex items-center justify-between text-sm border rounded-md p-2">
               <div>
-                <p className="font-medium">Run {run.id.slice(0, 6)}</p>
+                <p className="font-medium">
+                  {t('report_builder.run_label', { defaultValue: 'Run {{id}}', id: run.id.slice(0, 6) })}
+                </p>
                 <p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleString()}</p>
               </div>
               <Badge variant={run.status === 'success' ? 'default' : run.status === 'failed' ? 'destructive' : 'secondary'}>

@@ -10,6 +10,7 @@ class AnalyticsService {
     private sessionId: string | null = null
     private userId: string | null = null
     private sessionPromise: Promise<void> | null = null
+    private flushInProgress = false
 
     private constructor() {
         this.setupFlushTimer()
@@ -180,54 +181,51 @@ class AnalyticsService {
      * Flush buffer to Supabase
      */
     private async flush() {
-        if (this.buffer.length === 0) return
-
-        // Make sure session is ready
-        if (this.sessionPromise) {
-            await this.sessionPromise
-        }
-
-        // If still no session (e.g. DB error), try one more time
-        if (!this.sessionId) {
-            await this.startNewSession()
-            if (!this.sessionId) {
-                // Still failing? Keep events in buffer and retry later.
-                console.warn('Cannot flush analytics: No valid session ID')
-                return
-            }
-        }
-
-        // Optimistically clear buffer, but keep copy to restore on failure
-        const currentBuffer = [...this.buffer]
-        this.buffer = []
-
-        const eventsToSend = currentBuffer.map(e => ({
-            ...e,
-            session_id: this.sessionId,
-            user_id: this.userId || e.user_id
-        }))
+        if (this.buffer.length === 0 || this.flushInProgress) return
+        this.flushInProgress = true
 
         try {
+            // Make sure session is ready
+            if (this.sessionPromise) {
+                await this.sessionPromise
+            }
+
+            // If still no session (e.g. DB error), try one more time
+            if (!this.sessionId) {
+                await this.startNewSession()
+                if (!this.sessionId) {
+                    // Still failing? Keep events in buffer and retry later.
+                    console.warn('Cannot flush analytics: No valid session ID')
+                    return
+                }
+            }
+
+            const currentBuffer = [...this.buffer]
+            const eventsToSend = currentBuffer.map(e => ({
+                ...e,
+                session_id: this.sessionId,
+                user_id: this.userId || e.user_id
+            }))
+
             const { error } = await supabase
                 .from('analytics_events')
                 .insert(eventsToSend)
 
             if (error) {
                 console.error('Failed to flush analytics events', error)
-                // On failure, keep events in buffer for retry (if network issue)
-                // But we must remove them if it's a data validation issue to avoid clogging.
-                // For simplicity, we'll re-add them to the start of the buffer if error code indicates transient issue.
-                // 409, 5xx, or network error.
-                // For now, we'll just log and rely on the fact that we CLEARED buffer before sending.
-                // WAIT - if we cleared, we lost them. We should NOT clear until success.
-                // Reverting clear:
+                return
+            }
+
+            // Success: remove only the events we just sent
+            if (this.buffer.length >= currentBuffer.length) {
+                this.buffer = this.buffer.slice(currentBuffer.length)
             } else {
-                // Success - events are sent.
+                this.buffer = []
             }
         } catch (e) {
             console.error('Analytics flush error', e)
-            // Restore events on network failure
-            this.buffer = [...eventsToSend, ...this.buffer]
+        } finally {
+            this.flushInProgress = false
         }
     }
 

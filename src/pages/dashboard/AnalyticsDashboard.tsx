@@ -75,9 +75,11 @@ export default function AnalyticsDashboard() {
         supabase.from('documents').select('created_at, status').gte('created_at', isoDate),
         supabase.from('learning_assignments').select('created_at, status, due_date').gte('created_at', isoDate),
         supabase.from('maintenance_tickets').select('created_at, status, priority').gte('created_at', isoDate),
-        // Employee referrals table might not exist yet, so we skip it to prevent errors
-        // supabase.from('employee_referrals').select('created_at, status, bonus_amount').gte('created_at', isoDate),
-        Promise.resolve({ data: [], error: null }),
+        supabase
+          .from('job_applications')
+          .select('created_at, status, referred_by')
+          .not('referred_by', 'is', null)
+          .gte('created_at', isoDate),
         supabase.from('audit_logs').select('created_at, action').gte('created_at', isoDate)
       ])
 
@@ -125,8 +127,8 @@ export default function AnalyticsDashboard() {
         referrals: {
           total: referrals.length,
           hired: referrals.filter((r: AnalyticsItem) => r.status === 'hired').length,
-          pending: referrals.filter((r: AnalyticsItem) => r.status === 'pending').length,
-          bonusPaid: referrals.filter((r: AnalyticsItem) => r.status === 'hired').reduce((sum: number, r: AnalyticsItem) => sum + (r.bonus_amount || 0), 0)
+          pending: referrals.filter((r: AnalyticsItem) => r.status && !['hired', 'rejected'].includes(r.status)).length,
+          bonusPaid: 0
         },
         audit: {
           total: audit.length,

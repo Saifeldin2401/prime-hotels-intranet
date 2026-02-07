@@ -23,7 +23,9 @@ import {
 import { Loader2, UserPlus, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useTranslation } from 'react-i18next'
+import { useProperty } from '@/contexts/PropertyContext'
 import { format, addDays } from 'date-fns'
+import { getUserFriendlyError } from '@/lib/errorMessages'
 
 interface DelegateApprovalDialogProps {
     open: boolean
@@ -49,6 +51,7 @@ export function DelegateApprovalDialog({
 }: DelegateApprovalDialogProps) {
     const { t } = useTranslation('approvals')
     const { user } = useAuth()
+    const { currentProperty } = useProperty()
     const { toast } = useToast()
     const queryClient = useQueryClient()
 
@@ -75,28 +78,36 @@ export function DelegateApprovalDialog({
 
     const delegateMutation = useMutation({
         mutationFn: async () => {
-            if (!delegateId) throw new Error('Please select a delegate')
+            if (!delegateId) throw new Error(t('delegate.errors.select_delegate', { defaultValue: 'Please select a delegate.' }))
 
             const expiryDate = addDays(new Date(), parseInt(expiryDays))
+            
+            // Determine scope: if approvalId is provided, this is approval-specific delegation
+            // Otherwise, fall back to property-based scope
+            const scopeType = currentProperty?.id && currentProperty.id !== 'all' ? 'property' : 'all'
+            const scopeId = scopeType === 'property' ? currentProperty?.id : null
 
             // Create delegation record
-            const { error } = await supabase
-                .from('approval_delegations')
+            // If approvalId is provided, create approval-specific delegation
+            // Otherwise, create scope-based delegation (property/department/all)
+            const { data, error } = await supabase
+                .from('temporary_approvers')
                 .insert({
-                    approval_id: approvalId,
-                    approval_type: approvalType,
                     delegator_id: user?.id,
                     delegate_id: delegateId,
-                    reason: reason || null,
-                    expires_at: expiryDate.toISOString(),
-                    status: 'active'
+                    entity_type: approvalId ? approvalType : null, // Link to specific approval if provided
+                    entity_id: approvalId || null, // Link to specific approval if provided
+                    scope_type: scopeType,
+                    scope_id: scopeId,
+                    start_at: new Date().toISOString(),
+                    end_at: expiryDate.toISOString(),
+                    reason: reason.trim() || null
                 })
+                .select()
 
             if (error) {
-                // If table doesn't exist, we'll create it via migration later
-                // For now, just log and notify user
-                console.error('Delegation error:', error)
-                throw new Error('Delegation feature is not yet configured. Please contact support.')
+                const errorDetails = getUserFriendlyError(error)
+                throw new Error(errorDetails.message)
             }
         },
         onSuccess: () => {
@@ -110,10 +121,11 @@ export function DelegateApprovalDialog({
             onOpenChange(false)
             onDelegated?.()
         },
-        onError: (error: Error) => {
+        onError: (error: unknown) => {
+            const errorDetails = getUserFriendlyError(error)
             toast({
                 title: t('delegate.error_title', { defaultValue: 'Delegation Failed' }),
-                description: error.message,
+                description: errorDetails.message,
                 variant: 'destructive'
             })
         }
@@ -145,21 +157,21 @@ export function DelegateApprovalDialog({
                     <div className="space-y-2">
                         <Label>{t('delegate.select_person', { defaultValue: 'Delegate To' })}</Label>
                         <Select value={delegateId} onValueChange={setDelegateId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a person..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {loadingDelegates ? (
-                                    <div className="flex items-center justify-center p-4">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    </div>
-                                ) : delegates?.length === 0 ? (
-                                    <div className="p-4 text-center text-sm text-gray-500">
-                                        No delegates available
-                                    </div>
-                                ) : (
-                                    delegates?.map((delegate) => (
-                                        <SelectItem key={delegate.id} value={delegate.id}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={t('delegate.select_person_placeholder', { defaultValue: 'Select a person' })} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {loadingDelegates ? (
+                                <div className="flex items-center justify-center p-4">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                </div>
+                            ) : delegates?.length === 0 ? (
+                                <div className="p-4 text-center text-sm text-gray-500">
+                                    {t('delegate.no_delegates', { defaultValue: 'No delegates available.' })}
+                                </div>
+                            ) : (
+                                delegates?.map((delegate) => (
+                                    <SelectItem key={delegate.id} value={delegate.id}>
                                             <div className="flex flex-col">
                                                 <span>{delegate.full_name}</span>
                                                 {delegate.job_title && (
@@ -193,16 +205,19 @@ export function DelegateApprovalDialog({
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="1">1 day</SelectItem>
-                                <SelectItem value="3">3 days</SelectItem>
-                                <SelectItem value="7">7 days</SelectItem>
-                                <SelectItem value="14">14 days</SelectItem>
-                                <SelectItem value="30">30 days</SelectItem>
-                            </SelectContent>
+                        <SelectContent>
+                            <SelectItem value="1">{t('delegate.expiry_options.1', { defaultValue: '1 day' })}</SelectItem>
+                            <SelectItem value="3">{t('delegate.expiry_options.3', { defaultValue: '3 days' })}</SelectItem>
+                            <SelectItem value="7">{t('delegate.expiry_options.7', { defaultValue: '7 days' })}</SelectItem>
+                            <SelectItem value="14">{t('delegate.expiry_options.14', { defaultValue: '14 days' })}</SelectItem>
+                            <SelectItem value="30">{t('delegate.expiry_options.30', { defaultValue: '30 days' })}</SelectItem>
+                        </SelectContent>
                         </Select>
                         <p className="text-xs text-gray-500">
-                            Expires on {format(addDays(new Date(), parseInt(expiryDays)), 'PPP')}
+                            {t('delegate.expires_on', {
+                                defaultValue: 'Expires on {{date}}',
+                                date: format(addDays(new Date(), parseInt(expiryDays)), 'PPP')
+                            })}
                         </p>
                     </div>
 
@@ -212,7 +227,7 @@ export function DelegateApprovalDialog({
                         <Textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            placeholder="e.g., Out of office, vacation..."
+                            placeholder={t('delegate.reason_placeholder', { defaultValue: 'e.g., Out of office, vacation...' })}
                             rows={2}
                         />
                     </div>

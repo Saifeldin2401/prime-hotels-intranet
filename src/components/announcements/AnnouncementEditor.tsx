@@ -35,6 +35,9 @@ import {
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { announcementSchema } from '@/lib/validationSchemas'
+import { LoadingButton } from '@/components/loading'
 
 interface AnnouncementEditorProps {
   initialData?: any
@@ -136,7 +139,6 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         .single()
 
       if (error) {
-        console.error('Supabase error creating announcement:', error)
         throw error
       }
 
@@ -249,7 +251,8 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
               await response.json()
             }
           } catch (bulkError) {
-            console.error('Bulk notification error:', bulkError)
+            const errorDetails = getUserFriendlyError(bulkError)
+            toast.error(`Bulk notification error: ${errorDetails.message}`)
           }
         } else {
           // Direct insert for <= 10 users
@@ -263,7 +266,10 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
               link: `/announcements/${result.id}`,
               metadata: { announcement_id: result.id, creator_id: user?.id }
             })
-          ).catch(err => console.error('Failed to send notifications:', err))
+          ).catch(err => {
+            const errorDetails = getUserFriendlyError(err)
+            toast.error(`Failed to send notifications: ${errorDetails.message}`)
+          })
         }
       }
 
@@ -276,8 +282,8 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       onClose?.()
     },
     onError: (error) => {
-      console.error('Failed to create announcement:', error)
-      toast.error('Failed to create announcement: ' + error.message)
+      const errorDetails = getUserFriendlyError(error)
+      toast.error(`Failed to create announcement: ${errorDetails.message}`)
     }
   })
 
@@ -303,7 +309,8 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       onClose?.()
     },
     onError: (error) => {
-      toast.error('Failed to update announcement')
+      const errorDetails = getUserFriendlyError(error)
+      toast.error(`Failed to update announcement: ${errorDetails.message}`)
     }
   })
 
@@ -338,7 +345,8 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       setAttachments([...attachments, ...newAttachments as MediaAttachment[]])
       toast.success(`Uploaded ${newAttachments.length} file(s)`)
     } catch (error) {
-      toast.error('Failed to upload files')
+      const errorDetails = getUserFriendlyError(error)
+      toast.error(`Failed to upload files: ${errorDetails.message}`)
     }
   }
 
@@ -348,10 +356,24 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
   const handleSubmit = () => {
     try {
-      if (!formData.title.trim() || !formData.content.trim()) {
-        toast.error('Title and content are required')
-        return
+      // Validate using Zod schema
+      const validationData = {
+        title: formData.title,
+        content: formData.content,
+        priority: formData.priority as 'low' | 'medium' | 'high' | 'urgent',
+        status: 'published' as const,
+        targetType: targetAudience.type === 'all' ? 'all' : 
+                   targetAudience.type === 'property' ? 'property' :
+                   targetAudience.type === 'department' ? 'department' : 'role',
+        propertyId: targetAudience.type === 'property' && targetAudience.values.length > 0 ? targetAudience.values[0] : undefined,
+        departmentId: targetAudience.type === 'department' && targetAudience.values.length > 0 ? targetAudience.values[0] : undefined,
+        role: targetAudience.type === 'role' && targetAudience.values.length > 0 ? targetAudience.values[0] : undefined,
+        publishedAt: formData.is_scheduled && formData.scheduled_at ? new Date(formData.scheduled_at) : new Date(),
+        expiresAt: formData.expires_at ? new Date(formData.expires_at) : undefined,
+        attachments: attachments.map(a => a.url)
       }
+      
+      announcementSchema.parse(validationData)
 
       const { is_pinned, is_scheduled, ...restFormData } = formData
 
@@ -370,8 +392,8 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         createAnnouncementMutation.mutate(announcementData)
       }
     } catch (e: any) {
-      console.error('handleSubmit error:', e)
-      toast.error('Error submitting form: ' + e.message)
+      const errorDetails = getUserFriendlyError(e)
+      toast.error(`Error submitting form: ${errorDetails.message}`)
     }
   }
 
@@ -645,13 +667,15 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
+          <LoadingButton
             onClick={handleSubmit}
             disabled={createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending}
+            loading={createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending}
+            loadingText={initialData?.id ? 'Updating...' : 'Creating...'}
           >
             <Save className="h-4 w-4 mr-2" />
             {initialData?.id ? 'Update' : 'Create'} Announcement
-          </Button>
+          </LoadingButton>
         </div>
       </CardContent>
     </Card>

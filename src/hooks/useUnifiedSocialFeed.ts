@@ -235,7 +235,9 @@ export function useUnifiedSocialFeed() {
         .from('tasks')
         .select('*')
         .eq('assigned_to_id', user.id)
+        .eq('is_deleted', false)
         .neq('status', 'completed')
+        .neq('status', 'cancelled')
         .order('due_date', { ascending: true })
         .limit(5)
 

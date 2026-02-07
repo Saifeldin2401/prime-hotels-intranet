@@ -30,6 +30,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { getUserFriendlyError } from '@/lib/errorMessages'
 
 interface DigestData {
     id: string
@@ -74,12 +75,22 @@ export function AIDigestWidget({ className }: AIDigestWidgetProps) {
                 .maybeSingle()
 
             if (error && error.code !== 'PGRST116') {
-                console.error('Error fetching digest:', error)
+                const errorDetails = getUserFriendlyError(error)
+                toast({
+                    title: 'Unable to load digest',
+                    description: errorDetails.message,
+                    variant: 'destructive'
+                })
             }
 
             setDigest(data || null)
         } catch (err) {
-            console.error('Digest fetch error:', err)
+            const errorDetails = getUserFriendlyError(err)
+            toast({
+                title: 'Error loading digest',
+                description: errorDetails.message,
+                variant: 'destructive'
+            })
         } finally {
             setLoading(false)
         }
@@ -205,11 +216,10 @@ Generate the summary now:`
             })
 
         } catch (err: unknown) {
-            console.error('Digest generation error:', err)
-            const errorMessage = err instanceof Error ? err.message : 'Could not generate digest'
+            const errorDetails = getUserFriendlyError(err)
             toast({
                 title: 'Generation Failed',
-                description: errorMessage,
+                description: errorDetails.message,
                 variant: 'destructive'
             })
         } finally {

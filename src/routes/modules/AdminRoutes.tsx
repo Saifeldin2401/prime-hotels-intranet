@@ -17,6 +17,7 @@ const AIToolsPage = lazy(() => import('@/pages/admin/AIToolsPage'))
 const AdminAnalyticsDashboard = lazy(() => import('@/pages/admin/AdminAnalyticsDashboard'))
 const OnboardingTemplates = lazy(() => import('@/pages/onboarding/OnboardingTemplates'))
 const TemplateEditor = lazy(() => import('@/pages/onboarding/TemplateEditor'))
+const RoutingHealth = lazy(() => import('@/pages/admin/RoutingHealth'))
 
 export const AdminRoutes = () => (
     <>
@@ -86,6 +87,16 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
                     <AppLayout>
                         <EscalationRules />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/routing-health"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <RoutingHealth />
                     </AppLayout>
                 </ProtectedRoute>
             }

@@ -48,7 +48,7 @@ export default function EmployeeReferrals() {
       }
 
       const canViewAll = roles?.some(r =>
-        ['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'general_manager'].includes(r.role)
+        ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(r.role)
       )
 
       if (!canViewAll && user?.id) {

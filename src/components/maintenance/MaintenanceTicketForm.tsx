@@ -16,6 +16,8 @@ import {
   Upload,
   Camera
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import type { MaintenanceTicket } from '@/lib/types'
 
 interface MaintenanceTicketFormProps {
   onClose: () => void
@@ -24,16 +26,31 @@ interface MaintenanceTicketFormProps {
 
 export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicketFormProps) {
   const { profile, properties, departments } = useAuth()
+  const { t } = useTranslation('maintenance')
   const queryClient = useQueryClient()
+
+  const normalizeCategory = (value?: string) => {
+    if (!value) return 'other'
+    const normalized = value.toLowerCase()
+    const legacyMap: Record<string, string> = {
+      internet: 'appliance',
+      tv: 'appliance',
+      furniture: 'cosmetic',
+      general: 'other'
+    }
+    const allowed = ['plumbing', 'electrical', 'hvac', 'appliance', 'structural', 'cosmetic', 'safety', 'other']
+    if (allowed.includes(normalized)) return normalized
+    return legacyMap[normalized] || 'other'
+  }
 
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     description: initialData?.description || '',
     priority: initialData?.priority || 'medium',
-    category: initialData?.category || 'general',
+    category: normalizeCategory(initialData?.category),
     property_id: initialData?.property_id || '',
     department_id: initialData?.department_id || '',
-    location: initialData?.location || '',
+    room_number: initialData?.room_number || '',
     estimated_cost: initialData?.estimated_cost || ''
   })
 
@@ -43,17 +60,29 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
   // Trigger AI analysis when description changes
   useEffect(() => {
     if (formData.description.length > 15) {
-      analyzeTicketDebounced(formData.description, formData.location)
+      analyzeTicketDebounced(formData.description, formData.room_number)
     }
-  }, [formData.description, formData.location, analyzeTicketDebounced])
+  }, [formData.description, formData.room_number, analyzeTicketDebounced])
 
   // Apply AI suggestions to form
   const handleApplySuggestion = (s: typeof suggestion) => {
     if (!s) return
+    const categoryMap: Record<string, string> = {
+      'hvac': 'hvac',
+      'plumbing': 'plumbing',
+      'electrical': 'electrical',
+      'it/technology': 'appliance',
+      'housekeeping': 'cosmetic',
+      'carpentry': 'structural',
+      'safety': 'safety',
+      'general maintenance': 'other',
+      'exterior/grounds': 'structural'
+    }
+    const mappedCategory = categoryMap[s.category.toLowerCase()] || 'other'
     setFormData(prev => ({
       ...prev,
-      category: s.category.toLowerCase().replace(/[\s\/]/g, '_'),
-      priority: s.priority
+      category: mappedCategory,
+      priority: s.priority === 'urgent' ? 'urgent' : s.priority
     }))
     clearSuggestion()
   }
@@ -67,11 +96,11 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
         description: data.description,
         priority: data.priority,
         category: data.category,
-        property_id: data.property_id,
-        department_id: data.department_id,
-        location: data.location,
+        property_id: data.property_id || null,
+        department_id: data.department_id || null,
+        room_number: data.room_number || null,
         estimated_cost: data.estimated_cost ? parseFloat(data.estimated_cost) : null,
-        reported_by: profile.id,
+        reported_by_id: profile.id,
         status: 'open',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -113,18 +142,18 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
         <div className="flex items-center gap-2">
           <Wrench className="h-6 w-6" />
           <h1 className="text-2xl font-bold">
-            {initialData ? 'Edit Maintenance Ticket' : 'Create Maintenance Ticket'}
+            {initialData ? t('edit_ticket', { defaultValue: 'Edit Maintenance Ticket' }) : t('new_ticket_title', { defaultValue: 'Create Maintenance Ticket' })}
           </h1>
         </div>
         <Button variant="ghost" onClick={onClose}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          {t('back_to_dashboard', { defaultValue: 'Back' })}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Ticket Information</CardTitle>
+          <CardTitle>{t('ticket_details', { defaultValue: 'Ticket Information' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -132,18 +161,18 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
+                  <Label htmlFor="title">{t('submit_ticket.form_title', { defaultValue: 'Title' })} *</Label>
                   <Input
                     id="title"
                     value={formData.title}
                     onChange={(e) => updateFormData('title', e.target.value)}
-                    placeholder="Brief description of the issue"
+                    placeholder={t('submit_ticket.title_placeholder', { defaultValue: 'Brief description of the issue' })}
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="priority">Priority</Label>
+                  <Label htmlFor="priority">{t('priority', { defaultValue: 'Priority' })}</Label>
                   <Select
                     value={formData.priority}
                     onValueChange={(value) => updateFormData('priority', value)}
@@ -152,10 +181,11 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
+                      <SelectItem value="low">{t('low', { defaultValue: 'Low' })}</SelectItem>
+                      <SelectItem value="medium">{t('medium', { defaultValue: 'Medium' })}</SelectItem>
+                      <SelectItem value="high">{t('high', { defaultValue: 'High' })}</SelectItem>
+                      <SelectItem value="urgent">{t('urgent', { defaultValue: 'Urgent' })}</SelectItem>
+                      <SelectItem value="critical">{t('critical', { defaultValue: 'Critical' })}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -163,7 +193,7 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category">{t('submit_ticket.category', { defaultValue: 'Category' })}</Label>
                   <Select
                     value={formData.category}
                     onValueChange={(value) => updateFormData('category', value)}
@@ -172,35 +202,36 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="electrical">Electrical</SelectItem>
-                      <SelectItem value="plumbing">Plumbing</SelectItem>
-                      <SelectItem value="hvac">HVAC</SelectItem>
-                      <SelectItem value="internet">Internet</SelectItem>
-                      <SelectItem value="tv">TV</SelectItem>
-                      <SelectItem value="furniture">Furniture</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="plumbing">{t('categories.plumbing', { defaultValue: 'Plumbing' })}</SelectItem>
+                      <SelectItem value="electrical">{t('categories.electrical', { defaultValue: 'Electrical' })}</SelectItem>
+                      <SelectItem value="hvac">{t('categories.hvac', { defaultValue: 'HVAC' })}</SelectItem>
+                      <SelectItem value="appliance">{t('categories.appliance', { defaultValue: 'Appliance' })}</SelectItem>
+                      <SelectItem value="structural">{t('categories.structural', { defaultValue: 'Structural' })}</SelectItem>
+                      <SelectItem value="cosmetic">{t('categories.cosmetic', { defaultValue: 'Cosmetic' })}</SelectItem>
+                      <SelectItem value="safety">{t('categories.safety', { defaultValue: 'Safety' })}</SelectItem>
+                      <SelectItem value="other">{t('categories.other', { defaultValue: 'Other' })}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location/Room</Label>
+                  <Label htmlFor="room_number">{t('room_number', { defaultValue: 'Room Number' })}</Label>
                   <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => updateFormData('location', e.target.value)}
-                    placeholder="Room number or specific location"
+                    id="room_number"
+                    value={formData.room_number}
+                    onChange={(e) => updateFormData('room_number', e.target.value)}
+                    placeholder={t('submit_ticket.room_placeholder', { defaultValue: 'Room number or specific location' })}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
+                <Label htmlFor="description">{t('submit_ticket.description', { defaultValue: 'Description' })} *</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => updateFormData('description', e.target.value)}
-                  placeholder="Detailed description of the maintenance issue"
+                  placeholder={t('submit_ticket.desc_placeholder', { defaultValue: 'Detailed description of the maintenance issue' })}
                   rows={4}
                   required
                 />
@@ -217,16 +248,16 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
 
             {/* Assignment */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Assignment</h3>
+              <h3 className="text-lg font-semibold">{t('assigned_to', { defaultValue: 'Assignment' })}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="property">Property</Label>
+                  <Label htmlFor="property">{t('property', { defaultValue: 'Property' })}</Label>
                   <Select
                     value={formData.property_id}
                     onValueChange={(value) => updateFormData('property_id', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select property" />
+                      <SelectValue placeholder={t('select_property', { defaultValue: 'Select property' })} />
                     </SelectTrigger>
                     <SelectContent>
                       {properties?.map((property) => (
@@ -239,13 +270,13 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
+                  <Label htmlFor="department">{t('department', { defaultValue: 'Department' })}</Label>
                   <Select
                     value={formData.department_id}
                     onValueChange={(value) => updateFormData('department_id', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
+                      <SelectValue placeholder={t('select_department', { defaultValue: 'Select department' })} />
                     </SelectTrigger>
                     <SelectContent>
                       {departments?.map((department) => (
@@ -261,32 +292,32 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
 
             {/* Cost Estimate */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Cost Estimate</h3>
+              <h3 className="text-lg font-semibold">{t('cost_estimate', { defaultValue: 'Cost Estimate' })}</h3>
               <div className="space-y-2">
-                <Label htmlFor="estimated_cost">Estimated Cost (Optional)</Label>
+                <Label htmlFor="estimated_cost">{t('estimated_cost', { defaultValue: 'Estimated Cost (Optional)' })}</Label>
                 <Input
                   id="estimated_cost"
                   type="number"
                   step="0.01"
                   value={formData.estimated_cost}
                   onChange={(e) => updateFormData('estimated_cost', e.target.value)}
-                  placeholder="0.00"
+                  placeholder={t('cost_placeholder', { defaultValue: '0.00' })}
                 />
               </div>
             </div>
 
             {/* Attachments */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Attachments</h3>
+              <h3 className="text-lg font-semibold">{t('attachments', { defaultValue: 'Attachments' })}</h3>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                 <div className="flex flex-col items-center gap-2">
                   <Camera className="h-8 w-8 text-gray-400" />
                   <p className="text-sm text-gray-600">
-                    Add photos of the issue (optional)
+                    {t('submit_ticket.attachments_note', { defaultValue: 'Add photos of the issue (optional)' })}
                   </p>
                   <Button type="button" variant="outline" size="sm">
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload Photos
+                    {t('submit_ticket.upload_files', { defaultValue: 'Upload Photos' })}
                   </Button>
                 </div>
               </div>
@@ -295,13 +326,15 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t('cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button
                 type="submit"
                 disabled={createTicketMutation.isPending}
               >
-                {createTicketMutation.isPending ? 'Creating...' : 'Create Ticket'}
+                {createTicketMutation.isPending
+                  ? t('processing', { defaultValue: 'Creating...' })
+                  : t('submit_ticket.submit', { defaultValue: 'Create Ticket' })}
               </Button>
             </div>
           </form>

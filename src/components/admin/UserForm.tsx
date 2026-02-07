@@ -12,6 +12,9 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
 import { triggerService } from '@/services/triggerService'
+import { userSchema, type UserFormData } from '@/lib/validationSchemas'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { LoadingButton } from '@/components/loading'
 
 
 import type { Profile, Property, Department } from '@/lib/types'
@@ -125,10 +128,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
       onClose()
     },
     onError: (error) => {
-      console.error('User creation error:', error)
+      const errorDetails = getUserFriendlyError(error)
       toast({
         title: t('form.error.create_failed'),
-        description: error.message,
+        description: errorDetails.message,
         variant: "destructive"
       })
     }
@@ -388,54 +391,87 @@ export function UserForm({ user, onClose }: UserFormProps) {
       if (role) {
         // Delete existing roles
         const { error: delRoleErr } = await supabase.from('user_roles').delete().eq('user_id', user.id)
-        if (delRoleErr) console.error('Delete roles error:', delRoleErr)
+        if (delRoleErr) throw delRoleErr
         // Insert new role
         const { error: insRoleErr } = await supabase.from('user_roles').insert({ user_id: user.id, role })
-        if (insRoleErr) {
-          console.error('Insert role error:', insRoleErr)
-          throw insRoleErr
-        }
+        if (insRoleErr) throw insRoleErr
       }
 
       // Update properties
       const { error: delPropErr } = await supabase.from('user_properties').delete().eq('user_id', user.id)
-      if (delPropErr) console.error('Delete properties error:', delPropErr)
+      if (delPropErr) throw delPropErr
 
       if (selectedProperties.length > 0) {
         const { error: insPropErr } = await supabase
           .from('user_properties')
           .insert(selectedProperties.map((propertyId) => ({ user_id: user.id, property_id: propertyId })))
-        if (insPropErr) {
-          console.error('Insert properties error:', insPropErr)
-          throw insPropErr
-        }
+        if (insPropErr) throw insPropErr
       }
 
       // Update departments
       const { error: delDeptErr } = await supabase.from('user_departments').delete().eq('user_id', user.id)
-      if (delDeptErr) console.error('Delete departments error:', delDeptErr)
+      if (delDeptErr) throw delDeptErr
 
       if (selectedDepartments.length > 0) {
         const { error: insDeptErr } = await supabase
           .from('user_departments')
           .insert(selectedDepartments.map((departmentId) => ({ user_id: user.id, department_id: departmentId })))
-        if (insDeptErr) {
-          console.error('Insert departments error:', insDeptErr)
-          throw insDeptErr
-        }
+        if (insDeptErr) throw insDeptErr
       }
     },
     onSuccess: () => {
+      toast({
+        title: t('form.success.updated_title', { defaultValue: 'User Updated' }),
+        description: t('form.success.updated_message', { defaultValue: 'User information has been updated successfully.' })
+      })
       onClose()
     },
+    onError: (error) => {
+      const errorDetails = getUserFriendlyError(error)
+      toast({
+        title: t('form.error.update_failed', { defaultValue: 'Update Failed' }),
+        description: errorDetails.message,
+        variant: 'destructive'
+      })
+    }
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (user) {
-      updateUserMutation.mutate()
-    } else {
-      createUserMutation.mutate()
+    
+    // Validate form data
+    try {
+      const formData: UserFormData = {
+        email,
+        full_name: fullName,
+        phone: phone || undefined,
+        job_title: jobTitle || undefined,
+        role: role as UserFormData['role'],
+        property_ids: selectedProperties,
+        department_ids: selectedDepartments,
+        reporting_to: reportingTo || undefined,
+        is_active: isActive,
+        hire_date: undefined,
+        staff_id: undefined
+      }
+      
+      // Validate using Zod schema
+      userSchema.parse(formData)
+      
+      // If validation passes, proceed with mutation
+      if (user) {
+        updateUserMutation.mutate()
+      } else {
+        createUserMutation.mutate()
+      }
+    } catch (error) {
+      // Handle validation errors
+      const errorDetails = getUserFriendlyError(error)
+      toast({
+        title: t('form.error.validation_failed'),
+        description: errorDetails.message,
+        variant: 'destructive'
+      })
     }
   }
 
@@ -791,12 +827,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
               <Button type="button" variant="outline" onClick={onClose}>
                 {tCommon('common.cancel')}
               </Button>
-              <Button type="submit" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" disabled={createUserMutation.isPending || updateUserMutation.isPending}>
-                {(createUserMutation.isPending || updateUserMutation.isPending) && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
+              <LoadingButton
+                type="submit"
+                className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors"
+                loading={createUserMutation.isPending || updateUserMutation.isPending}
+                loadingText={user ? tCommon('common.updating') : tCommon('common.creating')}
+              >
                 {user ? tCommon('common.update') : tCommon('common.create')} {t('user')}
-              </Button>
+              </LoadingButton>
             </div>
           </form>
         </CardContent>

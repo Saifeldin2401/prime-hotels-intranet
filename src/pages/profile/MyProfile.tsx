@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
@@ -7,13 +7,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, Save, Upload, User as UserIcon, Key, Clock, Star, Target, Wallet } from 'lucide-react'
+import { Loader2, Save, Upload, User as UserIcon, Key, Clock, Star, Target, Wallet, Shield, Briefcase } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import EmployeeDocuments from './EmployeeDocuments'
+import { Separator } from '@/components/ui/separator'
 import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
 import { getReportingLineDisplay } from '@/lib/displayHelpers'
 import { toast } from 'sonner'
+import { format } from 'date-fns'
 
 export default function MyProfile() {
     const { user, profile: authProfile, refreshSession } = useAuth()
@@ -22,17 +26,26 @@ export default function MyProfile() {
     const isRTL = i18n.dir() === 'rtl'
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Form state
     const [fullName, setFullName] = useState('')
     const [phone, setPhone] = useState('')
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+    const [nationality, setNationality] = useState('')
+    const [bloodGroup, setBloodGroup] = useState('')
+    const [emergencyName, setEmergencyName] = useState('')
+    const [emergencyPhone, setEmergencyPhone] = useState('')
 
     useEffect(() => {
         if (authProfile) {
             setFullName(authProfile.full_name || '')
             setPhone(authProfile.phone || '')
             setAvatarUrl(authProfile.avatar_url)
+            setNationality(authProfile.nationality || '')
+            setBloodGroup(authProfile.blood_group || '')
+            setEmergencyName(authProfile.emergency_contact_name || '')
+            setEmergencyPhone(authProfile.emergency_contact_phone || '')
         }
     }, [authProfile])
 
@@ -45,6 +58,10 @@ export default function MyProfile() {
             const updates = {
                 full_name: fullName,
                 phone,
+                nationality,
+                blood_group: bloodGroup,
+                emergency_contact_name: emergencyName,
+                emergency_contact_phone: emergencyPhone,
                 updated_at: new Date().toISOString(),
             }
 
@@ -160,9 +177,10 @@ export default function MyProfile() {
                                         <div className="flex items-center gap-2">
                                             <Button
                                                 type="button"
-                                                className="relative cursor-pointer bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                                variant="outline"
                                                 size="sm"
                                                 disabled={uploading}
+                                                onClick={() => fileInputRef.current?.click()}
                                             >
                                                 {uploading ? (
                                                     <Loader2 className="w-4 h-4 animate-spin me-2" />
@@ -170,110 +188,200 @@ export default function MyProfile() {
                                                     <Upload className="w-4 h-4 me-2" />
                                                 )}
                                                 {t('change_avatar')}
-                                                <input
-                                                    type="file"
-                                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                                    accept="image/*"
-                                                    onChange={handleAvatarUpload}
-                                                    disabled={uploading}
-                                                />
                                             </Button>
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={handleAvatarUpload}
+                                                disabled={uploading}
+                                            />
                                         </div>
                                     </div>
 
                                     {/* Fields Section */}
-                                    <div className="flex-1 space-y-4 w-full">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="email">{t('email')}</Label>
-                                            <Input id="email" value={user?.email || ''} disabled />
-                                            <p className="text-xs text-gray-600">{t('email_desc')}</p>
-                                        </div>
+                                    <div className="flex-1 space-y-8 w-full">
+                                        {/* General Info */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <UserIcon className="w-4 h-4 text-hotel-gold" />
+                                                <h3 className="text-sm font-bold uppercase tracking-wider text-hotel-gold">{t('general_info')}</h3>
+                                            </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="fullName">{t('full_name')}</Label>
-                                            <Input
-                                                id="fullName"
-                                                value={fullName}
-                                                onChange={(e) => setFullName(e.target.value)}
-                                                placeholder="John Doe"
-                                            />
-                                        </div>
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="fullName">{t('full_name')}</Label>
+                                                    <Input
+                                                        id="fullName"
+                                                        value={fullName}
+                                                        onChange={(e) => setFullName(e.target.value)}
+                                                        placeholder="John Doe"
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="email">{t('email')}</Label>
+                                                    <Input id="email" value={user?.email || ''} disabled className="bg-muted/50" />
+                                                </div>
+                                            </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="phone">{t('phone_number')}</Label>
-                                            <Input
-                                                id="phone"
-                                                value={phone}
-                                                onChange={(e) => setPhone(e.target.value)}
-                                                placeholder="+1 (555) 000-0000"
-                                                style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }}
-                                            />
-                                        </div>
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="phone">{t('phone_number')}</Label>
+                                                    <Input
+                                                        id="phone"
+                                                        value={phone}
+                                                        onChange={(e) => setPhone(e.target.value)}
+                                                        placeholder="+1 (555) 001-0012"
+                                                        style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="nationality">{t('nationality')}</Label>
+                                                    <Input
+                                                        id="nationality"
+                                                        value={nationality}
+                                                        onChange={(e) => setNationality(e.target.value)}
+                                                        placeholder="Saudi"
+                                                    />
+                                                </div>
+                                            </div>
 
-                                        <div className="grid gap-2">
-                                            <Label>Job Title</Label>
-                                            <div className="px-3 py-2 bg-muted rounded-md text-sm">
-                                                {authProfile?.job_title || 'Not specified'}
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="bloodGroup">{t('blood_group')}</Label>
+                                                    <Select value={bloodGroup} onValueChange={setBloodGroup}>
+                                                        <SelectTrigger id="bloodGroup">
+                                                            <SelectValue placeholder="Select Blood Group" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) => (
+                                                                <SelectItem key={group} value={group}>{group}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {authProfile?.reporting_to_profile && (
+                                        <Separator />
+
+                                        {/* Emergency Contact */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Shield className="w-4 h-4 text-hotel-gold" />
+                                                <h3 className="text-sm font-bold uppercase tracking-wider text-hotel-gold">{t('emergency_info')}</h3>
+                                            </div>
+
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergencyName">{t('emergency_contact_name')}</Label>
+                                                    <Input
+                                                        id="emergencyName"
+                                                        value={emergencyName}
+                                                        onChange={(e) => setEmergencyName(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergencyPhone">{t('emergency_contact_phone')}</Label>
+                                                    <Input
+                                                        id="emergencyPhone"
+                                                        value={emergencyPhone}
+                                                        onChange={(e) => setEmergencyPhone(e.target.value)}
+                                                        style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <Separator />
+
+                                        {/* Organizational Info */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Briefcase className="w-4 h-4 text-hotel-gold" />
+                                                <h3 className="text-sm font-bold uppercase tracking-wider text-hotel-gold">{t('org_info')}</h3>
+                                            </div>
+
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label>{t('job_title')}</Label>
+                                                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                                                        {authProfile?.job_title || 'Not specified'}
+                                                    </div>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>Staff ID</Label>
+                                                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                                                        {authProfile?.staff_id || 'PH-0000'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label>Hire Date</Label>
+                                                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                                                        {authProfile?.hire_date ? format(new Date(authProfile.hire_date), 'MMMM d, yyyy') : 'Not specified'}
+                                                    </div>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>{t('reports_to')}</Label>
+                                                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                                                        {getReportingLineDisplay(authProfile) || 'Not specified'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div className="grid gap-2">
-                                                <Label>Reports To</Label>
-                                                <div className="px-3 py-2 bg-muted rounded-md text-sm">
-                                                    {getReportingLineDisplay(authProfile) || 'Not specified'}
+                                                <Label>{t('status')}</Label>
+                                                <div className="flex">
+                                                    <Badge variant={authProfile?.is_active ? "default" : "secondary"} className="capitalize">
+                                                        {authProfile?.is_active ? t('active') : t('inactive')}
+                                                    </Badge>
                                                 </div>
                                             </div>
-                                        )}
 
-                                        <div className="grid gap-2">
-                                            <Label>Status</Label>
-                                            <div className="flex gap-2 flex-wrap">
-                                                <div className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-sm capitalize">
-                                                    {authProfile?.is_active ? t('active') : t('inactive')}
+                                            <div className="grid gap-2 pt-4">
+                                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('hr_quick_links')}</Label>
+                                                <div className="flex flex-wrap gap-2 mt-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => navigate('/hr/attendance')}
+                                                        className="hover:bg-hotel-gold hover:text-white transition-colors"
+                                                    >
+                                                        <Clock className="w-3.5 h-3.5 me-2" />
+                                                        {t('attendance')}
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => navigate('/hr/performance')}
+                                                        className="hover:bg-hotel-gold hover:text-white transition-colors"
+                                                    >
+                                                        <Star className="w-3.5 h-3.5 me-2" />
+                                                        {t('performance')}
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => navigate('/hr/goals')}
+                                                        className="hover:bg-hotel-gold hover:text-white transition-colors"
+                                                    >
+                                                        <Target className="w-3.5 h-3.5 me-2" />
+                                                        {t('career_goals')}
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => navigate('/hr/payslips')}
+                                                        className="hover:bg-hotel-gold hover:text-white transition-colors"
+                                                    >
+                                                        <Wallet className="w-3.5 h-3.5 me-2" />
+                                                        {t('payroll')}
+                                                    </Button>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-2 pt-4 border-t">
-                                            <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">HR Quick Links</Label>
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => navigate('/hr/attendance')}
-                                                    className="bg-hotel-navy/5 text-hotel-navy border-hotel-navy/10"
-                                                >
-                                                    <Clock className="w-3.5 h-3.5 me-2" />
-                                                    Attendance
-                                                </Button>
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => navigate('/hr/performance')}
-                                                    className="bg-hotel-navy/5 text-hotel-navy border-hotel-navy/10"
-                                                >
-                                                    <Star className="w-3.5 h-3.5 me-2" />
-                                                    Performance
-                                                </Button>
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => navigate('/hr/goals')}
-                                                    className="bg-hotel-navy/5 text-hotel-navy border-hotel-navy/10"
-                                                >
-                                                    <Target className="w-3.5 h-3.5 me-2" />
-                                                    Career Goals
-                                                </Button>
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => navigate('/hr/payslips')}
-                                                    className="bg-hotel-navy/5 text-hotel-navy border-hotel-navy/10"
-                                                >
-                                                    <Wallet className="w-3.5 h-3.5 me-2" />
-                                                    Payroll
-                                                </Button>
                                             </div>
                                         </div>
                                     </div>
