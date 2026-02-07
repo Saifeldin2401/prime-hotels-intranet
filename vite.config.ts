@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from "path"
+import { sentryVitePlugin } from "@sentry/vite-plugin"
 
 const securityHeaders = {
   'Content-Security-Policy': [
@@ -20,6 +21,14 @@ const securityHeaders = {
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()'
 }
 
+const sentryRelease = process.env.VERCEL_GIT_COMMIT_SHA || process.env.VITE_RELEASE
+const sentryEnv = process.env.VERCEL_ENV || process.env.VITE_SENTRY_ENV || process.env.NODE_ENV
+const enableSentryUpload = Boolean(
+  process.env.SENTRY_AUTH_TOKEN &&
+  process.env.SENTRY_ORG &&
+  process.env.SENTRY_PROJECT
+)
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -36,7 +45,21 @@ export default defineConfig({
           next()
         })
       }
-    }
+    },
+    ...(enableSentryUpload ? [
+      sentryVitePlugin({
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        release: sentryRelease,
+        deploy: {
+          env: sentryEnv
+        },
+        sourcemaps: {
+          assets: "./dist/**"
+        }
+      })
+    ] : [])
   ],
   resolve: {
     alias: {
@@ -63,7 +86,7 @@ export default defineConfig({
   build: {
     // Security: Build optimizations
     minify: 'terser',
-    sourcemap: process.env.NODE_ENV !== 'production', // Disable sourcemaps in production
+    sourcemap: enableSentryUpload || process.env.NODE_ENV !== 'production',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -78,6 +101,8 @@ export default defineConfig({
     'process.env': {},
     'process.browser': true,
     global: 'globalThis',
+    'import.meta.env.VITE_RELEASE': JSON.stringify(sentryRelease || ''),
+    'import.meta.env.VITE_SENTRY_ENV': JSON.stringify(sentryEnv || ''),
   },
   // Security: Environment variable validation
   envPrefix: 'VITE_',

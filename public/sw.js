@@ -135,6 +135,12 @@ async function networkFirstWithOffline(request) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, response.clone());
         }
+        // If the server returns 404 for a client-side route,
+        // fall back to cached index.html to let the SPA handle it.
+        if (response.status === 404) {
+            const indexCached = await caches.match('/index.html');
+            if (indexCached) return indexCached;
+        }
         return response;
     } catch {
         const cached = await caches.match(request);

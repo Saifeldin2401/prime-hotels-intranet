@@ -7,12 +7,35 @@ import './i18n/i18n'
 import * as Sentry from "@sentry/react";
 import App from './App'
 
+const redirectParam = new URLSearchParams(window.location.search).get('__redirect')
+let redirectPath: string | null = null
+if (redirectParam) {
+  try {
+    const decoded = decodeURIComponent(redirectParam)
+    if (decoded.startsWith('/')) {
+      redirectPath = decoded
+    }
+  } catch {
+    // Ignore malformed redirect parameters
+  }
+}
+
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || "https://5f5ee68dbba50c2d138d3e9b8772d4b6@o4508792767840256.ingest.de.sentry.io/4510844400238672"
+const SENTRY_ENV = import.meta.env.VITE_SENTRY_ENV || import.meta.env.MODE
+const SENTRY_RELEASE =
+  import.meta.env.VITE_RELEASE ||
+  import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ||
+  import.meta.env.VITE_GIT_COMMIT ||
+  undefined
+
 Sentry.init({
-  dsn: "https://5f5ee68dbba50c2d138d3e9b8772d4b6@o4508792767840256.ingest.de.sentry.io/4510844400238672",
+  dsn: SENTRY_DSN,
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration(),
   ],
+  release: SENTRY_RELEASE,
+  environment: SENTRY_ENV,
   // Performance Monitoring
   tracesSampleRate: 1.0, //  Capture 100% of the transactions
   // Session Replay
@@ -22,6 +45,16 @@ Sentry.init({
   // For example, automatic IP address collection on events
   sendDefaultPii: true,
 });
+
+if (redirectPath) {
+  if (import.meta.env.PROD) {
+    Sentry.captureMessage('spa_route_404', {
+      level: 'warning',
+      extra: { path: redirectPath }
+    })
+  }
+  window.history.replaceState(null, '', redirectPath)
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
