@@ -14,7 +14,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-async function verifyEdgeFunction(name: string, payload: any) {
+async function verifyEdgeFunction(name: string, payload: Record<string, unknown>) {
     console.log(`\nTesting Function: ${name}...`)
     const { data, error } = await supabase.functions.invoke(name, {
         body: payload

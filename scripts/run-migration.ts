@@ -8,8 +8,6 @@
  * 4. Run it
  */
 
-import { createClient } from '@supabase/supabase-js'
-
 // You need to set these environment variables or replace them directly
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
 
@@ -17,10 +15,6 @@ if (!supabaseUrl) {
   console.error('Error: Missing VITE_SUPABASE_URL environment variable.')
   process.exit(1)
 }
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'YOUR_SERVICE_ROLE_KEY_HERE'
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
 async function runMigration() {
   console.log('Running conversations table migration...')
 
