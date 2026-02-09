@@ -12,20 +12,39 @@ serve(async (req) => {
     }
 
     try {
+        const authHeader = req.headers.get('Authorization')
+        if (!authHeader) {
+            return new Response(
+                JSON.stringify({ success: false, error: 'Missing Authorization header' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+            )
+        }
+
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
             {
                 global: {
-                    headers: { Authorization: req.headers.get('Authorization')! },
+                    headers: { Authorization: authHeader },
                 },
             }
         )
 
+        const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+        if (userError || !user) {
+            return new Response(
+                JSON.stringify({ success: false, error: 'Unauthorized' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+            )
+        }
+
         const { documentId } = await req.json()
 
         if (!documentId) {
-            throw new Error('documentId is required')
+            return new Response(
+                JSON.stringify({ success: false, error: 'documentId is required' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            )
         }
 
         console.log(`Computing related articles for document: ${documentId}`)
@@ -63,7 +82,7 @@ serve(async (req) => {
             }),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400,
+                status: 500,
             }
         )
     }

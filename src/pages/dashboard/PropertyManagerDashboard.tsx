@@ -31,6 +31,7 @@ import { DepartmentControlCenter } from '@/components/departments/DepartmentCont
 import { OperationsControlCenter } from '@/components/operations/OperationsControlCenter'
 import { ReportsControlCenter } from '@/components/reports/ReportsControlCenter'
 import { AuditsControlCenter } from '@/components/audits/AuditsControlCenter'
+import { CollapsibleSection } from '@/components/ui/collapsible-section'
 
 export function PropertyManagerDashboard() {
   const { t } = useTranslation('dashboard')
@@ -259,69 +260,73 @@ export function PropertyManagerDashboard() {
         </TabsContent>
 
         <TabsContent value="departments" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-base font-semibold text-foreground">{t('cards.department_performance', 'Department Performance')}</h3>
-            <p className="text-sm text-muted-foreground">{t('cards.department_performance_subtitle', 'KPIs, compliance, and staffing coverage.')}</p>
-          </div>
-          {/* Real Department KPIs */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <DepartmentKPIWidget propertyId={currentProperty?.id} />
-            <KnowledgeComplianceWidget variant="department" propertyId={currentProperty?.id} />
-          </div>
+          <CollapsibleSection
+            title={t('cards.department_performance', 'Department Performance')}
+            description={t('cards.department_performance_subtitle', 'KPIs, compliance, and staffing coverage.')}
+            defaultOpen={true}
+          >
+            {/* Real Department KPIs */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <DepartmentKPIWidget propertyId={currentProperty?.id} />
+              <KnowledgeComplianceWidget variant="department" propertyId={currentProperty?.id} />
+            </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <EnhancedCard padding="lg" className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h4 className="text-base font-semibold text-foreground">{t('cards.department_focus', 'Department Focus')}</h4>
-                  <p className="text-sm text-muted-foreground">{t('cards.department_focus_subtitle', 'Lowest compliance areas requiring attention.')}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <EnhancedCard padding="lg" className="lg:col-span-2">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="text-base font-semibold text-foreground">{t('cards.department_focus', 'Department Focus')}</h4>
+                    <p className="text-sm text-muted-foreground">{t('cards.department_focus_subtitle', 'Lowest compliance areas requiring attention.')}</p>
+                  </div>
+                  <Badge className="bg-blue-50 text-blue-700 border border-blue-100">
+                    {t('cards.action_needed', 'Action needed')}
+                  </Badge>
                 </div>
-                <Badge className="bg-blue-50 text-blue-700 border border-blue-100">
-                  {t('cards.action_needed', 'Action needed')}
-                </Badge>
-              </div>
-              {lowComplianceDepartments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t('cards.no_departments_found')}</p>
-              ) : (
+                {lowComplianceDepartments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">{t('cards.no_departments_found')}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {lowComplianceDepartments.map(dept => (
+                      <div key={dept.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium text-foreground">{dept.name}</p>
+                          <p className="text-xs text-muted-foreground">{t('cards.head_label', { name: dept.head })}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-foreground">{dept.compliance}%</p>
+                          <p className="text-xs text-muted-foreground">{t('cards.compliance_label', { score: dept.compliance })}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </EnhancedCard>
+              <EnhancedCard padding="lg">
                 <div className="space-y-3">
-                  {lowComplianceDepartments.map(dept => (
-                    <div key={dept.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium text-foreground">{dept.name}</p>
-                        <p className="text-xs text-muted-foreground">{t('cards.head_label', { name: dept.head })}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-foreground">{dept.compliance}%</p>
-                        <p className="text-xs text-muted-foreground">{t('cards.compliance_label', { score: dept.compliance })}</p>
-                      </div>
-                    </div>
-                  ))}
+                  <h4 className="text-base font-semibold text-foreground">{t('cards.department_controls', 'Department Controls')}</h4>
+                  <p className="text-sm text-muted-foreground">{t('cards.department_controls_subtitle', 'Manage team structure and training goals.')}</p>
+                  <div className="space-y-2">
+                    <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/dashboard/my-team')}>
+                      {t('actions.manage_teams', 'Manage Teams')}
+                    </button>
+                    <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/training/paths')}>
+                      {t('actions.manage_training_paths', 'Training Paths')}
+                    </button>
+                    <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/knowledge')}>
+                      {t('actions.review_sops', 'Review SOPs')}
+                    </button>
+                  </div>
                 </div>
-              )}
-            </EnhancedCard>
-            <EnhancedCard padding="lg">
-              <div className="space-y-3">
-                <h4 className="text-base font-semibold text-foreground">{t('cards.department_controls', 'Department Controls')}</h4>
-                <p className="text-sm text-muted-foreground">{t('cards.department_controls_subtitle', 'Manage team structure and training goals.')}</p>
-                <div className="space-y-2">
-                  <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/dashboard/my-team')}>
-                    {t('actions.manage_teams', 'Manage Teams')}
-                  </button>
-                  <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/training/paths')}>
-                    {t('actions.manage_training_paths', 'Training Paths')}
-                  </button>
-                  <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/knowledge')}>
-                    {t('actions.review_sops', 'Review SOPs')}
-                  </button>
-                </div>
-              </div>
-            </EnhancedCard>
-          </div>
+              </EnhancedCard>
+            </div>
 
-          <DepartmentControlCenter propertyId={currentProperty?.id} />
+            <DepartmentControlCenter propertyId={currentProperty?.id} />
 
-          {/* Leave Coverage Calendar */}
-          <LeaveCoverageCalendar />
+            {/* Leave Coverage Calendar */}
+            <div className="mt-6">
+              <LeaveCoverageCalendar />
+            </div>
+          </CollapsibleSection>
 
           {/* Department Details */}
           <Card>

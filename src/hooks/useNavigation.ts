@@ -72,7 +72,8 @@ export function useNavigation(): UseNavigationReturn {
             overdueTasks: counts.overdueTasks > 0 ? counts.overdueTasks : undefined,
             unreadMessages: counts.unreadMessages > 0 ? counts.unreadMessages : undefined,
             pendingTraining: counts.pendingTraining > 0 ? counts.pendingTraining : undefined,
-            activeGoals: counts.activeGoals > 0 ? counts.activeGoals : undefined
+            activeGoals: counts.activeGoals > 0 ? counts.activeGoals : undefined,
+            requiredReading: counts.requiredReading > 0 ? counts.requiredReading : undefined
         } as Record<string, number | undefined>
     }, [counts])
 

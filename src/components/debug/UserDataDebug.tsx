@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 export function UserDataDebug() {
   const { user, profile, roles, properties, departments, primaryRole, loading } = useAuth()
 
-  if (process.env.NODE_ENV !== 'development') return null
+  if (!import.meta.env.DEV) return null
 
   return (
     <Card className="mt-4 border-yellow-500">

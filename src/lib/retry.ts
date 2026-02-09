@@ -8,6 +8,7 @@ export interface RetryOptions {
   initialDelay?: number
   maxDelay?: number
   backoffMultiplier?: number
+  jitterRatio?: number
   retryable?: (error: unknown) => boolean
 }
 
@@ -15,7 +16,8 @@ const DEFAULT_OPTIONS: Required<Omit<RetryOptions, 'retryable'>> = {
   maxAttempts: 3,
   initialDelay: 1000, // 1 second
   maxDelay: 10000, // 10 seconds
-  backoffMultiplier: 2
+  backoffMultiplier: 2,
+  jitterRatio: 0.1
 }
 
 /**
@@ -23,6 +25,9 @@ const DEFAULT_OPTIONS: Required<Omit<RetryOptions, 'retryable'>> = {
  */
 function isRetryableError(error: unknown): boolean {
   if (error instanceof Error) {
+    if (error.name === 'AbortError') {
+      return false
+    }
     const message = error.message.toLowerCase()
     
     // Network errors are retryable
@@ -65,8 +70,9 @@ function isRetryableError(error: unknown): boolean {
  * Calculates delay for next retry attempt
  */
 function calculateDelay(attempt: number, options: Required<Omit<RetryOptions, 'retryable'>>): number {
-  const delay = options.initialDelay * Math.pow(options.backoffMultiplier, attempt - 1)
-  return Math.min(delay, options.maxDelay)
+  const baseDelay = options.initialDelay * Math.pow(options.backoffMultiplier, attempt - 1)
+  const jitter = baseDelay * options.jitterRatio * Math.random()
+  return Math.min(baseDelay + jitter, options.maxDelay)
 }
 
 /**

@@ -166,6 +166,10 @@ export function useRealtimeMessaging() {
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current)
       }
+      if (audioCtxRef.current) {
+        void audioCtxRef.current.close().catch(() => undefined)
+        audioCtxRef.current = null
+      }
     }
   }, [user?.id, queryClient])
 

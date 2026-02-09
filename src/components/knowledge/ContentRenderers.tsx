@@ -381,6 +381,7 @@ export function ImageGalleryRenderer({ images }: ImageGalleryRendererProps) {
                             <img
                                 src={image.url}
                                 alt={image.caption}
+                                loading="lazy"
                                 className="w-full h-full object-contain"
                             />
                         </div>

@@ -145,7 +145,7 @@ export function StaffDashboard() {
       </motion.div>
 
       <motion.div variants={item}>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
           <div className="col-span-4">
             <MotivationWidget />
           </div>
@@ -154,7 +154,7 @@ export function StaffDashboard() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-12 mt-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-12 mt-4">
           <div className="md:col-span-8">
             <EmployeeOfMonthWidget />
           </div>
@@ -412,7 +412,7 @@ export function StaffDashboard() {
           </p>
         </div>
       </motion.div>
-      <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div variants={item} className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <KnowledgeWidget />
         <DailyQuizWidget />
       </motion.div>

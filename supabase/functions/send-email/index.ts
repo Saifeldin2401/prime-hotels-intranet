@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +18,25 @@ serve(async (req) => {
   }
 
   try {
+    if (!RESEND_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'Missing RESEND_API_KEY' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Supabase environment variables' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'Missing SUPABASE_SERVICE_ROLE_KEY' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // 1. Validate Auth Header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -40,7 +60,42 @@ serve(async (req) => {
       )
     }
 
-    // 4. Parse Request
+    // 4. Enforce Role-Based Access (admin/HR only)
+    const adminRoles = [
+      'corporate_admin',
+      'regional_admin',
+      'regional_hr',
+      'property_manager',
+      'property_hr'
+    ]
+
+    const serviceClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    const { data: roleRows, error: roleError } = await serviceClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', adminRoles)
+
+    if (roleError) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to validate permissions' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!roleRows || roleRows.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // 5. Parse Request
     const { to, subject, html } = await req.json()
 
     if (!to || !subject || !html) {
@@ -50,7 +105,7 @@ serve(async (req) => {
       )
     }
 
-    // 5. Send Email via Resend
+    // 6. Send Email via Resend
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {

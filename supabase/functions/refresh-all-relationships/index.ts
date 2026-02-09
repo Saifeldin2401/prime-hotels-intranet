@@ -10,21 +10,34 @@ const corsHeaders = {
  * Scheduled Edge Function to refresh all related article relationships
  * Run this nightly via Supabase Cron or external scheduler
  */
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
 
     try {
+        if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+            return new Response(
+                JSON.stringify({ success: false, error: 'Missing Supabase environment variables' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+            )
+        }
+
         // Verify this is called from a trusted source (cron job or admin)
         const authHeader = req.headers.get('Authorization')
-        if (!authHeader?.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')) {
-            throw new Error('Unauthorized - service role key required')
+        if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
+            return new Response(
+                JSON.stringify({ success: false, error: 'Unauthorized' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+            )
         }
 
         const supabaseClient = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+            SUPABASE_URL,
+            SUPABASE_SERVICE_ROLE_KEY
         )
 
         console.log('Starting nightly related articles refresh...')

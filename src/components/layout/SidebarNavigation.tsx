@@ -79,7 +79,7 @@ export function SidebarNavigation({
   onToggleCollapse,
   isMobile = false
 }: SidebarNavigationProps) {
-  const { t } = useTranslation(['nav', 'common'])
+  const { t, i18n } = useTranslation(['nav', 'common'])
   const navigate = useNavigate()
   const { primaryRole, profile, signOut } = useAuth()
   const { groupedNavigation } = useNavigation()
@@ -116,6 +116,21 @@ export function SidebarNavigation({
 
   const handleNavClick = () => {
     if (isMobile) onClose()
+  }
+
+  const handleDragEnd = (_: any, info: any) => {
+    if (!isMobile) return
+
+    const swipeThreshold = 50
+    const isRTL = i18n.dir() === 'rtl'
+
+    if (isRTL) {
+      // RTL: Drag right (positive) to close
+      if (info.offset.x > swipeThreshold) onClose()
+    } else {
+      // LTR: Drag left (negative) to close
+      if (info.offset.x < -swipeThreshold) onClose()
+    }
   }
 
   const renderNavItem = (item: NavigationItem) => {
@@ -258,13 +273,18 @@ export function SidebarNavigation({
       )}
 
       {/* Sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 z-[110] bg-hotel-navy text-white transform transition-all duration-300 ease-in-out shadow-2xl",
-        "start-0 border-e border-hotel-navy-dark",
-        isMobile ? "lg:hidden w-[85vw] max-w-[320px]" : "hidden lg:block w-[280px]",
-        isMobile && (isOpen ? "translate-x-0" : "ltr:-translate-x-full rtl:translate-x-full"),
-        collapsed && !isMobile && "lg:w-20"
-      )}>
+      <motion.div
+        drag={isMobile ? "x" : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
+        className={cn(
+          "fixed inset-y-0 z-[110] bg-hotel-navy text-white transform transition-all duration-300 ease-in-out shadow-2xl",
+          "start-0 border-e border-hotel-navy-dark",
+          isMobile ? "lg:hidden w-[85vw] max-w-[320px]" : "hidden lg:block w-[280px]",
+          isMobile && (isOpen ? "translate-x-0" : "ltr:-translate-x-full rtl:translate-x-full"),
+          collapsed && !isMobile && "lg:w-20"
+        )}>
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className={cn(
@@ -494,7 +514,7 @@ export function SidebarNavigation({
             </Button>
           </div>
         </div>
-      </div >
+      </motion.div>
     </>
   )
 }

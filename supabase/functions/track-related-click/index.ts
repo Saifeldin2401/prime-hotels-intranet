@@ -12,12 +12,20 @@ serve(async (req) => {
     }
 
     try {
+        const authHeader = req.headers.get('Authorization')
+        if (!authHeader) {
+            return new Response(
+                JSON.stringify({ success: false, error: 'Missing Authorization header' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+            )
+        }
+
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
             {
                 global: {
-                    headers: { Authorization: req.headers.get('Authorization')! },
+                    headers: { Authorization: authHeader },
                 },
             }
         )
@@ -25,11 +33,20 @@ serve(async (req) => {
         const { sourceDocumentId, clickedDocumentId, position } = await req.json()
 
         if (!sourceDocumentId || !clickedDocumentId) {
-            throw new Error('sourceDocumentId and clickedDocumentId are required')
+            return new Response(
+                JSON.stringify({ success: false, error: 'sourceDocumentId and clickedDocumentId are required' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            )
         }
 
         // Get user ID from auth
-        const { data: { user } } = await supabaseClient.auth.getUser()
+        const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+        if (userError || !user) {
+            return new Response(
+                JSON.stringify({ success: false, error: 'Unauthorized' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+            )
+        }
 
         console.log(`Tracking click: ${sourceDocumentId} -> ${clickedDocumentId} by user ${user?.id}`)
 
@@ -67,7 +84,7 @@ serve(async (req) => {
             }),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400,
+                status: 500,
             }
         )
     }

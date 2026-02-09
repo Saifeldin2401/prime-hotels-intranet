@@ -223,7 +223,7 @@ function CorporateDashboardContent() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
         <div className="col-span-4">
           <MotivationWidget />
         </div>
@@ -232,7 +232,7 @@ function CorporateDashboardContent() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         <div className="md:col-span-8">
           <EmployeeOfMonthWidget />
         </div>
@@ -241,7 +241,7 @@ function CorporateDashboardContent() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-1">
+      <div className="grid grid-cols-1 gap-4">
         <NewsWidget />
       </div>
 

@@ -143,13 +143,13 @@ export const securityConfig = {
   },
 
   // Development vs Production
-  isDevelopment: process.env.NODE_ENV === 'development',
+  isDevelopment: import.meta.env.DEV,
 
   // Feature flags
   features: {
-    enableAuditLogging: process.env.NODE_ENV === 'production',
+    enableAuditLogging: import.meta.env.PROD,
     enableRateLimiting: true,
-    enableCSP: process.env.NODE_ENV === 'production',
+    enableCSP: import.meta.env.PROD,
     enableSecurityHeaders: true,
     enableInputValidation: true,
     enableSessionSecurity: true

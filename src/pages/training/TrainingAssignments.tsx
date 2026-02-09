@@ -757,79 +757,131 @@ export function TrainingAssignmentsPanel({
                   <Loader2 className="w-8 h-8 animate-spin text-hotel-gold" />
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className={isRTL ? "text-right" : ""}>{t('employee')}</TableHead>
-                      <TableHead className={isRTL ? "text-right" : ""}>{t('module')}</TableHead>
-                      <TableHead className={isRTL ? "text-right" : ""}>{t('status')}</TableHead>
-                      <TableHead className={isRTL ? "text-right" : ""}>{t('progress')}</TableHead>
-                      <TableHead className={isRTL ? "text-right" : ""}>{t('score')}</TableHead>
-                      <TableHead className={isRTL ? "text-right" : ""}>{t('lastAccess')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="space-y-4">
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className={isRTL ? "text-right" : ""}>{t('employee')}</TableHead>
+                          <TableHead className={isRTL ? "text-right" : ""}>{t('module')}</TableHead>
+                          <TableHead className={isRTL ? "text-right" : ""}>{t('status')}</TableHead>
+                          <TableHead className={isRTL ? "text-right" : ""}>{t('progress')}</TableHead>
+                          <TableHead className={isRTL ? "text-right" : ""}>{t('score')}</TableHead>
+                          <TableHead className={isRTL ? "text-right" : ""}>{t('lastAccess')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProgress.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                              {t('noProgressFound')}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredProgress.map((item) => {
+                            const deptData = userDepartments?.find(d => d.user_id === item.user_id)?.department
+                            const propData = userProperties?.find(p => p.user_id === item.user_id)?.property
+
+                            const deptName = Array.isArray(deptData) ? deptData[0]?.name : (deptData as any)?.name
+                            const propName = Array.isArray(propData) ? propData[0]?.name : (propData as any)?.name
+
+                            const user = users?.find(u => u.id === item.user_id)
+
+                            return (
+                              <TableRow key={item.id}>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{item.profiles?.full_name || user?.full_name || t('unknownUser')}</span>
+                                    <span className="text-xs text-gray-500">
+                                      {deptName || propName || t('noDept')}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={
+                                    item.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' :
+                                      item.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' :
+                                        item.status === 'overdue' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' :
+                                          'bg-gray-50 text-gray-700 border-gray-200'
+                                  }>
+                                    {t(item.status)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="w-[150px]">
+                                  <div className="flex items-center gap-2">
+                                    <Progress value={item.progress_percentage} className="h-2" />
+                                    <span className="text-xs text-gray-500">{item.progress_percentage}%</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {item.score_percentage !== undefined && item.score_percentage !== null ? (
+                                    <span className={`font-bold ${item.passed ? 'text-green-600' : 'text-red-500'}`}>
+                                      {Number(item.score_percentage).toFixed(0)}%
+                                    </span>
+                                  ) : '-'}
+                                </TableCell>
+                                <TableCell className="text-sm text-gray-500">
+                                  {formatDate(item.last_accessed_at || item.created_at)}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="grid grid-cols-1 gap-4 md:hidden">
                     {filteredProgress.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                          {t('noProgressFound')}
-                        </TableCell>
-                      </TableRow>
+                      <div className="text-center py-8 text-gray-500 border rounded-lg bg-gray-50">
+                        {t('noProgressFound')}
+                      </div>
                     ) : (
                       filteredProgress.map((item) => {
                         const deptData = userDepartments?.find(d => d.user_id === item.user_id)?.department
                         const propData = userProperties?.find(p => p.user_id === item.user_id)?.property
-
                         const deptName = Array.isArray(deptData) ? deptData[0]?.name : (deptData as any)?.name
                         const propName = Array.isArray(propData) ? propData[0]?.name : (propData as any)?.name
-
                         const user = users?.find(u => u.id === item.user_id)
+                        const module = modules?.find(m => m.id === item.content_id)
 
                         return (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{item.profiles?.full_name || user?.full_name || t('unknownUser')}</span>
-                                <span className="text-xs text-gray-500">
-                                  {deptName || propName || t('noDept')}
-                                </span>
+                          <div key={item.id} className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{item.profiles?.full_name || user?.full_name || t('unknownUser')}</h4>
+                                <p className="text-xs text-muted-foreground">{deptName || propName || t('noDept')}</p>
                               </div>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={
-                                item.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' :
-                                  item.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' :
-                                    item.status === 'overdue' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' :
-                                      'bg-gray-50 text-gray-700 border-gray-200'
-                              }>
+                              <Badge className={cn(getStatusColor(item.status as AssignmentStatus))}>
                                 {t(item.status)}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="w-[150px]">
-                              <div className="flex items-center gap-2">
-                                <Progress value={item.progress_percentage} className="h-2" />
-                                <span className="text-xs text-gray-500">{item.progress_percentage}%</span>
+                            </div>
+
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">{module?.title || t('unknownModule')}</p>
+                              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                <span>{t('progress')}: {item.progress_percentage}%</span>
+                                <span>{item.score_percentage ? `${t('score')}: ${item.score_percentage}%` : ''}</span>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              {item.score_percentage !== undefined && item.score_percentage !== null ? (
-                                <span className={`font-bold ${item.passed ? 'text-green-600' : 'text-red-500'}`}>
-                                  {Number(item.score_percentage).toFixed(0)}%
-                                </span>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-500">
-                              {formatDate(item.last_accessed_at || item.created_at)}
-                            </TableCell>
-                          </TableRow>
+                              <Progress value={item.progress_percentage} className="h-1.5 mt-1" />
+                            </div>
+
+                            <div className="pt-2 border-t flex justify-between items-center text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(item.last_accessed_at || item.created_at)}
+                              </span>
+                            </div>
+                          </div>
                         )
                       })
                     )}
-                  </TableBody>
-                </Table>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

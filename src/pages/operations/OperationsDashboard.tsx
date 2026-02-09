@@ -522,51 +522,89 @@ export default function OperationsDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-slate-50/50">
-                                            <TableHead className="w-[180px]">Date</TableHead>
-                                            <TableHead className="text-right">Available</TableHead>
-                                            <TableHead className="text-right">Sold</TableHead>
-                                            <TableHead className="text-right">OOO</TableHead>
-                                            <TableHead className="text-right">Rate</TableHead>
-                                            <TableHead className="text-right">Guests</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {occupancyData?.map((day) => (
-                                            <TableRow key={day.id} className="hover:bg-slate-50/30 transition-colors">
-                                                <TableCell className="font-medium text-slate-700">
-                                                    {format(new Date(day.business_date), 'EEE, MMM d, yyyy')}
-                                                </TableCell>
-                                                <TableCell className="text-right">{day.rooms_available}</TableCell>
-                                                <TableCell className="text-right font-semibold text-slate-900">{day.rooms_sold}</TableCell>
-                                                <TableCell className="text-right text-orange-600">{day.rooms_ooo || 0}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Badge variant={day.occupancy_rate >= 80 ? 'default' : day.occupancy_rate >= 50 ? 'secondary' : 'outline'} className="rounded-sm">
-                                                        {day.occupancy_rate}%
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex flex-col items-end">
-                                                        <span className="text-xs font-bold text-slate-600">{day.adults || 0} Adults</span>
-                                                        <span className="text-[10px] text-muted-foreground">{day.children || 0} Kids</span>
-                                                    </div>
-                                                </TableCell>
+                                <div className="hidden md:block">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-slate-50/50">
+                                                <TableHead className="w-[180px]">Date</TableHead>
+                                                <TableHead className="text-right">Available</TableHead>
+                                                <TableHead className="text-right">Sold</TableHead>
+                                                <TableHead className="text-right">OOO</TableHead>
+                                                <TableHead className="text-right">Rate</TableHead>
+                                                <TableHead className="text-right">Guests</TableHead>
                                             </TableRow>
-                                        ))}
-                                        {(!occupancyData || occupancyData.length === 0) && (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="h-48 text-center">
-                                                    <div className="flex flex-col items-center gap-2 opacity-40">
-                                                        <BedDouble className="h-10 w-10" />
-                                                        <p className="text-sm">{t('operations:no_data', 'No detailed occupancy data available')}</p>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {occupancyData?.map((day) => (
+                                                <TableRow key={day.id} className="hover:bg-slate-50/30 transition-colors">
+                                                    <TableCell className="font-medium text-slate-700">
+                                                        {format(new Date(day.business_date), 'EEE, MMM d, yyyy')}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">{day.rooms_available}</TableCell>
+                                                    <TableCell className="text-right font-semibold text-slate-900">{day.rooms_sold}</TableCell>
+                                                    <TableCell className="text-right text-orange-600">{day.rooms_ooo || 0}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge variant={day.occupancy_rate >= 80 ? 'default' : day.occupancy_rate >= 50 ? 'secondary' : 'outline'} className="rounded-sm">
+                                                            {day.occupancy_rate}%
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-xs font-bold text-slate-600">{day.adults || 0} Adults</span>
+                                                            <span className="text-[10px] text-muted-foreground">{day.children || 0} Kids</span>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {(!occupancyData || occupancyData.length === 0) && (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="h-48 text-center">
+                                                        <div className="flex flex-col items-center gap-2 opacity-40">
+                                                            <BedDouble className="h-10 w-10" />
+                                                            <p className="text-sm">{t('operations:no_data', 'No detailed occupancy data available')}</p>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                {/* Mobile Card View */}
+                                <div className="grid grid-cols-1 gap-4 md:hidden">
+                                    {(!occupancyData || occupancyData.length === 0) ? (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            {t('operations:no_data', 'No detailed occupancy data available')}
+                                        </div>
+                                    ) : (
+                                        occupancyData.map((day) => (
+                                            <Card key={day.id} className="border shadow-sm">
+                                                <CardContent className="p-4 space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="font-bold text-slate-900">{format(new Date(day.business_date), 'EEE, MMM d, yyyy')}</p>
+                                                            <div className="text-xs text-muted-foreground mt-1">
+                                                                {day.rooms_sold} / {day.rooms_available} Sold
+                                                            </div>
+                                                        </div>
+                                                        <Badge variant={day.occupancy_rate >= 80 ? 'default' : day.occupancy_rate >= 50 ? 'secondary' : 'outline'}>
+                                                            {day.occupancy_rate}% Occ
+                                                        </Badge>
                                                     </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                                        <div className="bg-slate-50 p-2 rounded">
+                                                            <span className="text-xs text-muted-foreground block">Guests</span>
+                                                            <span className="font-medium">{day.adults || 0} Ad, {day.children || 0} Ch</span>
+                                                        </div>
+                                                        <div className="bg-slate-50 p-2 rounded">
+                                                            <span className="text-xs text-muted-foreground block">OOO Rooms</span>
+                                                            <span className="font-medium text-orange-600">{day.rooms_ooo || 0}</span>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -681,42 +719,79 @@ export default function OperationsDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-emerald-50/30">
-                                            <TableHead className="w-[180px]">Date</TableHead>
-                                            <TableHead className="text-right">Room Rev</TableHead>
-                                            <TableHead className="text-right">F&B Rev</TableHead>
-                                            <TableHead className="text-right">ADR</TableHead>
-                                            <TableHead className="text-right">RevPAR</TableHead>
-                                            <TableHead className="text-right">Total</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {revenueData?.map((day) => (
-                                            <TableRow key={day.id} className="hover:bg-emerald-50/10 transition-colors">
-                                                <TableCell className="font-medium">
-                                                    {format(new Date(day.business_date), 'EEE, MMM d, yyyy')}
-                                                </TableCell>
-                                                <TableCell className="text-right text-slate-600">{formatCurrency(day.room_revenue)}</TableCell>
-                                                <TableCell className="text-right text-slate-600">{formatCurrency(day.fb_revenue || 0)}</TableCell>
-                                                <TableCell className="text-right font-mono text-xs text-blue-600">{formatCurrency(day.adr)}</TableCell>
-                                                <TableCell className="text-right font-mono text-xs text-amber-600">{formatCurrency(day.revpar)}</TableCell>
-                                                <TableCell className="text-right font-bold text-slate-900">{formatCurrency(day.total_revenue)}</TableCell>
+                                <div className="hidden md:block">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-emerald-50/30">
+                                                <TableHead className="w-[180px]">Date</TableHead>
+                                                <TableHead className="text-right">Room Rev</TableHead>
+                                                <TableHead className="text-right">F&B Rev</TableHead>
+                                                <TableHead className="text-right">ADR</TableHead>
+                                                <TableHead className="text-right">RevPAR</TableHead>
+                                                <TableHead className="text-right">Total</TableHead>
                                             </TableRow>
-                                        ))}
-                                        {(!revenueData || revenueData.length === 0) && (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="h-48 text-center">
-                                                    <div className="flex flex-col items-center gap-2 opacity-40">
-                                                        <DollarSign className="h-10 w-10" />
-                                                        <p className="text-sm">{t('operations:no_data', 'No detailed revenue data available')}</p>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {revenueData?.map((day) => (
+                                                <TableRow key={day.id} className="hover:bg-emerald-50/10 transition-colors">
+                                                    <TableCell className="font-medium">
+                                                        {format(new Date(day.business_date), 'EEE, MMM d, yyyy')}
+                                                    </TableCell>
+                                                    <TableCell className="text-right text-slate-600">{formatCurrency(day.room_revenue)}</TableCell>
+                                                    <TableCell className="text-right text-slate-600">{formatCurrency(day.fb_revenue || 0)}</TableCell>
+                                                    <TableCell className="text-right font-mono text-xs text-blue-600">{formatCurrency(day.adr)}</TableCell>
+                                                    <TableCell className="text-right font-mono text-xs text-amber-600">{formatCurrency(day.revpar)}</TableCell>
+                                                    <TableCell className="text-right font-bold text-slate-900">{formatCurrency(day.total_revenue)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {(!revenueData || revenueData.length === 0) && (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="h-48 text-center">
+                                                        <div className="flex flex-col items-center gap-2 opacity-40">
+                                                            <DollarSign className="h-10 w-10" />
+                                                            <p className="text-sm">{t('operations:no_data', 'No detailed revenue data available')}</p>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                {/* Mobile Card View */}
+                                <div className="grid grid-cols-1 gap-4 md:hidden">
+                                    {(!revenueData || revenueData.length === 0) ? (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            {t('operations:no_data', 'No detailed revenue data available')}
+                                        </div>
+                                    ) : (
+                                        revenueData.map((day) => (
+                                            <Card key={day.id} className="border shadow-sm">
+                                                <CardContent className="p-4 space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="font-bold text-slate-900">{format(new Date(day.business_date), 'EEE, MMM d, yyyy')}</p>
+                                                            <div className="text-xs text-muted-foreground mt-1">
+                                                                Total: {formatCurrency(day.total_revenue)}
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-xs font-mono text-blue-600">ADR: {formatCurrency(day.adr)}</div>
+                                                            <div className="text-xs font-mono text-amber-600">RevPAR: {formatCurrency(day.revpar)}</div>
+                                                        </div>
                                                     </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                                    <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
+                                                        <div>
+                                                            <span className="text-muted-foreground">Room Rev:</span> {formatCurrency(day.room_revenue)}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-muted-foreground">F&B Rev:</span> {formatCurrency(day.fb_revenue || 0)}
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
