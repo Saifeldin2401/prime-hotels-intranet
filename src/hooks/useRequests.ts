@@ -386,8 +386,13 @@ export function useRequestsInbox(filters?: {
       }
 
       if (filters?.search) {
-        const escaped = escapeSearchQuery(filters.search)
-        query = query.or(`request_no.ilike.%${escaped}%`)
+        const trimmed = filters.search.trim()
+        if (trimmed.length > 0) {
+          const numericValue = Number(trimmed)
+          if (Number.isFinite(numericValue) && /^\d+$/.test(trimmed)) {
+            query = query.eq('request_no', numericValue)
+          }
+        }
       }
 
       if (filters?.employee) {

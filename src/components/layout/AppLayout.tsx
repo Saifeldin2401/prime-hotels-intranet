@@ -75,12 +75,14 @@ export function AppLayout({ children }: AppLayoutProps) {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
-      {/* Mobile Sidebar Drawer */}
-      <SidebarNavigation
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        isMobile={true}
-      />
+      {/* Mobile Sidebar Drawer - only mount when open to avoid duplicate hooks/effects */}
+      {sidebarOpen && (
+        <SidebarNavigation
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          isMobile={true}
+        />
+      )}
 
       <div className={cn(
         "flex-1 flex flex-col transition-all duration-300 ease-in-out",

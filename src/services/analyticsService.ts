@@ -156,6 +156,9 @@ class AnalyticsService {
      * Track an event
      */
     public track(eventName: string, properties: Record<string, any> = {}, category = 'engagement') {
+        // Don't buffer events when there's no authenticated user - they can never be flushed
+        if (!this.userId && !this.sessionId) return
+
         const event: AnalyticsEvent = {
             event_name: eventName,
             category,
@@ -181,7 +184,7 @@ class AnalyticsService {
      * Flush buffer to Supabase
      */
     private async flush() {
-        if (this.buffer.length === 0 || this.flushInProgress) return
+        if (this.buffer.length === 0 || this.flushInProgress || (!this.userId && !this.sessionId)) return
         this.flushInProgress = true
 
         try {

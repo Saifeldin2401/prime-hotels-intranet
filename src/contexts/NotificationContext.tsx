@@ -53,11 +53,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         staleTime: 1000 * 60 * 5, // 5 minutes stale time
     })
 
-    // 2. Realtime Subscription (Single Source of Truth)
+    // 2. Realtime Subscription with reconnection handling (F-007)
     useEffect(() => {
         if (!user) return
-
-
 
         const channel = supabase
             .channel('global-notifications')
@@ -70,7 +68,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     filter: `user_id=eq.${user.id}`,
                 },
                 (payload) => {
-
                     if (!payload.new) return
 
                     // 1. Invalidate Query to fetch new data
@@ -83,7 +80,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     })
 
                     // 3. Browser Notification (if enabled)
-                    // Use window.Notification to avoid conflict with local Notification type
                     if (
                         preferencesRef.current?.browser_push_enabled &&
                         'Notification' in window &&
@@ -96,11 +92,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     }
                 }
             )
-            .subscribe()
-
+            .subscribe((status) => {
+                if (status === 'CHANNEL_ERROR') {
+                    // Refetch notifications on reconnection to catch missed events
+                    queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
+                }
+                if (status === 'TIMED_OUT') {
+                    channel.subscribe()
+                }
+            })
 
         return () => {
-
             supabase.removeChannel(channel)
         }
     }, [user, queryClient])

@@ -18,9 +18,12 @@ import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 const PublicHome = lazy(() => import('@/pages/public/PublicHome'))
 
 const RootLayout = () => {
-    const { loading, rolesLoading } = useAuth()
+    const { loading } = useAuth()
 
-    if (loading || rolesLoading) {
+    // Only wait for auth session loading here.
+    // Role loading is handled by ProtectedRoute for protected routes,
+    // so public routes (login, public home) aren't blocked.
+    if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-background">
                 <div className="text-center">

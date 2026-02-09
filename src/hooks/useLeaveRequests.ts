@@ -241,6 +241,23 @@ export function useSubmitLeaveRequest() {
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
+      // W-001: Validate no overlapping leave requests
+      const { data: overlapping } = await supabase
+        .from('leave_requests')
+        .select('id, start_date, end_date, type')
+        .eq('requester_id', user.id)
+        .eq('is_deleted', false)
+        .not('status', 'in', '("rejected","cancelled")')
+        .lte('start_date', data.end_date)
+        .gte('end_date', data.start_date)
+        .limit(1)
+
+      if (overlapping && overlapping.length > 0) {
+        throw new Error(
+          `You already have a leave request (${overlapping[0].type}) from ${overlapping[0].start_date} to ${overlapping[0].end_date} that overlaps with this period.`
+        )
+      }
+
       // Determine property for the request
       let propertyId: string | null = null
 
