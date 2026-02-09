@@ -71,14 +71,14 @@ export function SmartHeaderMapper({ csvHeaders, targetHeaders, onMappingChange, 
                         {csvHeaders.map((header, index) => {
                             const matched = mapping[header]
                             return (
-                                <div key={`${index}-${header}`} className="grid grid-cols-7 items-center gap-4 bg-background p-2 rounded-md border text-sm">
-                                    <div className="col-span-3 font-medium truncate px-2" title={header}>
+                                <div key={`${index}-${header}`} className="grid grid-cols-1 sm:grid-cols-7 items-center gap-3 bg-background p-2 rounded-md border text-sm">
+                                    <div className="sm:col-span-3 font-medium truncate px-2" title={header}>
                                         {header}
                                     </div>
-                                    <div className="col-span-1 flex justify-center">
+                                    <div className="sm:col-span-1 flex justify-start sm:justify-center px-2">
                                         <ArrowRight className={cn("h-4 w-4", matched ? "text-primary" : "text-muted-foreground")} />
                                     </div>
-                                    <div className="col-span-3">
+                                    <div className="sm:col-span-3">
                                         <Select value={matched || 'skip'} onValueChange={(v) => handleSelectChange(header, v)}>
                                             <SelectTrigger className={cn("h-8", matched ? "border-primary/50 bg-primary/5" : "border-dashed")}>
                                                 <SelectValue placeholder="Select target field" />

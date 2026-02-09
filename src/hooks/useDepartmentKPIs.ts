@@ -117,7 +117,6 @@ export function useDepartmentKPIs(propertyId?: string) {
                 const { count: totalTraining } = await supabase
                     .from('learning_assignments')
                     .select('*', { count: 'exact', head: true })
-                    .select('*', { count: 'exact', head: true })
                     .eq('target_type', 'user')
                     .in('target_id', userIds)
 

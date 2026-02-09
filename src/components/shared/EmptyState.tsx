@@ -6,6 +6,7 @@ interface EmptyStateProps {
     icon?: LucideIcon
     title: string
     description: string
+    animationData?: unknown
     action?: {
         label: string
         onClick: () => void

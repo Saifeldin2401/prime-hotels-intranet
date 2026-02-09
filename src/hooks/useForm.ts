@@ -120,7 +120,7 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
     if (!schema) return {}
 
     const result = validateFormUtil(schema, data)
-    if (!result.success) {
+    if (result.success === false) {
       return result.errors
     }
     return {}

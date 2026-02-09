@@ -40,7 +40,7 @@ export const AppRoutes = () => {
                 />
 
                 {/* Modularized Routes */}
-                {AuthRoutes(user)}
+                {AuthRoutes()}
                 {AdminRoutes()}
                 {HRRoutes()}
                 {OperationsRoutes()}

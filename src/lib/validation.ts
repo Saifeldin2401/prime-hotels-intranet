@@ -197,7 +197,7 @@ export const prepareFormData = <T>(data: T): Partial<T> => {
   
   Object.entries(data as any).forEach(([key, value]) => {
     if (value !== '' && value !== undefined && value !== null) {
-      prepared[key as keyof T] = value
+      prepared[key as keyof T] = value as T[keyof T]
     }
   })
   

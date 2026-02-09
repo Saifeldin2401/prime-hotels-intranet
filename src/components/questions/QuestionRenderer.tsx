@@ -120,21 +120,26 @@ export function QuestionRenderer({
         if (!hasSubmitted || !selectedAnswer) return undefined
 
         switch (question.question_type) {
-            case 'true_false':
+            case 'true_false': {
                 return selectedAnswer === question.correct_answer
-            case 'fill_blank':
+            }
+            case 'fill_blank': {
                 return (selectedAnswer as string).toLowerCase().trim() ===
                     question.correct_answer?.toLowerCase().trim()
-            case 'mcq':
+            }
+            case 'mcq': {
                 const selected = shuffledOptions.find(o => o.id === selectedAnswer)
                 return selected?.is_correct
-            case 'mcq_multi':
+            }
+            case 'mcq_multi': {
                 const correctIds = shuffledOptions.filter(o => o.is_correct).map(o => o.id)
                 const selectedIds = selectedAnswer as string[]
                 return correctIds.length === selectedIds.length &&
                     correctIds.every(id => selectedIds.includes(id))
-            default:
+            }
+            default: {
                 return undefined
+            }
         }
     })()
 

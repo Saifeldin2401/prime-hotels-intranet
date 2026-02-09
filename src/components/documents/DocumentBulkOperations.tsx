@@ -85,12 +85,12 @@ export function DocumentBulkOperations({
     try {
       const documentsToDownload = documents.filter(doc => selectedDocuments.has(doc.id))
 
-      for (const document of documentsToDownload) {
-        if (document.file_url) {
+      for (const docItem of documentsToDownload) {
+        if (docItem.file_url) {
           // Create download link
           const link = document.createElement('a')
-          link.href = document.file_url
-          link.download = document.title
+          link.href = docItem.file_url
+          link.download = docItem.title
           link.target = '_blank'
           document.body.appendChild(link)
           link.click()
@@ -170,7 +170,7 @@ export function DocumentBulkOperations({
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ folder_id })
+        .update({ folder_id: folderId })
         .in('id', Array.from(selectedDocuments))
         .eq('created_by', user?.id)
 

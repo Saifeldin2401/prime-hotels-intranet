@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { analytics } from '@/services/analyticsService'
@@ -21,7 +22,7 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [roles, setRoles] = useState<UserRole[]>([])
@@ -91,10 +92,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone: user.user_metadata?.phone || null,
             avatar_url: user.user_metadata?.avatar_url || null,
             hire_date: null,
+            date_of_birth: null,
             job_title: null,
             staff_id: null,
             reporting_to: null,
             is_active: true,
+            emergency_contact_name: null,
+            emergency_contact_phone: null,
+            nationality: null,
+            blood_group: null,
             created_at: user.created_at,
             updated_at: new Date().toISOString()
           }

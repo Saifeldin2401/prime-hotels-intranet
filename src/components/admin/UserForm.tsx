@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -43,6 +43,9 @@ interface UserFormProps {
   onClose: () => void
 }
 
+const isValidUUID = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+
 export function UserForm({ user, onClose }: UserFormProps) {
   const { t } = useTranslation('users')
   const { t: tCommon } = useTranslation('common')
@@ -59,7 +62,6 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [staffId, setStaffId] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState('')
 
-  const isValidUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
   const [openReportingTo, setOpenReportingTo] = useState(false)
 
   // ... (rest of invalidation)
@@ -242,22 +244,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
     enabled: selectedDepartments.length > 0 || selectedProperties.length > 0
   })
 
-  useEffect(() => {
-    if (user) {
-      setEmail(user.email)
-      setFullName(user.full_name || '')
-      setPhone(user.phone || '')
-      setJobTitle(user.job_title || '')
-      setIsActive(user.is_active !== false) // Default to true if undefined
-      setReportingTo(user.reporting_to || null)
-      setStaffId(user.staff_id || '')
-      setDateOfBirth(user.date_of_birth || '')
-      // Load user's roles, properties, departments
-      loadUserData()
-    }
-  }, [user])
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     if (!user) return
 
     // Load roles
@@ -309,7 +296,22 @@ export function UserForm({ user, onClose }: UserFormProps) {
       setReportingTo(profileData.reporting_to)
       setStaffId(profileData.staff_id || '')
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
+      setEmail(user.email)
+      setFullName(user.full_name || '')
+      setPhone(user.phone || '')
+      setJobTitle(user.job_title || '')
+      setIsActive(user.is_active !== false) // Default to true if undefined
+      setReportingTo(user.reporting_to || null)
+      setStaffId(user.staff_id || '')
+      setDateOfBirth(user.date_of_birth || '')
+      // Load user's roles, properties, departments
+      loadUserData()
+    }
+  }, [user, loadUserData])
 
   // Auto-suggest manager when department changes (for new users)
   useEffect(() => {

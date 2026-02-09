@@ -38,7 +38,7 @@ interface TrainingModule {
   title: string
   description?: string
   estimated_duration?: string
-  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  difficulty_level?: 'beginner' | 'intermediate' | 'advanced'
   category?: string
   status: ModuleStatus
   view_count?: number
@@ -46,6 +46,7 @@ interface TrainingModule {
   updated_by?: string
   created_at?: string
   updated_at?: string
+  certificate_enabled?: boolean
 }
 
 export default function TrainingModules() {
@@ -572,8 +573,8 @@ export default function TrainingModules() {
                   <Badge variant="secondary" className={cn("rounded-sm font-normal", getStatusColor(module.status || 'draft'))}>
                     {t(module.status)}
                   </Badge>
-                  <Badge variant="outline" className={cn("rounded-sm font-normal", getDifficultyColor(module.difficulty || 'beginner'))}>
-                    {t(module.difficulty || 'beginner')}
+                  <Badge variant="outline" className={cn("rounded-sm font-normal", getDifficultyColor(module.difficulty_level || 'beginner'))}>
+                    {t(module.difficulty_level || 'beginner')}
                   </Badge>
                   {module.category && (
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-normal">
@@ -678,15 +679,14 @@ export default function TrainingModules() {
           title: editingModule.title,
           description: editingModule.description,
           estimated_duration: editingModule.estimated_duration || '',
-          difficulty_level: editingModule.difficulty || 'beginner',
+          difficulty_level: editingModule.difficulty_level || 'beginner',
           category: editingModule.category || '',
           status: editingModule.status,
-          certificate_enabled: false // Default value
+          certificate_enabled: editingModule.certificate_enabled ?? false
         } : null}
         onSubmit={handleSubmit}
         isSubmitting={createModuleMutation.isPending || updateModuleMutation.isPending}
         existingCategories={categories || []}
-        existingDurations={durations || []}
       />
 
       {/* Assignment Dialog - Conditionally rendered to prevent infinite loop */}

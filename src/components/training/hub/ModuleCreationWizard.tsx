@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Wand2, Sparkles, BookOpen, Settings, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Wand2, Sparkles, BookOpen, Settings, CheckCircle2, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/components/ui/use-toast'
@@ -71,7 +71,7 @@ export function ModuleCreationWizard({
           title: values.topic,
           description: values.description,
           category: values.category,
-          difficulty: values.difficulty,
+          difficulty_level: values.difficulty,
           estimated_duration: values.estimatedDuration,
           validity_period_days: parseInt(values.validityPeriod || '365'),
           certificate_enabled: values.certificateEnabled,

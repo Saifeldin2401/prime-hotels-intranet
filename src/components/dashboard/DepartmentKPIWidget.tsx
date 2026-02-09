@@ -99,7 +99,7 @@ export function DepartmentKPIWidget({ propertyId, className, compact = false }: 
             </CardHeader>
             <CardContent className="space-y-4">
                 {/* Property Averages */}
-                <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 bg-gray-50 rounded-lg">
                     <div className="text-center">
                         <ClipboardCheck className="h-4 w-4 mx-auto mb-1 text-blue-600" />
                         <p className="text-lg font-bold text-hotel-navy">{avgScore.task_completion_rate}%</p>
@@ -157,7 +157,7 @@ export function DepartmentKPIWidget({ propertyId, className, compact = false }: 
                                                 '[&>div]:bg-red-500'
                                     )}
                                 />
-                                <div className="grid grid-cols-3 gap-2 text-xs text-gray-500">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-gray-500">
                                     <span>{t('widgets.dept_kpi.tasks', 'Tasks')}: {dept.metrics.task_completion_rate}%</span>
                                     <span>{t('widgets.dept_kpi.training', 'Training')}: {dept.metrics.training_completion_rate}%</span>
                                     <span>{t('widgets.dept_kpi.sops', 'SOPs')}: {dept.metrics.sop_compliance_rate}%</span>

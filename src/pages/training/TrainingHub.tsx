@@ -47,7 +47,7 @@ interface TrainingModule {
   title: string
   description?: string
   estimated_duration?: string
-  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  difficulty_level?: 'beginner' | 'intermediate' | 'advanced'
   category?: string
   status: ModuleStatus
   view_count?: number
@@ -57,6 +57,7 @@ interface TrainingModule {
   updated_at?: string
   completion_count?: number
   average_score?: number
+  certificate_enabled?: boolean
 }
 
 export default function TrainingHub() {
@@ -367,7 +368,7 @@ export default function TrainingHub() {
           title: `${module.title} (Copy)`,
           description: module.description,
           category: module.category,
-          difficulty: module.difficulty,
+          difficulty_level: module.difficulty_level,
           estimated_duration: module.estimated_duration,
           created_by: profile?.id,
           status: 'draft'
@@ -438,28 +439,28 @@ export default function TrainingHub() {
     visible: boolean
   }> = [
     {
-      key: 'list',
+      key: 'list' as ViewMode,
       label: t('workflow.design'),
       description: t('workflow.designDesc'),
       icon: FileText,
       visible: canManageModules
     },
     {
-      key: 'builder',
+      key: 'builder' as ViewMode,
       label: t('workflow.build'),
       description: t('workflow.buildDesc'),
       icon: Wand2,
       visible: canManageModules
     },
     {
-      key: 'assignments',
+      key: 'assignments' as ViewMode,
       label: t('workflow.assign'),
       description: t('workflow.assignDesc'),
       icon: Users,
       visible: canAssignTraining
     },
     {
-      key: 'insights',
+      key: 'insights' as ViewMode,
       label: t('workflow.track'),
       description: t('workflow.trackDesc'),
       icon: TrendingUp,
@@ -717,8 +718,8 @@ export default function TrainingHub() {
                               {t('assigned')}
                             </Badge>
                           )}
-                          <Badge variant="outline" className={cn("rounded-sm font-normal", getDifficultyColor(module.difficulty || 'beginner'))}>
-                            {t(module.difficulty || 'beginner')}
+                          <Badge variant="outline" className={cn("rounded-sm font-normal", getDifficultyColor(module.difficulty_level || 'beginner'))}>
+                            {t(module.difficulty_level || 'beginner')}
                           </Badge>
                           {module.category && (
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-normal">
@@ -839,7 +840,16 @@ export default function TrainingHub() {
       <ModuleFormDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-        initialData={editingModule}
+        initialData={editingModule ? {
+          title: editingModule.title,
+          description: editingModule.description,
+          estimated_duration: editingModule.estimated_duration || '',
+          difficulty_level: editingModule.difficulty_level || 'beginner',
+          category: editingModule.category || '',
+          status: editingModule.status,
+          department_id: (editingModule as any).department_id || null,
+          certificate_enabled: editingModule.certificate_enabled ?? true
+        } : null}
         onSubmit={handleSubmit}
         isSubmitting={createModuleMutation.isPending || updateModuleMutation.isPending}
         existingCategories={categories || []}

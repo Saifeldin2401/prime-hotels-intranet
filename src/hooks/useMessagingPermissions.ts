@@ -18,7 +18,9 @@ export function useMessagingPermissions(): MessagingPermissions {
   const { profile, primaryRole } = useAuth()
 
   return useMemo(() => {
-    const permissions = {
+    const baseMessageTypes: MessagingPermissions['allowedMessageTypes'] = ['direct']
+    const basePriorities: MessagingPermissions['allowedPriorities'] = ['low', 'medium', 'high']
+    const permissions: MessagingPermissions = {
       // Base permissions for all authenticated users
       canSendMessage: !!profile?.is_active,
       canSendBroadcast: false,
@@ -27,8 +29,8 @@ export function useMessagingPermissions(): MessagingPermissions {
       canDeleteMessages: false,
       canManageNotifications: false,
       maxRecipientsPerMessage: 10,
-      allowedMessageTypes: ['direct'] as const,
-      allowedPriorities: ['low', 'medium', 'high'] as const
+      allowedMessageTypes: baseMessageTypes,
+      allowedPriorities: basePriorities
     }
 
     // Role-based permissions

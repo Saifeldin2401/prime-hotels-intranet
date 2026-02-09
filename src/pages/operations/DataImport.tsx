@@ -1323,7 +1323,7 @@ export default function DataImport() {
             {/* Recent History Sidebar (Sheet) */}
             <Sheet>
                 <SheetTrigger asChild>
-                    <Button variant="ghost" size="sm" className="fixed bottom-6 right-6 rounded-full shadow-xl bg-white border h-12 w-12 group p-0">
+                    <Button variant="ghost" size="sm" className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+4rem)] sm:bottom-6 right-4 sm:right-6 rounded-full shadow-xl bg-white border h-12 w-12 group p-0">
                         <Clock className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </Button>
                 </SheetTrigger>

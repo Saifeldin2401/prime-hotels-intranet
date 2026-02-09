@@ -108,7 +108,7 @@ export const InteractiveButton = forwardRef<HTMLButtonElement, InteractiveButton
             }}
           />
         ))}
-        <style jsx>{`
+        <style>{`
           @keyframes ripple {
             from {
               width: 0;

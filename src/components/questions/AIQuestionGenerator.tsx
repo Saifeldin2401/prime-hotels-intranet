@@ -312,7 +312,7 @@ export function AIQuestionGenerator({
                     <div className="space-y-4">
                         <Label className="text-sm font-semibold uppercase tracking-wider text-slate-500">Source Content</Label>
                         <Tabs value={sourceType} onValueChange={(val) => setSourceType(val as any)}>
-                            <TabsList className="grid w-full grid-cols-3">
+                            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3">
                                 <TabsTrigger value="text" className="gap-2">
                                     <Edit3 className="h-4 w-4" />
                                     {t('content')}

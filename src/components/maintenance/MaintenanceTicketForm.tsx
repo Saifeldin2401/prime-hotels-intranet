@@ -51,7 +51,7 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
     property_id: initialData?.property_id || '',
     department_id: initialData?.department_id || '',
     room_number: initialData?.room_number || '',
-    estimated_cost: initialData?.estimated_cost || ''
+    estimated_cost: initialData?.estimated_cost != null ? String(initialData.estimated_cost) : ''
   })
 
   // AI Triage Hook
@@ -82,7 +82,7 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
     setFormData(prev => ({
       ...prev,
       category: mappedCategory,
-      priority: s.priority === 'urgent' ? 'urgent' : s.priority
+      priority: s.priority
     }))
     clearSuggestion()
   }

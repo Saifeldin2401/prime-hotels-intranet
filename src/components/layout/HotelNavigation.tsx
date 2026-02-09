@@ -87,7 +87,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const filteredNavItems = navigationItems.filter(item =>
-    canAccessPage(user, item.href)
+    canAccessPage(user?.role ?? null, [item.requiredRole])
   )
 
   return (

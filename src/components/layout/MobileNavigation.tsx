@@ -2,102 +2,152 @@
  * MobileNavigation Component
  * 
  * Bottom navigation bar for mobile devices.
- * Uses centralized navigation config for role-based quick actions.
+ * Redesigned with glassmorphism and floating action button.
  */
 
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Menu } from 'lucide-react'
+import { Menu, Home, MessageSquare, GraduationCap, LayoutDashboard } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useTranslation } from 'react-i18next'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import { ActionSheet } from '@/components/mobile/ActionSheet'
 
 interface MobileNavigationProps {
   onMenuClick?: () => void
+  className?: string
 }
 
-export function MobileNavigation({ onMenuClick }: MobileNavigationProps) {
+export function MobileNavigation({ onMenuClick, className }: MobileNavigationProps) {
   const { t } = useTranslation('nav')
   const location = useLocation()
   const { quickActions, isPathActive } = useNavigation()
-
-  // Take first 4 quick actions + menu button
-  const displayItems = quickActions.slice(0, 4)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   const handleHaptic = useCallback(() => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
-        navigator.vibrate(10) // Light tap vibration
+        navigator.vibrate(10)
       } catch (e) {
-        // Ignore vibration errors (e.g. permission issues or unsupported)
+        // Ignore
       }
     }
   }, [])
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-[100] bg-background border-t border-border lg:hidden shadow-lg pb-safe"
-      aria-label={t('mobileNav', { defaultValue: 'Mobile navigation' })}
-    >
-      <div className="grid grid-cols-5 gap-0">
-        {displayItems.map((item) => {
-          const Icon = item.icon
-          const isActive = isPathActive(item.resolvedPath)
+    <div className={cn("fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 max-w-full mx-auto print:hidden", className)}>
+      <nav
+        className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl px-2 py-2 flex items-center justify-between relative"
+        aria-label={t('mobileNav', { defaultValue: 'Mobile navigation' })}
+      >
+        {/* Home */}
+        <Link
+          to="/"
+          onClick={handleHaptic}
+          className={cn(
+            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200",
+            location.pathname === '/'
+              ? "text-hotel-primary"
+              : "text-gray-400 hover:text-gray-600"
+          )}
+        >
+          <div className={cn("p-1.5 rounded-full transition-all", location.pathname === '/' && "bg-hotel-primary/10")}>
+            <Home className="w-5 h-5" />
+          </div>
+          <span className="text-[10px] font-medium">{t('home', 'Home')}</span>
+        </Link>
 
-          return (
-            <Link
-              key={item.path}
-              to={item.resolvedPath}
-              onClick={handleHaptic}
-              className={cn(
-                "flex flex-col items-center justify-center gap-0.5 py-3 px-1 transition-all duration-150 relative",
-                "min-h-[3.5rem] touch-action-manipulation", // Ensure min height for touch
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-hotel-gold",
-                isActive
-                  ? "text-hotel-gold font-semibold bg-hotel-gold/5"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/80"
-              )}
-            >
-              <div className="relative">
-                <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isActive && "text-hotel-gold")} />
-                {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-4 min-w-[16px] px-0.5 flex items-center justify-center text-[9px] bg-red-500 text-white border-white border-[1.5px] shadow-sm">
-                    {item.badgeCount > 9 ? '9+' : item.badgeCount}
-                  </Badge>
-                )}
-              </div>
-              <span className={cn(
-                "text-[10px] sm:text-[11px] font-medium truncate max-w-[64px] transition-colors",
-                isActive ? "text-foreground" : "text-muted-foreground"
-              )}>
-                {t(item.title)}
-              </span>
-            </Link>
-          )
-        })}
+        {/* Training */}
+        <Link
+          to="/training"
+          onClick={handleHaptic}
+          className={cn(
+            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200",
+            location.pathname.startsWith('/training')
+              ? "text-hotel-primary"
+              : "text-gray-400 hover:text-gray-600"
+          )}
+        >
+          <div className={cn("p-1.5 rounded-full transition-all", location.pathname.startsWith('/training') && "bg-hotel-primary/10")}>
+            <GraduationCap className="w-5 h-5" />
+          </div>
+          <span className="text-[10px] font-medium">{t('training', 'Training')}</span>
+        </Link>
 
-        {/* Menu button - always last */}
+        {/* Floating Action Button (FAB) */}
+        <div className="relative -top-6">
+          <ActionSheet
+            open={isSheetOpen}
+            onOpenChange={setIsSheetOpen}
+            trigger={
+              <button
+                onClick={() => {
+                  handleHaptic()
+                  setIsSheetOpen(true)
+                }}
+                className="w-14 h-14 rounded-full bg-hotel-gold text-white shadow-lg shadow-hotel-gold/40 flex items-center justify-center transform active:scale-95 transition-transform border-4 border-gray-50"
+              >
+                <div className="relative">
+                  <LayoutDashboard className="w-6 h-6" />
+                </div>
+              </button>
+            }
+            title="Quick Actions"
+            description="Access common tasks instantly"
+          >
+            <div className="grid grid-cols-2 gap-3 py-4">
+              <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100">
+                <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-medium">New Request</span>
+              </button>
+              <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100">
+                <div className="h-10 w-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                  <LayoutDashboard className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-medium">Report Issue</span>
+              </button>
+              {/* Add more quick actions as needed */}
+            </div>
+          </ActionSheet>
+        </div>
+
+        {/* Messages */}
+        <Link
+          to="/messaging"
+          onClick={handleHaptic}
+          className={cn(
+            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200",
+            location.pathname.startsWith('/messaging')
+              ? "text-hotel-primary"
+              : "text-gray-400 hover:text-gray-600"
+          )}
+        >
+          <div className={cn("p-1.5 rounded-full transition-all", location.pathname.startsWith('/messaging') && "bg-hotel-primary/10")}>
+            <MessageSquare className="w-5 h-5" />
+            {/* Simple dot for unread messages if needed */}
+          </div>
+          <span className="text-[10px] font-medium">{t('chat', 'Chat')}</span>
+        </Link>
+
+        {/* Menu */}
         <button
           onClick={() => {
             handleHaptic()
             onMenuClick?.()
           }}
           className={cn(
-            "flex flex-col items-center justify-center gap-0.5 py-3 px-1 transition-all duration-150",
-            "min-h-[3.5rem] touch-action-manipulation",
-            "text-muted-foreground hover:text-foreground hover:bg-accent",
-            "active:scale-95 active:bg-accent/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-hotel-gold"
+            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-600"
           )}
-          aria-label={t('openMenu', { defaultValue: 'Open navigation menu' })}
-          aria-expanded="false"
         >
-          <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
-          <span className="text-[10px] sm:text-[11px] font-medium truncate max-w-[64px]" aria-hidden="true">
-            {t('menu', { defaultValue: 'Menu' })}
-          </span>
+          <div className="p-1.5 rounded-full">
+            <Menu className="w-5 h-5" />
+          </div>
+          <span className="text-[10px] font-medium">{t('menu', 'Menu')}</span>
         </button>
-      </div>
-    </nav>
+      </nav>
+    </div>
   )
 }

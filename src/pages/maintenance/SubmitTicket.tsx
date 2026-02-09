@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
-import { maintenanceTicketSchema, type MaintenanceTicketFormData } from '@/lib/validationSchemas'
+import { maintenanceTicketSchema } from '@/lib/validationSchemas'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { LoadingButton } from '@/components/loading'
 import {
@@ -56,11 +56,33 @@ const maxFileSizeBytes = 5 * 1024 * 1024
 const allowedFilePrefixes = ['image/']
 const allowedFileTypes = ['application/pdf']
 
-type TicketFormValues = z.infer<typeof maintenanceTicketSchema> & {
-  room_number?: string
-  property_id?: string | ''
-  category?: z.infer<typeof categoryEnum> | ''
-}
+const buildTicketSchema = (
+  t: (key: string, options?: Record<string, any>) => string,
+  propertiesLength: number
+) => (
+  maintenanceTicketSchema.extend({
+    room_number: z.string().optional(),
+    property_id: z.string().uuid().optional().or(z.literal('')),
+    category: categoryEnum.optional().or(z.literal(''))
+  }).superRefine((data, ctx) => {
+    if (!data.category) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: t('submit_ticket.validation_category_required', { defaultValue: 'Category is required.' }),
+        path: ['category']
+      })
+    }
+    if (propertiesLength > 1 && !data.property_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: t('submit_ticket.validation_property_required', { defaultValue: 'Property is required.' }),
+        path: ['property_id']
+      })
+    }
+  })
+)
+
+type TicketFormValues = z.input<ReturnType<typeof buildTicketSchema>>
 
 export default function SubmitTicket() {
   const { user, properties } = useAuth()
@@ -69,28 +91,10 @@ export default function SubmitTicket() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const ticketSchema = useMemo(() => (
-    maintenanceTicketSchema.extend({
-      room_number: z.string().optional(),
-      property_id: z.string().uuid().optional().or(z.literal('')),
-      category: categoryEnum.optional().or(z.literal(''))
-    }).superRefine((data, ctx) => {
-      if (!data.category) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: t('submit_ticket.validation_category_required', { defaultValue: 'Category is required.' }),
-          path: ['category']
-        })
-      }
-      if (properties.length > 1 && !data.property_id) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: t('submit_ticket.validation_property_required', { defaultValue: 'Property is required.' }),
-          path: ['property_id']
-        })
-      }
-    })
-  ), [properties.length, t])
+  const ticketSchema = useMemo(
+    () => buildTicketSchema(t, properties.length),
+    [properties.length, t]
+  )
 
   const form = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),

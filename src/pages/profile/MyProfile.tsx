@@ -149,7 +149,7 @@ export default function MyProfile() {
             <h1 className="text-3xl font-bold mb-8">{t('my_profile')}</h1>
 
             <Tabs defaultValue="personal" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:w-[600px]">
                     <TabsTrigger value="personal">{t('personal_info')}</TabsTrigger>
                     <TabsTrigger value="skills">Skills</TabsTrigger>
                     <TabsTrigger value="documents">{t('documents')}</TabsTrigger>

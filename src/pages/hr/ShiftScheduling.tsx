@@ -5,6 +5,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProfiles } from '@/hooks/useUsers'
 import { useCreateShift, useUpdateShift, useDeleteShift } from '@/hooks/useShifts'
+import type { Shift } from '@/hooks/useShifts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,7 +32,16 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 
-const defaultShiftForm = {
+const defaultShiftForm: {
+  user_id: string
+  shift_type: string
+  start_time: string
+  end_time: string
+  location: string
+  notes: string
+  break_duration_minutes: number
+  status: Shift['status']
+} = {
   user_id: '',
   shift_type: 'Shift',
   start_time: '',
@@ -80,6 +90,7 @@ export default function ShiftScheduling() {
 
   const [attendanceForm, setAttendanceForm] = useState(defaultAttendanceForm)
   const [editingAttendanceId, setEditingAttendanceId] = useState<string | null>(null)
+  const shiftStatusOptions: Shift['status'][] = ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show']
 
   const { departments } = useDepartments(propertyId)
   const { data: staff = [] } = useProfiles({
@@ -370,12 +381,12 @@ export default function ShiftScheduling() {
                   </div>
                   <div className="space-y-2">
                     <Label>{t('shift_management.form.status', 'Status')}</Label>
-                    <Select value={shiftForm.status} onValueChange={(value) => setShiftForm(prev => ({ ...prev, status: value }))}>
+                    <Select value={shiftForm.status} onValueChange={(value) => setShiftForm(prev => ({ ...prev, status: value as Shift['status'] }))}>
                       <SelectTrigger>
                         <SelectValue placeholder={t('shift_management.form.status', 'Status')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'].map(status => (
+                        {shiftStatusOptions.map(status => (
                           <SelectItem key={status} value={status}>{status.replace('_', ' ')}</SelectItem>
                         ))}
                       </SelectContent>

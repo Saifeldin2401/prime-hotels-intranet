@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+.ken-burns-duration {
+  transition-duration: 20000ms;
+}
+
 @layer base {
   :root {
     /* PRIME Hotels Corporate Palette */
@@ -108,6 +112,13 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    overflow-x: hidden;
+  }
+
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
   }
 
   h1,
@@ -435,6 +446,25 @@ select:focus-visible {
   .card-gold {
     @apply bg-[#FDF8F0] border border-hotel-gold-light/30 rounded-xl shadow-sm;
     /* Soft Cream */
+  }
+
+  /* Mobile Specific Styles */
+  .shadow-card-sm {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .prose-mobile h1 {
+    @apply text-2xl font-bold;
+    letter-spacing: -0.02em;
+  }
+
+  .prose-mobile h2 {
+    @apply text-xl font-semibold;
+    letter-spacing: -0.01em;
+  }
+
+  .prose-mobile p {
+    @apply text-sm leading-relaxed text-muted-foreground;
   }
 
   /* Button styles - Corporate */

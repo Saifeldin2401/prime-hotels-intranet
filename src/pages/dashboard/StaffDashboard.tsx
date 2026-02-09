@@ -426,7 +426,7 @@ export function StaffDashboard() {
       </motion.div>
       <motion.div variants={item}>
         <Tabs defaultValue="feed" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-hotel-navy/5">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 h-auto p-1 bg-hotel-navy/5">
             <TabsTrigger value="feed" className="text-[10px] xs:text-xs sm:text-sm py-2 xs:py-2.5">{t('staff.tabs.activity_feed')}</TabsTrigger>
             <TabsTrigger value="tasks" className="text-[10px] xs:text-xs sm:text-sm py-2 xs:py-2.5">{t('staff.tabs.my_tasks')}</TabsTrigger>
             <TabsTrigger value="schedule" className="text-[10px] xs:text-xs sm:text-sm py-2 xs:py-2.5">{t('staff.tabs.schedule')}</TabsTrigger>

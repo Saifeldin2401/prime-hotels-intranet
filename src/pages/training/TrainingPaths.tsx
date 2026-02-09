@@ -528,7 +528,7 @@ export default function TrainingPaths() {
             </DialogTitle>
           </DialogHeader>
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3">
               <TabsTrigger value="general">{t('general')}</TabsTrigger>
               <TabsTrigger value="modules">{t('modules')}</TabsTrigger>
               <TabsTrigger value="targeting">{t('targeting')}</TabsTrigger>

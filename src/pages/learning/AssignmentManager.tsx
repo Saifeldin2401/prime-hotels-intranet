@@ -72,37 +72,39 @@ function AssignmentProgressDialog({
                     </div>
                 ) : (
                     <div className="rounded-md border">
-                        <table className="w-full text-sm">
-                            <thead className="bg-slate-50 border-b">
-                                <tr>
-                                    <th className="px-4 py-3 text-left font-medium">User</th>
-                                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                                    <th className="px-4 py-3 text-left font-medium">Score</th>
-                                    <th className="px-4 py-3 text-left font-medium">Last Active</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {progress.map((p: any) => (
-                                    <tr key={p.id}>
-                                        <td className="px-4 py-3">
-                                            <div className="font-medium">{p.user?.full_name || 'Unknown User'}</div>
-                                            <div className="text-xs text-muted-foreground">{p.user?.job_title}</div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Badge variant={p.status === 'completed' ? 'default' : 'secondary'}>
-                                                {p.status}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-4 py-3 font-mono">
-                                            {p.score_percentage !== null && p.score_percentage !== undefined ? `${p.score_percentage}%` : '-'}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {format(new Date(p.updated_at), 'MMM d, HH:mm')}
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50 border-b">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left font-medium">User</th>
+                                        <th className="px-4 py-3 text-left font-medium">Status</th>
+                                        <th className="px-4 py-3 text-left font-medium">Score</th>
+                                        <th className="px-4 py-3 text-left font-medium">Last Active</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {progress.map((p: any) => (
+                                        <tr key={p.id}>
+                                            <td className="px-4 py-3">
+                                                <div className="font-medium">{p.user?.full_name || 'Unknown User'}</div>
+                                                <div className="text-xs text-muted-foreground">{p.user?.job_title}</div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <Badge variant={p.status === 'completed' ? 'default' : 'secondary'}>
+                                                    {p.status}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-4 py-3 font-mono">
+                                                {p.score_percentage !== null && p.score_percentage !== undefined ? `${p.score_percentage}%` : '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {format(new Date(p.updated_at), 'MMM d, HH:mm')}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </DialogContent>

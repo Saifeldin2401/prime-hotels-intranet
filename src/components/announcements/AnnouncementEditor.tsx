@@ -422,7 +422,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="content">Content</TabsTrigger>
             <TabsTrigger value="audience">Audience</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>

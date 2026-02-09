@@ -170,10 +170,10 @@ const PropertyRow = ({ report, consolidated, formatCurrency }: {
             {isExpanded && (
                 <tr className="bg-slate-50/50">
                     <td colSpan={9} className="p-6">
-                        <div className="grid grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="space-y-4">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Yield Analysis</div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="bg-white p-3 rounded-xl border border-slate-100">
                                         <div className="text-[10px] text-muted-foreground mb-1">ADR</div>
                                         <div className="text-sm font-bold text-slate-900">{formatCurrency(report.revenue.adr)}</div>
@@ -184,9 +184,9 @@ const PropertyRow = ({ report, consolidated, formatCurrency }: {
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-4 border-l pl-6">
+                            <div className="space-y-4 md:border-l md:pl-6">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Guest Mix</div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="bg-white p-3 rounded-xl border border-slate-100">
                                         <div className="text-[10px] text-muted-foreground mb-1">Adults</div>
                                         <div className="text-sm font-bold text-slate-900">{report.occupancy.adults}</div>
@@ -197,9 +197,9 @@ const PropertyRow = ({ report, consolidated, formatCurrency }: {
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-4 border-l pl-6">
+                            <div className="space-y-4 md:border-l md:pl-6">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Payment Health</div>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
                                         <div className="text-[9px] text-muted-foreground">Cash</div>
                                         <div className="text-[10px] font-bold">{formatCurrency(report.collections.cash)}</div>
@@ -214,7 +214,7 @@ const PropertyRow = ({ report, consolidated, formatCurrency }: {
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-4 border-l pl-6">
+                            <div className="space-y-4 md:border-l md:pl-6">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Ancillary</div>
                                 <div className="bg-white p-3 rounded-xl border border-slate-100">
                                     <div className="text-[10px] text-muted-foreground mb-1">Spa Revenue</div>

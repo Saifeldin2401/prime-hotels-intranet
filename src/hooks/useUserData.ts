@@ -6,9 +6,9 @@ export interface UserTask {
     id: string
     title: string
     description: string | null
-    due_date: string
+    due_date: string | null
     priority: 'low' | 'medium' | 'high' | 'urgent' | 'critical'
-    status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+    status: 'todo' | 'in_progress' | 'review' | 'completed' | 'cancelled'
     created_at: string
 }
 
@@ -31,10 +31,9 @@ export function useUserTasks() {
             if (!user?.id) return []
 
             const { data, error } = await supabase
-                .from('learning_assignments')
-                .select('id, status, due_date')
-                .eq('target_type', 'user')
-                .eq('target_id', user.id)
+                .from('tasks')
+                .select('id, title, description, due_date, priority, status, created_at')
+                .eq('assigned_to_id', user.id)
                 .neq('status', 'completed')
                 .order('due_date', { ascending: true })
                 .limit(10)

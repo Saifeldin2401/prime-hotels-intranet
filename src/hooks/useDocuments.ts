@@ -57,7 +57,7 @@ export function useDocument(documentId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('documents')
-        .select('*')
+        .select('*, departments(name), properties(name), profiles(full_name)')
         .eq('id', documentId)
         .eq('is_deleted', false)
         .single()

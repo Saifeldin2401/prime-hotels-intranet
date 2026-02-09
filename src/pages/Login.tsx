@@ -14,7 +14,7 @@ export default function Login() {
       <div className="hidden lg:flex flex-col justify-between bg-hotel-navy text-white relative overflow-hidden">
         {/* Background Image with Overlay */}
         <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] transform hover:scale-110 motion-safe:animate-ken-burns"
+          className="absolute inset-0 bg-cover bg-center transition-transform ken-burns-duration transform hover:scale-110 motion-safe:animate-ken-burns"
           style={{
             backgroundImage: "url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')",
           }}

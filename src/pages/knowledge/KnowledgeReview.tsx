@@ -360,7 +360,7 @@ export default function KnowledgeReview() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card className="bg-yellow-50 border-yellow-200">
                     <CardContent className="p-4 flex items-center gap-4">
                         <div className="p-3 rounded-lg bg-yellow-100">

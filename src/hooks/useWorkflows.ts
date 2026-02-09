@@ -24,6 +24,7 @@ export interface WorkflowExecution {
     metadata?: Record<string, any>
     execution_time_ms?: number
     current_step_id?: string
+    workflow_definitions?: { name: string } | null
 }
 
 /**

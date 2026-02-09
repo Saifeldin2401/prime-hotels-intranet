@@ -143,7 +143,7 @@ export default function UserProfile() {
     return (
         <div className="container mx-auto py-6 space-y-6">
             <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:w-[600px]">
                     <TabsTrigger value="overview">{t('profile:overview', 'Overview')}</TabsTrigger>
                     <TabsTrigger value="skills">{t('profile:skills_and_competencies', 'Skills')}</TabsTrigger>
                     <TabsTrigger value="documents">{t('profile:documents', 'Documents')}</TabsTrigger>

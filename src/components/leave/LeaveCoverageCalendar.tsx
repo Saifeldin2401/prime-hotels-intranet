@@ -76,83 +76,87 @@ export function LeaveCoverageCalendar({ departmentId, className }: LeaveCoverage
                 </div>
             </CardHeader>
             <CardContent>
-                {/* Day headers */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
-                            {day}
-                        </div>
-                    ))}
-                </div>
-
-                {/* Calendar grid */}
-                <div className="grid grid-cols-7 gap-1">
-                    {/* Empty cells for days before month starts */}
-                    {Array.from({ length: monthStart.getDay() }).map((_, i) => (
-                        <div key={`empty-${i}`} className="h-16" />
-                    ))}
-
-                    {/* Day cells */}
-                    {days.map(day => {
-                        const dayEvents = getEventsForDay(day)
-                        const dayConflicts = getConflictsForDay(day)
-                        const hasConflict = dayConflicts.some(c => c.is_critical)
-                        const hasWarning = dayConflicts.length > 0 && !hasConflict
-
-                        return (
-                            <div
-                                key={day.toISOString()}
-                                className={cn(
-                                    'h-16 p-1 rounded-lg border text-xs relative',
-                                    isToday(day) && 'border-hotel-gold border-2',
-                                    hasConflict && 'bg-red-50 border-red-200',
-                                    hasWarning && !hasConflict && 'bg-yellow-50 border-yellow-200',
-                                    !hasConflict && !hasWarning && dayEvents.length > 0 && 'bg-blue-50 border-blue-200',
-                                    !dayEvents.length && 'hover:bg-gray-50'
-                                )}
-                            >
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className={cn(
-                                        'font-medium',
-                                        isToday(day) && 'text-hotel-gold'
-                                    )}>
-                                        {format(day, 'd')}
-                                    </span>
-                                    {dayEvents.length > 0 && (
-                                        <div className="flex items-center gap-0.5">
-                                            <Users className="h-3 w-3 text-gray-500" />
-                                            <span className="text-gray-600">{dayEvents.length}</span>
-                                        </div>
-                                    )}
+                <div className="overflow-x-auto scrollbar-hide">
+                    <div className="min-w-[520px]">
+                        {/* Day headers */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
+                                    {day}
                                 </div>
+                            ))}
+                        </div>
 
-                                {hasConflict && (
-                                    <AlertTriangle className="h-3 w-3 text-red-500 absolute bottom-1 right-1" />
-                                )}
+                        {/* Calendar grid */}
+                        <div className="grid grid-cols-7 gap-1">
+                            {/* Empty cells for days before month starts */}
+                            {Array.from({ length: monthStart.getDay() }).map((_, i) => (
+                                <div key={`empty-${i}`} className="h-16" />
+                            ))}
 
-                                {dayEvents.length > 0 && (
-                                    <div className="space-y-0.5 overflow-hidden">
-                                        {dayEvents.slice(0, 2).map(event => (
-                                            <div
-                                                key={event.id}
-                                                className={cn(
-                                                    'truncate text-[10px] px-1 rounded',
-                                                    event.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            {/* Day cells */}
+                            {days.map(day => {
+                                const dayEvents = getEventsForDay(day)
+                                const dayConflicts = getConflictsForDay(day)
+                                const hasConflict = dayConflicts.some(c => c.is_critical)
+                                const hasWarning = dayConflicts.length > 0 && !hasConflict
+
+                                return (
+                                    <div
+                                        key={day.toISOString()}
+                                        className={cn(
+                                            'h-16 p-1 rounded-lg border text-xs relative',
+                                            isToday(day) && 'border-hotel-gold border-2',
+                                            hasConflict && 'bg-red-50 border-red-200',
+                                            hasWarning && !hasConflict && 'bg-yellow-50 border-yellow-200',
+                                            !hasConflict && !hasWarning && dayEvents.length > 0 && 'bg-blue-50 border-blue-200',
+                                            !dayEvents.length && 'hover:bg-gray-50'
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className={cn(
+                                                'font-medium',
+                                                isToday(day) && 'text-hotel-gold'
+                                            )}>
+                                                {format(day, 'd')}
+                                            </span>
+                                            {dayEvents.length > 0 && (
+                                                <div className="flex items-center gap-0.5">
+                                                    <Users className="h-3 w-3 text-gray-500" />
+                                                    <span className="text-gray-600">{dayEvents.length}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {hasConflict && (
+                                            <AlertTriangle className="h-3 w-3 text-red-500 absolute bottom-1 right-1" />
+                                        )}
+
+                                        {dayEvents.length > 0 && (
+                                            <div className="space-y-0.5 overflow-hidden">
+                                                {dayEvents.slice(0, 2).map(event => (
+                                                    <div
+                                                        key={event.id}
+                                                        className={cn(
+                                                            'truncate text-[10px] px-1 rounded',
+                                                            event.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                                        )}
+                                                    >
+                                                        {event.user_name.split(' ')[0]}
+                                                    </div>
+                                                ))}
+                                                {dayEvents.length > 2 && (
+                                                    <div className="text-[10px] text-gray-500">
+                                                        +{dayEvents.length - 2} more
+                                                    </div>
                                                 )}
-                                            >
-                                                {event.user_name.split(' ')[0]}
-                                            </div>
-                                        ))}
-                                        {dayEvents.length > 2 && (
-                                            <div className="text-[10px] text-gray-500">
-                                                +{dayEvents.length - 2} more
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
-                        )
-                    })}
+                                )
+                            })}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Coverage summary */}

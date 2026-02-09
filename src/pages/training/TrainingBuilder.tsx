@@ -462,7 +462,7 @@ export function TrainingBuilder() {
     })
   }
 
-  const getTemplateStats = (template?: TrainingTemplate | null) => {
+  function getTemplateStats(template?: TrainingTemplate | null) {
     if (!template) return { sectionsCount: 0, itemsCount: 0, sections: [] as Array<{ title: string; count: number }> }
     const structure = template?.template_structure || {}
     const templateSections = Array.isArray(structure.sections)
@@ -638,7 +638,7 @@ export function TrainingBuilder() {
     }
   }
 
-  const getBlockValidation = (block: ContentBlockForm) => {
+  function getBlockValidation(block: ContentBlockForm) {
     if (block.type === 'quiz' && !(block.content_data as any)?.quiz_id) {
       return { ok: false, message: t('builder.missingQuiz') }
     }
@@ -2118,7 +2118,7 @@ export function TrainingBuilder() {
                     <div className="mt-3 space-y-2 text-sm text-slate-700">
                       <div>{certificateEnabled ? t('builder.certEnabled') : t('builder.certDisabled')}</div>
                       <div>{t('builder.passScoreSummary', { score: passingScore || 80 })}</div>
-                      <div>{t('builder.retakeSummary', { count: allowRetake ? maxAttempts : 0 })}</div>
+                      <div>{t('builder.retakeSummary', { count: allowRetake ? Number(maxAttempts) : 0 })}</div>
                     </div>
                   </div>
                   <div className="rounded-lg border bg-slate-50/70 p-4">
@@ -2276,7 +2276,7 @@ export function TrainingBuilder() {
             <CardContent className="text-sm text-slate-600 space-y-2">
               <div>{certificateEnabled ? t('builder.certEnabled') : t('builder.certDisabled')}</div>
               <div>{t('builder.passScoreSummary', { score: passingScore || 80 })}</div>
-              <div>{t('builder.retakeSummary', { count: allowRetake ? maxAttempts : 0 })}</div>
+              <div>{t('builder.retakeSummary', { count: allowRetake ? Number(maxAttempts) : 0 })}</div>
             </CardContent>
           </Card>
         </div>
@@ -3229,7 +3229,7 @@ export function TrainingBuilder() {
       {/* Knowledge Base Floating Sidebar */}
       {
         showKBSidebar && (
-          <div className="fixed right-0 top-16 bottom-0 w-80 z-40 shadow-xl border-l bg-white">
+          <div className="fixed inset-x-0 sm:inset-x-auto sm:right-0 top-16 bottom-0 w-full sm:w-80 z-40 shadow-xl border-l bg-white">
             <KnowledgeBaseSidebar
               moduleId={moduleId || undefined}
               moduleTopic={title}

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAutomationConfigs, useUpdateAutomationConfig } from '@/hooks/useAutomationConfig'
+import type { AutomationConfig } from '@/hooks/useAutomationConfig'
 import { Loader2, Save, Sparkles, GraduationCap, CalendarDays } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -13,9 +14,9 @@ export function AutomationSettings() {
     const { data: configs, isLoading } = useAutomationConfigs()
     const updateMutation = useUpdateAutomationConfig()
     const { toast } = useToast()
-    const [localConfigs, setLocalConfigs] = useState<Record<string, any>>({})
+    const [localConfigs, setLocalConfigs] = useState<Partial<Record<AutomationConfig['id'], any>>>({})
 
-    const handleToggle = (id: string, isEnabled: boolean) => {
+    const handleToggle = (id: AutomationConfig['id'], isEnabled: boolean) => {
         updateMutation.mutate({ id, is_enabled: isEnabled }, {
             onSuccess: () => {
                 toast({
@@ -26,7 +27,7 @@ export function AutomationSettings() {
         })
     }
 
-    const handleSaveConfig = (id: string) => {
+    const handleSaveConfig = (id: AutomationConfig['id']) => {
         const config = localConfigs[id]
         if (!config) return
 
@@ -54,7 +55,7 @@ export function AutomationSettings() {
                         <CardTitle className="text-lg">Smart Leave Approval</CardTitle>
                         <Switch
                             checked={configs?.find(c => c.id === 'smart_leave')?.is_enabled}
-                            onCheckedChange={(val) => handleToggle('smart_leave' as any, val)}
+                            onCheckedChange={(val) => handleToggle('smart_leave', val)}
                         />
                     </div>
                     <CardDescription>
@@ -77,7 +78,7 @@ export function AutomationSettings() {
                         <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleSaveConfig('smart_leave' as any)}
+                            onClick={() => handleSaveConfig('smart_leave')}
                             disabled={updateMutation.isPending}
                         >
                             <Save className="h-4 w-4 mr-2" />
@@ -97,7 +98,7 @@ export function AutomationSettings() {
                         <CardTitle className="text-lg">AI Training Allocator</CardTitle>
                         <Switch
                             checked={configs?.find(c => c.id === 'auto_training')?.is_enabled}
-                            onCheckedChange={(val) => handleToggle('auto_training' as any, val)}
+                            onCheckedChange={(val) => handleToggle('auto_training', val)}
                         />
                     </div>
                     <CardDescription>
@@ -120,7 +121,7 @@ export function AutomationSettings() {
                         <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleSaveConfig('auto_training' as any)}
+                            onClick={() => handleSaveConfig('auto_training')}
                             disabled={updateMutation.isPending}
                         >
                             <Save className="h-4 w-4 mr-2" />
@@ -140,7 +141,7 @@ export function AutomationSettings() {
                         <CardTitle className="text-lg">Recurring Checklists</CardTitle>
                         <Switch
                             checked={configs?.find(c => c.id === 'recurring_tasks')?.is_enabled}
-                            onCheckedChange={(val) => handleToggle('recurring_tasks' as any, val)}
+                            onCheckedChange={(val) => handleToggle('recurring_tasks', val)}
                         />
                     </div>
                     <CardDescription>
@@ -164,7 +165,7 @@ export function AutomationSettings() {
                         <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleSaveConfig('recurring_tasks' as any)}
+                            onClick={() => handleSaveConfig('recurring_tasks')}
                             disabled={updateMutation.isPending}
                         >
                             <Save className="h-4 w-4 mr-2" />

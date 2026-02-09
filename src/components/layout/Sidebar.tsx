@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useNavigation, NavigationGroupWithItems } from '@/hooks/useNavigation'
+import { useNavigation } from '@/hooks/useNavigation'
+import type { NavigationGroupWithItems } from '@/hooks/useNavigation'
 
 export function Sidebar() {
   const location = useLocation()

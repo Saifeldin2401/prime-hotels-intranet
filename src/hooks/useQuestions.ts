@@ -11,7 +11,6 @@ import type {
     KnowledgeQuestion,
     QuestionFormData,
     AnswerSubmission,
-    QuestionFilters,
     QuestionUsageType,
     AIQuestionGenerationRequest,
     GeneratedQuestion

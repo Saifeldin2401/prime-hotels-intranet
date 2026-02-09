@@ -10,7 +10,7 @@ export interface Profile {
   phone: string | null
   avatar_url: string | null
   hire_date: string | null
-  date_of_birth: string
+  date_of_birth: string | null
   job_title: string | null // Actual hotel job title (e.g., "Front Office Manager", "Room Attendant")
   staff_id: string | null // Human-readable unique employee identifier (e.g., "PH-1001")
   reporting_to: string | null // UUID of supervisor/manager
@@ -310,6 +310,9 @@ export interface Document {
   updated_at: string
   view_count: number
   content_type: string
+  departments?: { id: string; name: string } | null
+  properties?: { id: string; name: string } | null
+  profiles?: { id: string; full_name: string | null } | null
 }
 
 export interface DocumentVersion {
@@ -669,6 +672,7 @@ export interface MaintenanceTicket {
   parts_needed: string | null
   labor_hours: number | null
   material_cost: number | null
+  estimated_cost: number | null
   notes: string | null
   created_at: string
   updated_at: string

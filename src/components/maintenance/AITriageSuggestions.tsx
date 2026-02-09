@@ -29,7 +29,7 @@ interface SimilarTicket {
 
 interface TriageSuggestion {
     category: string
-    priority: 'low' | 'medium' | 'high' | 'critical'
+    priority: 'low' | 'medium' | 'high' | 'urgent' | 'critical'
     department: string
     confidence: number
     suggestedTitle?: string
@@ -46,6 +46,7 @@ interface AITriageSuggestionsProps {
 
 const priorityConfig = {
     critical: { color: 'bg-red-100 text-red-800 border-red-200', icon: AlertTriangle },
+    urgent: { color: 'bg-orange-100 text-orange-800 border-orange-200', icon: AlertTriangle },
     high: { color: 'bg-orange-100 text-orange-800 border-orange-200', icon: AlertTriangle },
     medium: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
     low: { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle2 }

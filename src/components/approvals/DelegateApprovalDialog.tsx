@@ -21,7 +21,7 @@ import {
     SelectValue
 } from '@/components/ui/select'
 import { Loader2, UserPlus, Calendar } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/components/ui/use-toast'
 import { useTranslation } from 'react-i18next'
 import { useProperty } from '@/contexts/PropertyContext'
 import { format, addDays } from 'date-fns'

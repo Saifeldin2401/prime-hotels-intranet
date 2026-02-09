@@ -33,7 +33,8 @@ const CONTENT_TYPE_ICONS: Record<KnowledgeContentType, any> = {
     reference: FileText,
     faq: HelpCircle,
     video: Video,
-    visual: FileText
+    visual: FileText,
+    document: FileText
 }
 
 interface ContextualHelpWidgetProps {

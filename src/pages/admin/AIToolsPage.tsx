@@ -42,7 +42,7 @@ export default function AIToolsPage() {
 
             {/* Tools Tabs */}
             <Tabs defaultValue="feedback" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:w-auto lg:inline-flex">
                     <TabsTrigger value="feedback" className="gap-2">
                         <MessageSquareText className="h-4 w-4" />
                         <span className="hidden sm:inline">{t('ai_tools:feedback_analyzer')}</span>

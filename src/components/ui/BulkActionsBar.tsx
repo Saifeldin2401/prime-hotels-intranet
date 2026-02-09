@@ -107,7 +107,7 @@ export function BulkActionsBar({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     className={cn(
-                        'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
+                        'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+4rem)] sm:bottom-6 left-1/2 -translate-x-1/2 z-50',
                         'bg-background border rounded-lg shadow-lg p-3',
                         'flex items-center gap-3',
                         className
@@ -228,7 +228,7 @@ export function BulkActionsBar({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         className={cn(
-                            'fixed bottom-20 left-1/2 -translate-x-1/2 z-50',
+                            'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+6rem)] sm:bottom-20 left-1/2 -translate-x-1/2 z-50',
                             'bg-background border rounded-lg shadow-lg p-3',
                             'flex items-center gap-3'
                         )}

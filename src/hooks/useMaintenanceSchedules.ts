@@ -1,11 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
-import type { Database } from '@/types/supabase'
+type MaintenanceSchedule = {
+    id: string
+    created_at?: string
+    created_by?: string | null
+    assigned_to_id?: string | null
+    property_id?: string | null
+    [key: string]: any
+}
 
-type MaintenanceSchedule = Database['public']['Tables']['maintenance_schedules']['Row']
-type InsertMaintenanceSchedule = Database['public']['Tables']['maintenance_schedules']['Insert']
-type UpdateMaintenanceSchedule = Database['public']['Tables']['maintenance_schedules']['Update']
+type InsertMaintenanceSchedule = Omit<MaintenanceSchedule, 'id' | 'created_at'>
+type UpdateMaintenanceSchedule = Partial<InsertMaintenanceSchedule>
 
 export function useMaintenanceSchedules() {
     const { user } = useAuth()

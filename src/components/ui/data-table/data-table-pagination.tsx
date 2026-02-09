@@ -27,14 +27,14 @@ export function DataTablePagination<TData>({
     const isRTL = i18n.dir() === 'rtl'
 
     return (
-        <div className="flex items-center justify-between px-2">
-            <div className="flex-1 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-3 px-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs sm:text-sm text-muted-foreground">
                 {table.getFilteredSelectedRowModel().rows.length} {t('of')}{" "}
                 {table.getFilteredRowModel().rows.length} {t('rowsSelected')}
             </div>
-            <div className="flex items-center space-x-6 lg:space-x-8">
-                <div className="flex items-center space-x-2">
-                    <p className="text-sm font-medium">{t('rowsPerPage')}</p>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2">
+                    <p className="text-xs sm:text-sm font-medium">{t('rowsPerPage')}</p>
                     <Select
                         value={`${table.getState().pagination.pageSize}`}
                         onValueChange={(value) => {
@@ -53,11 +53,11 @@ export function DataTablePagination<TData>({
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                <div className="flex items-center justify-center text-xs sm:text-sm font-medium">
                     {t('page')} {table.getState().pagination.pageIndex + 1} {t('of')}{" "}
                     {table.getPageCount()}
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         className="hidden h-8 w-8 p-0 lg:flex"

@@ -210,7 +210,8 @@ export default function MyLearning() {
                     </h2>
 
                     <div className="border rounded-lg bg-white overflow-hidden">
-                        <table className={`w-full text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <div className="overflow-x-auto">
+                            <table className={`w-full text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                             <thead className="bg-slate-50 border-b">
                                 <tr>
                                     <th className="px-4 py-3 font-medium">{t('topic')}</th>
@@ -248,7 +249,8 @@ export default function MyLearning() {
                                     </tr>
                                 )}
                             </tbody>
-                        </table>
+                            </table>
+                        </div>
                     </div>
                 </div>
 

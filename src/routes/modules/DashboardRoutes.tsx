@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { RoleBasedRedirect } from '@/components/auth/RoleBasedRedirect'
+import { DashboardWrapper } from '@/pages/dashboard/DashboardWrapper'
 
 const StaffDashboard = lazy(() => import('@/pages/dashboard/StaffDashboard').then(m => ({ default: m.StaffDashboard })))
 const PropertyManagerDashboard = lazy(() => import('@/pages/dashboard/PropertyManagerDashboard').then(m => ({ default: m.PropertyManagerDashboard })))
@@ -22,7 +23,7 @@ export const DashboardRoutes = () => (
             path="/home"
             element={
                 <ProtectedRoute>
-                    <RoleBasedRedirect />
+                    <DashboardWrapper />
                 </ProtectedRoute>
             }
         />

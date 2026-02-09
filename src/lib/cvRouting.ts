@@ -1,4 +1,5 @@
-import type { SeniorityLevel, AppRole } from './types'
+import type { SeniorityLevel } from './types'
+import type { AppRole } from './constants'
 import { supabase } from './supabase'
 
 /**

@@ -85,6 +85,8 @@ export function SidebarNavigation({
   const { groupedNavigation } = useNavigation()
   const { currentProperty } = useProperty()
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
+  const isRTL = i18n.dir() === 'rtl'
+  const mobileClosedX = isRTL ? '100%' : '-100%'
 
   // Auto-expand groups with active items
   useEffect(() => {
@@ -122,7 +124,6 @@ export function SidebarNavigation({
     if (!isMobile) return
 
     const swipeThreshold = 50
-    const isRTL = i18n.dir() === 'rtl'
 
     if (isRTL) {
       // RTL: Drag right (positive) to close
@@ -267,22 +268,24 @@ export function SidebarNavigation({
       {/* Mobile overlay */}
       {isMobile && isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-[105] lg:hidden animate-fade-in"
+          className="fixed inset-0 bg-black/60 z-[998] lg:hidden animate-fade-in"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
       <motion.div
-        drag={isMobile ? "x" : false}
+        drag={isMobile && isOpen ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.1}
         onDragEnd={handleDragEnd}
+        animate={isMobile ? { x: isOpen ? 0 : mobileClosedX } : { x: 0 }}
+        initial={false}
+        transition={{ type: "tween", duration: 0.3, ease: "easeInOut" }}
         className={cn(
-          "fixed inset-y-0 z-[110] bg-hotel-navy text-white transform transition-all duration-300 ease-in-out shadow-2xl",
+          "fixed inset-y-0 z-[999] bg-hotel-navy text-white shadow-2xl",
           "start-0 border-e border-hotel-navy-dark",
           isMobile ? "lg:hidden w-[85vw] max-w-[320px]" : "hidden lg:block w-[280px]",
-          isMobile && (isOpen ? "translate-x-0" : "ltr:-translate-x-full rtl:translate-x-full"),
           collapsed && !isMobile && "lg:w-20"
         )}>
         <div className="flex h-full flex-col">

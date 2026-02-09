@@ -339,7 +339,7 @@ export default function AnnouncementAnalytics() {
                 </CardHeader>
                 <CardContent>
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="grid grid-cols-3 w-full max-w-md mb-4">
+                        <TabsList className="grid grid-cols-2 sm:grid-cols-3 w-full max-w-md mb-4">
                             <TabsTrigger value="acknowledged" className="flex items-center gap-2">
                                 <ThumbsUp className="w-4 h-4" />
                                 Acknowledged ({acknowledgedUsers.length})

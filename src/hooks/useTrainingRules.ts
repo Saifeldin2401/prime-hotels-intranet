@@ -1,11 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
-import type { Database } from '@/types/supabase'
+type TrainingAssignmentRule = {
+    id: string
+    created_at?: string
+    created_by?: string | null
+    [key: string]: any
+}
 
-type TrainingAssignmentRule = Database['public']['Tables']['training_assignment_rules']['Row']
-type InsertTrainingAssignmentRule = Database['public']['Tables']['training_assignment_rules']['Insert']
-type UpdateTrainingAssignmentRule = Database['public']['Tables']['training_assignment_rules']['Update']
+type InsertTrainingAssignmentRule = Omit<TrainingAssignmentRule, 'id' | 'created_at'>
+type UpdateTrainingAssignmentRule = Partial<InsertTrainingAssignmentRule>
 
 export function useTrainingModulesList() {
     return useQuery({

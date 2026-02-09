@@ -234,10 +234,6 @@ export default function KnowledgeEditor() {
         }
     }, [primaryRole, navigate])
 
-    if (isForbidden || primaryRole === 'staff') {
-        return null
-    }
-
     // Load Data Effect
     useEffect(() => {
         if (isEditing && id) {
@@ -523,6 +519,10 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
         } finally {
             setIsSaving(false)
         }
+    }
+
+    if (isForbidden || primaryRole === 'staff') {
+        return null
     }
 
     return (

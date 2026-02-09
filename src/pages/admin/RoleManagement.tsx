@@ -25,6 +25,13 @@ import type { Permission } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 
 const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
+  corporate_admin: [
+    'training.view', 'training.create', 'training.edit', 'training.delete', 'training.assign', 'training.report',
+    'users.view', 'users.create', 'users.edit', 'users.delete', 'users.assign_roles',
+    'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.approve',
+    'announcements.view', 'announcements.create', 'announcements.edit', 'announcements.delete',
+    'system.view_logs', 'system.manage_settings', 'system.export_data'
+  ],
   regional_admin: [
     'training.view', 'training.create', 'training.edit', 'training.delete', 'training.assign', 'training.report',
     'users.view', 'users.create', 'users.edit', 'users.delete', 'users.assign_roles',
@@ -52,6 +59,12 @@ const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     'announcements.view'
   ],
   department_head: [
+    'training.view', 'training.assign',
+    'users.view',
+    'documents.view',
+    'announcements.view'
+  ],
+  manager: [
     'training.view', 'training.assign',
     'users.view',
     'documents.view',

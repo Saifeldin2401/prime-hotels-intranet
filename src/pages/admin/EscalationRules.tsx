@@ -32,11 +32,13 @@ const entityTypes = [
 ]
 
 const roleLabels: Record<AppRole, string> = {
+  corporate_admin: 'Corporate Admin',
   regional_admin: 'Regional Admin',
   regional_hr: 'Regional HR',
   property_manager: 'Property Manager',
   property_hr: 'Property HR',
   department_head: 'Department Head',
+  manager: 'Manager',
   staff: 'Staff'
 }
 

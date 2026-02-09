@@ -6,6 +6,8 @@ interface DeleteConfirmationProps {
     onConfirm: () => void | Promise<void>
     itemName: string
     itemType?: string
+    title?: string
+    description?: string
     isLoading?: boolean
 }
 
@@ -15,15 +17,19 @@ export function DeleteConfirmation({
     onConfirm,
     itemName,
     itemType = 'item',
+    title,
+    description,
     isLoading = false,
 }: DeleteConfirmationProps) {
+    const fallbackTitle = `Delete ${itemType}?`
+    const fallbackDescription = `Are you sure you want to delete "${itemName}"? This action cannot be undone.`
     return (
         <ConfirmationDialog
             open={open}
             onOpenChange={onOpenChange}
             onConfirm={onConfirm}
-            title={`Delete ${itemType}?`}
-            description={`Are you sure you want to delete "${itemName}"? This action cannot be undone.`}
+            title={title || fallbackTitle}
+            description={description || fallbackDescription}
             confirmText="Delete"
             cancelText="Cancel"
             variant="danger"

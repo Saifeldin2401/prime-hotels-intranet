@@ -1447,7 +1447,7 @@ export default function KnowledgeViewer() {
                             <Separator />
                             <div className="space-y-2">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Reading Mode</p>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     <button onClick={() => setReaderTheme('light')} className={cn("h-8 rounded border flex items-center justify-center transition-all", readerTheme === 'light' ? "border-hotel-gold bg-hotel-gold/5" : "bg-white")}>
                                         <span className="w-4 h-4 bg-white rounded-full border border-gray-200" />
                                     </button>

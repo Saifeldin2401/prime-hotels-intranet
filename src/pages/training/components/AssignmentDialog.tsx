@@ -68,9 +68,10 @@ export function AssignmentDialog({
     // Memoize list items to prevent render loops
     const listItems = useMemo((): AssignableEntity[] => {
         switch (targetType) {
-            case 'users':
+            case 'users': {
                 return (users && Array.isArray(users)) ? users.map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`, details: u.email })) : []
-            case 'departments':
+            }
+            case 'departments': {
                 if (!departments || !Array.isArray(departments)) return []
                 // Filter by property if one is selected
                 const filteredDepts = propertyFilter === 'all'
@@ -81,10 +82,13 @@ export function AssignmentDialog({
                     name: d.rawName || d.name,
                     group: d.propertyName
                 }))
-            case 'properties':
+            }
+            case 'properties': {
                 return (properties && Array.isArray(properties)) ? properties.map(p => ({ id: p.id, name: p.name })) : []
-            default:
+            }
+            default: {
                 return []
+            }
         }
     }, [targetType, users, departments, properties, propertyFilter])
 

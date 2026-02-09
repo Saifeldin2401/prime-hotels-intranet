@@ -633,7 +633,8 @@ export default function LearningAnalytics() {
                         </CardHeader>
                         <CardContent>
                             <div className="rounded-md border">
-                                <table className="w-full text-sm text-left">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
                                     <thead className="bg-gray-50 border-b">
                                         <tr>
                                             <th className="px-4 py-3 font-medium text-gray-500">Employee</th>
@@ -683,7 +684,8 @@ export default function LearningAnalytics() {
                                             </tr>
                                         )}
                                     </tbody>
-                                </table>
+                                    </table>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -710,7 +712,7 @@ export default function LearningAnalytics() {
                                         </div>
                                         <Progress value={module.completion_rate} className="h-2" />
                                     </div>
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
                                             <p className="text-xs text-slate-400 uppercase tracking-widest">Avg progress</p>
                                             <p className="text-lg font-semibold text-hotel-navy">{module.avg_progress}%</p>
@@ -746,7 +748,8 @@ export default function LearningAnalytics() {
                         </CardHeader>
                         <CardContent>
                             <div className="rounded-md border">
-                                <table className="w-full text-sm text-left">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
                                     <thead className="bg-gray-50 border-b">
                                         <tr>
                                             <th className="px-4 py-3 font-medium text-gray-500">Module</th>
@@ -780,7 +783,8 @@ export default function LearningAnalytics() {
                                             </tr>
                                         )}
                                     </tbody>
-                                </table>
+                                    </table>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

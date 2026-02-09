@@ -1,5 +1,5 @@
 import * as LucideIcons from 'lucide-react';
-import { SVGProps } from 'react';
+import type { ComponentType, SVGProps } from 'react';
 
 // Export all Lucide icons directly with proper case
 export const Icons = {
@@ -35,7 +35,7 @@ export function Icon({
 }: { 
   name: IconName 
 } & SVGProps<SVGSVGElement>) {
-  const IconComponent = Icons[name] as React.ComponentType<SVGProps<SVGSVGElement>>;
+  const IconComponent = Icons[name] as ComponentType<SVGProps<SVGSVGElement>>;
   if (!IconComponent) {
     console.warn(`Icon "${name}" not found`);
     return null;

@@ -141,7 +141,7 @@ function SimpleLineChart({ data, lines }: {
     return (
         <div className="space-y-3">
             {/* Stats Summary */}
-            <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 {stats.map(s => (
                     <div key={s.key} className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
@@ -189,7 +189,7 @@ function SimpleLineChart({ data, lines }: {
             </ResponsiveContainer>
 
             {/* Stats Table */}
-            <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 {stats.map(s => (
                     <div key={s.key} className="space-y-1 p-2 bg-muted/30 rounded">
                         <div className="font-medium" style={{ color: s.color }}>{s.label}</div>
@@ -231,7 +231,7 @@ function SimplePieChart({ data }: {
     }))
 
     return (
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
             {/* Donut Chart */}
             <div className="flex-1">
                 <ResponsiveContainer width="100%" height={180}>

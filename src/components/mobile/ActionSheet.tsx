@@ -1,0 +1,56 @@
+import * as React from "react"
+import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
+import { Button } from "@/components/ui/button"
+
+interface ActionSheetProps {
+    trigger?: React.ReactNode
+    title?: string
+    description?: string
+    children: React.ReactNode
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    footer?: React.ReactNode
+}
+
+/**
+ * ActionSheet Component
+ * 
+ * A mobile-first bottom drawer for menus, forms, and quick actions.
+ * Wraps the Shadcn/Vaul Drawer component.
+ */
+export function ActionSheet({
+    trigger,
+    title,
+    description,
+    children,
+    open,
+    onOpenChange,
+    footer
+}: ActionSheetProps) {
+    return (
+        <Drawer open={open} onOpenChange={onOpenChange}>
+            {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
+            <DrawerContent>
+                <div className="mx-auto w-full max-w-sm">
+                    {(title || description) && (
+                        <DrawerHeader>
+                            {title && <DrawerTitle>{title}</DrawerTitle>}
+                            {description && <DrawerDescription>{description}</DrawerDescription>}
+                        </DrawerHeader>
+                    )}
+
+                    <div className="p-4 pb-0">
+                        {children}
+                    </div>
+
+                    <DrawerFooter>
+                        {footer}
+                        <DrawerClose asChild>
+                            <Button variant="outline">Close</Button>
+                        </DrawerClose>
+                    </DrawerFooter>
+                </div>
+            </DrawerContent>
+        </Drawer>
+    )
+}

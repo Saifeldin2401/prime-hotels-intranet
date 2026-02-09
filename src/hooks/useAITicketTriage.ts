@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 
 interface TriageSuggestion {
     category: string
-    priority: 'low' | 'medium' | 'high' | 'critical'
+    priority: 'low' | 'medium' | 'high' | 'urgent' | 'critical'
     department: string
     confidence: number
     suggestedTitle?: string
@@ -166,7 +166,7 @@ function getFallbackClassification(description: string): Omit<TriageSuggestion, 
     // Category detection
     let category = 'General Maintenance'
     let department = 'Engineering'
-    let priority: 'low' | 'medium' | 'high' | 'critical' = 'medium'
+    let priority: 'low' | 'medium' | 'high' | 'urgent' | 'critical' = 'medium'
 
     if (text.includes('ac') || text.includes('air condition') || text.includes('heating') || text.includes('hvac') || text.includes('temperature') || text.includes('cold') || text.includes('hot')) {
         category = 'HVAC'

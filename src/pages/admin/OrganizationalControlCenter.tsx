@@ -117,7 +117,7 @@ export default function OrganizationalControlCenter() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid">
                     <TabsTrigger value="orgchart" className="gap-2">
                         <GitBranch className="h-4 w-4" />
                         <span className="hidden sm:inline">{t('organization.tab_orgchart', 'Org Chart')}</span>

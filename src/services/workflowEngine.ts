@@ -28,6 +28,7 @@ export interface WorkflowExecution {
     error?: string
     metadata?: Record<string, any>
     execution_time_ms?: number
+    workflow_definitions?: { name: string } | null
 }
 
 export interface ScheduledReminder {
@@ -100,19 +101,19 @@ async function resolveAssignmentTargets(targetType: string, targetId: string | n
     const userIds: string[] = []
 
     switch (targetType) {
-        case 'everyone':
+        case 'everyone': {
             // Get all active users
             const { data: allUsers } = await supabase
                 .from('profiles')
                 .select('id')
             if (allUsers) userIds.push(...allUsers.map(u => u.id))
             break
-
-        case 'user':
+        }
+        case 'user': {
             if (targetId) userIds.push(targetId)
             break
-
-        case 'department':
+        }
+        case 'department': {
             if (targetId) {
                 const { data: deptUsers } = await supabase
                     .from('user_departments')
@@ -121,8 +122,8 @@ async function resolveAssignmentTargets(targetType: string, targetId: string | n
                 if (deptUsers) userIds.push(...deptUsers.map(u => u.user_id))
             }
             break
-
-        case 'property':
+        }
+        case 'property': {
             if (targetId) {
                 const { data: propUsers } = await supabase
                     .from('user_properties')
@@ -131,6 +132,7 @@ async function resolveAssignmentTargets(targetType: string, targetId: string | n
                 if (propUsers) userIds.push(...propUsers.map(u => u.user_id))
             }
             break
+        }
     }
 
     return [...new Set(userIds)] // Remove duplicates
@@ -159,7 +161,7 @@ export async function getWorkflowExecutions(
 ): Promise<WorkflowExecution[]> {
     let query = supabase
         .from('workflow_executions')
-        .select('*')
+        .select('*, workflow_definitions(name)')
         .order('started_at', { ascending: false })
         .limit(limit)
 

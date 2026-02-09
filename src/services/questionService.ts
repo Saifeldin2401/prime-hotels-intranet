@@ -323,27 +323,31 @@ export async function recordAttempt(
     let feedback: string | undefined
 
     switch (question.question_type) {
-        case 'true_false':
+        case 'true_false': {
             isCorrect = submission.selected_answer === question.correct_answer
             break
-        case 'fill_blank':
+        }
+        case 'fill_blank': {
             // Case-insensitive, trimmed comparison
             const userAnswer = (submission.selected_answer || '').trim().toLowerCase()
             const correctAnswer = (question.correct_answer || '').trim().toLowerCase()
             isCorrect = userAnswer === correctAnswer
             break
-        case 'mcq':
+        }
+        case 'mcq': {
             const selectedOption = question.options?.find(o => o.id === submission.selected_answer)
             isCorrect = selectedOption?.is_correct ?? false
             feedback = selectedOption?.feedback
             break
-        case 'mcq_multi':
+        }
+        case 'mcq_multi': {
             const correctOptions = question.options?.filter(o => o.is_correct).map(o => o.id) || []
             const selectedOptions = submission.selected_options || []
             isCorrect =
                 correctOptions.length === selectedOptions.length &&
                 correctOptions.every(id => selectedOptions.includes(id))
             break
+        }
     }
 
     // Get attempt number
