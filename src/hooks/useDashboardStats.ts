@@ -153,13 +153,13 @@ export function usePropertyManagerStats() {
                 // 1. Total Staff
                 supabase
                     .from('user_properties')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('property_id', propertyId),
 
                 // 2. Pending Tasks
                 supabase
                     .from('tasks')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('property_id', propertyId)
                     .neq('status', 'completed')
                     .neq('status', 'cancelled'),
@@ -167,7 +167,7 @@ export function usePropertyManagerStats() {
                 // 3. Maintenance Issues
                 supabase
                     .from('maintenance_tickets')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('property_id', propertyId)
                     .neq('status', 'completed')
                     .neq('status', 'closed'),
@@ -175,7 +175,7 @@ export function usePropertyManagerStats() {
                 // 4. Active Departments
                 supabase
                     .from('departments')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('property_id', propertyId)
                     .eq('is_active', true),
 
@@ -184,7 +184,7 @@ export function usePropertyManagerStats() {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
                         .from('training_progress')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .in('user_id', userIds)
                 })(),
@@ -194,7 +194,7 @@ export function usePropertyManagerStats() {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
                         .from('learning_assignments')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('target_type', 'user')
                         .in('target_id', userIds)
                 })()
@@ -281,13 +281,13 @@ export function useDepartmentHeadStats() {
                 // 1. Total Staff
                 supabase
                     .from('user_departments')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .in('department_id', deptIds),
 
                 // 2. Present Today
                 supabase
                     .from('shifts')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .in('department_id', deptIds)
                     .lte('start_time', now)
                     .gte('end_time', now)
@@ -299,7 +299,7 @@ export function useDepartmentHeadStats() {
                     if (deptUserIds.length === 0) return { count: 0 }
                     return supabase
                         .from('training_progress')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .in('user_id', deptUserIds)
                 })(),
@@ -318,7 +318,7 @@ export function useDepartmentHeadStats() {
                     if (deptUserIds.length === 0) return { count: 0 }
                     return supabase
                         .from('tasks')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .in('assigned_to_id', deptUserIds)
                 })(),
 
@@ -327,7 +327,7 @@ export function useDepartmentHeadStats() {
                     if (deptUserIds.length === 0) return { count: 0 }
                     return supabase
                         .from('tasks')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .in('assigned_to_id', deptUserIds)
                         .eq('status', 'completed')
                 })(),
@@ -335,7 +335,7 @@ export function useDepartmentHeadStats() {
                 // 7. Pending Leave Approvals
                 supabase
                     .from('leave_requests')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('status', 'pending')
                     .in('department_id', deptIds)
             ])
@@ -421,13 +421,13 @@ export function useHRStats(propertyId?: string) {
                 // 1. Total Staff
                 supabase
                     .from('user_properties')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('property_id', propId),
 
                 // 2. Present Today
                 supabase
                     .from('shifts')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('property_id', propId)
                     .lte('start_time', now)
                     .gte('end_time', now)
@@ -438,7 +438,7 @@ export function useHRStats(propertyId?: string) {
                 (async () => {
                     let q = supabase
                         .from('leave_requests')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('status', 'pending')
                     if (propId !== 'all') {
                         q = q.eq('property_id', propId)
@@ -449,14 +449,14 @@ export function useHRStats(propertyId?: string) {
                 // 4. New Hires
                 supabase
                     .from('user_properties')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('property_id', propId)
                     .gte('created_at', startOfMonth.toISOString()),
 
                 // 5. Open Positions
                 supabase
                     .from('job_postings')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .eq('property_id', propId)
                     .eq('status', 'open'),
 
@@ -465,7 +465,7 @@ export function useHRStats(propertyId?: string) {
                     if (propUserIds.length === 0) return { count: 0 }
                     return supabase
                         .from('training_progress')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .in('user_id', propUserIds)
                 })(),
@@ -475,7 +475,7 @@ export function useHRStats(propertyId?: string) {
                     if (propUserIds.length === 0) return { count: 0 }
                     return supabase
                         .from('learning_assignments')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .in('assigned_to_user_id', propUserIds)
                 })()
             ])
@@ -552,14 +552,14 @@ export function useAreaManagerStats(propertyId?: string) {
             ] = await Promise.all([
                 // 1. Total Properties
                 (async () => {
-                    const q = supabase.from('properties').select('*', { count: 'exact', head: true }).eq('is_active', true)
+                    const q = supabase.from('properties').select('id', { count: 'exact', head: true }).eq('is_active', true)
                     if (!isAll) q.eq('id', propertyId)
                     return q
                 })(),
 
                 // 2. Open Issues (Tasks)
                 (async () => {
-                    const q = supabase.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'cancelled')
+                    const q = supabase.from('tasks').select('id', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'cancelled')
                     if (!isAll) q.eq('property_id', propertyId)
                     return q
                 })(),
@@ -567,7 +567,7 @@ export function useAreaManagerStats(propertyId?: string) {
                 // 3. Completed Training
                 (async () => {
                     if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase.from('training_progress').select('*', { count: 'exact', head: true }).eq('status', 'completed')
+                    const q = supabase.from('training_progress').select('id', { count: 'exact', head: true }).eq('status', 'completed')
                     if (!isAll && userIds.length > 0) q.in('user_id', userIds)
                     return q
                 })(),
@@ -575,28 +575,28 @@ export function useAreaManagerStats(propertyId?: string) {
                 // 4. Total Training Assignments
                 (async () => {
                     if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase.from('learning_assignments').select('*', { count: 'exact', head: true })
+                    const q = supabase.from('learning_assignments').select('id', { count: 'exact', head: true })
                     if (!isAll && userIds.length > 0) q.in('assigned_to_user_id', userIds)
                     return q
                 })(),
 
                 // 5. Completed Maintenance Tickets (Last 30 Days)
                 (async () => {
-                    const q = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true }).eq('status', 'completed').gte('created_at', thirtyDaysAgo.toISOString())
+                    const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('created_at', thirtyDaysAgo.toISOString())
                     if (!isAll) q.eq('property_id', propertyId)
                     return q
                 })(),
 
                 // 6. Total Maintenance Tickets (Last 30 Days)
                 (async () => {
-                    const q = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo.toISOString())
+                    const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo.toISOString())
                     if (!isAll) q.eq('property_id', propertyId)
                     return q
                 })(),
 
                 // 7. Open Vacancies
                 (async () => {
-                    const q = supabase.from('job_postings').select('*', { count: 'exact', head: true }).eq('status', 'open')
+                    const q = supabase.from('job_postings').select('id', { count: 'exact', head: true }).eq('status', 'open')
                     if (!isAll) q.eq('property_id', propertyId)
                     return q
                 })()
@@ -669,7 +669,7 @@ export function useCorporateStats(propertyId?: string) {
             ] = await Promise.all([
                 // 1. Total Properties
                 (async () => {
-                    const q = supabase.from('properties').select('*', { count: 'exact', head: true }).eq('is_active', true)
+                    const q = supabase.from('properties').select('id', { count: 'exact', head: true }).eq('is_active', true)
                     if (!isAll) q.eq('id', propertyId)
                     return q
                 })(),
@@ -684,7 +684,7 @@ export function useCorporateStats(propertyId?: string) {
                 // 3. Completed Training
                 (async () => {
                     if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase.from('training_progress').select('*', { count: 'exact', head: true }).eq('status', 'completed')
+                    const q = supabase.from('training_progress').select('id', { count: 'exact', head: true }).eq('status', 'completed')
                     if (!isAll && userIds.length > 0) q.in('user_id', userIds)
                     return q
                 })(),
@@ -692,7 +692,7 @@ export function useCorporateStats(propertyId?: string) {
                 // 4. Total Training Assignments
                 (async () => {
                     if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase.from('learning_assignments').select('*', { count: 'exact', head: true })
+                    const q = supabase.from('learning_assignments').select('id', { count: 'exact', head: true })
                     // Logic check: if filtering by property, we filter assignments by property users
                     if (!isAll && userIds.length > 0) q.in('assigned_to_user_id', userIds)
                     return q
@@ -700,21 +700,21 @@ export function useCorporateStats(propertyId?: string) {
 
                 // 5. Completed Maintenance
                 (async () => {
-                    const q = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true }).eq('status', 'completed')
+                    const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).eq('status', 'completed')
                     if (!isAll) q.eq('property_id', propertyId)
                     return q
                 })(),
 
                 // 6. Total Maintenance
                 (async () => {
-                    const q = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true })
+                    const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true })
                     if (!isAll) q.eq('property_id', propertyId)
                     return q
                 })(),
 
                 // 7. Vacancies
                 (async () => {
-                    const q = supabase.from('job_postings').select('*', { count: 'exact', head: true }).eq('status', 'open')
+                    const q = supabase.from('job_postings').select('id', { count: 'exact', head: true }).eq('status', 'open')
                     if (!isAll) q.eq('property_id', propertyId)
                     return q
                 })()

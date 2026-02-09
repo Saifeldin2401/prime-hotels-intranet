@@ -44,6 +44,7 @@ export default function RequestsInbox() {
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const isNumericSearch = /^\d+$/.test(searchTerm.trim())
 
   // Build filters object
   const filters = {
@@ -125,12 +126,19 @@ export default function RequestsInbox() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Search className="w-4 h-4 text-gray-500" />
-              <Input
-                placeholder={t('search_placeholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
-              />
+              <div className="flex flex-col">
+                <Input
+                  placeholder={t('search_placeholder')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-64"
+                />
+                {searchTerm.trim().length > 0 && !isNumericSearch && (
+                  <span className="text-xs text-muted-foreground mt-1">
+                    {t('search_hint', { defaultValue: 'Search by request number (digits only).' })}
+                  </span>
+                )}
+              </div>
             </div>
             <Button
               variant="outline"

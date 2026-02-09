@@ -180,7 +180,7 @@ export function LoginForm() {
             to="/forgot-password"
             className="text-sm font-medium text-primary hover:text-accent transition-colors hover:underline"
           >
-            {t('forgot_password')}
+            {t('forgot_password.title')}
           </Link>
         </div>
       </div>
