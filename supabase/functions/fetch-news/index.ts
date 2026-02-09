@@ -1,6 +1,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { parseString } from 'npm:xml2js'
+import { isAuthorizedServiceRole } from '../_shared/auth.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
   try {
     // Require service role key for scheduled/internal calls
     const authHeader = req.headers.get('Authorization') || '';
-    if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
+    if (!isAuthorizedServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY)) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }

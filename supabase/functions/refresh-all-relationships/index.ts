@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isAuthorizedServiceRole } from '../_shared/auth.ts'
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -28,7 +29,7 @@ serve(async (req) => {
 
         // Verify this is called from a trusted source (cron job or admin)
         const authHeader = req.headers.get('Authorization')
-        if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
+        if (!isAuthorizedServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY ?? '')) {
             return new Response(
                 JSON.stringify({ success: false, error: 'Unauthorized' }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }

@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { validateEnvironment } from './env-validation'
-import type { Database } from './database.types'
 
 // Validate environment variables on startup
 const env = validateEnvironment()
@@ -19,7 +18,7 @@ if (supabaseAnonKey.length < 100) {
   throw new Error('Invalid Supabase anon key format')
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,

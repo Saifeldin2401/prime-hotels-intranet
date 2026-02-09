@@ -197,14 +197,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
 
-    // Safety timeout - ensure loading never stays true forever (reduced to 2 seconds)
+    // Safety timeout - ensure loading never stays true forever
     const timeoutId = setTimeout(() => {
       if (mounted && loadingState) {
-        console.warn('Loading timeout - forcing loading to false after 2 seconds')
+        console.warn('Loading timeout - forcing loading to false after 5 seconds')
         setLoading(false)
         loadingState = false
       }
-    }, 2000) // 2 second timeout
+    }, 5000) // 5 second timeout for slow networks
 
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {

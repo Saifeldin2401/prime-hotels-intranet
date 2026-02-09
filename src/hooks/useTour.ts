@@ -1,6 +1,6 @@
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 export interface TourStep {
     element: string;
@@ -26,11 +26,11 @@ export function useTour(steps: TourStep[]) {
         });
     }, [steps]);
 
-    const startTour = () => {
+    const startTour = useCallback(() => {
         if (driverObj.current) {
             driverObj.current.drive();
         }
-    };
+    }, []);
 
     return { startTour };
 }

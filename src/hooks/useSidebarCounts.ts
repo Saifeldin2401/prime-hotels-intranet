@@ -128,7 +128,7 @@ export function useSidebarCounts() {
             let approvalsQuery = supabase
                 .from('requests')
                 .select('id', { count: 'exact', head: true })
-                .eq('status', 'pending')
+                .in('status', ['pending_supervisor_approval', 'pending_hr_review'])
 
             if (isRegionalAccess) {
                 // Regional admin/hr sees ALL pending approvals
