@@ -15,6 +15,7 @@ class AnalyticsService {
     private constructor() {
         this.setupFlushTimer()
         this.setupWindowListeners()
+        this.setupAuthStateListener()
         this.sessionPromise = this.recoverSession()
     }
 
@@ -131,6 +132,27 @@ class AnalyticsService {
         }
     }
 
+    private setupAuthStateListener() {
+        supabase.auth.onAuthStateChange((event, session) => {
+            const newUser = session?.user?.id || null
+
+            // If user changed or logged out
+            if (newUser !== this.userId) {
+                console.debug('[Analytics] Auth state changed:', event, newUser)
+                this.userId = newUser
+
+                // If we have a session, update it. If not, start one.
+                if (newUser) {
+                    this.identify(newUser)
+                } else {
+                    // Logged out: end current session
+                    this.sessionId = null
+                    localStorage.removeItem('prime_analytics_session')
+                }
+            }
+        })
+    }
+
     /**
      * Identify user (e.g. after login)
      */
@@ -216,6 +238,14 @@ class AnalyticsService {
 
             if (error) {
                 console.error('Failed to flush analytics events', error)
+
+                // Handle 401/403: session expired or unauthorized
+                if (error.code === '401' || error.code === '42501' || (error as any).status === 401) {
+                    console.warn('[Analytics] Unauthorized flush. Clearing stale session.')
+                    this.sessionId = null
+                    localStorage.removeItem('prime_analytics_session')
+                    // Session will be re-created on next track()
+                }
                 return
             }
 
