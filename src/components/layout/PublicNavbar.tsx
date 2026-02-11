@@ -20,15 +20,15 @@ export function PublicNavbar() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between h-20 px-4 lg:px-8">
                     {/* Logo with PHG Connect branding */}
-                    <Link to="/" className="flex items-center gap-4">
+                    <Link to="/" className="flex items-center gap-3 lg:gap-4 shrink-0">
                         <img
                             src="/prime-logo-light.png"
                             alt="Prime Hotels Group"
-                            className="h-14 w-auto"
+                            className="h-10 lg:h-14 w-auto"
                         />
-                        <div className="hidden sm:block border-l border-white/20 pl-4">
-                            <div className="text-lg font-bold text-hotel-gold tracking-wide">PHG Connect</div>
-                            <div className="text-xs text-white/60 tracking-wider uppercase">Official Intranet</div>
+                        <div className="hidden md:block border-l border-white/20 pl-4">
+                            <div className="text-base lg:text-lg font-bold text-hotel-gold tracking-wide leading-tight">PHG Connect</div>
+                            <div className="text-[10px] text-white/60 tracking-wider uppercase leading-none">Official Intranet</div>
                         </div>
                     </Link>
 

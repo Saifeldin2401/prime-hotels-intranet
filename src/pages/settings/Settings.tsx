@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Globe, Accessibility, Keyboard, Shield, Clock } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -159,7 +160,7 @@ export default function Settings() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400">Choose your primary interface language</p>
                                     </div>
                                     <Select value={language} onValueChange={handleLanguageChange}>
-                                        <SelectTrigger className="w-[180px] bg-white dark:bg-hotel-navy-dark">
+                                        <SelectTrigger id="language-select" className="w-[180px] bg-white dark:bg-hotel-navy-dark">
                                             <SelectValue placeholder={t('language.select_placeholder')} />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -180,7 +181,7 @@ export default function Settings() {
                                         value={timezone}
                                         onValueChange={(val) => updateUserSettings({ timezone: val })}
                                     >
-                                        <SelectTrigger className="w-[220px] bg-white dark:bg-hotel-navy-dark">
+                                        <SelectTrigger id="timezone-select" className="w-[220px] bg-white dark:bg-hotel-navy-dark">
                                             <SelectValue placeholder={t('general.timezone.select_placeholder')} />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -278,24 +279,30 @@ export default function Settings() {
                             </CardHeader>
                             <CardContent className="pt-6 space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">New Password</Label>
-                                    <input
+                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Input
+                                        id="new-password"
+                                        name="new-password"
+                                        autoComplete="new-password"
                                         type="password"
                                         placeholder="••••••••"
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
-                                        className="w-full bg-slate-50 dark:bg-hotel-navy-dark border border-border/50 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-hotel-gold outline-none"
+                                        className="w-full bg-slate-50 dark:bg-hotel-navy-dark border border-border/50"
                                     />
                                     <p className="text-xs text-gray-400">Must be at least 8 characters</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Confirm New Password</Label>
-                                    <input
+                                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                    <Input
+                                        id="confirm-password"
+                                        name="confirm-password"
+                                        autoComplete="new-password"
                                         type="password"
                                         placeholder="••••••••"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="w-full bg-slate-50 dark:bg-hotel-navy-dark border border-border/50 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-hotel-gold outline-none"
+                                        className="w-full bg-slate-50 dark:bg-hotel-navy-dark border border-border/50"
                                     />
                                 </div>
                                 <button

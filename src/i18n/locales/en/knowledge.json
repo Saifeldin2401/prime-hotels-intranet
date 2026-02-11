@@ -385,23 +385,29 @@
         "no_results_hint": "Try adjusting your search or filters"
     },
     "search_page": {
-        "title": "Search Knowledge Base",
-        "subtitle": "Find SOPs, policies, guides, and more",
-        "placeholder": "Search articles, SOPs, policies...",
+        "title": "Knowledge Library",
+        "subtitle": "Search standard operating procedures, policies, and guides",
+        "placeholder": "Type to search...",
+        "trending": "Trending",
+        "filters_label": "Filters",
+        "clear_filters": "Clear",
         "sort": {
             "relevance": "Relevance",
             "updated": "Recently Updated",
             "views": "Most Viewed",
-            "az": "Title (A-Z)"
+            "az": "A → Z"
         },
         "filters": {
             "all_categories": "All Categories",
             "all_departments": "All Departments",
+            "content_type": "Content Type",
+            "department_label": "Department",
+            "category_label": "Category",
             "clear_all": "Clear All",
             "clear_filters": "Clear Filters"
         },
         "results_count": "{{count}} articles found",
-        "no_results": "No articles found",
+        "no_results": "No results found",
         "no_results_hint": "Try adjusting your search or filters"
     },
     "review_queue": {

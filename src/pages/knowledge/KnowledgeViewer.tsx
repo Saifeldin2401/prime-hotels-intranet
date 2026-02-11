@@ -53,7 +53,8 @@ import {
     Type,
     Settings2,
     Zap,
-    BookOpen
+    BookOpen,
+    ShieldCheck
 } from 'lucide-react'
 import '@/styles/knowledge-ui.css'
 import { cn } from '@/lib/utils'
@@ -666,42 +667,45 @@ export default function KnowledgeViewer() {
                 />
             </div>
 
-            {/* Header - hidden when printing & Focus Mode */}
+            {/* Header - Back Navigation & Actions */}
             <div className={cn(
-                "bg-white border-b sticky top-0 z-40 kb-focus-transition print:hidden",
+                "bg-white/80 border-b sticky top-0 z-40 kb-focus-transition kb-action-blur print:hidden",
                 isFocusMode && "-translate-y-full opacity-0"
             )}>
-                <div className="container mx-auto px-4 py-4">
+                <div className="max-w-[1400px] mx-auto px-4 py-3">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                {t('viewer.back')}
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(-1)}
+                                className="hover:bg-gray-100 rounded-full h-9 w-9 p-0 md:h-9 md:w-auto md:px-3"
+                            >
+                                <ArrowLeft className="h-4 w-4 md:mr-2" />
+                                <span className="hidden md:inline">{t('viewer.back')}</span>
                             </Button>
-                            <Separator orientation="vertical" className="h-6" />
-                            <div className="flex items-center gap-2">
-                                <Badge className={cn(
-                                    statusConfig.color === 'green' && 'bg-green-100 text-green-800',
-                                    statusConfig.color === 'yellow' && 'bg-yellow-100 text-yellow-800',
-                                    statusConfig.color === 'gray' && 'bg-gray-100 text-gray-800',
-                                    statusConfig.color === 'red' && 'bg-red-100 text-red-800'
-                                )}>
-                                    {statusLabel}
-                                </Badge>
+                            <Separator orientation="vertical" className="h-6 mx-1" />
+                            <Breadcrumbs items={[
+                                { label: t('viewer.library', 'Library'), href: '/knowledge/search' },
+                                { label: article.department?.name || t('viewer.no_dept', 'General'), href: `/knowledge/search?department=${article.department_id}` },
+                                { label: article.title }
+                            ]} className="hidden md:flex" />
+                            <div className="md:hidden text-xs font-semibold text-slate-500 truncate max-w-[150px]">
+                                {article.title}
                             </div>
                         </div>
 
                         <div className="flex items-center gap-1 sm:gap-2">
                             {canEdit && (
-                                <div className="flex items-center gap-1 sm:gap-2">
+                                <div className="flex items-center gap-1 sm:gap-2 mr-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => navigate(`/knowledge/${id}/edit`)}
-                                        className="h-8 px-2 sm:h-9 sm:px-3"
+                                        className="h-9 px-3 border-slate-200 hover:border-indigo-300 hover:text-indigo-600 rounded-lg group transition-all"
                                     >
-                                        <Pencil className="h-3.5 w-3.5 sm:mr-2" />
-                                        <span className="hidden sm:inline">{t('viewer.edit')}</span>
+                                        <Pencil className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
+                                        <span>{t('viewer.edit')}</span>
                                     </Button>
 
                                     <AlertDialog>
@@ -709,9 +713,9 @@ export default function KnowledgeViewer() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-8 px-2 sm:h-9 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 rounded-lg group"
                                             >
-                                                <Trash2 className="h-3.5 w-3.5 sm:mr-2" />
+                                                <Trash2 className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
                                                 <span className="hidden sm:inline">{t('viewer.delete')}</span>
                                             </Button>
                                         </AlertDialogTrigger>
@@ -735,10 +739,9 @@ export default function KnowledgeViewer() {
                                         </AlertDialogContent>
                                     </AlertDialog>
 
-                                    <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
+                                    <Separator orientation="vertical" className="h-6 mx-2 hidden md:block" />
                                 </div>
                             )}
-                            <div className="h-4 w-px bg-gray-200 hidden xs:block print:hidden mx-1" />
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -746,28 +749,28 @@ export default function KnowledgeViewer() {
                                         variant="outline"
                                         size="sm"
                                         className={cn(
-                                            "h-8 px-2 sm:h-9 sm:px-3 gap-2",
-                                            translatedData && "bg-hotel-gold/10 border-hotel-gold/30 text-hotel-gold"
+                                            "h-9 px-3 gap-2 rounded-lg transition-all",
+                                            translatedData ? "bg-indigo-50 border-indigo-200 text-indigo-600" : "border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
                                         )}
                                         disabled={isTranslating}
                                     >
-                                        {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                        {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
                                         <span className="hidden sm:inline">
                                             {translatedData
-                                                ? t('viewer.translated', `Translated${translationTargetMeta ? ` (${translationTargetMeta.label})` : ''}`)
+                                                ? t('viewer.translated', { lang: translationTargetMeta?.label })
                                                 : t('viewer.translate', 'Translate')}
                                         </span>
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                <DropdownMenuContent align="end" className="w-48">
                                     {!translatedData ? (
                                         <>
-                                            <div className="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                                            <div className="px-2 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                                 {t('viewer.translate_ai', 'Translate to')}
                                             </div>
                                             {SUPPORTED_TRANSLATION_LANGUAGES.map(lang => (
-                                                <DropdownMenuItem key={lang.code} onClick={() => handleAITranslate(lang.code)}>
-                                                    <Languages className="h-4 w-4 mr-2" />
+                                                <DropdownMenuItem key={lang.code} onClick={() => handleAITranslate(lang.code)} className="gap-2">
+                                                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
                                                     {lang.label}
                                                 </DropdownMenuItem>
                                             ))}
@@ -776,49 +779,163 @@ export default function KnowledgeViewer() {
                                         <>
                                             <DropdownMenuItem onClick={() => setShowBilingual(!showBilingual)}>
                                                 <Maximize2 className="h-4 w-4 mr-2" />
-                                                {showBilingual ? t('viewer.show_single', 'Show Single View') : t('viewer.show_bilingual', 'Show Bilingual View')}
+                                                {showBilingual ? t('viewer.show_single', 'Show Single') : t('viewer.show_bilingual', 'Show Bilingual')}
                                             </DropdownMenuItem>
                                             <DropdownMenuItem onClick={() => { setTranslatedData(null); setShowBilingual(false); setTranslationTarget(null); }}>
-                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                {t('viewer.clear_translation', 'Clear Translation')}
+                                                <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                                                {t('viewer.clear_translation', 'Clear')}
                                             </DropdownMenuItem>
                                         </>
                                     )}
-</DropdownMenuContent>
+                                </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
-
-                            <Button variant="ghost" size="sm" onClick={() => toggleBookmark.mutate(id!)} className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:text-hotel-gold print:hidden">
-                                {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-hotel-gold" /> : <Bookmark className="h-4 w-4" />}
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={handleShare} className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:text-blue-600 print:hidden" title={t('viewer.share', 'Share article')}>
-                                <Share2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={handlePrint} className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:text-hotel-navy print:hidden" title={t('viewer.print', 'Print article')}>
-                                <Printer className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center ml-1 space-x-0.5">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleBookmark.mutate(id!)}
+                                    className={cn(
+                                        "h-9 w-9 p-0 rounded-full transition-colors",
+                                        isBookmarked ? "text-indigo-600 bg-indigo-50" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                    )}
+                                >
+                                    {isBookmarked ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleShare}
+                                    className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                >
+                                    <Share2 className="h-5 w-5" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handlePrint}
+                                    className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                >
+                                    <Printer className="h-5 w-5" />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className={cn(
-                "bg-white border-b border-gray-100 kb-focus-transition print:hidden",
-                isFocusMode && "-translate-y-full opacity-0 h-0 overflow-hidden"
+            {/* Premium Article Hero Section */}
+            <header className={cn(
+                "kb-article-header py-12 md:py-16 border-b border-slate-200/60 kb-focus-transition",
+                isFocusMode && "opacity-0 -translate-y-8 pointer-events-none"
             )}>
-                <div className="container mx-auto px-4 py-3">
-                    <Breadcrumbs items={[
-                        { label: t('viewer.library', 'Library'), href: '/knowledge/search' },
-                        { label: article.department?.name || t('viewer.no_dept', 'General'), href: `/knowledge/search?department=${article.department_id}` },
-                        { label: article.title }
-                    ]} />
+                <div className="absolute inset-0 kb-hero-pattern" />
+                <div className="container relative max-w-[1400px] mx-auto px-4 select-none">
+                    <div className="flex flex-col gap-6">
+                        {/* Upper Metadata */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Badge className={cn(
+                                "rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider",
+                                statusConfig.color === 'green' && 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200',
+                                statusConfig.color === 'yellow' && 'bg-amber-100 text-amber-700 ring-1 ring-amber-200',
+                                statusConfig.color === 'gray' && 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
+                                statusConfig.color === 'red' && 'bg-rose-100 text-rose-700 ring-1 ring-rose-200'
+                            )}>
+                                {statusLabel}
+                            </Badge>
+                            {article.content_type && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 border border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                    <FileText className="h-3 w-3" />
+                                    {t(`content_types.${article.content_type}`)}
+                                </div>
+                            )}
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-50/50 border border-indigo-100/50 text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+                                <ShieldCheck className="h-3 w-3" />
+                                {article.version || 'v1.0'}
+                            </div>
+                        </div>
+
+                        {/* Title & Description */}
+                        <div className="max-w-4xl space-y-4">
+                            <h1 className={cn(
+                                "text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.15] tracking-tight",
+                                shouldUseRtl && "font-arabic"
+                            )}>
+                                {translatedData && !showBilingual ? translatedData.title : article.title}
+                            </h1>
+
+                            {showBilingual && translatedData && (
+                                <h1
+                                    dir={isRtlTarget ? 'rtl' : 'ltr'}
+                                    className={cn(
+                                        "text-2xl md:text-4xl font-bold text-indigo-500/80 leading-snug",
+                                        isRtlTarget ? "font-arabic pr-6 border-r-4 border-indigo-200" : "pl-6 border-l-4 border-indigo-200"
+                                    )}
+                                >
+                                    {translatedData.title}
+                                </h1>
+                            )}
+
+                            {(translatedData?.description || article.description) && (
+                                <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-3xl">
+                                    {translatedData ? translatedData.description : article.description}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Lower Metadata Row */}
+                        <div className="flex flex-wrap items-center gap-y-4 gap-x-8 mt-4 pt-8 border-t border-slate-200/40">
+                            {article.author && (
+                                <div className="flex items-center gap-3 group">
+                                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm transition-transform group-hover:scale-105">
+                                        <AvatarImage src={article.author.avatar_url} />
+                                        <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold">
+                                            {article.author.full_name?.charAt(0) || '?'}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-slate-900">{article.author.full_name}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-6">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.updated')}</span>
+                                    <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                                        {t('viewer.updated_at', { date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '' })}
+                                    </div>
+                                </div>
+
+                                <Separator orientation="vertical" className="h-8 bg-slate-200/60" />
+
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.reading_time', 'Est. Time')}</span>
+                                    <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                                        <Timer className="h-3.5 w-3.5 text-slate-400" />
+                                        {readingTime} min read
+                                    </div>
+                                </div>
+
+                                <Separator orientation="vertical" className="h-8 bg-slate-200/60" />
+
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.views', 'Views')}</span>
+                                    <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                                        <Eye className="h-3.5 w-3.5 text-slate-400" />
+                                        {article.view_count || 0}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </header>
 
             <div className={cn(
-                "container mx-auto py-8 px-4 print:py-0 print:px-0 transition-all duration-500",
-                isFocusMode ? "max-w-4xl py-20 z-[45] relative kb-focus-content" : "relative z-10"
+                "container max-w-[1400px] mx-auto py-10 px-4 print:py-0 print:px-0 transition-all duration-500",
+                isFocusMode ? "max-w-4xl py-24 z-[45] relative kb-focus-content" : "relative z-10"
             )}>
                 {/* Print Header - only visible when printing */}
                 <div className="hidden print:block print-header mb-8 pb-4 border-b-2 border-gray-300">
@@ -831,214 +948,120 @@ export default function KnowledgeViewer() {
                 </div>
 
                 <div className={cn(
-                    "grid grid-cols-1 lg:grid-cols-4 gap-8 print:block",
+                    "grid grid-cols-1 lg:grid-cols-12 gap-10 print:block",
                     isFocusMode && "block"
                 )}>
-                    {/* Main Content */}
+                    {/* Main Content Pane */}
                     <div className={cn(
-                        "lg:col-span-3 space-y-6 print-content",
-                        isFocusMode && "lg:col-span-4"
+                        "lg:col-span-9 space-y-8 print-content",
+                        isFocusMode && "lg:col-span-12"
                     )}>
-                        {/* Title Section - hidden in print (already shown in print header) */}
-                        <div className={cn(
-                            "print:hidden",
-                            isFocusMode && "text-center mb-12"
-                        )}>
-                            <h1 className={cn(
-                                "text-3xl font-bold mb-2 text-hotel-navy",
-                                isFocusMode && "text-5xl",
-                                shouldUseRtl && "font-arabic"
-                            )}>
-                                {translatedData && !showBilingual ? translatedData.title : article.title}
-                            </h1>
-                            {showBilingual && translatedData && (
-                                <h2
-                                    dir={isRtlTarget ? 'rtl' : 'ltr'}
-                                    className={cn(
-                                        "text-2xl font-bold mb-4 text-hotel-gold",
-                                        isRtlTarget ? "text-right font-arabic" : "text-left"
-                                    )}
-                                >
-                                    {translatedData.title}
-                                </h2>
-                            )}
 
-                            {(translatedData?.description || article.description) && (
-                                <div className={cn(
-                                    "text-xl text-gray-500 font-medium leading-relaxed mb-6",
-                                    isFocusMode && "text-2xl text-gray-400"
-                                )}>
-                                    {showBilingual && translatedData ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div>{article.description}</div>
-                                            <div
-                                                dir={isRtlTarget ? 'rtl' : 'ltr'}
-                                                className={cn(
-                                                    "text-hotel-gold",
-                                                    isRtlTarget ? "text-right font-arabic" : "text-left"
-                                                )}
-                                            >
-                                                {translatedData.description}
+                        {/* Mobile TOC - Quick Jump */}
+                        {tocItems.length > 0 && (
+                            <div className="lg:hidden no-print">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="w-full flex items-center justify-between border-slate-200 bg-white">
+                                            <div className="flex items-center gap-2">
+                                                <List className="h-4 w-4 text-indigo-500" />
+                                                <span className="text-sm font-semibold">{t('viewer.on_this_page', 'Jump to Section')}</span>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        translatedData ? translatedData.description : article.description
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Readability Metadata Bar */}
-                            <div className={cn(
-                                "flex items-center gap-6 text-sm text-gray-400 mb-8 border-b border-gray-100 pb-4",
-                                isFocusMode && "justify-center border-none"
-                            )}>
-                                <div className="flex items-center gap-2">
-                                    <Timer className="h-4 w-4" />
-                                    <span>{readingTime} min read</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Eye className="h-4 w-4" />
-                                    <span>{article.view_count || 0} views</span>
-                                </div>
-                                <div className="hidden sm:flex items-center gap-2">
-                                    <Languages className="h-4 w-4" />
-                                    <span>{article.department?.name || 'General'}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* TL;DR Quick Summary */}
-                        {article.summary && (
-                            <div className="mb-6 bg-hotel-gold/5 border border-hotel-gold/20 rounded-xl p-5 shadow-sm relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-2 opacity-10">
-                                    <Sparkles className="h-12 w-12 text-hotel-gold" />
-                                </div>
-                                <h3 className="text-xs md:text-sm font-bold text-hotel-gold uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    {t('viewer.tldr', 'Quick Summary')}
-                                </h3>
-                                <p className="text-hotel-navy/80 text-sm md:text-base font-medium leading-relaxed italic">
-                                    {showBilingual && translatedData ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>"{(article as any).summary}"</div>
-                                            <div
-                                                dir={isRtlTarget ? 'rtl' : 'ltr'}
-                                                className={cn(
-                                                    isRtlTarget ? "text-right font-arabic" : "text-left"
-                                                )}
-                                            >
-                                                "{translatedData.summary}"
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        translatedData && translatedData.summary ? `"${translatedData.summary}"` : `"{(article as any).summary}"`
-                                    )}
-                                </p>
+                                            <ChevronDown className="h-4 w-4 text-slate-400" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="w-[calc(100vw-2rem)] max-h-64 overflow-y-auto">
+                                        {tocItems.map(item => (
+                                            <DropdownMenuItem key={item.id} onClick={() => scrollToSection(item.id)}>
+                                                <div className={cn(
+                                                    "w-1.5 h-1.5 rounded-full mr-2",
+                                                    activeSection === item.id ? "bg-indigo-600" : "bg-slate-200"
+                                                )} />
+                                                {item.text}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         )}
 
-                        {/* Mobile Table of Contents */}
-                        {tocItems.length > 0 && (
-                            <div className="lg:hidden">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-between bg-white shadow-sm border-gray-200">
-                                            <span className="flex items-center gap-2">
-                                                <List className="h-4 w-4 text-hotel-gold" />
-                                                {t('viewer.on_this_page')}
-                                            </span>
-                                            <ChevronDown className="h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="sm:max-w-md">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>{t('viewer.on_this_page')}</AlertDialogTitle>
-                                        </AlertDialogHeader>
-                                        <div className="max-h-[60vh] overflow-y-auto py-2">
-                                            {tocItems.map(item => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => {
-                                                        scrollToSection(item.id)
-                                                        // Close dialog (handled by AlertDialogAction or custom closer)
-                                                    }}
+                        {/* TL;DR Quick Summary - Premium Redesign */}
+                        {article.summary && (
+                            <div className="relative group p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-transparent">
+                                <div className="bg-white rounded-[15px] p-6 shadow-sm overflow-hidden relative">
+                                    <div className="absolute -top-4 -right-4 h-24 w-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-700" />
+                                    <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                        <Zap className="h-3.5 w-3.5 fill-indigo-600" />
+                                        {t('viewer.tldr', 'Quick Summary')}
+                                    </h3>
+                                    <p className="relative z-10 text-slate-700 text-lg font-medium leading-relaxed italic">
+                                        {showBilingual && translatedData ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="border-r border-slate-100 pr-6">"{article.summary}"</div>
+                                                <div
+                                                    dir={isRtlTarget ? 'rtl' : 'ltr'}
                                                     className={cn(
-                                                        "block w-full text-left py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors text-sm border-b border-gray-50 last:border-0",
-                                                        activeSection === item.id && "bg-hotel-gold/5 text-hotel-gold font-bold"
+                                                        "text-indigo-600",
+                                                        isRtlTarget ? "text-right font-arabic" : "text-left"
                                                     )}
                                                 >
-                                                    <AlertDialogAction asChild className="bg-transparent text-inherit hover:bg-transparent border-0 p-0 shadow-none block w-full text-left font-normal uppercase">
-                                                        <span>{item.text}</span>
-                                                    </AlertDialogAction>
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>{t('viewer.close', 'Close')}</AlertDialogCancel>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                                    "{translatedData.summary}"
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            translatedData && translatedData.summary ? `"${translatedData.summary}"` : `"${article.summary}"`
+                                        )}
+                                    </p>
+                                </div>
                             </div>
                         )}
-                        {/* File Attachment - Only show in English view or if no Arabic content exists */}
-                        {article.file_url && (!translationTarget || translationTarget === 'en' || (!article.content_ar && !translatedData)) ? (
-                            <div className="mb-8">
-                                {article.file_url.toLowerCase().endsWith('.pdf') ? (
-                                    <div className="space-y-2">
-                                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                                            <FileText className="h-5 w-5 text-red-500" />
-                                            {t('viewer.preview_doc')}
-                                        </h3>
-                                        <PdfViewer url={article.file_url} />
+
+                        {/* File Attachment Quick Preview */}
+                        {article.file_url && (!translationTarget || translationTarget === 'en' || (!article.content_ar && !translatedData)) && (
+                            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                        <FileText className="h-5 w-5" />
                                     </div>
-                                ) : (
-                                    <Button variant="outline" className="gap-2" onClick={() => window.open(article.file_url, '_blank')}>
-                                        <Download className="h-4 w-4" />
-                                        {t('viewer.download_attachment')}
-                                    </Button>
-                                )}
-                            </div>
-                        ) : null}
-
-                        {/* Meta */}
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                            {article.department && (
-                                <Badge variant="outline" className="text-xs font-normal border-gray-300 text-gray-600">
-                                    {article.department.name}
-                                </Badge>
-                            )}
-                            {article.category && (
-                                <Badge variant="outline" className="text-xs font-normal border-gray-300 text-gray-600">
-                                    {article.category.name}
-                                </Badge>
-                            )}
-                            <Separator orientation="vertical" className="h-4" />
-                            {article.author && (
-                                <div className="flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    <span>{article.author.full_name}</span>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">{t('viewer.attached_file', 'Attached Document')}</p>
+                                        <p className="text-xs text-slate-500">{article.file_url.split('/').pop()}</p>
+                                    </div>
                                 </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" />
-                                <span>{t('viewer.updated_at', { date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '' })}</span>
+                                <div className="flex gap-2">
+                                    <Button variant="ghost" size="sm" className="h-9 px-4 rounded-lg hover:bg-white" onClick={() => window.open(article.file_url, '_blank')}>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        {t('viewer.view')}
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="h-9 px-4 rounded-lg bg-white" onClick={() => window.open(article.file_url, '_blank')}>
+                                        <Download className="h-4 w-4 mr-2" />
+                                        {t('viewer.download')}
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
-                        {/* Content */}
+                        {/* PDF Viewer if applicable */}
+                        {article.file_url?.toLowerCase().endsWith('.pdf') && (
+                            <div className="mt-4 rounded-xl overflow-hidden shadow-sm border border-slate-200">
+                                <PdfViewer url={article.file_url} />
+                            </div>
+                        )}
+
+                        {/* Main Article Content Card */}
                         <Card className={cn(
-                            "transition-all duration-500",
+                            "kb-reader-card transition-all duration-500 overflow-hidden",
                             isFocusMode && "border-none shadow-none bg-transparent",
-                            readerTheme === 'sepia' && "bg-[var(--kb-bg-article)]",
-                            readerTheme === 'dark' && "bg-[var(--kb-bg-article)] dark:border-gray-800"
+                            readerTheme === 'sepia' && "kb-theme-sepia",
+                            readerTheme === 'dark' && "kb-theme-dark"
                         )}>
                             <CardContent className={cn(
-                                "p-6 lg:p-10 transition-all duration-500",
+                                "p-6 md:p-10 lg:p-14 transition-all duration-500",
                                 isFocusMode && "px-0"
                             )}>
                                 {translatedData || article.content_ar ? (
                                     showBilingual ? (
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-hotel-navy">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 text-slate-800">
                                             <div
                                                 className={cn(
                                                     "prose max-w-none transition-all duration-300",
@@ -1054,8 +1077,8 @@ export default function KnowledgeViewer() {
                                                 className={cn(
                                                     "prose max-w-none transition-all duration-300",
                                                     shouldUseRtl
-                                                        ? "border-r-2 border-hotel-gold/20 pr-8 text-right font-arabic"
-                                                        : "border-l-2 border-hotel-gold/20 pl-8",
+                                                        ? "border-r-2 border-indigo-100 pr-10 text-right font-arabic"
+                                                        : "border-l-2 border-indigo-100 pl-10",
                                                     fontSize === 'sm' && "text-kb-sm",
                                                     fontSize === 'base' && "text-kb-base",
                                                     fontSize === 'lg' && "text-kb-lg",
@@ -1065,11 +1088,11 @@ export default function KnowledgeViewer() {
                                             />
                                         </div>
                                     ) : (
-                                        <div
+                                        <article
                                             dir={shouldUseRtl ? 'rtl' : 'ltr'}
                                             className={cn(
                                                 "prose md:prose-lg max-w-none transition-all duration-300",
-                                                shouldUseRtl && "text-right font-arabic",
+                                                shouldUseRtl ? "text-right font-arabic" : "text-left",
                                                 fontSize === 'sm' && "text-kb-sm",
                                                 fontSize === 'base' && "text-kb-base",
                                                 fontSize === 'lg' && "text-kb-lg",
@@ -1082,387 +1105,486 @@ export default function KnowledgeViewer() {
                                     <div
                                         ref={contentRef}
                                         className={cn(
-                                            "prose md:prose-lg max-w-none text-hotel-navy kb-prose transition-all duration-300",
+                                            "prose md:prose-lg max-w-none text-slate-800 kb-prose transition-all duration-300",
                                             fontFamily === 'serif' && "kb-prose-serif",
                                             fontSize === 'sm' && "text-kb-sm",
                                             fontSize === 'base' && "text-kb-base",
                                             fontSize === 'lg' && "text-kb-lg",
                                             fontSize === 'xl' && "text-kb-xl",
-                                            readerTheme === 'dark' && "text-gray-100"
                                         )}
                                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
                                     />
                                 ) : (
-                                    !article.file_url && !article.video_url && !article.checklist_items?.length && !article.faq_items?.length && !article.images?.length && (
-                                        <p className="text-gray-500 italic">{t('viewer.no_content')}</p>
+                                    !article.file_url && (
+                                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                                            <AlertTriangle className="h-10 w-10 mb-3 opacity-20" />
+                                            <p className="italic">{t('viewer.no_content')}</p>
+                                        </div>
                                     )
                                 )}
 
-
                                 {/* Content Type Specific Renderers */}
-                                <div className="mt-8 space-y-8">
+                                <div className="mt-12 space-y-12">
                                     {article.content_type === 'video' && article.video_url && (
                                         <VideoPlayer videoUrl={article.video_url} title={article.title} />
                                     )}
 
                                     {article.content_type === 'checklist' && article.checklist_items && article.checklist_items.length > 0 && (
-                                        <ChecklistRenderer items={article.checklist_items} />
+                                        <div className="pt-8 border-t border-slate-100">
+                                            <ChecklistRenderer items={article.checklist_items} />
+                                        </div>
                                     )}
 
                                     {article.content_type === 'faq' && article.faq_items && article.faq_items.length > 0 && (
-                                        <FAQAccordion items={article.faq_items} />
+                                        <div className="pt-8 border-t border-slate-100">
+                                            <FAQAccordion items={article.faq_items} />
+                                        </div>
                                     )}
 
                                     {article.content_type === 'visual' && article.images && article.images.length > 0 && (
-                                        <ImageGalleryRenderer images={article.images} />
+                                        <div className="pt-8 border-t border-slate-100">
+                                            <ImageGalleryRenderer images={article.images} />
+                                        </div>
                                     )}
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Acknowledgment */}
-                        {article.requires_acknowledgment && (
-                            <Card className={cn(
-                                "border-blue-200 print:hidden",
-                                article.is_acknowledged ? "bg-green-50 border-green-200" : "bg-blue-50",
-                                isFocusMode && "mt-20"
-                            )}>
-                                <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3">
-                                        {article.is_acknowledged ? (
-                                            <CheckCircle2 className="h-6 w-6 text-green-600" />
-                                        ) : (
-                                            <CheckCircle className="h-6 w-6 text-blue-600" />
-                                        )}
-                                        <div>
-                                            <p className={cn(
-                                                "font-semibold",
-                                                article.is_acknowledged ? "text-green-900" : "text-blue-900"
-                                            )}>
-                                                {article.is_acknowledged ? t('viewer.already_acknowledged', 'Article Acknowledged') : t('viewer.acknowledge_title')}
-                                            </p>
-                                            <p className={cn(
-                                                "text-sm",
-                                                article.is_acknowledged ? "text-green-700" : "text-blue-700"
-                                            )}>
-                                                {article.is_acknowledged
-                                                    ? t('viewer.acknowledged_on', 'You acknowledged this on {{date}}', { date: new Date(article.acknowledged_at!).toLocaleDateString() })
-                                                    : t('viewer.acknowledge_desc')}
-                                            </p>
+                        {/* Acknowledgment & Feedback - Horizontal Layout */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
+                            {/* Acknowledgment */}
+                            {article.requires_acknowledgment && (
+                                <Card className={cn(
+                                    "border-none shadow-md overflow-hidden relative transition-all duration-300",
+                                    article.is_acknowledged ? "bg-emerald-50/50" : "bg-indigo-50/50"
+                                )}>
+                                    <div className={cn(
+                                        "absolute top-0 left-0 w-1 h-full",
+                                        article.is_acknowledged ? "bg-emerald-500" : "bg-indigo-500"
+                                    )} />
+                                    <CardContent className="p-6">
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "h-10 w-10 rounded-full flex items-center justify-center",
+                                                    article.is_acknowledged ? "bg-emerald-100 text-emerald-600" : "bg-indigo-100 text-indigo-600"
+                                                )}>
+                                                    {article.is_acknowledged ? <CheckCircle2 className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-900">
+                                                        {article.is_acknowledged ? t('viewer.already_acknowledged', 'Article Acknowledged') : t('viewer.acknowledge_title')}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500">
+                                                        {article.is_acknowledged
+                                                            ? t('viewer.acknowledged_on', 'Completed on {{date}}', { date: new Date(article.acknowledged_at!).toLocaleDateString() })
+                                                            : t('viewer.acknowledge_desc')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {!article.is_acknowledged && (
+                                                <Button
+                                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-11"
+                                                    onClick={() => acknowledgeArticle.mutate(id!)}
+                                                    disabled={acknowledgeArticle.isPending}
+                                                >
+                                                    {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
+                                                    {t('viewer.i_acknowledge')}
+                                                </Button>
+                                            )}
                                         </div>
-                                    </div>
-                                    {!article.is_acknowledged && (
-                                        <Button
-                                            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
-                                            onClick={() => acknowledgeArticle.mutate(id!)}
-                                            disabled={acknowledgeArticle.isPending}
-                                        >
-                                            {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                                            {t('viewer.i_acknowledge')}
-                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Feedback Section */}
+                            <Card className="border-none shadow-md bg-white overflow-hidden relative">
+                                <CardContent className="p-6">
+                                    {submitFeedback.isSuccess ? (
+                                        <div className="flex items-center gap-4 animate-in fade-in zoom-in duration-500">
+                                            <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+                                                <Sparkles className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-900">{t('viewer.feedback_thanks')}</p>
+                                                <p className="text-xs text-slate-500">{t('viewer.feedback_thanks_desc')}</p>
+                                            </div>
+                                        </div>
+                                    ) : showFeedbackInput ? (
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-bold text-slate-900">
+                                                    {feedbackHelpful ? t('viewer.what_did_you_like', 'Feedback') : t('viewer.how_can_we_improve', 'Help us improve')}
+                                                </p>
+                                                <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] uppercase font-bold text-slate-400" onClick={() => setShowFeedbackInput(false)}>
+                                                    {t('viewer.cancel')}
+                                                </Button>
+                                            </div>
+                                            <Textarea
+                                                value={feedbackText}
+                                                onChange={(e) => setFeedbackText(e.target.value)}
+                                                placeholder={t('viewer.feedback_placeholder', 'Your thoughts...')}
+                                                className="min-h-[80px] text-sm bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                                            />
+                                            <Button
+                                                size="sm"
+                                                className="w-full bg-slate-900 hover:bg-slate-800 text-white h-9"
+                                                onClick={() => submitFeedback.mutate({ documentId: id!, helpful: feedbackHelpful, feedbackText })}
+                                                disabled={submitFeedback.isPending}
+                                            >
+                                                {submitFeedback.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                                                {t('viewer.submit_feedback')}
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-between gap-4">
+                                            <p className="text-sm font-bold text-slate-900">{t('viewer.feedback_title')}</p>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-9 w-9 p-0 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-all"
+                                                    disabled={submitFeedback.isPending}
+                                                    onClick={() => submitFeedback.mutate({ documentId: id!, helpful: true })}
+                                                >
+                                                    <ThumbsUp className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-9 w-9 p-0 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all"
+                                                    disabled={submitFeedback.isPending}
+                                                    onClick={() => {
+                                                        setFeedbackHelpful(false)
+                                                        setShowFeedbackInput(true)
+                                                    }}
+                                                >
+                                                    <ThumbsDown className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
                                     )}
                                 </CardContent>
                             </Card>
-                        )}
-
-                        {/* Was this helpful? */}
-                        <div className="py-12 border-t border-gray-100 flex flex-col items-center gap-6 print:hidden">
-                            {submitFeedback.isSuccess ? (
-                                <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in duration-500">
-                                    <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center">
-                                        <Sparkles className="h-8 w-8 text-green-600" />
-                                    </div>
-                                    <h4 className="text-xl font-semibold text-hotel-navy">{t('viewer.feedback_thanks')}</h4>
-                                    <p className="text-gray-500">{t('viewer.feedback_thanks_desc')}</p>
-                                </div>
-                            ) : showFeedbackInput ? (
-                                <div className="w-full max-w-md space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                    <div className="text-center">
-                                        <h4 className="text-lg font-semibold text-hotel-navy mb-1">
-                                            {feedbackHelpful ? t('viewer.what_did_you_like', 'What did you like?') : t('viewer.how_can_we_improve', 'How can we improve this article?')}
-                                        </h4>
-                                        <p className="text-sm text-gray-500">{t('viewer.feedback_optional', 'Your feedback helps us improve.')}</p>
-                                    </div>
-                                    <Textarea
-                                        value={feedbackText}
-                                        onChange={(e) => setFeedbackText(e.target.value)}
-                                        placeholder={feedbackHelpful ? t('viewer.feedback_placeholder_pos', 'Great article because...') : t('viewer.feedback_placeholder_neg', 'Prevented me from solving my issue because...')}
-                                        className="min-h-[100px]"
-                                    />
-                                    <div className="flex gap-2 justify-center">
-                                        <Button variant="ghost" onClick={() => setShowFeedbackInput(false)}>
-                                            {t('viewer.cancel')}
-                                        </Button>
-                                        <Button
-                                            onClick={() => submitFeedback.mutate({ documentId: id!, helpful: feedbackHelpful, feedbackText })}
-                                            disabled={submitFeedback.isPending}
-                                        >
-                                            {submitFeedback.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                                            {t('viewer.submit_feedback')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <h4 className="text-xl font-semibold text-hotel-navy">{t('viewer.feedback_title')}</h4>
-                                    <div className="flex gap-4">
-                                        <Button
-                                            variant="outline"
-                                            className="h-12 px-8 gap-2 hover:bg-green-50 hover:text-green-600 hover:border-green-200 rounded-full transition-all"
-                                            disabled={submitFeedback.isPending}
-                                            onClick={() => submitFeedback.mutate({ documentId: id!, helpful: true })}
-                                        >
-                                            {submitFeedback.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-5 w-5" />}
-                                            {t('viewer.feedback_yes')}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            className="h-12 px-8 gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-full transition-all"
-                                            disabled={submitFeedback.isPending}
-                                            onClick={() => {
-                                                setFeedbackHelpful(false)
-                                                setShowFeedbackInput(true)
-                                            }}
-                                        >
-                                            {submitFeedback.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsDown className="h-5 w-5" />}
-                                            {t('viewer.feedback_no')}
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
                         </div>
 
                         {/* Comments Section */}
-                        <Card className={cn(isFocusMode && "opacity-50 hover:opacity-100 transition-opacity print:hidden")}>
-                            <CardHeader>
+                        <Card className={cn(
+                            "border-none shadow-sm bg-slate-50/50 print:hidden transition-all duration-500",
+                            isFocusMode && "opacity-0 pointer-events-none translate-y-8"
+                        )}>
+                            <CardHeader className="pb-4">
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2">
-                                        <MessageSquare className="h-5 w-5" />
-                                        {t('viewer.discussion')} ({comments?.length || 0})
+                                    <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+                                        <MessageSquare className="h-5 w-5 text-indigo-500" />
+                                        {t('viewer.discussion')}
+                                        <span className="text-sm font-normal text-slate-400 ml-1">({comments?.length || 0})</span>
                                     </CardTitle>
-                                    <Button variant="ghost" size="sm" onClick={() => setShowComments(!showComments)}>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowComments(!showComments)}>
                                         {showComments ? <ChevronUp className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                     </Button>
                                 </div>
                             </CardHeader>
                             {showComments && (
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
                                         <Textarea
                                             value={newComment}
                                             onChange={(e) => setNewComment(e.target.value)}
                                             placeholder={t('viewer.leave_comment')}
-                                            rows={3}
+                                            className="min-h-[80px] border-none focus-visible:ring-0 p-0 text-sm resize-none"
                                         />
-                                        <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending}>
-                                            <Send className="h-4 w-4 mr-2" /> {t('viewer.post')}
-                                        </Button>
+                                        <div className="flex justify-end pt-2 border-t border-slate-50">
+                                            <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending} className="bg-indigo-600 hover:bg-indigo-700">
+                                                <Send className="h-3.5 w-3.5 mr-2" /> {t('viewer.post')}
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <Separator />
-                                    {comments?.length === 0 && <p className="text-center text-gray-500">{t('viewer.no_comments')}</p>}
-                                    <div className="space-y-4">
-                                        {comments?.map((comment) => (
-                                            <div key={comment.id} className="flex gap-3">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={comment.author?.avatar_url} />
-                                                    <AvatarFallback>{comment.author?.full_name?.charAt(0) || '?'}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1 space-y-1">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm font-medium">{comment.author?.full_name || t('viewer.unknown_author')}</span>
-                                                        <span className="text-xs text-gray-500">
-                                                            {new Date(comment.created_at).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
-                                                        {comment.content}
+
+                                    {comments?.length === 0 ? (
+                                        <div className="text-center py-8 text-slate-400">
+                                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-10" />
+                                            <p className="text-sm italic">{t('viewer.no_comments')}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            {comments?.map((comment) => (
+                                                <div key={comment.id} className="flex gap-4 group">
+                                                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm shrink-0">
+                                                        <AvatarImage src={comment.author?.avatar_url} />
+                                                        <AvatarFallback className="bg-slate-200 text-slate-500 font-bold">
+                                                            {comment.author?.full_name?.charAt(0) || '?'}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1 space-y-1.5 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-bold text-slate-900">{comment.author?.full_name || t('viewer.unknown_author')}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                                {new Date(comment.created_at).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm text-slate-700 leading-relaxed bg-white/80 p-3.5 rounded-2xl rounded-tl-none border border-slate-100/50 shadow-sm">
+                                                            {comment.content}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </CardContent>
                             )}
                         </Card>
                     </div>
 
-                    {/* Sidebar - hidden when printing & Focus Mode */}
+                    {/* Premium Sidebar */}
                     {!isFocusMode && (
-                        <div className="space-y-6 print:hidden">
+                        <aside className="lg:col-span-3 space-y-8 sticky top-24 h-fit print:hidden">
+                            {/* Table of Contents - Primary Sidebar Widget */}
                             {tocItems.length > 0 && (
-                                <Card className="kb-sidebar-glass">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-semibold uppercase text-gray-500">{t('viewer.on_this_page')}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-1 max-h-[60vh] overflow-auto">
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{t('viewer.on_this_page')}</h4>
+                                    <nav className="space-y-0.5">
                                         {tocItems.map(item => (
                                             <button
                                                 key={item.id}
                                                 onClick={() => scrollToSection(item.id)}
                                                 className={cn(
-                                                    "block w-full text-left text-sm py-1.5 px-2 rounded-md transition-all hover:bg-hotel-gold/10 hover:text-hotel-gold",
-                                                    activeSection === item.id && "bg-hotel-gold/10 text-hotel-gold font-bold border-l-2 border-hotel-gold rounded-l-none"
+                                                    "kb-sidebar-item w-full text-start text-sm py-2 px-3 rounded-xl transition-all flex items-center gap-3",
+                                                    activeSection === item.id ? "kb-toc-active" : "text-slate-500 hover:text-indigo-600"
                                                 )}
                                             >
-                                                {item.text}
+                                                <div className={cn(
+                                                    "w-1.5 h-1.5 rounded-full shrink-0",
+                                                    activeSection === item.id ? "bg-indigo-600" : "bg-slate-200"
+                                                )} />
+                                                <span className="truncate">{item.text}</span>
                                             </button>
                                         ))}
-                                    </CardContent>
-                                </Card>
-                            )}
-                            {article.tags && article.tags.length > 0 && (
-                                <Card>
-                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold uppercase text-gray-500">{t('viewer.tags')}</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <div className="flex flex-wrap gap-2">
-                                            {article.tags.map(tag => (
-                                                <Badge key={tag.id} variant="secondary" style={{ borderColor: tag.color }}>{tag.name}</Badge>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-                            {relatedArticles && relatedArticles.length > 0 && (
-                                <RelatedArticles
-                                    articles={relatedArticles}
-                                    sourceId={article.id}
-                                />
+                                    </nav>
+                                </div>
                             )}
 
-                            {/* Linked Learning Resources */}
-                            {(article.linked_training_id || article.linked_quiz_id) && (
-                                <Card className="border-hotel-gold/30 bg-hotel-gold/5">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-semibold uppercase text-hotel-gold flex items-center gap-2">
-                                            <GraduationCap className="h-4 w-4" />
-                                            {t('viewer.linked_learning')}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        {article.linked_training_id && (
-                                            <div className="space-y-2">
-                                                <p className="text-xs text-gray-500">{t('viewer.training_hint')}</p>
-                                                <Button
-                                                    className="w-full bg-hotel-gold hover:bg-hotel-gold/90 text-white"
-                                                    onClick={() => navigate(`/learning/training/${article.linked_training_id}`)}
-                                                >
-                                                    <PlayCircle className="h-4 w-4 mr-2" />
-                                                    {t('viewer.start_training')}
-                                                </Button>
-                                            </div>
-                                        )}
-                                        {article.linked_quiz_id && (
-                                            <div className="space-y-2">
-                                                {article.linked_training_id && <Separator />}
-                                                <p className="text-xs text-gray-500">{t('viewer.quiz_hint')}</p>
-                                                <Button
-                                                    variant="outline"
-                                                    className="w-full border-hotel-gold text-hotel-gold hover:bg-hotel-gold/10"
-                                                    onClick={() => navigate(`/learning/quizzes/${article.linked_quiz_id}/take`)}
-                                                >
-                                                    <Lightbulb className="h-4 w-4 mr-2" />
-                                                    {t('viewer.take_quiz')}
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                            {/* Tags */}
+                            {article.tags && article.tags.length > 0 && (
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{t('viewer.tags')}</h4>
+                                    <div className="flex flex-wrap gap-2 px-2">
+                                        {article.tags.map(tag => (
+                                            <Badge
+                                                key={tag.id}
+                                                variant="outline"
+                                                className="bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors cursor-default"
+                                                style={{ borderLeft: `3px solid ${tag.color}` }}
+                                            >
+                                                {tag.name}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
-                        </div>
+
+                            {/* Linked Learning - Featured Card */}
+                            {(article.linked_training_id || article.linked_quiz_id) && (
+                                <div className="p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600">
+                                    <div className="bg-white/95 rounded-[15px] p-5 backdrop-blur-sm">
+                                        <div className="flex items-center gap-2 text-indigo-600 mb-3">
+                                            <GraduationCap className="h-5 w-5" />
+                                            <span className="text-[11px] font-black uppercase tracking-wider">{t('viewer.linked_learning')}</span>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {article.linked_training_id && (
+                                                <div className="space-y-3">
+                                                    <p className="text-xs text-slate-500 leading-relaxed font-medium">{t('viewer.training_hint')}</p>
+                                                    <Button
+                                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 rounded-xl"
+                                                        onClick={() => navigate(`/learning/training/${article.linked_training_id}`)}
+                                                    >
+                                                        <PlayCircle className="h-4 w-4 mr-2" />
+                                                        {t('viewer.start_training')}
+                                                    </Button>
+                                                </div>
+                                            )}
+
+                                            {article.linked_quiz_id && (
+                                                <div className="space-y-3">
+                                                    {article.linked_training_id && <div className="h-px bg-slate-100" />}
+                                                    <p className="text-xs text-slate-500 leading-relaxed font-medium">{t('viewer.quiz_hint')}</p>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl"
+                                                        onClick={() => navigate(`/learning/quizzes/${article.linked_quiz_id}/take`)}
+                                                    >
+                                                        <Lightbulb className="h-4 w-4 mr-2" />
+                                                        {t('viewer.take_quiz')}
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Related Articles */}
+                            {relatedArticles && relatedArticles.length > 0 && (
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{t('viewer.related')}</h4>
+                                    <RelatedArticles
+                                        articles={relatedArticles}
+                                        sourceId={article.id}
+                                    />
+                                </div>
+                            )}
+                        </aside>
                     )}
                 </div>
             </div>
 
-            {/* Readability Floating Controls */}
-            <div className="kb-control-panel flex items-center gap-1 print:hidden">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                        setIsFocusMode(!isFocusMode)
-                        toast.info(isFocusMode ? "Exited Focus Mode" : "Entered Focus Mode", { duration: 1500 })
-                    }}
-                    className={cn(
-                        "transition-all active:scale-90",
-                        isFocusMode && "text-hotel-gold bg-hotel-gold/10"
-                    )}
-                    title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
-                >
-                    {isFocusMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-                </Button>
-                <Separator orientation="vertical" className="h-6" />
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+            {/* Premium Floating Readability Toolbar */}
+            <div className={cn(
+                "kb-floating-toolbar fixed bottom-28 md:bottom-8 left-1/2 -translate-x-1/2 h-14 flex items-center px-1 py-1 rounded-2xl print:hidden z-50 transition-all duration-500 ease-out",
+                isFocusMode ? "ring-2 ring-indigo-500 ring-offset-4 ring-offset-slate-50" : "bg-white/80"
+            )}>
+                <div className="flex items-center">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            setIsFocusMode(!isFocusMode)
+                            toast.info(isFocusMode ? "Exited Focus Mode" : "Entered Focus Mode", { duration: 1500 })
+                        }}
+                        className={cn(
+                            "h-12 w-12 rounded-[14px] transition-all duration-300",
+                            isFocusMode ? "text-indigo-600 bg-indigo-50 scale-105" : "text-slate-500 hover:bg-slate-100"
+                        )}
+                        title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+                    >
+                        {isFocusMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+                    </Button>
+
+                    <Separator orientation="vertical" className="h-6 mx-1" />
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-12 w-12 rounded-[14px] text-slate-500 hover:bg-slate-100 transition-all"
+                            >
+                                <Type className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" className="w-64 p-5 rounded-2xl shadow-2xl border-slate-200/60 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('viewer.font_size', 'Font Size')}</p>
+                                        <span className="text-[10px] font-bold text-indigo-500 uppercase">{fontSize}</span>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
+                                        {(['sm', 'base', 'lg', 'xl'] as const).map((size) => (
+                                            <button
+                                                key={size}
+                                                onClick={() => setFontSize(size)}
+                                                className={cn(
+                                                    "py-2 rounded-lg text-[10px] font-black transition-all uppercase",
+                                                    fontSize === size ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                                                )}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('viewer.typeface', 'Typeface')}</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={() => setFontFamily('sans')}
+                                            className={cn(
+                                                "py-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1",
+                                                fontFamily === 'sans' ? "border-indigo-600 bg-indigo-50/50" : "border-slate-100 hover:border-slate-300"
+                                            )}
+                                        >
+                                            <span className="text-lg font-bold">Aa</span>
+                                            <span className="text-[10px] font-bold text-slate-500">SANS</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setFontFamily('serif')}
+                                            className={cn(
+                                                "py-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 font-serif",
+                                                fontFamily === 'serif' ? "border-indigo-600 bg-indigo-50/50" : "border-slate-100 hover:border-slate-300"
+                                            )}
+                                        >
+                                            <span className="text-lg font-bold italic">Aa</span>
+                                            <span className="text-[10px] font-bold text-slate-500">SERIF</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <Separator className="bg-slate-100" />
+
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('viewer.appearance', 'Appearance')}</p>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <button
+                                            onClick={() => setReaderTheme('light')}
+                                            className={cn(
+                                                "h-10 rounded-xl border-2 transition-all flex items-center justify-center",
+                                                readerTheme === 'light' ? "border-indigo-600 ring-2 ring-indigo-50 ring-offset-1" : "border-slate-100 bg-white"
+                                            )}
+                                        >
+                                            <div className="w-5 h-5 bg-white rounded-full border border-slate-200" title="Light" />
+                                        </button>
+                                        <button
+                                            onClick={() => setReaderTheme('sepia')}
+                                            className={cn(
+                                                "h-10 rounded-xl border-2 transition-all flex items-center justify-center",
+                                                readerTheme === 'sepia' ? "border-indigo-600 ring-2 ring-indigo-50 ring-offset-1" : "border-slate-100 bg-[#FDF6E3]"
+                                            )}
+                                        >
+                                            <div className="w-5 h-5 bg-[#FDF6E3] rounded-full border border-slate-200" title="Sepia" />
+                                        </button>
+                                        <button
+                                            onClick={() => setReaderTheme('dark')}
+                                            className={cn(
+                                                "h-10 rounded-xl border-2 transition-all flex items-center justify-center",
+                                                readerTheme === 'dark' ? "border-indigo-600 ring-2 ring-indigo-50 ring-offset-1" : "border-slate-100 bg-slate-900"
+                                            )}
+                                        >
+                                            <div className="w-5 h-5 bg-slate-900 rounded-full border border-slate-700" title="Dark" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <div className="hidden sm:flex items-center">
+                        <Separator orientation="vertical" className="h-6 mx-1" />
                         <Button
                             variant="ghost"
                             size="icon"
-                            title="Readability Settings"
-                            className="active:scale-90 transition-all"
+                            onClick={handleShare}
+                            className="h-12 w-12 rounded-[14px] text-slate-500 hover:bg-slate-100 transition-all"
+                            title="Share"
                         >
-                            <Type className="h-5 w-5" />
+                            <Share2 className="h-5 w-5" />
                         </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 p-4">
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Font Size</p>
-                                <div className="flex bg-gray-100 rounded-lg p-1">
-                                    {(['sm', 'base', 'lg', 'xl'] as const).map((size) => (
-                                        <button
-                                            key={size}
-                                            onClick={() => setFontSize(size)}
-                                            className={cn(
-                                                "flex-1 text-[10px] py-1.5 rounded-md transition-all uppercase",
-                                                fontSize === size ? "bg-white shadow-sm font-bold text-hotel-navy" : "text-gray-400 hover:text-gray-600"
-                                            )}
-                                        >
-                                            {size}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Font Family</p>
-                                <div className="flex bg-gray-100 rounded-lg p-1">
-                                    <button
-                                        onClick={() => setFontFamily('sans')}
-                                        className={cn(
-                                            "flex-1 text-[10px] py-1.5 rounded-md transition-all uppercase",
-                                            fontFamily === 'sans' ? "bg-white shadow-sm font-bold text-hotel-navy" : "text-gray-400 hover:text-gray-600"
-                                        )}
-                                    >
-                                        Sans
-                                    </button>
-                                    <button
-                                        onClick={() => setFontFamily('serif')}
-                                        className={cn(
-                                            "flex-1 text-[10px] py-1.5 rounded-md transition-all uppercase font-serif",
-                                            fontFamily === 'serif' ? "bg-white shadow-sm font-bold text-hotel-navy" : "text-gray-400 hover:text-gray-600"
-                                        )}
-                                    >
-                                        Serif
-                                    </button>
-                                </div>
-                            </div>
-                            <Separator />
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Reading Mode</p>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    <button onClick={() => setReaderTheme('light')} className={cn("h-8 rounded border flex items-center justify-center transition-all", readerTheme === 'light' ? "border-hotel-gold bg-hotel-gold/5" : "bg-white")}>
-                                        <span className="w-4 h-4 bg-white rounded-full border border-gray-200" />
-                                    </button>
-                                    <button onClick={() => setReaderTheme('sepia')} className={cn("h-8 rounded border flex items-center justify-center transition-all", readerTheme === 'sepia' ? "border-hotel-gold bg-hotel-gold/5" : "bg-[#f4ecd8]")}>
-                                        <span className="w-4 h-4 bg-[#f4ecd8] rounded-full border border-gray-200" />
-                                    </button>
-                                    <button onClick={() => setReaderTheme('dark')} className={cn("h-8 rounded border flex items-center justify-center transition-all", readerTheme === 'dark' ? "border-hotel-gold bg-hotel-gold/5" : "bg-gray-900")}>
-                                        <span className="w-4 h-4 bg-gray-900 rounded-full border border-gray-200" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handlePrint}
+                            className="h-12 w-12 rounded-[14px] text-slate-500 hover:bg-slate-100 transition-all"
+                            title="Print"
+                        >
+                            <Printer className="h-5 w-5" />
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     )
 }
+

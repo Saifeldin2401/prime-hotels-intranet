@@ -188,6 +188,8 @@ export default function ChangePassword() {
                                 <div className="relative">
                                     <Input
                                         id="current-password"
+                                        name="current-password"
+                                        autoComplete="current-password"
                                         type={showCurrentPassword ? "text" : "password"}
                                         value={currentPassword}
                                         onChange={(e) => setCurrentPassword(e.target.value)}
@@ -211,6 +213,8 @@ export default function ChangePassword() {
                             <div className="relative">
                                 <Input
                                     id="new-password"
+                                    name="new-password"
+                                    autoComplete="new-password"
                                     type={showNewPassword ? "text" : "password"}
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
@@ -232,6 +236,8 @@ export default function ChangePassword() {
                             <Label htmlFor="confirm-password">Confirm New Password</Label>
                             <Input
                                 id="confirm-password"
+                                name="confirm-password"
+                                autoComplete="new-password"
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}

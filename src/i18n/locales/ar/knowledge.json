@@ -376,23 +376,29 @@
         "translated": "Translated"
     },
     "search_page": {
-        "title": "البحث في قاعدة المعرفة",
-        "subtitle": "ابحث عن الإجراءات والسياسات والأدلة والمزيد",
-        "placeholder": "البحث في المقالات والإجراءات والسياسات...",
+        "title": "مكتبة المعرفة",
+        "subtitle": "البحث في الإجراءات التشغيلية والسياسات والأدلة",
+        "placeholder": "ابحث هنا...",
+        "trending": "الأكثر رواجاً",
+        "filters_label": "المرشحات",
+        "clear_filters": "مسح",
         "sort": {
             "relevance": "الملاءمة",
             "updated": "تم تحديثه مؤخراً",
             "views": "الأكثر مشاهدة",
-            "az": "العنوان (أ-ي)"
+            "az": "أ → ي"
         },
         "filters": {
             "all_categories": "كل الفئات",
             "all_departments": "كل الأقسام",
+            "content_type": "نوع المحتوى",
+            "department_label": "القسم",
+            "category_label": "الفئة",
             "clear_all": "مسح الكل",
             "clear_filters": "مسح المرشحات"
         },
         "results_count": "تم العثور على {{count}} مقال",
-        "no_results": "لم يتم العثور على مقالات",
+        "no_results": "لم يتم العثور على نتائج",
         "no_results_hint": "حاول تعديل البحث أو المرشحات"
     },
     "analytics": {

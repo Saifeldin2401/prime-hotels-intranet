@@ -71,5 +71,7 @@
     "select_property": "Select a property",
     "property": "Property / Hotel",
     "no_employees_found": "No Employees Found",
-    "select_assignee": "Select Assignee"
+    "select_assignee": "Select Assignee",
+    "overdue": "Overdue",
+    "drag_to_move": "Drag to move"
 }

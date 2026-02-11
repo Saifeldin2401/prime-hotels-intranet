@@ -7,7 +7,7 @@
  * - Collapsible navigation groups
  * - Dynamic badge counts
  * - Theme/language switcher
- * - Mobile responsive
+ * - Mobile responsive (Bottom Sheet Launcher)
  */
 
 import { useState, useEffect } from 'react'
@@ -86,7 +86,6 @@ export function SidebarNavigation({
   const { currentProperty } = useProperty()
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const isRTL = i18n.dir() === 'rtl'
-  const mobileClosedX = isRTL ? '100%' : '-100%'
 
   // Auto-expand groups with active items
   useEffect(() => {
@@ -95,9 +94,7 @@ export function SidebarNavigation({
       .map(group => group.config.id)
 
     setExpandedGroups(prev => {
-      // Only add groups that aren't already in prev to avoid infinite re-renders
       const newGroups = activeGroups.filter(id => !prev.includes(id))
-      // Only update state if there are ACTUALLY new groups to add
       if (newGroups.length === 0) return prev
       return [...prev, ...newGroups]
     })
@@ -122,21 +119,14 @@ export function SidebarNavigation({
 
   const handleDragEnd = (_: any, info: any) => {
     if (!isMobile) return
-
     const swipeThreshold = 50
-
-    if (isRTL) {
-      // RTL: Drag right (positive) to close
-      if (info.offset.x > swipeThreshold) onClose()
-    } else {
-      // LTR: Drag left (negative) to close
-      if (info.offset.x < -swipeThreshold) onClose()
+    if (info.offset.y > swipeThreshold) {
+      onClose()
     }
   }
 
   const renderNavItem = (item: NavigationItem) => {
     const Icon = item.icon
-    // Extract nav identifier for tour targeting (e.g., /admin/users -> users)
     const navId = item.path.split('/').filter(Boolean).pop() || item.path
 
     return (
@@ -146,40 +136,56 @@ export function SidebarNavigation({
         onClick={handleNavClick}
         data-nav={navId}
         className={cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",
+          "flex items-center gap-3 px-3 py-2.5 lg:py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",
+          isMobile && "flex-col justify-center text-center p-4 bg-white/5 border border-white/5",
           item.isActive
-            ? "bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-hotel-navy shadow-lg shadow-black/20"
-            : "text-gray-300 hover:bg-hotel-navy-light hover:text-white hover:shadow-inner",
-          collapsed && "justify-center px-0"
+            ? (isMobile
+              ? "bg-hotel-gold text-hotel-navy border-hotel-gold/30 shadow-lg shadow-hotel-gold/10"
+              : "bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-hotel-navy shadow-lg shadow-black/20")
+            : (isMobile
+              ? "text-gray-400 hover:text-white hover:bg-white/10"
+              : "text-gray-300 hover:bg-hotel-navy-light hover:text-white hover:shadow-inner"),
+          collapsed && !isMobile && "justify-center px-0"
         )}
-        title={collapsed ? t(item.title, { defaultValue: item.title }) : undefined}
+        title={collapsed && !isMobile ? t(item.title, { defaultValue: item.title }) : undefined}
       >
-        {/* Active indicator for collapsed mode */}
-        {item.isActive && collapsed && (
+        {item.isActive && collapsed && !isMobile && (
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-hotel-gold rounded-e-full" />
         )}
 
         <Icon className={cn(
-          "h-5 w-5 flex-shrink-0",
-          item.isActive ? "text-hotel-navy" : "text-white/60 group-hover:text-hotel-gold transition-colors"
+          "h-5 w-5 lg:h-5 lg:w-5 flex-shrink-0",
+          isMobile && "h-7 w-7 mb-1",
+          item.isActive
+            ? "text-hotel-navy"
+            : (isMobile ? "text-white/80" : "text-white/60 group-hover:text-hotel-gold transition-colors")
         )} />
 
         <AnimatePresence>
-          {!collapsed && (
+          {(!collapsed || isMobile) && (
             <motion.div
               variants={sidebarItemVariants}
               initial="hidden"
               animate="visible"
               exit="hidden"
-              className="flex-1 flex items-center min-w-0 overflow-hidden"
+              className={cn(
+                "flex-1 flex items-center min-w-0 overflow-hidden",
+                isMobile && "flex-col w-full"
+              )}
             >
-              <span className="flex-1 tracking-wide truncate">
+              <span className={cn(
+                "flex-1 tracking-wide truncate",
+                isMobile && "text-[11px] font-bold uppercase tracking-tighter"
+              )}>
                 {t(item.title, { defaultValue: item.title.split('.').pop() })}
               </span>
               {item.badgeCount && item.badgeCount > 0 && (
                 <Badge className={cn(
                   "ms-auto text-[10px] h-5 px-1.5 font-bold min-w-[20px] justify-center",
-                  item.isActive ? "bg-hotel-navy/20 text-hotel-navy" : "bg-hotel-gold text-hotel-navy"
+                  isMobile && "absolute top-2 right-2",
+                  item.isActive
+                    ? "bg-hotel-navy/20 text-hotel-navy"
+                    : "bg-hotel-gold text-hotel-navy"
                 )}>
                   {item.badgeCount > 99 ? '99+' : item.badgeCount}
                 </Badge>
@@ -198,7 +204,6 @@ export function SidebarNavigation({
 
     return (
       <div key={group.config.id} className="mb-2">
-        {/* Group Header */}
         {group.config.collapsible ? (
           <button
             onClick={() => toggleGroup(group.config.id)}
@@ -242,7 +247,10 @@ export function SidebarNavigation({
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
-                className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 whitespace-nowrap overflow-hidden"
+                className={cn(
+                  "px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 whitespace-nowrap overflow-hidden",
+                  isMobile && "text-hotel-gold mt-6 border-b border-white/5 pb-1 mb-2"
+                )}
               >
                 {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
               </motion.div>
@@ -250,11 +258,11 @@ export function SidebarNavigation({
           </AnimatePresence>
         )}
 
-        {/* Group Items */}
         {(isExpanded || collapsed) && (
           <div className={cn(
             "space-y-1",
-            !collapsed && group.config.collapsible && "mt-1 ms-2 ps-2 border-s border-white/10"
+            !collapsed && group.config.collapsible && "mt-1 ms-2 ps-2 border-s border-white/10",
+            isMobile && "grid grid-cols-2 gap-3 mt-3 px-1 border-none ms-0 ps-0"
           )}>
             {group.items.map(renderNavItem)}
           </div>
@@ -265,7 +273,6 @@ export function SidebarNavigation({
 
   return (
     <>
-      {/* Mobile overlay */}
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-[998] lg:hidden animate-fade-in"
@@ -273,49 +280,52 @@ export function SidebarNavigation({
         />
       )}
 
-      {/* Sidebar */}
       <motion.div
-        drag={isMobile && isOpen ? "x" : false}
-        dragConstraints={{ left: 0, right: 0 }}
+        drag={isMobile && isOpen ? "y" : false}
+        dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.1}
         onDragEnd={handleDragEnd}
-        animate={isMobile ? { x: isOpen ? 0 : mobileClosedX } : { x: 0 }}
-        initial={false}
-        transition={{ type: "tween", duration: 0.3, ease: "easeInOut" }}
+        animate={isMobile ? { y: isOpen ? 0 : '100%' } : { x: 0 }}
+        initial={isMobile ? { y: '100%' } : false}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className={cn(
-          "fixed inset-y-0 z-[999] bg-hotel-navy text-white shadow-2xl",
-          "start-0 border-e border-hotel-navy-dark",
-          isMobile ? "lg:hidden w-[85vw] max-w-[320px]" : "hidden lg:block w-[280px]",
-          collapsed && !isMobile && "lg:w-20"
+          "fixed z-[1001] bg-hotel-navy text-white shadow-2xl overflow-hidden",
+          isMobile
+            ? "inset-x-0 bottom-0 h-[85vh] rounded-t-[2.5rem] border-t border-white/10 bg-[#0a0f1d]/95 backdrop-blur-xl"
+            : "inset-y-0 start-0 w-[280px] border-e border-hotel-navy-dark block",
+          collapsed && !isMobile && "lg:w-20",
+          !isMobile && !isOpen && "hidden lg:block",
+          isMobile && !isOpen && "pointer-events-none"
         )}>
         <div className="flex h-full flex-col">
-          {/* Header */}
+          {isMobile && (
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+            </div>
+          )}
+
           <div className={cn(
             "flex h-20 items-center justify-center relative px-6 border-b border-hotel-navy-dark bg-hotel-navy",
-            collapsed && "px-0 h-16"
+            collapsed && "px-0 h-16",
+            isMobile && "h-14 border-none bg-transparent"
           )}>
-            <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute left-1/2 transform -translate-x-1/2")}>
-              <img
-                src="/prime-logo-light.png"
-                alt="Prime Hotels"
-                className={cn("w-auto transition-all duration-300", collapsed ? "h-8" : "h-14")}
-              />
-              {!collapsed && (
-                <div className="animate-fade-in sr-only">
-                  <h1 className="text-lg font-bold text-white tracking-wide font-serif">
-                    Prime Hotels
-                  </h1>
-                </div>
-              )}
-            </div>
+            {!isMobile && (
+              <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute left-1/2 transform -translate-x-1/2")}>
+                <img
+                  src="/prime-logo-light.png"
+                  alt="Prime Hotels"
+                  className={cn("w-auto transition-all duration-300", collapsed ? "h-8" : "h-14")}
+                />
+              </div>
+            )}
             {isMobile && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="absolute right-4 text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors"
+                className="absolute right-6 top-0 text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </Button>
             )}
             {!isMobile && !collapsed && onToggleCollapse && (
@@ -331,7 +341,6 @@ export function SidebarNavigation({
             )}
           </div>
 
-          {/* User Profile Summary - Enhanced with Avatar & Quick Actions */}
           {!collapsed && (
             <div className="px-4 py-3">
               <DropdownMenu>
@@ -353,7 +362,10 @@ export function SidebarNavigation({
                     </div>
 
                     <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-semibold text-white truncate font-serif tracking-wide group-hover:text-hotel-gold transition-colors">
+                      <p className={cn(
+                        "text-sm font-semibold text-white truncate font-serif tracking-wide group-hover:text-hotel-gold transition-colors",
+                        isMobile && "text-base font-sans font-bold"
+                      )}>
                         {profile?.full_name || 'Guest User'}
                       </p>
                       <div className="flex flex-col gap-0.5">
@@ -368,7 +380,11 @@ export function SidebarNavigation({
                         )}
                       </div>
                     </div>
-                    <ChevronsUpDown className="h-4 w-4 text-white/40 group-hover:text-white transition-colors" />
+                    {isMobile ? (
+                      <div className="p-1 px-2 rounded-full bg-white/5 text-[10px] text-white/40 uppercase tracking-tighter">Profile</div>
+                    ) : (
+                      <ChevronsUpDown className="h-4 w-4 text-white/40 group-hover:text-white transition-colors" />
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -478,12 +494,10 @@ export function SidebarNavigation({
             </div>
           )}
 
-          {/* Navigation */}
           <nav id="sidebar-nav" className="flex-1 px-3 py-2 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
             {groupedNavigation.map(renderGroup)}
           </nav>
 
-          {/* Footer */}
           <div className={cn(
             "p-4 border-t border-hotel-navy-dark space-y-3 bg-hotel-navy-dark",
             collapsed && "p-2 items-center flex flex-col"

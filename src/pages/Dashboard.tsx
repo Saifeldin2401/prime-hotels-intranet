@@ -64,8 +64,8 @@ export default function Dashboard() {
           </motion.p>
         </div>
         <Button variant="outline" size="sm" onClick={startTour} className="hidden sm:flex">
-          <HelpCircle className="w-4 h-4 mr-2" />
-          Take Tour
+          <HelpCircle className="w-4 h-4 me-2" />
+          {t('take_tour', 'Take Tour')}
         </Button>
       </div>
 

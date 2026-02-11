@@ -108,8 +108,10 @@ export function LoginForm() {
             </div>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder={t('email_placeholder')}
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -135,8 +137,10 @@ export function LoginForm() {
             </div>
             <Input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
               placeholder={t('password_placeholder')}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

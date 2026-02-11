@@ -64,12 +64,14 @@
     },
     "cancelled": "ملغاة",
     "messages": {
-        "task_updated": "???? Updated",
-        "task_created": "???? Created"
+        "task_updated": "تم تحديث المهمة",
+        "task_created": "تم إنشاء المهمة"
     },
-    "assign_to": "Assign To",
-    "select_property": "Select a ?????",
-    "property": "????? / Hotel",
-    "no_employees_found": "?? ???????? Found",
-    "select_assignee": "Select Assignee"
+    "assign_to": "تعيين إلى",
+    "select_property": "اختر المنشأة",
+    "property": "المنشأة / الفندق",
+    "no_employees_found": "لم يتم العثور على موظفين",
+    "select_assignee": "اختر الموظف المكلف",
+    "overdue": "متأخر",
+    "drag_to_move": "اسحب للنقل"
 }

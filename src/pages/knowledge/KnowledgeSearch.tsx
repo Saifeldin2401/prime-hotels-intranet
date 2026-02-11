@@ -1,15 +1,14 @@
 /**
- * KnowledgeSearch
- * 
- * Full-text search page for Knowledge Base with filters and sorting.
+ * KnowledgeSearch — Knowledge Library Search Page (Full Redesign)
+ * Premium search + filter experience to match the redesigned KnowledgeHome.
  */
 
 import { useState, useMemo, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
     Search,
-    Filter,
     X,
     FileText,
     BookOpen,
@@ -19,23 +18,24 @@ import {
     Image,
     ClipboardList,
     Link2,
-    ChevronDown,
-    Grid3X3,
     List,
+    LayoutGrid,
     Clock,
     Eye,
     Star,
-    Bookmark,
     ArrowUpDown,
-    Sparkles,
     Loader2,
-    ChevronRight
+    ChevronRight,
+    ShieldCheck,
+    SlidersHorizontal,
+    ArrowLeft,
+    Building2,
+    Sparkles
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import {
     Select,
     SelectContent,
@@ -43,79 +43,107 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuCheckboxItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useArticles, useCategories } from '@/hooks/useKnowledge'
 import { useDepartments } from '@/hooks/useDepartments'
 import type { KnowledgeContentType } from '@/types/knowledge'
 
-const CONTENT_TYPE_CONFIG: Record<KnowledgeContentType, { icon: any; label: string; color: string }> = {
-    sop: { icon: ClipboardList, label: 'SOP', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-    policy: { icon: FileText, label: 'Policy', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-    guide: { icon: BookOpen, label: 'Guide', color: 'bg-green-100 text-green-700 border-green-200' },
-    checklist: { icon: CheckSquare, label: 'Checklist', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-    reference: { icon: Link2, label: 'Reference', color: 'bg-gray-100 text-gray-700 border-gray-200' },
-    faq: { icon: HelpCircle, label: 'FAQ', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-    video: { icon: Video, label: 'Video', color: 'bg-red-100 text-red-700 border-red-200' },
-    visual: { icon: Image, label: 'Visual', color: 'bg-pink-100 text-pink-700 border-pink-200' },
-    document: { icon: FileText, label: 'Document', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+/* ─── Type Configuration ───────────────────────────────────── */
+const TYPE_CONFIG: Record<KnowledgeContentType, {
+    icon: React.ElementType
+    label: string
+    gradient: string
+    accent: string
+    bg: string
+    text: string
+    ring: string
+}> = {
+    sop: { icon: ClipboardList, label: 'SOP', gradient: 'from-blue-500 to-blue-600', accent: 'text-blue-600', bg: 'bg-blue-50', text: 'text-blue-700', ring: 'ring-blue-200' },
+    policy: { icon: ShieldCheck, label: 'Policy', gradient: 'from-violet-500 to-purple-600', accent: 'text-violet-600', bg: 'bg-violet-50', text: 'text-violet-700', ring: 'ring-violet-200' },
+    guide: { icon: BookOpen, label: 'Guide', gradient: 'from-emerald-500 to-teal-600', accent: 'text-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-200' },
+    checklist: { icon: CheckSquare, label: 'Checklist', gradient: 'from-amber-500 to-orange-500', accent: 'text-amber-600', bg: 'bg-amber-50', text: 'text-amber-700', ring: 'ring-amber-200' },
+    reference: { icon: Link2, label: 'Reference', gradient: 'from-slate-500 to-gray-600', accent: 'text-slate-600', bg: 'bg-slate-50', text: 'text-slate-700', ring: 'ring-slate-200' },
+    faq: { icon: HelpCircle, label: 'FAQ', gradient: 'from-sky-500 to-cyan-500', accent: 'text-sky-600', bg: 'bg-sky-50', text: 'text-sky-700', ring: 'ring-sky-200' },
+    video: { icon: Video, label: 'Video', gradient: 'from-rose-500 to-red-600', accent: 'text-rose-600', bg: 'bg-rose-50', text: 'text-rose-700', ring: 'ring-rose-200' },
+    visual: { icon: Image, label: 'Visual', gradient: 'from-pink-500 to-fuchsia-500', accent: 'text-pink-600', bg: 'bg-pink-50', text: 'text-pink-700', ring: 'ring-pink-200' },
+    document: { icon: FileText, label: 'Document', gradient: 'from-gray-500 to-gray-600', accent: 'text-gray-600', bg: 'bg-gray-100', text: 'text-gray-700', ring: 'ring-gray-200' },
 }
 
+/* ─── Helpers ──────────────────────────────────────────────── */
+function readTime(content?: string): number {
+    if (!content) return 2
+    return Math.max(1, Math.round(content.split(/\s+/).length / 200))
+}
+
+function timeAgo(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const days = Math.floor(diff / 86400000)
+    if (days === 0) return 'Today'
+    if (days === 1) return 'Yesterday'
+    if (days < 7) return `${days}d ago`
+    if (days < 30) return `${Math.floor(days / 7)}w ago`
+    return `${Math.floor(days / 30)}mo ago`
+}
+
+const fadeUp = {
+    hidden: { opacity: 0, y: 12 },
+    visible: (i: number) => ({
+        opacity: 1, y: 0,
+        transition: { delay: i * 0.04, duration: 0.35, ease: 'easeOut' as const }
+    })
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
 export default function KnowledgeSearch() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const isRTL = i18n.dir() === 'rtl'
+    const [searchParams] = useSearchParams()
 
-    const [searchQuery, setSearchQuery] = useState('')
-    const [selectedTypes, setSelectedTypes] = useState<KnowledgeContentType[]>([])
+    /* State */
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+    const [selectedTypes, setSelectedTypes] = useState<KnowledgeContentType[]>(
+        searchParams.get('type') ? [searchParams.get('type') as KnowledgeContentType] : []
+    )
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
-    const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
-    const [sortBy, setSortBy] = useState('relevance')
+    const [selectedDepartment, setSelectedDepartment] = useState<string>(searchParams.get('department') || 'all')
+    const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'relevance')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+    const [showFilters, setShowFilters] = useState(false)
 
     const SORT_OPTIONS = [
-        { value: 'relevance', label: t('search_page.sort.relevance') },
-        { value: 'updated', label: t('search_page.sort.updated') },
-        { value: 'views', label: t('search_page.sort.views') },
-        { value: 'title', label: t('search_page.sort.az') },
+        { value: 'relevance', label: t('search_page.sort.relevance', 'Relevance') },
+        { value: 'updated', label: t('search_page.sort.updated', 'Recently Updated') },
+        { value: 'views', label: t('search_page.sort.views', 'Most Viewed') },
+        { value: 'title', label: t('search_page.sort.az', 'A → Z') },
     ]
 
+    /* Data */
     const { data: articles, isLoading } = useArticles({
         search: searchQuery || undefined,
         type: selectedTypes.length === 1 ? selectedTypes[0] : undefined,
         limit: 50
     })
-
     const { data: categories } = useCategories()
     const { departments } = useDepartments()
 
-    // Filter articles client-side for multi-type filtering
+    /* Filter + sort */
     const filteredArticles = useMemo(() => {
         if (!articles) return []
-
         let filtered = [...articles]
 
-        // Filter by multiple types
         if (selectedTypes.length > 0) {
             filtered = filtered.filter(a => selectedTypes.includes(a.content_type as KnowledgeContentType))
         }
-
-        // Filter by category
         if (selectedCategory !== 'all') {
             filtered = filtered.filter(a => a.category_id === selectedCategory)
         }
-
-        // Filter by department
         if (selectedDepartment !== 'all') {
             filtered = filtered.filter(a => a.department_id === selectedDepartment)
         }
 
-        // Sort
         switch (sortBy) {
             case 'updated':
                 filtered.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
@@ -127,15 +155,18 @@ export default function KnowledgeSearch() {
                 filtered.sort((a, b) => a.title.localeCompare(b.title))
                 break
         }
-
         return filtered
     }, [articles, selectedTypes, selectedCategory, selectedDepartment, sortBy])
 
+    /* Trending (when no search) */
+    const trendingArticles = useMemo(() => {
+        if (!articles || searchQuery) return []
+        return [...articles].sort((a, b) => (b.view_count || 0) - (a.view_count || 0)).slice(0, 4)
+    }, [articles, searchQuery])
+
     const toggleTypeFilter = useCallback((type: KnowledgeContentType) => {
         setSelectedTypes(prev =>
-            prev.includes(type)
-                ? prev.filter(t => t !== type)
-                : [...prev, type]
+            prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
         )
     }, [])
 
@@ -147,326 +178,463 @@ export default function KnowledgeSearch() {
         setSearchQuery('')
     }
 
-    const hasActiveFilters = selectedTypes.length > 0 || selectedCategory !== 'all' || selectedDepartment !== 'all' || searchQuery.length > 0
+    const hasActiveFilters = selectedTypes.length > 0 || selectedCategory !== 'all' || selectedDepartment !== 'all'
+    const activeFilterCount = selectedTypes.length + (selectedCategory !== 'all' ? 1 : 0) + (selectedDepartment !== 'all' ? 1 : 0)
 
-    // Get trending articles (most viewed)
-    const trendingArticles = useMemo(() => {
-        if (!articles) return []
-        return [...articles]
-            .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
-            .slice(0, 4)
-    }, [articles])
-
+    /* ─── Render ─────────────────────────────────────────────── */
     return (
-        <div className="space-y-8 pb-20">
-            {/* Hero Search Section */}
-            <div className="relative overflow-hidden rounded-3xl bg-hotel-navy text-white px-8 py-16 mb-8">
-                <div className="absolute top-0 right-0 p-8 opacity-10">
-                    <BookOpen className="h-64 w-64 rotate-12" />
-                </div>
+        <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-slate-50 to-white pb-16">
 
-                <div className="relative z-10 max-w-2xl mx-auto text-center">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-                        {t('search_page.title', 'Knowledge Library')}
-                    </h1>
-                    <p className="text-blue-100 text-lg mb-8 opacity-90">
-                        {t('search_page.subtitle', 'Search standard operating procedures, policies, and guides.')}
-                    </p>
+            {/* ═══ HEADER ══════════════════════════════════════════ */}
+            <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950" />
+                <div className="absolute top-1/2 start-1/3 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/8 rounded-full blur-[100px]" />
+                <div className="absolute inset-0 opacity-[0.02]" style={{
+                    backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+                    backgroundSize: '40px 40px'
+                }} />
 
-                    <div className="relative group">
-                        <Search className={cn(
-                            "absolute top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400 group-focus-within:text-hotel-gold transition-colors",
-                            isRTL ? "right-4" : "left-4"
-                        )} />
-                        <Input
-                            type="text"
-                            placeholder={t('search_page.placeholder', 'Type to search... (SOP, Policy, Guide)')}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className={cn(
-                                "h-16 text-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:bg-white focus:text-gray-900 rounded-2xl transition-all shadow-2xl backdrop-blur-md",
-                                isRTL ? "pr-12" : "pl-12"
-                            )}
-                        />
-                        {searchQuery && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn("absolute top-1/2 -translate-y-1/2 h-8 w-8 p-0 text-white/60 hover:text-white", isRTL ? "left-3" : "right-3")}
-                                onClick={() => setSearchQuery('')}
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </div>
+                <div className="relative container mx-auto px-4 md:px-6 pt-8 pb-16 md:pt-10 md:pb-20">
+                    {/* Back link */}
+                    <Link to="/knowledge" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors">
+                        <ArrowLeft className="w-4 h-4" />
+                        {t('title')}
+                    </Link>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="max-w-2xl"
+                    >
+                        <h1 className="text-2xl md:text-4xl font-extrabold text-white mb-3 tracking-tight">
+                            {t('search_page.title', 'Knowledge Library')}
+                        </h1>
+                        <p className="text-white/40 text-sm md:text-base mb-8">
+                            {t('search_page.subtitle', 'Search standard operating procedures, policies, and guides')}
+                        </p>
+                    </motion.div>
+
+                    {/* Search Bar */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.15 }}
+                        className="max-w-2xl"
+                    >
+                        <div className="relative group">
+                            <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-indigo-500/20 via-violet-500/20 to-purple-500/20 opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 blur-sm" />
+                            <div className="relative flex items-center bg-white/[0.07] backdrop-blur-xl border border-white/[0.1] rounded-2xl px-5 py-1 focus-within:bg-white/[0.12] transition-colors">
+                                <Search className="w-5 h-5 text-white/30 shrink-0" />
+                                <Input
+                                    type="text"
+                                    placeholder={t('search_page.placeholder', 'Type to search...')}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="border-0 shadow-none focus-visible:ring-0 text-base md:text-lg py-5 text-white placeholder:text-white/25 bg-transparent flex-1"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="text-white/30 hover:text-white/60 transition-colors p-1"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
 
-            {/* Trending / Featured Carousel */}
-            {!searchQuery && trendingArticles.length > 0 && (
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-hotel-navy flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-hotel-gold" />
-                            {t('search_page.trending', 'Trending Articles')}
+            <div className="container mx-auto px-4 md:px-6 -mt-6 relative z-10">
+
+                {/* ═══ TRENDING (when no search) ═══════════════════ */}
+                {!searchQuery && trendingArticles.length > 0 && (
+                    <motion.section
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-8"
+                    >
+                        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-amber-400" />
+                            {t('search_page.trending', 'Trending')}
                         </h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {trendingArticles.map(article => (
-                            <Link key={article.id} to={`/knowledge/${article.id}`}>
-                                <Card className="h-full hover:shadow-xl hover:-translate-y-1 transition-all border-none bg-hotel-gold/5 group">
-                                    <CardContent className="p-5 flex flex-col h-full">
-                                        <div className="flex items-center gap-2 mb-3 text-hotel-gold">
-                                            <Star className="h-4 w-4 fill-current" />
-                                            <span className="text-[10px] font-bold uppercase tracking-wider">{t(`content_types.${article.content_type}`)}</span>
-                                        </div>
-                                        <h3 className="font-bold text-hotel-navy group-hover:text-hotel-gold line-clamp-2 mb-2">{article.title}</h3>
-                                        <div className="mt-auto pt-4 flex items-center justify-between text-[10px] text-gray-400">
-                                            <span className="flex items-center gap-1">
-                                                <Eye className="h-3 w-3" />
-                                                {article.view_count} views
-                                            </span>
-                                            <span>{new Date(article.updated_at).toLocaleDateString()}</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 pt-8">
-                {/* Sidebar Filters */}
-                <div className="lg:col-span-1 space-y-8">
-                    <div className="space-y-6">
-                        {/* Type Filters */}
-                        <div>
-                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Content Types</h3>
-                            <div className="space-y-1">
-                                {Object.entries(CONTENT_TYPE_CONFIG).map(([type, config]) => {
-                                    const Icon = config.icon
-                                    const isActive = selectedTypes.includes(type as KnowledgeContentType)
-
-                                    return (
-                                        <button
-                                            key={type}
-                                            onClick={() => toggleTypeFilter(type as KnowledgeContentType)}
-                                            className={cn(
-                                                "flex items-center justify-between w-full px-3 py-2 rounded-xl text-sm transition-all",
-                                                isActive
-                                                    ? "bg-hotel-navy text-white font-medium shadow-lg shadow-hotel-navy/20"
-                                                    : "text-gray-600 hover:bg-gray-100"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn("p-1.5 rounded-lg", !isActive && config.color)}>
-                                                    <Icon className="h-4 w-4" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            {trendingArticles.map((article, idx) => {
+                                const cfg = TYPE_CONFIG[article.content_type as KnowledgeContentType] || TYPE_CONFIG.document
+                                const Icon = cfg.icon
+                                return (
+                                    <motion.div key={article.id} custom={idx} variants={fadeUp} initial="hidden" animate="visible">
+                                        <Link to={`/knowledge/${article.id}`} className="group block">
+                                            <div className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 p-4 hover:shadow-md transition-all group-hover:-translate-y-0.5 h-full">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center', cfg.bg)}>
+                                                        <Icon className={cn('w-3.5 h-3.5', cfg.accent)} />
+                                                    </div>
+                                                    <span className={cn('text-[10px] font-bold uppercase tracking-wider', cfg.accent)}>
+                                                        {t(`content_types.${article.content_type}`, cfg.label)}
+                                                    </span>
                                                 </div>
-                                                {t(`content_types.${type}`, config.label)}
+                                                <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2 mb-3 leading-snug">
+                                                    {article.title}
+                                                </h3>
+                                                <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                                                    {article.view_count > 0 && (
+                                                        <span className="flex items-center gap-1">
+                                                            <Eye className="w-3 h-3" /> {article.view_count}
+                                                        </span>
+                                                    )}
+                                                    <span>{timeAgo(article.updated_at)}</span>
+                                                </div>
                                             </div>
-                                            {isActive && <CheckSquare className="h-3.5 w-3.5" />}
-                                        </button>
-                                    )
-                                })}
-                            </div>
+                                        </Link>
+                                    </motion.div>
+                                )
+                            })}
                         </div>
+                    </motion.section>
+                )}
 
-                        {/* Dropdown Filters */}
-                        <div className="space-y-4 pt-4 border-t border-gray-100">
-                            <div>
-                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Department</h3>
-                                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                                    <SelectTrigger className="w-full bg-white border-gray-200">
-                                        <SelectValue placeholder={t('search_page.filters.all_departments')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('search_page.filters.all_departments')}</SelectItem>
-                                        {departments?.map(dept => (
-                                            <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div>
-                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Category</h3>
-                                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                    <SelectTrigger className="w-full bg-white border-gray-200">
-                                        <SelectValue placeholder={t('search_page.filters.all_categories')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('search_page.filters.all_categories')}</SelectItem>
-                                        {categories?.map(cat => (
-                                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        {hasActiveFilters && (
-                            <Button variant="outline" className="w-full border-dashed border-gray-300 text-gray-500 hover:text-hotel-navy" onClick={clearFilters}>
-                                <X className="h-4 w-4 mr-2" />
-                                Reset All Filters
-                            </Button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Main Content Areas */}
-                <div className="lg:col-span-3 space-y-6">
-                    {/* Toolbar */}
-                    <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm font-medium text-gray-900">
-                                {t('search_page.results_count', { count: filteredArticles.length })}
+                {/* ═══ TOOLBAR ═════════════════════════════════════ */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-6">
+                    <div className="flex items-center justify-between px-5 py-3.5 gap-4">
+                        {/* Left: Result count + filter toggle */}
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-gray-800">
+                                {isLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-gray-400 inline" />
+                                ) : (
+                                    t('search_page.results_count', { count: filteredArticles.length })
+                                )}
                             </span>
-                            {isLoading && <Loader2 className="h-4 w-4 animate-spin text-hotel-gold" />}
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={cn(
+                                    'inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all border',
+                                    showFilters || hasActiveFilters
+                                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                        : 'bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100'
+                                )}
+                            >
+                                <SlidersHorizontal className="w-3.5 h-3.5" />
+                                {t('search_page.filters_label', 'Filters')}
+                                {activeFilterCount > 0 && (
+                                    <span className="bg-indigo-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
+                            </button>
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={clearFilters}
+                                    className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                                >
+                                    <X className="w-3 h-3" /> {t('search_page.clear_filters', 'Clear')}
+                                </button>
+                            )}
                         </div>
 
-                        <div className="flex gap-2">
+                        {/* Right: Sort + view toggle */}
+                        <div className="flex items-center gap-2">
                             <Select value={sortBy} onValueChange={setSortBy}>
-                                <SelectTrigger className="w-[160px] h-9 text-xs">
-                                    <ArrowUpDown className="h-3.5 w-3.5 mr-2" />
+                                <SelectTrigger className="w-[150px] h-8 text-xs border-gray-200 bg-gray-50">
+                                    <ArrowUpDown className="w-3 h-3 me-1.5 text-gray-400" />
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {SORT_OPTIONS.map(option => (
-                                        <SelectItem key={option.value} value={option.value} className="text-xs">
-                                            {option.label}
-                                        </SelectItem>
+                                    {SORT_OPTIONS.map(opt => (
+                                        <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
 
-                            <div className="flex bg-gray-100 p-1 rounded-lg">
-                                <Button
-                                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    className="h-7 px-2 rounded-md"
+                            <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                                <button
                                     onClick={() => setViewMode('list')}
+                                    className={cn(
+                                        'p-1.5 rounded-md transition-colors',
+                                        viewMode === 'list' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'
+                                    )}
                                 >
-                                    <List className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    className="h-7 px-2 rounded-md"
+                                    <List className="w-3.5 h-3.5" />
+                                </button>
+                                <button
                                     onClick={() => setViewMode('grid')}
+                                    className={cn(
+                                        'p-1.5 rounded-md transition-colors',
+                                        viewMode === 'grid' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'
+                                    )}
                                 >
-                                    <Grid3X3 className="h-4 w-4" />
-                                </Button>
+                                    <LayoutGrid className="w-3.5 h-3.5" />
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Results */}
-                    {isLoading ? (
-                        <div className={cn(
-                            viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'
-                        )}>
-                            {[1, 2, 3, 4, 5, 6].map(i => (
-                                <Card key={i} className="animate-pulse">
-                                    <CardContent className="p-4 flex gap-4">
-                                        <Skeleton className="h-12 w-12 rounded-xl" />
-                                        <div className="flex-1 space-y-2">
-                                            <Skeleton className="h-4 w-3/4" />
-                                            <Skeleton className="h-3 w-1/2" />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : filteredArticles.length === 0 ? (
-                        <div className="bg-white rounded-3xl border-2 border-dashed border-gray-100 py-20 text-center">
-                            <div className="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Search className="h-10 w-10 text-gray-300" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">{t('search_page.no_results')}</h3>
-                            <p className="text-gray-500 max-w-xs mx-auto">{t('search_page.no_results_hint')}</p>
-                        </div>
-                    ) : (
-                        <div className={cn(
-                            viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4'
-                        )}>
-                            {filteredArticles.map(article => {
-                                const typeConfig = CONTENT_TYPE_CONFIG[article.content_type as KnowledgeContentType] || CONTENT_TYPE_CONFIG.sop
-                                const Icon = typeConfig.icon
-                                const typeLabel = t(`content_types.${article.content_type}`, typeConfig.label)
-
-                                if (viewMode === 'grid') {
-                                    return (
-                                        <Link key={article.id} to={`/knowledge/${article.id}`}>
-                                            <Card className="group hover:shadow-2xl hover:border-hotel-gold/30 transition-all cursor-pointer h-full border-none shadow-sm flex flex-col">
-                                                <CardContent className="p-6 flex flex-col h-full">
-                                                    <div className="flex items-start justify-between mb-4">
-                                                        <div className={cn("p-3 rounded-2xl transition-transform group-hover:scale-110", typeConfig.color)}>
-                                                            <Icon className="h-6 w-6" />
-                                                        </div>
-                                                        {article.featured && <Star className="h-4 w-4 text-hotel-gold fill-current" />}
-                                                    </div>
-                                                    <h3 className="font-bold text-xl text-hotel-navy group-hover:text-hotel-gold transition-colors mb-2 line-clamp-2">
-                                                        {article.title}
-                                                    </h3>
-                                                    {article.description && (
-                                                        <p className="text-sm text-gray-500 line-clamp-3 mb-6">
-                                                            {article.description}
-                                                        </p>
-                                                    )}
-                                                    <div className="mt-auto pt-6 border-t border-gray-50 flex items-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                                        <span className="text-hotel-gold">{typeLabel}</span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Clock className="h-3 w-3" />
-                                                            {new Date(article.updated_at).toLocaleDateString()}
-                                                        </span>
-                                                        {article.view_count !== undefined && article.view_count > 0 && (
-                                                            <span className="flex items-center gap-1">
-                                                                <Eye className="h-3 w-3" />
-                                                                {article.view_count}
-                                                            </span>
+                    {/* ── Expandable Filter Panel ──────────────────── */}
+                    <AnimatePresence>
+                        {showFilters && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="border-t border-gray-100 px-5 py-4 space-y-5">
+                                    {/* Type pills */}
+                                    <div>
+                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                                            {t('search_page.filters.content_type', 'Content Type')}
+                                        </h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {Object.entries(TYPE_CONFIG).map(([type, cfg]) => {
+                                                const Icon = cfg.icon
+                                                const isActive = selectedTypes.includes(type as KnowledgeContentType)
+                                                return (
+                                                    <button
+                                                        key={type}
+                                                        onClick={() => toggleTypeFilter(type as KnowledgeContentType)}
+                                                        className={cn(
+                                                            'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border',
+                                                            isActive
+                                                                ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                                                                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                         )}
+                                                    >
+                                                        <Icon className="w-3.5 h-3.5" />
+                                                        {t(`content_types.${type}`, cfg.label)}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Department + Category row */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                                {t('search_page.filters.department_label', 'Department')}
+                                            </h3>
+                                            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                                                <SelectTrigger className="w-full h-9 text-xs bg-white border-gray-200">
+                                                    <Building2 className="w-3.5 h-3.5 me-2 text-gray-400" />
+                                                    <SelectValue placeholder={t('search_page.filters.all_departments')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">{t('search_page.filters.all_departments', 'All Departments')}</SelectItem>
+                                                    {departments?.map(dept => (
+                                                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                                {t('search_page.filters.category_label', 'Category')}
+                                            </h3>
+                                            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                                                <SelectTrigger className="w-full h-9 text-xs bg-white border-gray-200">
+                                                    <SelectValue placeholder={t('search_page.filters.all_categories')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">{t('search_page.filters.all_categories', 'All Categories')}</SelectItem>
+                                                    {categories?.map(cat => (
+                                                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Active filter chips */}
+                    {hasActiveFilters && !showFilters && (
+                        <div className="border-t border-gray-50 px-5 py-2.5 flex flex-wrap gap-2">
+                            {selectedTypes.map(type => {
+                                const cfg = TYPE_CONFIG[type]
+                                return (
+                                    <button
+                                        key={type}
+                                        onClick={() => toggleTypeFilter(type)}
+                                        className={cn(
+                                            'inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors',
+                                            cfg.bg, cfg.text
+                                        )}
+                                    >
+                                        {t(`content_types.${type}`, cfg.label)}
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )
+                            })}
+                            {selectedDepartment !== 'all' && (
+                                <button
+                                    onClick={() => setSelectedDepartment('all')}
+                                    className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700"
+                                >
+                                    {departments?.find(d => d.id === selectedDepartment)?.name}
+                                    <X className="w-3 h-3" />
+                                </button>
+                            )}
+                            {selectedCategory !== 'all' && (
+                                <button
+                                    onClick={() => setSelectedCategory('all')}
+                                    className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700"
+                                >
+                                    {categories?.find(c => c.id === selectedCategory)?.name}
+                                    <X className="w-3 h-3" />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ═══ RESULTS ═════════════════════════════════════ */}
+                {isLoading ? (
+                    <div className={cn(
+                        viewMode === 'grid'
+                            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+                            : 'space-y-3'
+                    )}>
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 animate-pulse">
+                                <div className="flex gap-4">
+                                    <Skeleton className="w-10 h-10 rounded-lg" />
+                                    <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-4 w-3/4" />
+                                        <Skeleton className="h-3 w-1/2" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : filteredArticles.length === 0 ? (
+                    /* Empty State */
+                    <div className="bg-white rounded-2xl border border-gray-100 py-20 text-center shadow-sm">
+                        <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-5">
+                            <Search className="w-7 h-7 text-gray-300" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">{t('search_page.no_results', 'No results found')}</h3>
+                        <p className="text-sm text-gray-400 max-w-xs mx-auto mb-6">
+                            {t('search_page.no_results_hint', 'Try adjusting your search or filters')}
+                        </p>
+                        <Button variant="outline" onClick={clearFilters} className="rounded-xl">
+                            {t('search_page.clear_filters', 'Clear all filters')}
+                        </Button>
+                    </div>
+                ) : (
+                    /* Results */
+                    <div className={cn(
+                        viewMode === 'grid'
+                            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+                            : 'bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden'
+                    )}>
+                        {filteredArticles.map((article, idx) => {
+                            const cfg = TYPE_CONFIG[article.content_type as KnowledgeContentType] || TYPE_CONFIG.document
+                            const Icon = cfg.icon
+                            const typeLabel = t(`content_types.${article.content_type}`, cfg.label)
+
+                            if (viewMode === 'grid') {
+                                return (
+                                    <motion.div key={article.id} custom={idx} variants={fadeUp} initial="hidden" animate="visible">
+                                        <Link to={`/knowledge/${article.id}`} className="group block h-full">
+                                            <Card className="h-full border-0 shadow-sm hover:shadow-lg transition-all bg-white overflow-hidden group-hover:-translate-y-0.5">
+                                                <CardContent className="p-0 flex flex-col h-full">
+                                                    <div className={cn('h-1 bg-gradient-to-r', cfg.gradient)} />
+                                                    <div className="p-5 flex flex-col h-full">
+                                                        <div className="flex items-start justify-between mb-3">
+                                                            <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', cfg.bg)}>
+                                                                <Icon className={cn('w-5 h-5', cfg.accent)} />
+                                                            </div>
+                                                            {article.featured && (
+                                                                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                                            )}
+                                                        </div>
+                                                        <Badge className={cn('text-[10px] font-bold uppercase tracking-wider py-0 border-0 w-fit mb-2', cfg.bg, cfg.text)}>
+                                                            {typeLabel}
+                                                        </Badge>
+                                                        <h3 className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2 mb-2 leading-snug">
+                                                            {article.title}
+                                                        </h3>
+                                                        {article.description && (
+                                                            <p className="text-xs text-gray-400 line-clamp-2 mb-4">{article.description}</p>
+                                                        )}
+                                                        <div className="mt-auto pt-3 border-t border-gray-50 flex items-center gap-3 text-[10px] text-gray-400">
+                                                            <span className="flex items-center gap-1">
+                                                                <Clock className="w-3 h-3" /> {readTime(article.content)} {t('article.min_read', 'min')}
+                                                            </span>
+                                                            {article.view_count > 0 && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Eye className="w-3 h-3" /> {article.view_count}
+                                                                </span>
+                                                            )}
+                                                            <span className="ms-auto">
+                                                                {timeAgo(article.updated_at)}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </CardContent>
                                             </Card>
                                         </Link>
-                                    )
-                                }
-
-                                return (
-                                    <Link key={article.id} to={`/knowledge/${article.id}`}>
-                                        <div className="group bg-white p-4 rounded-2xl hover:bg-hotel-gold/5 border border-transparent hover:border-hotel-gold/20 transition-all flex items-center gap-4">
-                                            <div className={cn("h-14 w-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105", typeConfig.color)}>
-                                                <Icon className="h-7 w-7" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <h3 className="font-bold text-gray-900 group-hover:text-hotel-navy transition-colors truncate">
-                                                        {article.title}
-                                                    </h3>
-                                                    {article.featured && <Star className="h-3.5 w-3.5 text-hotel-gold fill-current" />}
-                                                </div>
-                                                <div className="flex items-center gap-3 text-[10px] text-gray-400 font-medium whitespace-nowrap overflow-hidden">
-                                                    <span className="text-hotel-gold font-bold uppercase">{typeLabel}</span>
-                                                    <Separator orientation="vertical" className="h-2" />
-                                                    <span>{article.category?.name || 'Uncategorized'}</span>
-                                                    <Separator orientation="vertical" className="h-2" />
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="h-3 w-3" />
-                                                        {new Date(article.updated_at).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-gray-300 group-hover:text-hotel-gold transition-colors">
-                                                <ChevronRight className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </Link>
+                                    </motion.div>
                                 )
-                            })}
-                        </div>
-                    )}
-                </div>
+                            }
+
+                            /* List view */
+                            return (
+                                <Link
+                                    key={article.id}
+                                    to={`/knowledge/${article.id}`}
+                                    className="group flex items-center gap-4 px-5 py-4 hover:bg-gray-50/80 transition-colors"
+                                >
+                                    <div className={cn(
+                                        'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105',
+                                        cfg.bg
+                                    )}>
+                                        <Icon className={cn('w-4 h-4', cfg.accent)} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <h3 className="text-sm font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors truncate">
+                                                {article.title}
+                                            </h3>
+                                            {article.featured && (
+                                                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                                            <span className={cn('font-bold uppercase tracking-wider', cfg.accent)}>{typeLabel}</span>
+                                            <span>·</span>
+                                            <span>{article.category?.name || article.department?.name || t('general_category')}</span>
+                                            <span>·</span>
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                {readTime(article.content)} {t('article.min_read', 'min')}
+                                            </span>
+                                            {article.view_count > 0 && (
+                                                <>
+                                                    <span>·</span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Eye className="w-3 h-3" /> {article.view_count}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <span className="text-[11px] text-gray-400 hidden sm:block">
+                                            {timeAgo(article.updated_at)}
+                                        </span>
+                                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" />
+                                    </div>
+                                </Link>
+                            )
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     )

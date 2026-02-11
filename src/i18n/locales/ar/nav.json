@@ -101,5 +101,10 @@
         "view_all": "عرض الكل",
         "close": "إغلاق"
     },
-    "training": "التدريب"
+    "training": "التدريب",
+    "quickActions": "إجراءات سريعة",
+    "quickActionsDesc": "الوصول إلى المهام الشائعة فوراً",
+    "newRequest": "طلب جديد",
+    "reportIssue": "الإبلاغ عن مشكلة",
+    "chat": "المحادثة"
 }

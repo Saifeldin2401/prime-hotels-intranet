@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SidebarNavigation } from './SidebarNavigation'
 import { MobileLayout } from '@/layouts/MobileLayout'
@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 
 import { PageTransition } from '@/components/layout/PageTransition'
 import { WizardTrigger } from '@/components/common/WizardTrigger'
+import { CommandPalette } from '@/components/common/CommandPalette'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -39,6 +40,19 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+
+  // Global ⌘K / Ctrl+K shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -120,6 +134,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* New User Onboarding Wizard Trigger */}
       <WizardTrigger />
+
+      {/* Global Command Palette (⌘K) */}
+      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
 
     </div>
   )

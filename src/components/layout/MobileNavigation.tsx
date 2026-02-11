@@ -93,21 +93,21 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
                 </div>
               </button>
             }
-            title="Quick Actions"
-            description="Access common tasks instantly"
+            title={t('quickActions', 'Quick Actions')}
+            description={t('quickActionsDesc', 'Access common tasks instantly')}
           >
             <div className="grid grid-cols-2 gap-3 py-4">
               <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100">
                 <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
                   <MessageSquare className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-medium">New Request</span>
+                <span className="text-xs font-medium">{t('newRequest', 'New Request')}</span>
               </button>
               <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100">
                 <div className="h-10 w-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
                   <LayoutDashboard className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-medium">Report Issue</span>
+                <span className="text-xs font-medium">{t('reportIssue', 'Report Issue')}</span>
               </button>
               {/* Add more quick actions as needed */}
             </div>

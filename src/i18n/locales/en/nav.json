@@ -101,5 +101,10 @@
     "mobileNav": "Mobile navigation",
     "openMenu": "Open navigation menu",
     "menu": "Menu",
-    "training": "Training"
+    "training": "Training",
+    "quickActions": "Quick Actions",
+    "quickActionsDesc": "Access common tasks instantly",
+    "newRequest": "New Request",
+    "reportIssue": "Report Issue",
+    "chat": "Chat"
 }
