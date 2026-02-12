@@ -1,11 +1,11 @@
 /**
- * Service Worker for Prime Hotels PWA
+ * Service Worker for Prime Hotels PWA (v4)
  * 
  * Provides offline caching for static assets and API responses.
- * Implements the App Shell pattern for ultra-reliable SPA navigation.
+ * Implements a "Clean Shell" strategy to resolve navigation redirect errors.
  */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE_NAME = `prime-hotels-${VERSION}`;
 const STATIC_CACHE = `prime-hotels-static-${VERSION}`;
 const DYNAMIC_CACHE = `prime-hotels-dynamic-${VERSION}`;
@@ -24,7 +24,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(STATIC_CACHE).then((cache) => {
-            console.log('[SW] Caching static assets');
+            console.log(`[SW ${VERSION}] Caching static assets`);
             return cache.addAll(STATIC_ASSETS);
         })
     );
@@ -37,9 +37,13 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames
-                    .filter((name) => name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
+                    .filter((name) =>
+                        name.startsWith('prime-hotels-') &&
+                        name !== STATIC_CACHE &&
+                        name !== DYNAMIC_CACHE
+                    )
                     .map((name) => {
-                        console.log('[SW] Deleting old cache:', name);
+                        console.log(`[SW ${VERSION}] Deleting old cache:`, name);
                         return caches.delete(name);
                     })
             );
@@ -59,30 +63,37 @@ self.addEventListener('fetch', (event) => {
     // Skip Chrome extensions and non-http(s)
     if (!url.protocol.startsWith('http')) return;
 
-    // 1. App Shell Pattern for Navigations
-    // This solves the "redirected response" error by serving the 200 OK index.html shell
+    // 1. Navigation Redirect Fix (App Shell Pattern)
+    // Navigation requests (mode: navigate) are blocked if the SW returns a "redirected" response.
     if (request.mode === 'navigate') {
         event.respondWith(
             (async () => {
-                // Try the cache first for the shell
-                const cachedResponse = await caches.match('/index.html');
-                if (cachedResponse) return cachedResponse;
+                // ALWAYS try to serve the cached index.html shell first.
+                // This completely bypasses server-side redirects for navigation requests.
+                const cachedShell = await caches.match('/index.html');
+                if (cachedShell) {
+                    return cachedShell;
+                }
 
-                // Fallback to network if shell isn't cached yet
+                // If shell isn't cached (first load), try network but handle redirects carefully
                 try {
-                    // BE CAREFUL: Navigation requests cannot return a redirected response.
-                    // If we fetch and it redirects, we should return the redirect as 'manual'
-                    // or let it fail and return a custom error.
-                    const fetchOptions = { redirect: 'manual' };
-                    const response = await fetch(request, fetchOptions);
+                    const response = await fetch(request);
 
-                    if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
-                        // Let the browser handle the redirect itself
-                        return response;
+                    // CRITICAL: If the network response is redirected, we MUST "clean" it
+                    // because Browsers (Chrome) throw a Network Error if a FetchEvent 
+                    // returns a redirected response for a navigation request.
+                    if (response.redirected) {
+                        return new Response(response.body, {
+                            status: response.status,
+                            statusText: response.statusText,
+                            headers: response.headers
+                        });
                     }
 
                     return response;
                 } catch (error) {
+                    console.error(`[SW ${VERSION}] Navigation fetch failed:`, error);
+                    // Minimal fallback if everything fails
                     return new Response('Offline', { status: 503 });
                 }
             })()
