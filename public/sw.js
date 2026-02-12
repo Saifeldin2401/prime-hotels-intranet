@@ -5,9 +5,10 @@
  * Implements the App Shell pattern for ultra-reliable SPA navigation.
  */
 
-const CACHE_NAME = 'prime-hotels-v2';
-const STATIC_CACHE = 'prime-hotels-static-v2';
-const DYNAMIC_CACHE = 'prime-hotels-dynamic-v2';
+const VERSION = 'v3';
+const CACHE_NAME = `prime-hotels-${VERSION}`;
+const STATIC_CACHE = `prime-hotels-static-${VERSION}`;
+const DYNAMIC_CACHE = `prime-hotels-dynamic-${VERSION}`;
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
@@ -60,18 +61,31 @@ self.addEventListener('fetch', (event) => {
 
     // 1. App Shell Pattern for Navigations
     // This solves the "redirected response" error by serving the 200 OK index.html shell
-    // for all navigation requests, regardless of deep-linking or server redirects.
     if (request.mode === 'navigate') {
         event.respondWith(
-            caches.match('/index.html').then((cachedResponse) => {
-                // We prefer the cached shell for speed and reliability
+            (async () => {
+                // Try the cache first for the shell
+                const cachedResponse = await caches.match('/index.html');
                 if (cachedResponse) return cachedResponse;
 
                 // Fallback to network if shell isn't cached yet
-                return fetch(request).catch(() => {
+                try {
+                    // BE CAREFUL: Navigation requests cannot return a redirected response.
+                    // If we fetch and it redirects, we should return the redirect as 'manual'
+                    // or let it fail and return a custom error.
+                    const fetchOptions = { redirect: 'manual' };
+                    const response = await fetch(request, fetchOptions);
+
+                    if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+                        // Let the browser handle the redirect itself
+                        return response;
+                    }
+
+                    return response;
+                } catch (error) {
                     return new Response('Offline', { status: 503 });
-                });
-            })
+                }
+            })()
         );
         return;
     }

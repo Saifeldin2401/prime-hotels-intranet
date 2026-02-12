@@ -68,7 +68,24 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
-        // Service Worker registered successfully
+        // Check for updates every hour
+        setInterval(() => {
+          registration.update();
+        }, 1000 * 60 * 60);
+
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  // New content is available; please refresh.
+                  console.log('[PWA] New content available, refresh to update.');
+                }
+              }
+            };
+          }
+        };
       })
       .catch((error) => {
         console.error('[PWA] Service Worker registration failed:', error)
