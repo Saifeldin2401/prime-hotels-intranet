@@ -2,11 +2,12 @@
  * Service Worker for Prime Hotels PWA
  * 
  * Provides offline caching for static assets and API responses.
+ * Implements the App Shell pattern for ultra-reliable SPA navigation.
  */
 
-const CACHE_NAME = 'prime-hotels-v1';
-const STATIC_CACHE = 'prime-hotels-static-v1';
-const DYNAMIC_CACHE = 'prime-hotels-dynamic-v1';
+const CACHE_NAME = 'prime-hotels-v2';
+const STATIC_CACHE = 'prime-hotels-static-v2';
+const DYNAMIC_CACHE = 'prime-hotels-dynamic-v2';
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
@@ -16,13 +17,6 @@ const STATIC_ASSETS = [
     '/prime-logo-dark.png',
     '/prime-logo-light.png',
     '/vite.svg'
-];
-
-// API routes to cache with network-first strategy
-const API_ROUTES = [
-    '/rest/v1/announcements',
-    '/rest/v1/messages',
-    '/rest/v1/training_modules'
 ];
 
 // Install event - cache static assets
@@ -53,7 +47,7 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch event - serve from cache or network
+// Fetch event handler
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
@@ -64,13 +58,31 @@ self.addEventListener('fetch', (event) => {
     // Skip Chrome extensions and non-http(s)
     if (!url.protocol.startsWith('http')) return;
 
-    // API requests - network first, fallback to cache
+    // 1. App Shell Pattern for Navigations
+    // This solves the "redirected response" error by serving the 200 OK index.html shell
+    // for all navigation requests, regardless of deep-linking or server redirects.
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            caches.match('/index.html').then((cachedResponse) => {
+                // We prefer the cached shell for speed and reliability
+                if (cachedResponse) return cachedResponse;
+
+                // Fallback to network if shell isn't cached yet
+                return fetch(request).catch(() => {
+                    return new Response('Offline', { status: 503 });
+                });
+            })
+        );
+        return;
+    }
+
+    // 2. API requests - network first, fallback to cache
     if (url.pathname.includes('/rest/v1/') || url.pathname.includes('/api/')) {
         event.respondWith(networkFirst(request));
         return;
     }
 
-    // Static assets - cache first, fallback to network
+    // 3. Static assets - cache first, fallback to network
     if (
         request.destination === 'image' ||
         request.destination === 'style' ||
@@ -84,13 +96,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // HTML pages - network first with offline fallback
-    if (request.destination === 'document' || request.headers.get('accept')?.includes('text/html')) {
-        event.respondWith(networkFirstWithOffline(request));
-        return;
-    }
-
-    // Default - network with cache fallback
+    // 4. Default - network with cache fallback
     event.respondWith(networkFirst(request));
 });
 
@@ -114,14 +120,7 @@ async function cacheFirst(request) {
 // Network-first strategy
 async function networkFirst(request) {
     try {
-        // Handle redirects safely for navigation requests
-        const fetchOptions = request.mode === 'navigate' ? { redirect: 'manual' } : {};
-        const response = await fetch(request, fetchOptions);
-
-        if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
-            return response;
-        }
-
+        const response = await fetch(request);
         if (response.status === 200) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, response.clone());
@@ -134,62 +133,27 @@ async function networkFirst(request) {
     }
 }
 
-// Network-first with offline fallback for HTML
-async function networkFirstWithOffline(request) {
-    try {
-        // Handle redirects safely for navigation requests
-        const fetchOptions = request.mode === 'navigate' ? { redirect: 'manual' } : {};
-        const response = await fetch(request, fetchOptions);
-
-        // If it's a redirect, return it as-is and let the browser handle it
-        if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
-            return response;
-        }
-
-        if (response.status === 200) {
-            const cache = await caches.open(DYNAMIC_CACHE);
-            cache.put(request, response.clone());
-        }
-        // If the server returns 404 for a client-side route,
-        // fall back to cached index.html to let the SPA handle it.
-        if (response.status === 404) {
-            const indexCached = await caches.match('/index.html');
-            if (indexCached) return indexCached;
-        }
-        return response;
-    } catch {
-        const cached = await caches.match(request);
-        if (cached) return cached;
-
-        // Return cached index.html for SPA navigation
-        const indexCached = await caches.match('/index.html');
-        if (indexCached) return indexCached;
-
-        return new Response('You are offline', {
-            status: 503,
-            headers: { 'Content-Type': 'text/html' }
-        });
-    }
-}
-
-// Handle push notifications (future)
+// Handle push notifications
 self.addEventListener('push', (event) => {
     if (!event.data) return;
 
-    const data = event.data.json();
-    const options = {
-        body: data.body,
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-72x72.png',
-        vibrate: [100, 50, 100],
-        data: {
-            url: data.url || '/'
-        }
-    };
+    try {
+        const data = event.data.json();
+        const options = {
+            body: data.body,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            data: {
+                url: data.url || '/'
+            }
+        };
 
-    event.waitUntil(
-        self.registration.showNotification(data.title, options)
-    );
+        event.waitUntil(
+            self.registration.showNotification(data.title, options)
+        );
+    } catch (e) {
+        console.error('Push error:', e);
+    }
 });
 
 // Handle notification click
