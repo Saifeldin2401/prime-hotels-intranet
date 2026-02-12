@@ -114,7 +114,14 @@ async function cacheFirst(request) {
 // Network-first strategy
 async function networkFirst(request) {
     try {
-        const response = await fetch(request);
+        // Handle redirects safely for navigation requests
+        const fetchOptions = request.mode === 'navigate' ? { redirect: 'manual' } : {};
+        const response = await fetch(request, fetchOptions);
+
+        if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+            return response;
+        }
+
         if (response.status === 200) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, response.clone());
@@ -130,7 +137,15 @@ async function networkFirst(request) {
 // Network-first with offline fallback for HTML
 async function networkFirstWithOffline(request) {
     try {
-        const response = await fetch(request);
+        // Handle redirects safely for navigation requests
+        const fetchOptions = request.mode === 'navigate' ? { redirect: 'manual' } : {};
+        const response = await fetch(request, fetchOptions);
+
+        // If it's a redirect, return it as-is and let the browser handle it
+        if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+            return response;
+        }
+
         if (response.status === 200) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, response.clone());
