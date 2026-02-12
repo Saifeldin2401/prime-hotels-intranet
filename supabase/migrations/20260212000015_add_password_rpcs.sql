@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION public.check_password_reuse(plain_password text)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public, auth, extensions
 AS $$
 DECLARE
     is_reused boolean;
@@ -32,7 +32,7 @@ BEGIN
             ORDER BY created_at DESC
             LIMIT 5
         ) AS recent
-        WHERE recent.password_hash = crypt(plain_password, recent.password_hash)
+        WHERE recent.password_hash = extensions.crypt(plain_password, recent.password_hash)
     ) INTO is_reused;
 
     RETURN COALESCE(is_reused, false);
@@ -44,43 +44,7 @@ GRANT EXECUTE ON FUNCTION public.check_password_reuse(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.check_password_reuse(text) TO service_role;
 
 -- 2. RPC: complete_password_reset
--- Finalizes the password reset flow by updating profile flags.
-CREATE OR REPLACE FUNCTION public.complete_password_reset()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, auth
-AS $$
-DECLARE
-    current_uid uuid;
-BEGIN
-    current_uid := auth.uid();
-
-    IF current_uid IS NULL THEN
-        RAISE EXCEPTION 'Not authenticated';
-    END IF;
-
-    UPDATE public.profiles
-    SET 
-        is_temp_password = false,
-        password_initialized = true,
-        force_password_reset = false,
-        password_last_changed_at = now(),
-        updated_at = now()
-    WHERE id = current_uid;
-END;
-$$;
-
--- Grant execution permissions
-GRANT EXECUTE ON FUNCTION public.complete_password_reset() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.complete_password_reset() TO service_role;
-
--- 3. Cleanup: Ensure password_history doesn't grow indefinitely
--- Adding a limit to the history via a trigger or just in the RPC is good.
--- We'll add a simple pruning logic to the existing save_password_history function if it exists,
--- or just do it in complete_password_reset.
--- Let's update complete_password_reset to also prune.
-
+-- Finalizes the password reset flow by updating profile flags and pruning history.
 CREATE OR REPLACE FUNCTION public.complete_password_reset()
 RETURNS void
 LANGUAGE plpgsql
@@ -117,3 +81,4 @@ BEGIN
     );
 END;
 $$;
+
