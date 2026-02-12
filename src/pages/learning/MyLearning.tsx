@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Clock, AlertCircle, CheckCircle, Play, Award, Loader2, FileQuestion, Sparkles } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { BookOpen, Clock, AlertCircle, CheckCircle, Play, Award, Loader2, FileQuestion, Sparkles, Flame } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TrainingProgressVisualization } from '@/components/training/TrainingProgressVisualization'
 import { format, formatDistanceToNow } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -12,6 +15,7 @@ import {
 } from '@/hooks/useTraining'
 import { useTranslation } from 'react-i18next'
 import { DailyQuizWidget } from '@/components/questions/DailyQuizWidget'
+import { calculateStreak } from '@/lib/training/analytics'
 import { learningService } from '@/services/learningService'
 import type { LearningAssignment } from '@/types/learning'
 import { ar, enUS } from 'date-fns/locale'
@@ -72,7 +76,8 @@ export default function MyLearning() {
         totalAssigned: allItems.length,
         inProgress: allItems.filter(i => i.progress?.status === 'in_progress').length,
         completed: completedItems.length,
-        overdue: activeItems.filter(a => a.due_date && new Date(a.due_date) < new Date()).length
+        overdue: activeItems.filter(a => a.due_date && new Date(a.due_date) < new Date()).length,
+        streak: calculateStreak(completedItems.map(i => ({ completed_at: i.progress?.completed_at || null })))
     }
 
     if (isLoading) {
@@ -116,6 +121,15 @@ export default function MyLearning() {
                     <CardContent className="p-6">
                         <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
                         <div className="text-sm text-muted-foreground">{t('overdue')}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-6">
+                        <div className="flex items-center gap-2">
+                            <div className="text-2xl font-bold text-orange-500">{stats.streak}</div>
+                            <Flame className={cn("h-5 w-5 text-orange-500", stats.streak > 0 && "animate-pulse")} />
+                        </div>
+                        <div className="text-sm text-muted-foreground">{t('streakDays')}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -212,43 +226,43 @@ export default function MyLearning() {
                     <div className="border rounded-lg bg-white overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className={`w-full text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
-                            <thead className="bg-slate-50 border-b">
-                                <tr>
-                                    <th className="px-4 py-3 font-medium">{t('topic')}</th>
-                                    <th className="px-4 py-3 font-medium">{t('completed')}</th>
-                                    <th className="px-4 py-3 font-medium">{t('score')}</th>
-                                    <th className="px-4 py-3 font-medium">{t('action')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {completedItems.map(item => (
-                                    <tr key={item.id}>
-                                        <td className="px-4 py-3 font-medium flex items-center gap-2">
-                                            {item.content_type === 'quiz' ? <FileQuestion className="h-3 w-3 text-muted-foreground" /> : <BookOpen className="h-3 w-3 text-muted-foreground" />}
-                                            {item.content_title}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {item.progress?.completed_at ? format(new Date(item.progress.completed_at), 'MMM d, yyyy', { locale: dateLocale }) : '-'}
-                                        </td>
-                                        <td className="px-4 py-3 font-mono">
-                                            {item.progress?.score_percentage != null ? `${item.progress.score_percentage}%` : 'N/A'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Button size="sm" variant="ghost" onClick={() => navigate(`/training/certificates`)}>
-                                                <Award className={`h-4 w-4 text-purple-600 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                                                {t('certificate')}
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {completedItems.length === 0 && (
+                                <thead className="bg-slate-50 border-b">
                                     <tr>
-                                        <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                                            {t('noCompletedHistory')}
-                                        </td>
+                                        <th className="px-4 py-3 font-medium">{t('topic')}</th>
+                                        <th className="px-4 py-3 font-medium">{t('completed')}</th>
+                                        <th className="px-4 py-3 font-medium">{t('score')}</th>
+                                        <th className="px-4 py-3 font-medium">{t('action')}</th>
                                     </tr>
-                                )}
-                            </tbody>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {completedItems.map(item => (
+                                        <tr key={item.id}>
+                                            <td className="px-4 py-3 font-medium flex items-center gap-2">
+                                                {item.content_type === 'quiz' ? <FileQuestion className="h-3 w-3 text-muted-foreground" /> : <BookOpen className="h-3 w-3 text-muted-foreground" />}
+                                                {item.content_title}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {item.progress?.completed_at ? format(new Date(item.progress.completed_at), 'MMM d, yyyy', { locale: dateLocale }) : '-'}
+                                            </td>
+                                            <td className="px-4 py-3 font-mono">
+                                                {item.progress?.score_percentage != null ? `${item.progress.score_percentage}%` : 'N/A'}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <Button size="sm" variant="ghost" onClick={() => navigate(`/training/certificates`)}>
+                                                    <Award className={`h-4 w-4 text-purple-600 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                                    {t('certificate')}
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {completedItems.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                                                {t('noCompletedHistory')}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
                             </table>
                         </div>
                     </div>

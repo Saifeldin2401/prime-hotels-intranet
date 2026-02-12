@@ -5,12 +5,30 @@ import { aiService } from '@/lib/gemini'
 import { learningService } from '@/services/learningService'
 import { supabase } from '@/lib/supabase'
 
+interface QuizGenerationOptions {
+    types?: string[]
+    difficulty?: string
+    includeHints?: boolean
+    includeExplanations?: boolean
+    timeLimitMinutes?: number
+    passingScore?: number
+    randomizeQuestions?: boolean
+    showFeedbackDuring?: boolean
+    status?: 'draft' | 'published'
+}
+
 export const useAIQuizGenerator = () => {
     const [generating, setGenerating] = useState(false)
     const { toast } = useToast()
     const navigate = useNavigate()
 
-    const generateQuizFromSOP = async (sopId: string, title?: string, count: number = 5, language: string = 'English') => {
+    const generateQuizFromSOP = async (
+        sopId: string,
+        title?: string,
+        count: number = 5,
+        language: string = 'English',
+        options: QuizGenerationOptions = {}
+    ) => {
         try {
             setGenerating(true)
 
@@ -28,7 +46,11 @@ export const useAIQuizGenerator = () => {
             const generatedQuestions = await aiService.generateQuiz({
                 sopContent: sop.content,
                 count,
-                language
+                language,
+                types: options.types,
+                difficulty: options.difficulty,
+                includeHints: options.includeHints,
+                includeExplanations: options.includeExplanations,
             })
 
             if (!generatedQuestions || generatedQuestions.length === 0) {
@@ -37,14 +59,17 @@ export const useAIQuizGenerator = () => {
 
             // 3. Create "Learning Quiz" Container
             const quizTitle = title || `Assessment: ${sop.title}`
+            const resolvedTimeLimit = options.timeLimitMinutes === 0 ? null : options.timeLimitMinutes
+            const timeLimitMinutes = resolvedTimeLimit === undefined ? 20 : resolvedTimeLimit
+
             const newQuiz = await learningService.createQuiz({
                 title: quizTitle,
                 description: `Automatically generated assessment for ${sop.title}`,
-                passing_score_percentage: 70,
-                time_limit_minutes: 20, // Default sensible limit
-                randomize_questions: true,
-                show_feedback_during: true,
-                status: 'draft', // Always draft first for review
+                passing_score_percentage: options.passingScore ?? 70,
+                time_limit_minutes: timeLimitMinutes,
+                randomize_questions: options.randomizeQuestions ?? true,
+                show_feedback_during: options.showFeedbackDuring ?? true,
+                status: options.status ?? 'draft',
                 linked_sop_id: sopId // Storing document ID here. Assumes FK constraint is removed or compatible.
             })
 
@@ -61,8 +86,10 @@ export const useAIQuizGenerator = () => {
                         options: q.options,
                         correct_answer: q.correct_answer,
                         points: q.points,
+                        explanation: q.explanation ?? null,
+                        hint: q.hint ?? null,
                         linked_sop_id: sopId, // Storing document ID here too.
-                        difficulty: 'medium',
+                        difficulty: options.difficulty ?? 'medium',
                         status: 'draft',
                         usage_type: 'quiz',
                         created_by: (await supabase.auth.getUser()).data.user?.id

@@ -18,6 +18,9 @@ const AdminAnalyticsDashboard = lazy(() => import('@/pages/admin/AdminAnalyticsD
 const OnboardingTemplates = lazy(() => import('@/pages/onboarding/OnboardingTemplates'))
 const TemplateEditor = lazy(() => import('@/pages/onboarding/TemplateEditor'))
 const RoutingHealth = lazy(() => import('@/pages/admin/RoutingHealth'))
+const DelegationSettings = lazy(() => import('@/pages/admin/DelegationSettings'))
+const SystemSettings = lazy(() => import('@/pages/admin/SystemSettings'))
+const SLASettings = lazy(() => import('@/pages/admin/SLASettings'))
 
 export const AdminRoutes = () => (
     <>
@@ -171,6 +174,36 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
                     <AppLayout>
                         <TemplateEditor />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/delegations"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
+                    <AppLayout>
+                        <DelegationSettings />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/sla"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
+                    <AppLayout>
+                        <SLASettings />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/settings"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <SystemSettings />
                     </AppLayout>
                 </ProtectedRoute>
             }

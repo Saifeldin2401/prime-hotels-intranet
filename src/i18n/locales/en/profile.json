@@ -70,6 +70,11 @@
         "category": "Category"
     },
     "employment": "Employment",
+    "employment_type": "Employment Type",
+    "contract_end_date": "Contract End Date",
+    "iqama_number": "Iqama / National ID",
+    "iqama_expiry": "Iqama Expiry",
+    "employment_details": "Employment & Compliance",
     "hire_date": "Hire Date",
     "messages": {
         "profile_updated_desc": "Profile Updated Description",

@@ -85,11 +85,11 @@ export function TrainingCertificateGenerator({
       if (!trainingCompletionId) return null
 
       const { data, error } = await supabase
-        .from('training_completions')
+        .from('training_progress')
         .select(`
           *,
-          training_module:training_module_id(id, title, description, duration_minutes, category),
-          user:user_id(id, full_name, email, user_profiles(department_id, position))
+          training_module:training_modules(id, title, description, estimated_duration_minutes, category),
+          user:profiles(id, full_name, email)
         `)
         .eq('id', trainingCompletionId)
         .single()
@@ -107,10 +107,10 @@ export function TrainingCertificateGenerator({
       if (!targetUserId) return []
 
       const { data, error } = await supabase
-        .from('training_completions')
+        .from('training_progress')
         .select(`
           *,
-          training_module:training_module_id(id, title, description, category)
+          training_module:training_modules(id, title, description, category)
         `)
         .eq('user_id', targetUserId)
         .eq('status', 'completed')
@@ -300,7 +300,7 @@ export function TrainingCertificateGenerator({
             
             <div class="certificate-details">
               <div>
-                <strong>${t('certificateGenerator.courseDuration')}:</strong> ${trainingCompletion?.training_module?.duration_minutes || 60} ${t('minutes')}
+                <strong>${t('certificateGenerator.courseDuration')}:</strong> ${trainingCompletion?.training_module?.estimated_duration_minutes || 60} ${t('minutes')}
               </div>
               <div>
                 <strong>${t('wizard.category')}:</strong> ${trainingCompletion?.training_module?.category || t('categories.general')}
@@ -342,7 +342,7 @@ export function TrainingCertificateGenerator({
       recipient_name: trainingCompletion.user?.full_name || '',
       course_name: trainingCompletion.training_module?.title || '',
       completion_date: trainingCompletion.completed_at?.split('T')[0] || format(new Date(), 'yyyy-MM-dd'),
-      score: trainingCompletion.score || 100
+      score: trainingCompletion.quiz_score || 100
     })
   }
 

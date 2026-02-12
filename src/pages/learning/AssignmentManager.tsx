@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
-import { Plus, Users, Calendar, BookOpen, Search, Check, ChevronsUpDown } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Plus, Users, BookOpen, Check, ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { learningService } from '@/services/learningService'
 import type { LearningAssignment } from '@/types/learning'
-import { format } from 'date-fns'
+import { addDays, format } from 'date-fns'
 import { useSearchParams } from 'react-router-dom'
 import {
     Dialog,
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
 import {
     Select,
     SelectContent,
@@ -126,7 +127,6 @@ const ROLES = [
 export default function AssignmentManager() {
     const { t } = useTranslation('learning')
     const [assignments, setAssignments] = useState<LearningAssignment[]>([])
-    const [loading, setLoading] = useState(true)
     const [searchParams] = useSearchParams()
     const { toast } = useToast()
 
@@ -173,7 +173,7 @@ export default function AssignmentManager() {
         } catch (error) {
             console.error(error)
         } finally {
-            setLoading(false)
+            // noop
         }
     }
 
@@ -225,6 +225,31 @@ export default function AssignmentManager() {
         return id
     }
 
+    const validationErrors = useMemo(() => {
+        const errors: string[] = []
+        if (!formData.content_id) errors.push('Select content to assign.')
+        if (formData.target_type !== 'everyone' && !formData.target_id) errors.push('Select a target.')
+        if (!formData.due_date) errors.push('Choose a due date.')
+        return errors
+    }, [formData.content_id, formData.target_id, formData.target_type, formData.due_date])
+
+    const dueDatePresets = [
+        { label: '3 days', days: 3 },
+        { label: '1 week', days: 7 },
+        { label: '2 weeks', days: 14 },
+        { label: '1 month', days: 30 },
+    ]
+
+    const selectedContentName = formData.content_id
+        ? getContentName(formData.content_id, formData.content_type)
+        : 'Not selected'
+
+    const selectedTargetLabel = formData.target_type === 'everyone'
+        ? 'All staff'
+        : formData.target_id
+            ? getTargetName(formData.target_id, formData.target_type)
+            : 'Not selected'
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex justify-between items-center">
@@ -252,11 +277,23 @@ export default function AssignmentManager() {
             </div>
 
             <Dialog open={showModal} onOpenChange={setShowModal}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Create New Assignment</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-6 py-4">
+                        {validationErrors.length > 0 && (
+                            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                                {validationErrors.map((message) => (
+                                    <p key={message}>{message}</p>
+                                ))}
+                            </div>
+                        )}
+
+                        <div>
+                            <h4 className="text-sm font-semibold">Content</h4>
+                            <p className="text-xs text-muted-foreground">Choose which quiz or module to assign.</p>
+                        </div>
                         {/* Content Selection */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -364,6 +401,12 @@ export default function AssignmentManager() {
                             </div>
                         </div>
 
+                        <Separator />
+
+                        <div>
+                            <h4 className="text-sm font-semibold">Target Audience</h4>
+                            <p className="text-xs text-muted-foreground">Select who should receive this assignment.</p>
+                        </div>
                         {/* Target Selection */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -467,6 +510,12 @@ export default function AssignmentManager() {
                             </div>
                         </div>
 
+                        <Separator />
+
+                        <div>
+                            <h4 className="text-sm font-semibold">Schedule & Priority</h4>
+                            <p className="text-xs text-muted-foreground">Set due dates and importance for the assignment.</p>
+                        </div>
                         {/* Date and Priority */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -476,6 +525,22 @@ export default function AssignmentManager() {
                                     value={formData.due_date}
                                     onChange={e => setFormData({ ...formData, due_date: e.target.value })}
                                 />
+                                <div className="flex flex-wrap gap-2">
+                                    {dueDatePresets.map((preset) => (
+                                        <Button
+                                            key={preset.label}
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                const dateValue = format(addDays(new Date(), preset.days), 'yyyy-MM-dd')
+                                                setFormData({ ...formData, due_date: dateValue })
+                                            }}
+                                        >
+                                            {preset.label}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label>{t('priority_label')}</Label>
@@ -491,12 +556,43 @@ export default function AssignmentManager() {
                                         <SelectItem value="compliance">{t('complianceMandatory')}</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    {formData.priority === 'compliance'
+                                        ? 'Compliance assignments require strict completion.'
+                                        : formData.priority === 'high'
+                                            ? 'High priority assignments are highlighted in dashboards.'
+                                            : 'Standard priority for routine learning.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <Separator />
+
+                        <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Summary</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <p className="text-muted-foreground">Content</p>
+                                    <p className="font-medium">{selectedContentName}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">Target</p>
+                                    <p className="font-medium">{selectedTargetLabel}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">Due date</p>
+                                    <p className="font-medium">{formData.due_date ? format(new Date(formData.due_date), 'PPP') : 'Not set'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">Priority</p>
+                                    <p className="font-medium capitalize">{formData.priority}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowModal(false)}>{t('cancel')}</Button>
-                        <Button onClick={handleCreate} disabled={creating}>
+                        <Button onClick={handleCreate} disabled={creating || validationErrors.length > 0}>
                             {creating ? t('creating') : t('createAssignment')}
                         </Button>
                     </DialogFooter>

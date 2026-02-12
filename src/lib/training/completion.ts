@@ -105,10 +105,10 @@ export async function getTrainingProgressWithDocuments(
   try {
     // Get training completion status
     const { data: trainingCompletion } = await supabase
-      .from('training_completions')
-      .select('completed_at, score, time_spent_seconds')
+      .from('training_progress')
+      .select('completed_at, quiz_score')
       .eq('user_id', userId)
-      .eq('training_module_id', moduleId)
+      .eq('training_id', moduleId)
       .single();
 
     // Get document requirements and completion
@@ -121,7 +121,7 @@ export async function getTrainingProgressWithDocuments(
 
     return {
       isTrainingCompleted: !!trainingCompletion?.completed_at,
-      trainingScore: trainingCompletion?.score,
+      trainingScore: trainingCompletion?.quiz_score,
       documentProgress,
       prerequisites,
       canCompleteTraining: prerequisites.canStart

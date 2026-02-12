@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -61,6 +61,7 @@ export default function RequestDetail() {
   const navigate = useNavigate()
   const { user, primaryRole } = useAuth()
   const { t } = useTranslation(['hr', 'common'])
+  const queryClient = useQueryClient()
 
   const [comment, setComment] = useState('')
   const [visibility, setVisibility] = useState<'all' | 'internal'>('all')
@@ -69,6 +70,12 @@ export default function RequestDetail() {
     null | 'approve' | 'reject' | 'return' | 'forward' | 'close' | 'comment'
   >(null)
   const [forwardTo, setForwardTo] = useState<string>('')
+  const [manageDialogOpen, setManageDialogOpen] = useState(false)
+  const [managePriority, setManagePriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal')
+  const [manageDueAt, setManageDueAt] = useState('')
+  const [manageAssignee, setManageAssignee] = useState('')
+  const [manageNote, setManageNote] = useState('')
+  const [manageSaving, setManageSaving] = useState(false)
 
   const requestQuery = useRequest(id)
   const stepsQuery = useRequestSteps(id)
@@ -180,6 +187,71 @@ export default function RequestDetail() {
     return [...events, ...comments].sort((a, b) => a.created_at.localeCompare(b.created_at))
   }, [commentsQuery.data, eventsQuery.data])
 
+  const toLocalInputValue = (value?: string | null) => {
+    if (!value) return ''
+    const date = new Date(value)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+
+  const openManageDialog = () => {
+    if (!request) return
+    setManagePriority(request.priority ?? 'normal')
+    setManageDueAt(toLocalInputValue(request.due_at))
+    setManageAssignee(request.current_assignee_id || '')
+    setManageNote('')
+    setManageDialogOpen(true)
+  }
+
+  const saveManagement = async () => {
+    if (!request) return
+
+    setManageSaving(true)
+    try {
+      const dueAtValue = manageDueAt ? new Date(manageDueAt).toISOString() : null
+      const { error } = await supabase
+        .from('requests')
+        .update({
+          priority: managePriority,
+          due_at: dueAtValue,
+        })
+        .eq('id', request.id)
+
+      if (error) throw error
+
+      if (manageAssignee && manageAssignee !== request.current_assignee_id) {
+        await actionMutation.mutateAsync({
+          requestId: request.id,
+          action: 'forward',
+          forwardTo: manageAssignee,
+          comment: manageNote || 'Reassigned via management controls',
+          visibility: 'internal',
+        })
+      } else if (manageNote.trim()) {
+        await actionMutation.mutateAsync({
+          requestId: request.id,
+          action: 'add_comment',
+          comment: manageNote,
+          visibility: 'internal',
+        })
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['request', request.id] }),
+        queryClient.invalidateQueries({ queryKey: ['request', request.id, 'steps'] }),
+        queryClient.invalidateQueries({ queryKey: ['requests-inbox'] }),
+      ])
+
+      toast.success('Request updated')
+      setManageDialogOpen(false)
+    } catch (error) {
+      toast.error('Failed to update request')
+      console.error('Request management update failed:', error)
+    } finally {
+      setManageSaving(false)
+    }
+  }
+
   const onSubmitAction = async (action: 'approve' | 'reject' | 'return' | 'forward' | 'close' | 'add_comment') => {
     if (!request?.id) return
 
@@ -264,6 +336,23 @@ export default function RequestDetail() {
   }
 
   const requester = request.requester
+  const requiresComment = actionDialog === 'reject' || actionDialog === 'return'
+  const commentIsEmpty = comment.trim().length === 0
+  const isOverdue = request.due_at
+    ? new Date(request.due_at) < new Date() && !['approved', 'rejected', 'closed'].includes(request.status)
+    : false
+  const priorityLabel: Record<'low' | 'normal' | 'high' | 'urgent', string> = {
+    low: 'Low',
+    normal: 'Normal',
+    high: 'High',
+    urgent: 'Urgent',
+  }
+  const priorityClass: Record<'low' | 'normal' | 'high' | 'urgent', string> = {
+    low: 'bg-gray-100 text-gray-700',
+    normal: 'bg-blue-100 text-blue-800',
+    high: 'bg-orange-100 text-orange-800',
+    urgent: 'bg-red-100 text-red-800',
+  }
 
   return (
     <div className="space-y-6 md:space-y-8 py-4 px-4 sm:py-6 sm:px-6">
@@ -288,6 +377,17 @@ export default function RequestDetail() {
             Assigned to: {request.current_assignee.full_name || request.current_assignee.email}
           </Badge>
         )}
+        {request.priority && (
+          <Badge className={priorityClass[request.priority]}>
+            Priority: {priorityLabel[request.priority]}
+          </Badge>
+        )}
+        {request.due_at && (
+          <Badge className={isOverdue ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}>
+            Due: {format(new Date(request.due_at), 'MMM dd, yyyy')}
+          </Badge>
+        )}
+        {isOverdue && <Badge className="bg-red-100 text-red-800">Overdue</Badge>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -570,6 +670,39 @@ export default function RequestDetail() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Management</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-500">Priority</div>
+                {request.priority ? (
+                  <Badge className={priorityClass[request.priority]}>
+                    {priorityLabel[request.priority]}
+                  </Badge>
+                ) : (
+                  <span className="text-sm text-gray-600">—</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-500">Due Date</div>
+                <div className={isOverdue ? 'text-sm text-red-600 font-medium' : 'text-sm text-gray-700'}>
+                  {request.due_at ? format(new Date(request.due_at), 'MMM dd, yyyy') : '—'}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-500">Last Action</div>
+                <div className="text-sm text-gray-700">
+                  {request.last_action_at ? format(new Date(request.last_action_at), 'MMM dd, yyyy HH:mm') : '—'}
+                </div>
+              </div>
+              <Button variant="outline" onClick={openManageDialog} disabled={!canAct}>
+                Manage Request
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Quick Comment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -634,7 +767,7 @@ export default function RequestDetail() {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
-                placeholder="Comment (optional)"
+                placeholder={requiresComment ? 'Comment (required)' : 'Comment (optional)'}
               />
             </div>
           ) : (
@@ -642,8 +775,20 @@ export default function RequestDetail() {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={4}
-              placeholder="Comment (recommended)"
+              placeholder={requiresComment ? 'Comment (required)' : 'Comment (recommended)'}
             />
+          )}
+          <Select value={visibility} onValueChange={(v) => setVisibility(v as 'all' | 'internal')}>
+            <SelectTrigger>
+              <SelectValue placeholder="Visibility" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Visible to all viewers</SelectItem>
+              <SelectItem value="internal">Internal (HR/Admin only)</SelectItem>
+            </SelectContent>
+          </Select>
+          {requiresComment && commentIsEmpty && (
+            <p className="text-xs text-red-600">A comment is required for this action.</p>
           )}
 
           <DialogFooter>
@@ -657,13 +802,13 @@ export default function RequestDetail() {
             ) : actionDialog === 'reject' ? (
               <Button
                 variant="destructive"
-                disabled={actionMutation.isPending}
+                disabled={actionMutation.isPending || commentIsEmpty}
                 onClick={() => onSubmitAction('reject')}
               >
                 Reject
               </Button>
             ) : actionDialog === 'return' ? (
-              <Button disabled={actionMutation.isPending} onClick={() => onSubmitAction('return')}>
+              <Button disabled={actionMutation.isPending || commentIsEmpty} onClick={() => onSubmitAction('return')}>
                 Return
               </Button>
             ) : actionDialog === 'forward' ? (
@@ -679,6 +824,80 @@ export default function RequestDetail() {
                 Add Comment
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Manage Request</DialogTitle>
+            <DialogDescription>
+              Update priority, due date, and current assignee. Changes are logged to the request timeline.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <Select value={managePriority} onValueChange={(value) => setManagePriority(value as 'low' | 'normal' | 'high' | 'urgent')}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(['low', 'normal', 'high', 'urgent'] as const).map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {priorityLabel[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <Input
+                type="datetime-local"
+                value={manageDueAt}
+                onChange={(e) => setManageDueAt(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reassign Current Step</label>
+              <Select value={manageAssignee} onValueChange={setManageAssignee}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(forwardTargetsQuery.data || []).map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {(p.full_name || p.email) + ` (${p.role})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Internal Note</label>
+              <Textarea
+                value={manageNote}
+                onChange={(e) => setManageNote(e.target.value)}
+                rows={3}
+                placeholder="Optional note for the audit trail"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageDialogOpen(false)} disabled={manageSaving}>
+              Cancel
+            </Button>
+            <Button onClick={saveManagement} disabled={manageSaving}>
+              {manageSaving ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : null}
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

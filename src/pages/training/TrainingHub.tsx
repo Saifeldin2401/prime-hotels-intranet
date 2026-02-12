@@ -38,6 +38,7 @@ import { ModuleTemplateSelector } from '@/components/training/hub/ModuleTemplate
 import { ModuleCreationWizard } from '@/components/training/hub/ModuleCreationWizard'
 import { ModuleQuickActions } from '@/components/training/hub/ModuleQuickActions'
 import { ModuleAnalyticsCard } from '@/components/training/hub/ModuleAnalyticsCard'
+import { TrainingProgressVisualization } from '@/components/training/TrainingProgressVisualization'
 
 type ModuleStatus = 'draft' | 'published' | 'archived'
 type ViewMode = 'list' | 'builder' | 'assignments' | 'insights'
@@ -825,6 +826,14 @@ export default function TrainingHub() {
           ) : (
             <>
               {analytics && <ModuleAnalyticsCard analytics={analytics} />}
+
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-hotel-navy">{t('visualization.title')}</h3>
+                </div>
+                <TrainingProgressVisualization />
+              </div>
+
               <TrainingAssignmentsPanel
                 embedded
                 initialTab="overview"

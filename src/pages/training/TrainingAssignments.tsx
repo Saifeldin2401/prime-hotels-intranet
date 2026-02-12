@@ -11,8 +11,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,13 +45,15 @@ import {
   AlertCircle,
   BarChart3,
   Download,
-  Settings
+  Settings,
+  X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TrainingModule } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
+import { addDays, format } from 'date-fns'
 
 // Interface for learning_assignments table
 interface LearningAssignment {
@@ -59,7 +65,12 @@ interface LearningAssignment {
   assigned_by: string | null
   due_date: string | null
   valid_from: string
+  expires_at?: string | null
   priority: string
+  instructions?: string | null
+  requires_acknowledgement?: boolean | null
+  notify_on_due?: boolean | null
+  reminder_days_before?: number[] | null
   created_at: string
   // Joined data
   training_modules?: TrainingModule
@@ -94,23 +105,32 @@ export function TrainingAssignmentsPanel({
 
   // State
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter] = useState<string>('all')
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(autoOpen)
   const [activeTab, setActiveTab] = useState<'overview' | 'assignments'>(initialTab)
 
   // Progress Data
   const { data: progressData, isLoading: isLoadingProgress } = useLearningProgress()
 
-  // Advanced Filters
-  const [filterStatus, setFilterStatus] = useState<string | null>(null)
-  const [filterDept, setFilterDept] = useState<string | null>(null)
-  const [filterProp, setFilterProp] = useState<string | null>(null)
+  // Overview Tab Specific Filters
+  const [overviewSearch, setOverviewSearch] = useState('')
+  const [overviewFilterStatus, setOverviewFilterStatus] = useState<string>('all')
+  const [overviewFilterDept, setOverviewFilterDept] = useState<string>('all')
+  const [overviewFilterProp, setOverviewFilterProp] = useState<string>('all')
 
   // Form state
   const [formModuleId, setFormModuleId] = useState(defaultModuleId || '')
   const [formTargetType, setFormTargetType] = useState<'all' | 'users' | 'departments' | 'properties'>('all')
   const [formTargetIds, setFormTargetIds] = useState<string[]>([])
   const [formDeadline, setFormDeadline] = useState('')
+  const [formValidFrom, setFormValidFrom] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const [formExpiresAt, setFormExpiresAt] = useState('')
+  const [formPriority, setFormPriority] = useState<'normal' | 'high' | 'compliance'>('normal')
+  const [formInstructions, setFormInstructions] = useState('')
+  const [requiresAcknowledgement, setRequiresAcknowledgement] = useState(false)
+  const [sendNotifications, setSendNotifications] = useState(true)
+  const [notifyOnDue, setNotifyOnDue] = useState(true)
+  const [reminderDaysBefore, setReminderDaysBefore] = useState<number[]>([])
   const [propertyFilter, setPropertyFilter] = useState<string>('all')
 
   useEffect(() => {
@@ -124,6 +144,7 @@ export function TrainingAssignmentsPanel({
   useEffect(() => {
     if (autoOpen) setShowAssignmentDialog(true)
   }, [autoOpen])
+
 
   // Fetch assignments
   const { data: rawAssignments, isLoading: isLoadingAssignments } = useQuery({
@@ -231,16 +252,21 @@ export function TrainingAssignmentsPanel({
       }
 
       if (formTargetType === 'all') {
-        assignments.push({
-          target_type: 'everyone',
-          target_id: null,
-          content_type: 'module',
-          content_id: formModuleId,
-          assigned_by: profile?.id,
-          due_date: formDeadline || null,
-          valid_from: new Date().toISOString(),
-          priority: 'normal'
-        })
+          assignments.push({
+            target_type: 'everyone',
+            target_id: null,
+            content_type: 'module',
+            content_id: formModuleId,
+            assigned_by: profile?.id,
+            due_date: formDeadline || null,
+            valid_from: formValidFrom ? new Date(formValidFrom).toISOString() : new Date().toISOString(),
+            expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
+            priority: formPriority,
+            instructions: formInstructions || null,
+            requires_acknowledgement: requiresAcknowledgement,
+            notify_on_due: notifyOnDue,
+            reminder_days_before: reminderDaysBefore
+          })
       } else {
         formTargetIds.forEach(id => {
           assignments.push({
@@ -250,8 +276,13 @@ export function TrainingAssignmentsPanel({
             content_id: formModuleId,
             assigned_by: profile?.id,
             due_date: formDeadline || null,
-            valid_from: new Date().toISOString(),
-            priority: 'normal'
+            valid_from: formValidFrom ? new Date(formValidFrom).toISOString() : new Date().toISOString(),
+            expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
+            priority: formPriority,
+            instructions: formInstructions || null,
+            requires_acknowledgement: requiresAcknowledgement,
+            notify_on_due: notifyOnDue,
+            reminder_days_before: reminderDaysBefore
           })
         })
       }
@@ -260,6 +291,8 @@ export function TrainingAssignmentsPanel({
         .from('learning_assignments')
         .insert(assignments)
       if (error) throw error
+
+      if (!sendNotifications) return
 
       // Send bulk notifications to affected users
       const moduleTitle = modules?.find(m => m.id === formModuleId)?.title || t('unknownModule')
@@ -353,8 +386,15 @@ export function TrainingAssignmentsPanel({
     setFormTargetType('all')
     setFormTargetIds([])
     setFormDeadline('')
+    setFormValidFrom(format(new Date(), 'yyyy-MM-dd'))
+    setFormExpiresAt('')
+    setFormPriority('normal')
+    setFormInstructions('')
+    setRequiresAcknowledgement(false)
+    setSendNotifications(true)
+    setNotifyOnDue(true)
+    setReminderDaysBefore([])
   }
-
   const handleDelete = (id: string) => {
     if (confirm(t('confirmAssignmentDelete'))) {
       deleteAssignmentMutation.mutate(id)
@@ -420,7 +460,7 @@ export function TrainingAssignmentsPanel({
     return new Date(dateStr).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US')
   }
 
-  // Filtered Assignments
+  // Filtered Assignments (For the Assignments Tab)
   const filteredAssignments = useMemo(() => {
     return assignments?.filter(assignment => {
       const moduleTitle = assignment.training_modules?.title || ''
@@ -431,12 +471,24 @@ export function TrainingAssignmentsPanel({
     }) || []
   }, [assignments, search, statusFilter])
 
-  // Filtered Progress Data
+  // Overview Tab: Filtered Progress Logic with NEW filters
   const filteredProgress = useMemo(() => {
     if (!progressData) return []
     return progressData.filter(item => {
-      // Status Filter
-      if (filterStatus && filterStatus !== 'all' && item.status !== filterStatus) return false
+      // 1. Search Filter
+      if (overviewSearch) {
+        const searchLower = overviewSearch.toLowerCase()
+        const user = users?.find(u => u.id === item.user_id)
+        const userName = item.profiles?.full_name || user?.full_name || ''
+        const moduleTitle = modules?.find(m => m.id === item.content_id)?.title || ''
+
+        if (!userName.toLowerCase().includes(searchLower) && !moduleTitle.toLowerCase().includes(searchLower)) {
+          return false
+        }
+      }
+
+      // 2. Status Filter
+      if (overviewFilterStatus !== 'all' && item.status !== overviewFilterStatus) return false
 
       // Resolve User Context
       const userDeptData = userDepartments?.find(ud => ud.user_id === item.user_id)?.department
@@ -445,33 +497,46 @@ export function TrainingAssignmentsPanel({
       const userDeptId = Array.isArray(userDeptData) ? userDeptData[0]?.id : (userDeptData as any)?.id
       const userPropId = Array.isArray(userPropData) ? userPropData[0]?.id : (userPropData as any)?.id
 
-      // Department Filter
-      if (filterDept && userDeptId !== filterDept) return false
+      // 3. Department Filter
+      if (overviewFilterDept !== 'all' && userDeptId !== overviewFilterDept) return false
 
-      // Property Filter
-      if (filterProp && userPropId !== filterProp) return false
+      // 4. Property Filter
+      if (overviewFilterProp !== 'all' && userPropId !== overviewFilterProp) return false
 
       return true
     })
-  }, [progressData, filterStatus, filterDept, filterProp, userDepartments, userProperties])
+  }, [progressData, overviewSearch, overviewFilterStatus, overviewFilterDept, overviewFilterProp, userDepartments, userProperties, users, modules])
 
-  // Progress Metrics
+  // Overview Tab: Progress Metrics based on Filtered Data
   const progressMetrics = useMemo(() => {
-    if (!progressData) return { total: 0, completed: 0, in_progress: 0, overdue: 0 }
+    const sourceData = filteredProgress
     return {
-      total: progressData.length,
-      completed: progressData.filter(p => p.status === 'completed').length,
-      in_progress: progressData.filter(p => p.status === 'in_progress').length,
-      overdue: progressData.filter(p => p.status === 'overdue').length
+      total: sourceData.length,
+      completed: sourceData.filter(p => p.status === 'completed').length,
+      in_progress: sourceData.filter(p => p.status === 'in_progress').length,
+      overdue: sourceData.filter(p => p.status === 'overdue').length
     }
-  }, [progressData])
+  }, [filteredProgress])
 
   // Get unique properties from departments
+  // Group departments by property for the dropdown
+  const groupedDepartments = useMemo(() => {
+    if (!departments) return {}
+
+    return departments.reduce((acc, dept) => {
+      const propName = dept.propertyName || t('other')
+      if (!acc[propName]) {
+        acc[propName] = []
+      }
+      acc[propName].push(dept)
+      return acc
+    }, {} as Record<string, typeof departments>)
+  }, [departments, t])
+
   const departmentProperties = useMemo(() => {
     if (!departments) return []
     const props = new Set<string>()
     departments.forEach(d => {
-      // Extract property name from the formatted name "Dept (Property)"
       const match = d.name.match(/\((.+)\)$/)
       if (match) props.add(match[1])
     })
@@ -484,11 +549,9 @@ export function TrainingAssignmentsPanel({
       case 'users': return users?.map(u => ({ id: u.id, name: u.full_name || u.email })) || []
       case 'departments': {
         if (!departments) return []
-        // Filter by property if one is selected
         const filtered = propertyFilter === 'all'
           ? departments
           : departments.filter(d => d.name.includes(`(${propertyFilter})`))
-        // Return with clean names (remove property suffix)
         return filtered.map(d => ({
           id: d.id,
           name: d.name.replace(/\s*\(.+\)$/, '')
@@ -498,6 +561,30 @@ export function TrainingAssignmentsPanel({
       default: return []
     }
   }, [formTargetType, users, departments, properties, propertyFilter])
+
+  const validationErrors = useMemo(() => {
+    const errors: string[] = []
+    if (!formModuleId) errors.push(t('moduleRequired'))
+    if (formTargetType !== 'all' && formTargetIds.length === 0) errors.push(t('selectTargetsRequired', 'Select at least one target.'))
+    return errors
+  }, [formModuleId, formTargetIds.length, formTargetType, t])
+
+  const dueDatePresets = [
+    { label: t('in_1_week', 'In 1 week'), days: 7 },
+    { label: t('in_2_weeks', 'In 2 weeks'), days: 14 },
+    { label: t('in_1_month', 'In 1 month'), days: 30 },
+  ]
+
+  const reminderOptions = [
+    { label: t('reminder_1_day', '1 day before'), value: 1 },
+    { label: t('reminder_3_days', '3 days before'), value: 3 },
+    { label: t('reminder_7_days', '7 days before'), value: 7 }
+  ]
+
+  const selectedModuleName = modules?.find(m => m.id === formModuleId)?.title || t('unknownModule')
+  const selectedTargetsLabel = formTargetType === 'all'
+    ? t('allUsers')
+    : `${formTargetIds.length} ${t('selected')}`
 
   const handleExport = () => {
     if (!filteredProgress.length) return
@@ -588,56 +675,135 @@ export function TrainingAssignmentsPanel({
 
         {/* PROGRESS TAB */}
         <TabsContent value="overview" className="space-y-6">
+          {/* Overview Filters Toolbar */}
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-gray-50 p-4 rounded-lg border">
+            <div className="flex flex-1 items-center gap-4 w-full md:w-auto flex-wrap">
+              <div className="relative flex-1 md:w-64 min-w-[200px]">
+                <Search className={cn("absolute top-2.5 h-4 w-4 text-gray-500", isRTL ? "right-3" : "left-3")} />
+                <Input
+                  placeholder={t('searchEmployeeOrModule')}
+                  value={overviewSearch}
+                  onChange={(e) => setOverviewSearch(e.target.value)}
+                  className={cn(isRTL ? "pr-9" : "pl-9", "bg-white")}
+                />
+              </div>
+              <Select value={overviewFilterDept} onValueChange={setOverviewFilterDept}>
+                <SelectTrigger className="w-[180px] bg-white">
+                  <SelectValue placeholder={t('filterByDept')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('allDepartments')}</SelectItem>
+                  {Object.entries(groupedDepartments).map(([propertyName, depts], index, array) => (
+                    <SelectGroup key={propertyName}>
+                      <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-slate-50">
+                        {propertyName}
+                      </SelectLabel>
+                      {depts.map(d => (
+                        <SelectItem key={d.id} value={d.id} className="pl-4">
+                          {d.rawName || d.name.replace(/\s*\(.+\)$/, '')}
+                        </SelectItem>
+                      ))}
+                      {index < array.length - 1 && <SelectSeparator />}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={overviewFilterProp} onValueChange={setOverviewFilterProp}>
+                <SelectTrigger className="w-[180px] bg-white">
+                  <SelectValue placeholder={t('filterByProp')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('allProperties')}</SelectItem>
+                  {properties?.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={overviewFilterStatus} onValueChange={setOverviewFilterStatus}>
+                <SelectTrigger className="w-[150px] bg-white">
+                  <SelectValue placeholder={t('filterByStatus')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('allStatuses')}</SelectItem>
+                  <SelectItem value="completed">{t('completed')}</SelectItem>
+                  <SelectItem value="in_progress">{t('inProgress')}</SelectItem>
+                  <SelectItem value="overdue">{t('overdue')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2">
+              {(overviewSearch || overviewFilterDept !== 'all' || overviewFilterProp !== 'all' || overviewFilterStatus !== 'all') && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setOverviewSearch('')
+                    setOverviewFilterDept('all')
+                    setOverviewFilterProp('all')
+                    setOverviewFilterStatus('all')
+                  }}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  {t('clearFilters')}
+                </Button>
+              )}
+              <Button variant="outline" onClick={handleExport} className="bg-white">
+                <Download className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                {t('export')}
+              </Button>
+            </div>
+          </div>
           {/* Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
+            <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{t('totalEnrollments')}</p>
-                    <h3 className="text-2xl font-bold mt-1">{progressMetrics.total}</h3>
+                    <p className="text-sm font-medium text-muted-foreground">{t('totalEnrollments')}</p>
+                    <h3 className="text-3xl font-bold mt-2 text-slate-900">{progressMetrics.total}</h3>
                   </div>
-                  <div className="h-10 w-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                    <Users className="w-5 h-5" />
+                  <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                    <Users className="w-6 h-6" />
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-all">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{t('completed')}</p>
-                    <h3 className="text-2xl font-bold mt-1 text-green-600">{progressMetrics.completed}</h3>
+                    <p className="text-sm font-medium text-muted-foreground">{t('completed')}</p>
+                    <h3 className="text-3xl font-bold mt-2 text-slate-900">{progressMetrics.completed}</h3>
                   </div>
-                  <div className="h-10 w-10 bg-green-50 rounded-full flex items-center justify-center text-green-600">
-                    <CheckCircle2 className="w-5 h-5" />
+                  <div className="h-12 w-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
+                    <CheckCircle2 className="w-6 h-6" />
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-l-4 border-l-yellow-500 shadow-sm hover:shadow-md transition-all">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{t('inProgress')}</p>
-                    <h3 className="text-2xl font-bold mt-1 text-yellow-600">{progressMetrics.in_progress}</h3>
+                    <p className="text-sm font-medium text-muted-foreground">{t('inProgress')}</p>
+                    <h3 className="text-3xl font-bold mt-2 text-slate-900">{progressMetrics.in_progress}</h3>
                   </div>
-                  <div className="h-10 w-10 bg-yellow-50 rounded-full flex items-center justify-center text-yellow-600">
-                    <Clock className="w-5 h-5" />
+                  <div className="h-12 w-12 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-600">
+                    <Clock className="w-6 h-6" />
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-all">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{t('overdue')}</p>
-                    <h3 className="text-2xl font-bold mt-1 text-red-600">{progressMetrics.overdue}</h3>
+                    <p className="text-sm font-medium text-muted-foreground">{t('overdue')}</p>
+                    <h3 className="text-3xl font-bold mt-2 text-slate-900">{progressMetrics.overdue}</h3>
                   </div>
-                  <div className="h-10 w-10 bg-red-50 rounded-full flex items-center justify-center text-red-600">
-                    <AlertCircle className="w-5 h-5" />
+                  <div className="h-12 w-12 bg-red-50 rounded-xl flex items-center justify-center text-red-600">
+                    <AlertCircle className="w-6 h-6" />
                   </div>
                 </div>
               </CardContent>
@@ -645,136 +811,38 @@ export function TrainingAssignmentsPanel({
           </div>
 
           {/* Progress Table */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t('employeeProgress')}</CardTitle>
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className={cn(filterStatus || filterDept || filterProp ? "bg-blue-50 border-blue-200 text-blue-700" : "", isRTL ? "flex-row-reverse" : "")}>
-                      <span className={isRTL ? "ml-2" : "mr-2"}>{t('filter')}</span>
-                      {(filterStatus || filterDept || filterProp) && (
-                        <span className={cn("flex h-2 w-2 rounded-full bg-blue-600", isRTL ? "ml-2" : "mr-2")} />
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align={isRTL ? "start" : "end"} className="w-[200px] bg-white">
-                    <DropdownMenuLabel>{t('filterBy')}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-
-                    {/* Status Sub-menu */}
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>{t('status')}</DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="bg-white">
-                        <DropdownMenuCheckboxItem
-                          checked={filterStatus === 'assigned'}
-                          onCheckedChange={() => setFilterStatus(filterStatus === 'assigned' ? null : 'assigned')}
-                        >
-                          {t('assigned')}
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={filterStatus === 'in_progress'}
-                          onCheckedChange={() => setFilterStatus(filterStatus === 'in_progress' ? null : 'in_progress')}
-                        >
-                          {t('inProgress')}
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={filterStatus === 'completed'}
-                          onCheckedChange={() => setFilterStatus(filterStatus === 'completed' ? null : 'completed')}
-                        >
-                          {t('completed')}
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={filterStatus === 'overdue'}
-                          onCheckedChange={() => setFilterStatus(filterStatus === 'overdue' ? null : 'overdue')}
-                        >
-                          {t('overdue')}
-                        </DropdownMenuCheckboxItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-
-                    {/* Department Sub-menu */}
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>{t('department')}</DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="max-h-[300px] overflow-y-auto bg-white">
-                        {departments?.map(dept => (
-                          <DropdownMenuCheckboxItem
-                            key={dept.id}
-                            checked={filterDept === dept.id}
-                            onCheckedChange={() => setFilterDept(filterDept === dept.id ? null : dept.id)}
-                          >
-                            {dept.name}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                        {(!departments || departments.length === 0) && (
-                          <DropdownMenuItem disabled>{t('noDepartments')}</DropdownMenuItem>
-                        )}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-
-                    {/* Property Sub-menu */}
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>{t('property')}</DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="max-h-[300px] overflow-y-auto bg-white">
-                        {properties?.map(prop => (
-                          <DropdownMenuCheckboxItem
-                            key={prop.id}
-                            checked={filterProp === prop.id}
-                            onCheckedChange={() => setFilterProp(filterProp === prop.id ? null : prop.id)}
-                          >
-                            {prop.name}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                        {(!properties || properties.length === 0) && (
-                          <DropdownMenuItem disabled>{t('noProperties')}</DropdownMenuItem>
-                        )}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-red-600 justify-center"
-                      onClick={() => {
-                        setFilterStatus(null)
-                        setFilterDept(null)
-                        setFilterProp(null)
-                      }}
-                    >
-                      {t('resetFilters')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button variant="outline" size="sm" onClick={handleExport} className={isRTL ? "flex-row-reverse" : ""}>
-                  <Download className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-                  {t('exportReport')}
-                </Button>
-              </div>
+          <Card className="shadow-md border-t-4 border-t-hotel-navy">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+              <CardTitle className="text-xl font-heading text-hotel-navy">{t('employeeProgress')}</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {isLoadingProgress ? (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-hotel-gold" />
+                <div className="flex justify-center p-12">
+                  <Loader2 className="w-10 h-10 animate-spin text-hotel-gold" />
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="hidden md:block">
                     <Table>
-                      <TableHeader>
+                      <TableHeader className="bg-slate-50">
                         <TableRow>
-                          <TableHead className={isRTL ? "text-right" : ""}>{t('employee')}</TableHead>
-                          <TableHead className={isRTL ? "text-right" : ""}>{t('module')}</TableHead>
-                          <TableHead className={isRTL ? "text-right" : ""}>{t('status')}</TableHead>
-                          <TableHead className={isRTL ? "text-right" : ""}>{t('progress')}</TableHead>
-                          <TableHead className={isRTL ? "text-right" : ""}>{t('score')}</TableHead>
-                          <TableHead className={isRTL ? "text-right" : ""}>{t('lastAccess')}</TableHead>
+                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('employee')}</TableHead>
+                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('module')}</TableHead>
+                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('status')}</TableHead>
+                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('progress')}</TableHead>
+                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('score')}</TableHead>
+                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('lastAccess')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredProgress.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                              {t('noProgressFound')}
+                            <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                              <div className="flex flex-col items-center gap-3">
+                                <Search className="h-10 w-10 text-slate-300" />
+                                <p>{t('noProgressFound')}</p>
+                                <p className="text-xs text-slate-400">{t('adjustFilters')}</p>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -786,45 +854,68 @@ export function TrainingAssignmentsPanel({
                             const propName = Array.isArray(propData) ? propData[0]?.name : (propData as any)?.name
 
                             const user = users?.find(u => u.id === item.user_id)
+                            const userName = item.profiles?.full_name || user?.full_name || t('unknownUser')
+                            const userInitials = userName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
 
                             return (
-                              <TableRow key={item.id}>
-                                <TableCell>
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{item.profiles?.full_name || user?.full_name || t('unknownUser')}</span>
-                                    <span className="text-xs text-gray-500">
-                                      {deptName || propName || t('noDept')}
-                                    </span>
+                              <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                                <TableCell className="py-4">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm group-hover:border-blue-100 transition-all">
+                                      <AvatarImage src={item.profiles?.avatar_url || ''} />
+                                      <AvatarFallback className="bg-hotel-navy/5 text-hotel-navy font-bold text-xs">
+                                        {userInitials}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col">
+                                      <span className="font-semibold text-slate-900 group-hover:text-hotel-navy transition-colors">{userName}</span>
+                                      <span className="text-xs text-muted-foreground max-w-[180px] truncate" title={deptName || propName || t('noDept')}>
+                                        {deptName || propName || t('noDept')}
+                                      </span>
+                                    </div>
                                   </div>
                                 </TableCell>
-                                <TableCell className="font-medium">
+                                <TableCell className="font-medium text-slate-700 py-4">
                                   {modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')}
                                 </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className={
-                                    item.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' :
-                                      item.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' :
-                                        item.status === 'overdue' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' :
-                                          'bg-gray-50 text-gray-700 border-gray-200'
-                                  }>
+                                <TableCell className="py-4">
+                                  <Badge variant="outline" className={cn(
+                                    "capitalize px-3 py-1 rounded-full text-xs font-semibold shadow-sm border-0",
+                                    item.status === 'completed' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
+                                      item.status === 'in_progress' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
+                                        item.status === 'overdue' ? 'bg-red-100 text-red-700 hover:bg-red-200' :
+                                          'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                  )}>
                                     {t(item.status)}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="w-[150px]">
-                                  <div className="flex items-center gap-2">
-                                    <Progress value={item.progress_percentage} className="h-2" />
-                                    <span className="text-xs text-gray-500">{item.progress_percentage}%</span>
+                                <TableCell className="w-[150px] py-4">
+                                  <div className="flex flex-col gap-1.5">
+                                    <div className="flex justify-between text-xs mb-1">
+                                      <span className="font-medium text-slate-700">{item.progress_percentage}%</span>
+                                    </div>
+                                    <Progress value={item.progress_percentage} className={cn("h-2",
+                                      item.progress_percentage === 100 ? "[&>div]:bg-green-500" : "[&>div]:bg-hotel-gold"
+                                    )} />
                                   </div>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="py-4">
                                   {item.score_percentage !== undefined && item.score_percentage !== null ? (
-                                    <span className={`font-bold ${item.passed ? 'text-green-600' : 'text-red-500'}`}>
+                                    <span className={cn(
+                                      "font-bold text-sm",
+                                      item.passed ? "text-green-600" : "text-red-500"
+                                    )}>
                                       {Number(item.score_percentage).toFixed(0)}%
                                     </span>
-                                  ) : '-'}
+                                  ) : (
+                                    <span className="text-slate-400">-</span>
+                                  )}
                                 </TableCell>
-                                <TableCell className="text-sm text-gray-500">
-                                  {formatDate(item.last_accessed_at || item.created_at)}
+                                <TableCell className="text-sm text-muted-foreground py-4">
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                    {formatDate(item.last_accessed_at || item.created_at)}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             )
@@ -884,11 +975,11 @@ export function TrainingAssignmentsPanel({
                 </div>
               )}
             </CardContent>
-          </Card>
-        </TabsContent>
+          </Card >
+        </TabsContent >
 
         {/* ASSIGNMENTS TAB */}
-        <TabsContent value="assignments" className="space-y-6">
+        < TabsContent value="assignments" className="space-y-6" >
           <div className={cn(
             "flex items-center bg-white p-4 rounded-lg border shadow-sm",
             hideCreateButton ? "justify-start" : "justify-between"
@@ -920,9 +1011,19 @@ export function TrainingAssignmentsPanel({
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
-                        {t('module')}
-                      </Badge>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                          {t('module')}
+                        </Badge>
+                        <Badge variant="outline" className="bg-slate-50 text-slate-700">
+                          {t(assignment.priority || 'normal', assignment.priority || 'normal')}
+                        </Badge>
+                        {assignment.requires_acknowledgement && (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700">
+                            {t('ackRequired', 'Ack required')}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-600" onClick={() => handleDelete(assignment.id)}>
                           <Trash2 className="w-4 h-4" />
@@ -974,14 +1075,14 @@ export function TrainingAssignmentsPanel({
               </div>
             )}
           </div>
-        </TabsContent>
+        </TabsContent >
       </Tabs >
 
       {/* CREATE DIALOG */}
       {
         showAssignmentDialog && (
           <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
-            <DialogContent className="max-w-lg bg-white">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white">
               <DialogHeader>
                 <DialogTitle>
                   {t('createAssignment')}
@@ -991,6 +1092,14 @@ export function TrainingAssignmentsPanel({
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6">
+                {validationErrors.length > 0 && (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                    {validationErrors.map((message) => (
+                      <p key={message}>{message}</p>
+                    ))}
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label>{t('selectModule')}</Label>
                   <select
@@ -1006,6 +1115,8 @@ export function TrainingAssignmentsPanel({
                     ))}
                   </select>
                 </div>
+
+                <Separator />
 
                 <div className="space-y-2">
                   <Label>{t('assignTo')}</Label>
@@ -1043,11 +1154,32 @@ export function TrainingAssignmentsPanel({
 
                 {formTargetType !== 'all' && (
                   <div className="space-y-2">
-                    <Label>
-                      {formTargetType === 'users' ? t('selectUsers') :
-                        formTargetType === 'departments' ? t('selectDepartments') :
-                          t('selectProperties')}
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label>
+                        {formTargetType === 'users' ? t('selectUsers') :
+                          formTargetType === 'departments' ? t('selectDepartments') :
+                            t('selectProperties')}
+                      </Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFormTargetIds(currentListItems.map(item => item.id))}
+                          disabled={currentListItems.length === 0}
+                        >
+                          {t('selectAll', 'Select all')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFormTargetIds([])}
+                        >
+                          {t('clear', 'Clear')}
+                        </Button>
+                      </div>
+                    </div>
                     <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-gray-50">
                       {currentListItems.length > 0 ? (
                         currentListItems.map((item) => (
@@ -1079,14 +1211,179 @@ export function TrainingAssignmentsPanel({
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label>{t('deadline')} ({t('optional')})</Label>
-                  <input
-                    type="date"
-                    value={formDeadline}
-                    onChange={(e) => setFormDeadline(e.target.value)}
-                    className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                  />
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t('validFrom', 'Valid from')}</Label>
+                    <input
+                      type="date"
+                      value={formValidFrom}
+                      onChange={(e) => setFormValidFrom(e.target.value)}
+                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('deadline')} ({t('optional')})</Label>
+                    <input
+                      type="date"
+                      value={formDeadline}
+                      onChange={(e) => setFormDeadline(e.target.value)}
+                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {dueDatePresets.map((preset) => (
+                        <Button
+                          key={preset.label}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFormDeadline(format(addDays(new Date(), preset.days), 'yyyy-MM-dd'))}
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('expiresAt', 'Expires at')}</Label>
+                    <input
+                      type="date"
+                      value={formExpiresAt}
+                      onChange={(e) => setFormExpiresAt(e.target.value)}
+                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('priority_label', 'Priority')}</Label>
+                    <select
+                      value={formPriority}
+                      onChange={(e) => setFormPriority(e.target.value as any)}
+                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
+                    >
+                      <option value="normal">{t('normal', 'Normal')}</option>
+                      <option value="high">{t('high', 'High')}</option>
+                      <option value="compliance">{t('complianceMandatory')}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <p className="text-sm font-medium">{t('sendNotifications', 'Send notifications')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('notifications.toggle_desc', 'Notify recipients when assignments are created.')}
+                    </p>
+                  </div>
+                  <Switch checked={sendNotifications} onCheckedChange={setSendNotifications} />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium">{t('assignmentControls', 'Assignment controls')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('assignmentControlsDesc', 'Add safeguards, reminders, and instructions.')}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>{t('instructions', 'Instructions')}</Label>
+                      <textarea
+                        value={formInstructions}
+                        onChange={(e) => setFormInstructions(e.target.value)}
+                        placeholder={t('instructionsPlaceholder', 'Optional notes for assignees...')}
+                        className="w-full min-h-[90px] px-3 py-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold text-sm"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="flex items-center justify-between rounded-md border p-3 text-sm">
+                        <span>{t('requiresAcknowledgement', 'Requires acknowledgement')}</span>
+                        <Switch checked={requiresAcknowledgement} onCheckedChange={setRequiresAcknowledgement} />
+                      </label>
+                      <label className="flex items-center justify-between rounded-md border p-3 text-sm">
+                        <span>{t('notifyOnDue', 'Notify when due')}</span>
+                        <Switch checked={notifyOnDue} onCheckedChange={setNotifyOnDue} />
+                      </label>
+                      <div className="rounded-md border p-3 space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">{t('reminders', 'Reminders')}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {reminderOptions.map((option) => {
+                            const isSelected = reminderDaysBefore.includes(option.value)
+                            return (
+                              <Button
+                                key={option.value}
+                                type="button"
+                                variant={isSelected ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                  setReminderDaysBefore((prev) => {
+                                    if (prev.includes(option.value)) {
+                                      return prev.filter((v) => v !== option.value)
+                                    }
+                                    return [...prev, option.value].sort((a, b) => a - b)
+                                  })
+                                }}
+                              >
+                                {option.label}
+                              </Button>
+                            )
+                          })}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {reminderDaysBefore.length > 0
+                            ? t('reminderSummary', '{{count}} reminders selected', { count: reminderDaysBefore.length })
+                            : t('reminderNone', 'No reminders selected')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t('summary', 'Summary')}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-muted-foreground">{t('module')}</p>
+                      <p className="font-medium">{selectedModuleName}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t('assignTo')}</p>
+                      <p className="font-medium">{selectedTargetsLabel}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t('deadline')}</p>
+                      <p className="font-medium">{formDeadline ? format(new Date(formDeadline), 'PPP') : t('none', 'None')}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t('priority_label', 'Priority')}</p>
+                      <p className="font-medium capitalize">{formPriority}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t('acknowledgement', 'Acknowledgement')}</p>
+                      <p className="font-medium">{requiresAcknowledgement ? t('required', 'Required') : t('notRequired', 'Not required')}</p>
+                    </div>
+                  </div>
+                  {formValidFrom && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t('validFrom', 'Valid from')}: {format(new Date(formValidFrom), 'PPP')}
+                    </p>
+                  )}
+                  {formExpiresAt && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t('expiresAt', 'Expires at')}: {format(new Date(formExpiresAt), 'PPP')}
+                    </p>
+                  )}
+                  {formInstructions && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t('instructions', 'Instructions')}: {formInstructions}
+                    </p>
+                  )}
                 </div>
 
                 <div className={cn("flex justify-end gap-3 pt-4 border-t", isRTL ? "flex-row-reverse" : "")}>
@@ -1101,7 +1398,7 @@ export function TrainingAssignmentsPanel({
                   </Button>
                   <Button
                     onClick={() => createAssignmentMutation.mutate()}
-                    disabled={!formModuleId || createAssignmentMutation.isPending || (formTargetType !== 'all' && formTargetIds.length === 0)}
+                    disabled={validationErrors.length > 0 || createAssignmentMutation.isPending}
                     className={cn("bg-hotel-navy text-white hover:bg-hotel-navy-light", isRTL ? "flex-row-reverse" : "")}
                   >
                     {createAssignmentMutation.isPending ? (

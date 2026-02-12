@@ -99,7 +99,8 @@ export default function MaintenanceDashboard() {
     completeMutation.mutate({ ticketId })
   }
 
-  const TicketCard = ({ ticket, showActions = false }: { ticket: MaintenanceTicket, showActions?: boolean }) => {
+    const TicketCard = ({ ticket, showActions = false }: { ticket: MaintenanceTicket, showActions?: boolean }) => {
+    const isOverdue = ticket.due_at ? new Date(ticket.due_at) < new Date() : false
     const Icon = categoryIcons[ticket.category] || Wrench
 
     return (
@@ -121,6 +122,11 @@ export default function MaintenanceDashboard() {
             <Badge className={cn("text-[10px]", statusColors[ticket.status] || statusColors.closed)}>
               {t(ticket.status)}
             </Badge>
+            {ticket.due_at && (
+              <Badge className={cn("text-[10px]", isOverdue ? "bg-red-100 text-red-800 border border-red-200" : "bg-gray-100 text-gray-700 border border-gray-200")}>
+                {t('due', { defaultValue: 'Due' })} {format(new Date(ticket.due_at), 'MMM dd')}
+              </Badge>
+            )}
           </div>
         </div>
 

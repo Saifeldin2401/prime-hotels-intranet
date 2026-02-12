@@ -37,27 +37,17 @@ export interface RequestRow {
   supervisor_id: string | null
   current_assignee_id: string | null
   status: RequestStatus
+  priority?: 'low' | 'normal' | 'high' | 'urgent'
+  due_at?: string | null
+  last_action_at?: string | null
   submitted_at: string | null
   closed_at: string | null
   metadata: any
   created_at: string
   updated_at: string
   property_id: string | null
+  department_id?: string | null
   requester?: {
-    id: string
-    full_name: string
-    email: string
-    phone: string | null
-    job_title: string | null
-    hire_date: string | null
-    reporting_to: string | null
-    department_id?: string
-    property_id?: string
-  }
-  supervisor?: {
-    id: string
-    full_name: string
-    email: string
     phone: string | null
     job_title: string | null
   }
@@ -83,6 +73,9 @@ export interface RequestStepRow {
   status: RequestStepStatus
   acted_at: string | null
   completed_at: string | null
+  due_at?: string | null
+  sla_hours?: number | null
+  escalated_at?: string | null
   metadata: any
   comment: string | null
   created_by: string | null
@@ -150,7 +143,7 @@ export function useRequest(requestId?: string) {
         .select(
           `
           *,
-          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to, department_id, property_id),
+          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to),
           supervisor:profiles!requests_supervisor_id_fkey(id, full_name, email, phone, job_title),
           current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email, phone, job_title),
           property:properties(id, name)
@@ -311,6 +304,7 @@ export function useRequestAction() {
  */
 export function useRequestsInbox(filters?: {
   status?: RequestStatus[]
+  priority?: Array<'low' | 'normal' | 'high' | 'urgent'>
   department?: string[]
   employee?: string
   dateRange?: { start: string; end: string }
@@ -348,7 +342,7 @@ export function useRequestsInbox(filters?: {
         .select(
           `
           *,
-          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to, department_id, property_id),
+          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to),
           supervisor:profiles!requests_supervisor_id_fkey(id, full_name, email, phone, job_title),
           current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email, phone, job_title),
           property:properties(id, name)
@@ -383,6 +377,10 @@ export function useRequestsInbox(filters?: {
       // 4. Apply additional filters
       if (filters?.status && filters.status.length > 0) {
         query = query.in('status', filters.status)
+      }
+
+      if (filters?.priority && filters.priority.length > 0) {
+        query = query.in('priority', filters.priority)
       }
 
       if (filters?.search) {

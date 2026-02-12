@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
-import { Loader2, Search, Filter, CalendarIcon, User, FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Loader2, Search, Filter, CalendarIcon, User, FileText, Clock, CheckCircle, XCircle, AlertCircle, ArrowDown, ArrowUp, Flame } from 'lucide-react'
 import { format } from 'date-fns'
 import { useRequestsInbox, type RequestStatus, type RequestRow } from '@/hooks/useRequests'
 import { useTranslation } from 'react-i18next'
@@ -32,6 +32,13 @@ const entityConfig: Record<string, { label: string; icon: React.ReactNode }> = {
   transfer: { label: 'transfer', icon: <User className="w-4 h-4" /> },
 }
 
+const priorityConfig: Record<'low' | 'normal' | 'high' | 'urgent', { label: string; color: string; icon: React.ReactNode }> = {
+  low: { label: 'priority.low', color: 'bg-gray-100 text-gray-700', icon: <ArrowDown className="w-3.5 h-3.5" /> },
+  normal: { label: 'priority.normal', color: 'bg-blue-100 text-blue-800', icon: <Clock className="w-3.5 h-3.5" /> },
+  high: { label: 'priority.high', color: 'bg-orange-100 text-orange-800', icon: <ArrowUp className="w-3.5 h-3.5" /> },
+  urgent: { label: 'priority.urgent', color: 'bg-red-100 text-red-800', icon: <Flame className="w-3.5 h-3.5" /> },
+}
+
 export default function RequestsInbox() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation('requests')
@@ -41,6 +48,7 @@ export default function RequestsInbox() {
   // Filter states
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([])
+  const [selectedPriorities, setSelectedPriorities] = useState<Array<'low' | 'normal' | 'high' | 'urgent'>>([])
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
   const [showFilters, setShowFilters] = useState(false)
@@ -50,6 +58,7 @@ export default function RequestsInbox() {
   const filters = {
     search: searchTerm || undefined,
     status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+    priority: selectedPriorities.length > 0 ? selectedPriorities : undefined,
     employee: selectedEmployee || undefined,
     dateRange: dateRange || undefined,
   }
@@ -74,6 +83,7 @@ export default function RequestsInbox() {
   const clearFilters = () => {
     setSearchTerm('')
     setSelectedStatuses([])
+    setSelectedPriorities([])
     setSelectedEmployee('')
     setDateRange(null)
   }
@@ -94,6 +104,18 @@ export default function RequestsInbox() {
       <Badge variant="outline" className="rounded-md">
         {config.icon}
         <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{t(config.label)}</span>
+      </Badge>
+    )
+  }
+
+  const getPriorityBadge = (priority: 'low' | 'normal' | 'high' | 'urgent') => {
+    const config = priorityConfig[priority]
+    return (
+      <Badge className={cn(config.color, "rounded-md")}>
+        {config.icon}
+        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>
+          {t(config.label, { defaultValue: priority })}
+        </span>
       </Badge>
     )
   }
@@ -147,13 +169,13 @@ export default function RequestsInbox() {
             >
               <Filter className="w-4 h-4" />
               {t('filters')}
-              {selectedStatuses.length > 0 || selectedEmployee || dateRange && (
+              {selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedEmployee || dateRange && (
                 <Badge variant="secondary" className="ml-1">
-                  {selectedStatuses.length + (selectedEmployee ? 1 : 0) + (dateRange ? 1 : 0)}
+                  {selectedStatuses.length + selectedPriorities.length + (selectedEmployee ? 1 : 0) + (dateRange ? 1 : 0)}
                 </Badge>
               )}
             </Button>
-            {(selectedStatuses.length > 0 || selectedEmployee || dateRange) && (
+            {(selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedEmployee || dateRange) && (
               <Button variant="ghost" onClick={clearFilters}>
                 {t('clear_all')}
               </Button>
@@ -176,6 +198,31 @@ export default function RequestsInbox() {
                     />
                     <Label htmlFor={status} className="text-sm cursor-pointer">
                       {t(config.label)}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                {t('priority_label', { defaultValue: 'Priority' })}
+              </Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {Object.entries(priorityConfig).map(([priority, config]) => (
+                  <div key={priority} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`priority-${priority}`}
+                      checked={selectedPriorities.includes(priority as 'low' | 'normal' | 'high' | 'urgent')}
+                      onCheckedChange={(checked) => {
+                        const value = priority as 'low' | 'normal' | 'high' | 'urgent'
+                        setSelectedPriorities(prev =>
+                          checked ? [...prev, value] : prev.filter(p => p !== value)
+                        )
+                      }}
+                    />
+                    <Label htmlFor={`priority-${priority}`} className="text-sm cursor-pointer">
+                      {t(config.label, { defaultValue: priority })}
                     </Label>
                   </div>
                 ))}
@@ -255,6 +302,7 @@ export default function RequestsInbox() {
                       <span className="text-sm font-medium text-gray-500">{t('request_no', { no: request.request_no })}</span>
                       {getEntityBadge(request.entity_type)}
                       {getStatusBadge(request.status)}
+                      {request.priority ? getPriorityBadge(request.priority) : null}
                     </div>
 
                     <h3 className="text-lg font-medium mb-1">
@@ -266,6 +314,11 @@ export default function RequestsInbox() {
                       {request.current_assignee && (
                         <div>
                           {t('current_assignee', { name: request.current_assignee.full_name })}
+                        </div>
+                      )}
+                      {request.due_at && (
+                        <div className={new Date(request.due_at) < new Date() && !['approved', 'rejected', 'closed'].includes(request.status) ? 'text-red-600 font-medium' : ''}>
+                          {t('due_date', { defaultValue: 'Due' })}: {format(new Date(request.due_at), 'MMM d, yyyy')}
                         </div>
                       )}
                     </div>

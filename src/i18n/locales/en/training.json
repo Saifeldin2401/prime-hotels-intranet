@@ -75,6 +75,7 @@
     "dailyChallenge": "Daily Challenge",
     "dailyChallengeComplete": "Daily Challenge Complete",
     "dayStreak": "day streak!",
+    "streakDays": "Day Streak",
     "delete": "Delete",
     "description": "Description",
     "difficulty": "Difficulty",
@@ -498,6 +499,7 @@
         "on": "on"
     },
     "visualization": {
+        "title": "Personal Progress Stats",
         "completed": "Completed",
         "trainings": "trainings",
         "timeSpent": "Time Spent",
@@ -519,7 +521,11 @@
         "deptProgress": "Department Progress",
         "deptCategories": "Department Categories",
         "recentAchievements": "Recent Achievements",
-        "noAchievements": "No achievements yet. Keep training to earn your first badge!"
+        "noAchievements": "No achievements yet. Keep training to earn your first badge!",
+        "streak": "Current Streak",
+        "keepItUp": "Keep it up!",
+        "skillsRadar": "Skills Radar",
+        "needMoreDataForRadar": "Complete more training in different categories to see your skills radar."
     },
     "builder": {
         "courseStructure": "Course Structure",
@@ -1058,5 +1064,14 @@
     "departments": "Departments",
     "errorLoadingSop": "Errorloadingsop",
     "properties": "Properties",
-    "documentCannotBePreviewed": "Documentcannotbepreviewed"
+    "documentCannotBePreviewed": "Documentcannotbepreviewed",
+    "searchEmployeeOrModule": "Search Employee or Module",
+    "filterByDept": "Filter by Department",
+    "filterByProp": "Filter by Property",
+    "filterByStatus": "Filter by Status",
+    "allDepartments": "All Departments",
+    "allProperties": "All Properties",
+    "allStatuses": "All Statuses",
+    "clearFilters": "Clear Filters",
+    "export": "Export"
 }

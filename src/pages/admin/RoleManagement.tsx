@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -12,33 +11,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Switch } from '@/components/ui/switch'
+import { useToast } from '@/components/ui/use-toast'
 import {
   Users,
   Shield,
   Edit,
   Search,
   Lock,
-  CheckCircle
+  CheckCircle,
+  XCircle,
+  Loader2,
+  RotateCcw,
+  Columns
 } from 'lucide-react'
-import type { AppRole } from '@/lib/constants'
+import { ROLES, ROLE_HIERARCHY, type AppRole } from '@/lib/constants'
 import type { Permission } from '@/hooks/usePermissions'
+import { ALL_PERMISSIONS, PERMISSION_CATEGORIES, formatPermissionLabel } from '@/lib/permissionCatalog'
 import { useTranslation } from 'react-i18next'
 
-const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
-  corporate_admin: [
-    'training.view', 'training.create', 'training.edit', 'training.delete', 'training.assign', 'training.report',
-    'users.view', 'users.create', 'users.edit', 'users.delete', 'users.assign_roles',
-    'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.approve',
-    'announcements.view', 'announcements.create', 'announcements.edit', 'announcements.delete',
-    'system.view_logs', 'system.manage_settings', 'system.export_data'
-  ],
-  regional_admin: [
-    'training.view', 'training.create', 'training.edit', 'training.delete', 'training.assign', 'training.report',
-    'users.view', 'users.create', 'users.edit', 'users.delete', 'users.assign_roles',
-    'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.approve',
-    'announcements.view', 'announcements.create', 'announcements.edit', 'announcements.delete',
-    'system.view_logs', 'system.manage_settings', 'system.export_data'
-  ],
+// Fallback hardcoded permissions for role assignment dialog
+const ROLE_PERMISSIONS_FALLBACK: Record<AppRole, Permission[]> = {
+  corporate_admin: ALL_PERMISSIONS,
+  regional_admin: ALL_PERMISSIONS,
   regional_hr: [
     'training.view', 'training.create', 'training.edit', 'training.assign', 'training.report',
     'users.view', 'users.create', 'users.edit', 'users.delete',
@@ -52,45 +47,89 @@ const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.approve',
     'announcements.view', 'announcements.create', 'announcements.edit', 'announcements.delete'
   ],
-  property_hr: [
-    'training.view', 'training.assign',
-    'users.view',
-    'documents.view', 'documents.create', 'documents.edit',
-    'announcements.view'
-  ],
-  department_head: [
-    'training.view', 'training.assign',
-    'users.view',
-    'documents.view',
-    'announcements.view'
-  ],
-  manager: [
-    'training.view', 'training.assign',
-    'users.view',
-    'documents.view',
-    'announcements.view'
-  ],
-  staff: [
-    'training.view',
-    'documents.view',
-    'announcements.view'
-  ]
+  property_hr: ['training.view', 'training.assign', 'users.view', 'documents.view', 'documents.create', 'documents.edit', 'announcements.view'],
+  department_head: ['training.view', 'training.assign', 'users.view', 'documents.view', 'announcements.view'],
+  manager: ['training.view', 'training.assign', 'users.view', 'documents.view', 'announcements.view'],
+  staff: ['training.view', 'documents.view', 'announcements.view']
+}
+
+interface RolePermissionRow {
+  id: string
+  role: string
+  permission: string
+  granted: boolean
 }
 
 export default function RoleManagement() {
   const { hasPermission } = usePermissions()
   const { t, i18n } = useTranslation(['admin', 'common'])
-  const isRTL = i18n.dir() === 'rtl'
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   // State
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState<AppRole>('staff')
+  const [viewMode, setViewMode] = useState<'list' | 'comparison'>('list')
 
-  const queryClient = useQueryClient()
+  // Fetch role permissions from DB
+  const { data: dbPermissions = [], isLoading: permissionsLoading } = useQuery({
+    queryKey: ['role-permissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('role_permissions')
+        .select('*')
+        .order('role')
+        .order('permission')
+      if (error) throw error
+      return data as RolePermissionRow[]
+    },
+  })
 
-  // Queries
+  // Build permission matrix from DB data
+  const permissionMatrix = useMemo(() => {
+    const matrix: Record<string, Record<string, boolean>> = {}
+    for (const role of ROLE_HIERARCHY) {
+      matrix[role] = {}
+      for (const permission of ALL_PERMISSIONS) {
+        const dbEntry = dbPermissions.find(p => p.role === role && p.permission === permission)
+        matrix[role][permission] = dbEntry?.granted ?? false
+      }
+    }
+    return matrix
+  }, [dbPermissions])
+
+  // Toggle a permission
+  const togglePermissionMutation = useMutation({
+    mutationFn: async ({ role, permission, granted }: { role: string; permission: string; granted: boolean }) => {
+      const existing = dbPermissions.find(p => p.role === role && p.permission === permission)
+      if (existing) {
+        const { error } = await supabase
+          .from('role_permissions')
+          .update({ granted, updated_at: new Date().toISOString() })
+          .eq('id', existing.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('role_permissions')
+          .insert({ role, permission, granted })
+        if (error) throw error
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['role-permissions'] })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to update permission',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
+  // User queries
   const { data: users = [] } = useQuery({
     queryKey: ['users', searchQuery],
     queryFn: async () => {
@@ -111,7 +150,7 @@ export default function RoleManagement() {
     enabled: hasPermission('users.view')
   })
 
-  // Mutations
+  // Assign role mutation
   const assignRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
       const { error } = await supabase
@@ -133,8 +172,9 @@ export default function RoleManagement() {
   }
 
   const getRoleDisplayName = (role: AppRole) => {
-    return t(`common:roles.${role}`, { defaultValue: role })
+    return t(`common:roles.${role}`, { defaultValue: ROLES[role]?.label || role })
   }
+
 
   if (!hasPermission('users.view')) {
     return (
@@ -159,8 +199,13 @@ export default function RoleManagement() {
         <TabsList>
           <TabsTrigger value="users">{t('roles.user_roles')}</TabsTrigger>
           <TabsTrigger value="permissions">{t('roles.permissions')}</TabsTrigger>
+          <TabsTrigger value="comparison">
+            <Columns className="w-4 h-4 me-1" />
+            Comparison
+          </TabsTrigger>
         </TabsList>
 
+        {/* Users Tab - existing functionality */}
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
@@ -222,29 +267,134 @@ export default function RoleManagement() {
           </Card>
         </TabsContent>
 
+        {/* Permissions Tab - Dynamic from DB */}
         <TabsContent value="permissions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                {t('roles.permissions_by_role')}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  {t('roles.permissions_by_role')}
+                </CardTitle>
+                {permissionsLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {Object.entries(ROLE_PERMISSIONS).map(([role, permissions]) => (
+                {ROLE_HIERARCHY.map((role) => (
                   <div key={role} className="border rounded-lg p-4">
-                    <h3 className="font-semibold mb-3">{getRoleDisplayName(role as AppRole)}</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {permissions.map((permission) => (
-                        <div key={permission} className="flex items-center gap-2 text-sm">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span className="capitalize">{permission.replace('.', ' ')}</span>
-                        </div>
-                      ))}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{getRoleDisplayName(role)}</h3>
+                        <Badge variant="secondary" className="text-[10px]">
+                          Level {ROLES[role]?.level}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {Object.values(permissionMatrix[role] || {}).filter(Boolean).length} / {ALL_PERMISSIONS.length}
+                      </span>
                     </div>
+
+                    {Object.entries(PERMISSION_CATEGORIES).map(([category, permissions]) => (
+                      <div key={category} className="mb-3">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          {category}
+                        </p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {permissions.map((permission) => {
+                            const isGranted = permissionMatrix[role]?.[permission] ?? false
+                            return (
+                              <div key={permission} className="flex items-center justify-between gap-2 text-sm p-1.5 rounded hover:bg-muted/50">
+                                <span className="capitalize text-xs">{formatPermissionLabel(permission)}</span>
+                                {hasPermission('users.assign_roles') ? (
+                                  <Switch
+                                    checked={isGranted}
+                                    onCheckedChange={(checked) => {
+                                      togglePermissionMutation.mutate({ role, permission, granted: checked })
+                                    }}
+                                    className="scale-75"
+                                  />
+                                ) : (
+                                  isGranted ? (
+                                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                  ) : (
+                                    <XCircle className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                                  )
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Comparison Tab - Side-by-side role comparison */}
+        <TabsContent value="comparison" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Columns className="w-5 h-5" />
+                Role Comparison Matrix
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-start p-2 font-medium text-muted-foreground sticky start-0 bg-background min-w-[150px]">
+                        Permission
+                      </th>
+                      {ROLE_HIERARCHY.map((role) => (
+                        <th key={role} className="p-2 text-center font-medium min-w-[90px]">
+                          <div className="truncate">{ROLES[role]?.label.split(' ')[0]}</div>
+                          <div className="text-[10px] text-muted-foreground font-normal truncate">
+                            {ROLES[role]?.label.split(' ').slice(1).join(' ')}
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(PERMISSION_CATEGORIES).map(([category, permissions]) => (
+                      <>
+                        <tr key={`cat-${category}`}>
+                          <td
+                            colSpan={ROLE_HIERARCHY.length + 1}
+                            className="p-2 pt-4 font-medium text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30"
+                          >
+                            {category}
+                          </td>
+                        </tr>
+                        {permissions.map((permission) => (
+                          <tr key={permission} className="border-b border-muted/50 hover:bg-muted/20">
+                            <td className="p-2 capitalize sticky start-0 bg-background">
+                              {formatPermissionLabel(permission)}
+                            </td>
+                            {ROLE_HIERARCHY.map((role) => {
+                              const isGranted = permissionMatrix[role]?.[permission] ?? false
+                              return (
+                                <td key={`${role}-${permission}`} className="p-2 text-center">
+                                  {isGranted ? (
+                                    <CheckCircle className="w-4 h-4 text-green-500 mx-auto" />
+                                  ) : (
+                                    <XCircle className="w-4 h-4 text-gray-200 mx-auto" />
+                                  )}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
+                      </>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -269,9 +419,9 @@ export default function RoleManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(ROLE_PERMISSIONS).map((role) => (
+                  {ROLE_HIERARCHY.map((role) => (
                     <SelectItem key={role} value={role}>
-                      {getRoleDisplayName(role as AppRole)}
+                      {getRoleDisplayName(role)}
                     </SelectItem>
                   ))}
                 </SelectContent>

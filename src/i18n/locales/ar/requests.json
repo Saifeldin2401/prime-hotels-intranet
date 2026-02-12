@@ -29,5 +29,13 @@
     },
     "leave_request": "طلب إجازة",
     "document": "مستند",
-    "transfer": "نقل موظف"
+    "transfer": "نقل موظف",
+    "priority_label": "Priority",
+    "due_date": "Due",
+    "priority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent"
+    }
 }

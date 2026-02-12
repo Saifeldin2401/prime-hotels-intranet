@@ -9,7 +9,36 @@
     "loading": "Loading users...",
     "status": {
         "active": "Active",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "suspended": "Suspended",
+        "locked": "Locked"
+    },
+    "account_actions": {
+        "suspend": "Suspend Account",
+        "reactivate": "Reactivate Account",
+        "force_password_reset": "Force Password Reset",
+        "unlock": "Unlock Account",
+        "suspend_reason": "Reason for suspension",
+        "suspend_reason_placeholder": "Enter the reason for suspending this account...",
+        "confirm_suspend": "Are you sure you want to suspend this account? The user will no longer be able to log in.",
+        "confirm_reactivate": "Are you sure you want to reactivate this account? The user will be able to log in again.",
+        "confirm_force_reset": "Are you sure you want to force a password reset? The user will need to reset their password on next login.",
+        "confirm_unlock": "Are you sure you want to unlock this account?",
+        "suspended_by": "Suspended by",
+        "suspended_at": "Suspended at",
+        "last_login": "Last login",
+        "never_logged_in": "Never logged in",
+        "actions": "Actions"
+    },
+    "bulk": {
+        "selected": "{{count}} selected",
+        "select_all": "Select All",
+        "deselect_all": "Deselect All",
+        "assign_role": "Assign Role",
+        "deactivate": "Deactivate",
+        "activate": "Activate",
+        "reset_password": "Reset Password",
+        "confirm_bulk": "This action will affect {{count}} user(s). Are you sure?"
     },
     "empty": {
         "title": "No users found",

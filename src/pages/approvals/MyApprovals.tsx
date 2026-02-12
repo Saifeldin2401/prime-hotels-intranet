@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import type { Document, DocumentApproval, LeaveRequest, MaintenanceTicket } from '@/lib/types'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { useTranslation } from 'react-i18next'
@@ -56,6 +57,8 @@ export default function MyApprovals() {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId] = useState<string>('')
+  const [assignmentDueDate, setAssignmentDueDate] = useState('')
+  const [assignmentNote, setAssignmentNote] = useState('')
   const queryClient = useQueryClient()
   const { notifyRequestApproved, notifyRequestRejected, notifyMaintenanceAssigned } = useNotificationTriggers()
 
@@ -408,7 +411,19 @@ export default function MyApprovals() {
 
   // Maintenance ticket mutations
   const assignMaintenanceMutation = useMutation({
-    mutationFn: async ({ ticketId, assignedToId }: { ticketId: string; assignedToId: string }) => {
+    mutationFn: async ({
+      ticketId,
+      assignedToId,
+      estimatedCompletionDate,
+      assignmentNote,
+      currentNotes
+    }: {
+      ticketId: string
+      assignedToId: string
+      estimatedCompletionDate?: string | null
+      assignmentNote?: string
+      currentNotes?: string | null
+    }) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to assign maintenance tickets')
 
       // Get ticket details
@@ -418,13 +433,25 @@ export default function MyApprovals() {
         .eq('id', ticketId)
         .single()
 
+      const updatePayload: Record<string, any> = {
+        status: 'in_progress',
+        assigned_to_id: assignedToId,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (estimatedCompletionDate) {
+        updatePayload.estimated_completion_date = estimatedCompletionDate
+      }
+
+      if (assignmentNote && assignmentNote.trim()) {
+        const noteStamp = new Date().toLocaleDateString()
+        const notePrefix = `Assignment note (${noteStamp}): `
+        updatePayload.notes = [currentNotes, `${notePrefix}${assignmentNote.trim()}`].filter(Boolean).join('\n')
+      }
+
       const { error } = await supabase
         .from('maintenance_tickets')
-        .update({
-          status: 'in_progress',
-          assigned_to_id: assignedToId,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', ticketId)
         .eq('status', 'open')
 
@@ -474,15 +501,27 @@ export default function MyApprovals() {
 
   const handleAssignMaintenance = (ticketId: string) => {
     setSelectedTicketId(ticketId)
+    setSelectedStaffId('')
+    setAssignmentDueDate('')
+    setAssignmentNote('')
     setAssignDialogOpen(true)
   }
 
   const confirmAssignment = () => {
     if (selectedTicketId && selectedStaffId) {
-      assignMaintenanceMutation.mutate({ ticketId: selectedTicketId, assignedToId: selectedStaffId })
+      const selectedTicket = pendingMaintenanceTickets?.find(ticket => ticket.id === selectedTicketId)
+      assignMaintenanceMutation.mutate({
+        ticketId: selectedTicketId,
+        assignedToId: selectedStaffId,
+        estimatedCompletionDate: assignmentDueDate || null,
+        assignmentNote: assignmentNote.trim(),
+        currentNotes: selectedTicket?.notes ?? null
+      })
       setAssignDialogOpen(false)
       setSelectedTicketId(null)
       setSelectedStaffId('')
+      setAssignmentDueDate('')
+      setAssignmentNote('')
     }
   }
 
@@ -507,6 +546,7 @@ export default function MyApprovals() {
   const filteredPendingLeave = filterApprovals(pendingLeaveRequests || [], searchQuery)
   const filteredPendingMaintenance = filterApprovals(pendingMaintenanceTickets || [], searchQuery)
   const filteredCompleted = filterApprovals(completedApprovals || [], searchQuery)
+  const selectedMaintenanceTicket = pendingMaintenanceTickets?.find(ticket => ticket.id === selectedTicketId) || null
 
   // Calculate total pending count
   const totalPendingCount = filteredPendingDocuments.length + filteredPendingLeave.length + filteredPendingMaintenance.length
@@ -915,20 +955,62 @@ export default function MyApprovals() {
               {t('assign_dialog_desc')}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-2">
-            <Label htmlFor="staff-select">{t('select_staff_placeholder')}</Label>
-            <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
-              <SelectTrigger id="staff-select">
-                <SelectValue placeholder={t('select_staff_placeholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {staffMembers?.map((staff: any) => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.full_name || staff.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="py-4 space-y-4">
+            {selectedMaintenanceTicket && (
+              <div className="rounded-md border bg-muted/20 p-3 text-xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{selectedMaintenanceTicket.title}</p>
+                  <Badge variant={selectedMaintenanceTicket.priority === 'critical' ? 'destructive' : 'secondary'} className="text-[10px] capitalize">
+                    {selectedMaintenanceTicket.priority}
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px] capitalize">
+                    {selectedMaintenanceTicket.category}
+                  </Badge>
+                </div>
+                {selectedMaintenanceTicket.room_number && (
+                  <p className="text-muted-foreground mt-1">Room {selectedMaintenanceTicket.room_number}</p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="staff-select">{t('select_staff_placeholder')}</Label>
+              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                <SelectTrigger id="staff-select">
+                  <SelectValue placeholder={t('select_staff_placeholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffMembers?.map((staff: any) => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      {staff.full_name || staff.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="assignment-due-date">Estimated completion date</Label>
+                <Input
+                  id="assignment-due-date"
+                  type="date"
+                  value={assignmentDueDate}
+                  onChange={(e) => setAssignmentDueDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assignment-note">Assignment note (optional)</Label>
+              <Textarea
+                id="assignment-note"
+                value={assignmentNote}
+                onChange={(e) => setAssignmentNote(e.target.value)}
+                placeholder="e.g., Please prioritize HVAC inspection before 3 PM."
+                rows={3}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>{t('cancel')}</Button>

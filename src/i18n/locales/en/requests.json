@@ -5,6 +5,7 @@
     "filters": "Filters",
     "clear_all": "Clear all",
     "status_label": "Status",
+    "priority_label": "Priority",
     "start_date": "Start Date",
     "end_date": "End Date",
     "pick_date": "Pick a date",
@@ -15,6 +16,7 @@
     "request_no": "Request #{{no}}",
     "submitted": "Submitted: {{date}}",
     "current_assignee": "Current assignee: {{name}}",
+    "due_date": "Due",
     "view_details": "View Details",
     "error_loading": "Error loading requests",
     "error_loading_desc": "Please try again later",
@@ -26,6 +28,12 @@
         "rejected": "Rejected",
         "returned": "Returned",
         "closed": "Closed"
+    },
+    "priority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent"
     },
     "leave_request": "Leave Request",
     "document": "Document",

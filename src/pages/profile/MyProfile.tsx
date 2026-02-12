@@ -399,6 +399,36 @@ export default function MyProfile() {
                                             </div>
                                         </div>
 
+                                        <div className="grid md:grid-cols-2 gap-4">
+                                            <div className="grid gap-2">
+                                                <Label>{t('employment_type')}</Label>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100 capitalize">
+                                                    {authProfile?.employment_type?.replace('_', ' ') || t('not_specified', 'Not specified')}
+                                                </div>
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label>{t('contract_end_date')}</Label>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
+                                                    {authProfile?.contract_end_date ? format(new Date(authProfile.contract_end_date), 'MMMM d, yyyy') : t('not_specified', 'Not specified')}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid md:grid-cols-2 gap-4">
+                                            <div className="grid gap-2">
+                                                <Label>{t('iqama_number')}</Label>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
+                                                    {authProfile?.iqama_number || t('not_specified', 'Not specified')}
+                                                </div>
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label>{t('iqama_expiry')}</Label>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
+                                                    {authProfile?.iqama_expiry ? format(new Date(authProfile.iqama_expiry), 'MMMM d, yyyy') : t('not_specified', 'Not specified')}
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div className="grid gap-2 pt-4">
                                             <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400">{t('hr_quick_links')}</Label>
                                             <div className="flex flex-wrap gap-2 mt-1">

@@ -75,6 +75,7 @@
     "dailyChallenge": "التحدي اليومي",
     "dailyChallengeComplete": "اكتمل التحدي اليومي",
     "dayStreak": "يوم متتالي!",
+    "streakDays": "تتابع الأيام",
     "delete": "حذف",
     "description": "الوصف",
     "difficulty": "الصعوبة",
@@ -498,6 +499,7 @@
         "on": "في"
     },
     "visualization": {
+        "title": "إحصائيات التقدم الشخصي",
         "completed": "مكتمل",
         "trainings": "تدريبات",
         "timeSpent": "الوقت المستغرق",
@@ -519,7 +521,11 @@
         "deptProgress": "تقدم القسم",
         "deptCategories": "فئات القسم",
         "recentAchievements": "الإنجازات الأخيرة",
-        "noAchievements": "لا توجد إنجازات بعد. استمر في التدريب للحصول على أول شارة لك!"
+        "noAchievements": "لا توجد إنجازات بعد. استمر في التدريب للحصول على أول شارة لك!",
+        "streak": "التتابع الحالي",
+        "keepItUp": "استمر في ذلك!",
+        "skillsRadar": "رادار المهارات",
+        "needMoreDataForRadar": "أكمل المزيد من التدريبات في فئات مختلفة لرؤية رادار مهاراتك."
     },
     "builder": {
         "courseStructure": "هيكل الدورة",
@@ -1058,5 +1064,14 @@
     "departments": "???????",
     "errorLoadingSop": "Errorloadingsop",
     "properties": "???????",
-    "documentCannotBePreviewed": "Documentcannotbepreviewed"
+    "documentCannotBePreviewed": "Documentcannotbepreviewed",
+    "searchEmployeeOrModule": "بحث عن موظف أو وحدة تدريبية",
+    "filterByDept": "تصفية حسب القسم",
+    "filterByProp": "تصفية حسب الفندق",
+    "filterByStatus": "تصفية حسب الحالة",
+    "allDepartments": "جميع الأقسام",
+    "allProperties": "جميع الفنادق",
+    "allStatuses": "جميع الحالات",
+    "clearFilters": "مسح التصفيات",
+    "export": "تصدير"
 }

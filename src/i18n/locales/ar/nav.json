@@ -75,6 +75,8 @@
     "pii_access_logs": "سجلات الوصول للبيانات الشخصية",
     "escalation_rules": "قواعد التصعيد",
     "routing_health": "صحة التوجيه",
+    "delegations": "التفويضات",
+    "system_settings": "إعدادات النظام",
     "my_training": "تدريبي",
     "my_certificates": "شهاداتي",
     "my_requests": "طلباتي",
@@ -106,5 +108,6 @@
     "quickActionsDesc": "الوصول إلى المهام الشائعة فوراً",
     "newRequest": "طلب جديد",
     "reportIssue": "الإبلاغ عن مشكلة",
-    "chat": "المحادثة"
+    "chat": "المحادثة",
+    "sla_settings": "SLA Settings"
 }

@@ -61,6 +61,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [reportingTo, setReportingTo] = useState<string | null>(null)
   const [staffId, setStaffId] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState('')
+  const [employmentType, setEmploymentType] = useState('full_time')
+  const [contractEndDate, setContractEndDate] = useState('')
+  const [iqamaNumber, setIqamaNumber] = useState('')
+  const [iqamaExpiry, setIqamaExpiry] = useState('')
 
   const [openReportingTo, setOpenReportingTo] = useState(false)
 
@@ -308,6 +312,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
       setReportingTo(user.reporting_to || null)
       setStaffId(user.staff_id || '')
       setDateOfBirth(user.date_of_birth || '')
+      setEmploymentType(user.employment_type || 'full_time')
+      setContractEndDate(user.contract_end_date || '')
+      setIqamaNumber(user.iqama_number || '')
+      setIqamaExpiry(user.iqama_expiry || '')
       // Load user's roles, properties, departments
       loadUserData()
     }
@@ -400,7 +408,11 @@ export function UserForm({ user, onClose }: UserFormProps) {
           job_title: jobTitle || null,
           is_active: isActive,
           reporting_to: reportingTo && isValidUUID(reportingTo) ? reportingTo : null,
-          date_of_birth: dateOfBirth
+          date_of_birth: dateOfBirth,
+          employment_type: employmentType || 'full_time',
+          contract_end_date: contractEndDate || null,
+          iqama_number: iqamaNumber || null,
+          iqama_expiry: iqamaExpiry || null,
         })
         .eq('id', user.id)
 
@@ -594,6 +606,66 @@ export function UserForm({ user, onClose }: UserFormProps) {
                   onChange={(e) => setDateOfBirth(e.target.value)}
                   required
                 />
+              </div>
+            </div>
+
+            {/* Employment Details */}
+            <div className="border-t pt-4 mt-2">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('form.employment_details', 'Employment Details')}</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="employmentType">{t('form.employment_type', 'Employment Type')}</Label>
+                  <select
+                    id="employmentType"
+                    value={employmentType}
+                    onChange={(e) => setEmploymentType(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="full_time">{t('form.employment_types.full_time', 'Full Time')}</option>
+                    <option value="part_time">{t('form.employment_types.part_time', 'Part Time')}</option>
+                    <option value="contract">{t('form.employment_types.contract', 'Contract')}</option>
+                    <option value="probation">{t('form.employment_types.probation', 'Probation')}</option>
+                    <option value="intern">{t('form.employment_types.intern', 'Intern')}</option>
+                  </select>
+                </div>
+                {(employmentType === 'contract' || employmentType === 'probation') && (
+                  <div className="space-y-2">
+                    <Label htmlFor="contractEndDate">{t('form.contract_end_date', 'Contract End Date')}</Label>
+                    <Input
+                      id="contractEndDate"
+                      type="date"
+                      value={contractEndDate}
+                      onChange={(e) => setContractEndDate(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* KSA Compliance */}
+            <div className="border-t pt-4 mt-2">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('form.ksa_compliance', 'KSA Compliance')}</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="iqamaNumber">{t('form.iqama_number', 'Iqama Number')}</Label>
+                  <Input
+                    id="iqamaNumber"
+                    type="text"
+                    value={iqamaNumber}
+                    onChange={(e) => setIqamaNumber(e.target.value)}
+                    placeholder="e.g., 2XXXXXXXXX"
+                  />
+                  <p className="text-xs text-muted-foreground">{t('form.iqama_helper', 'Saudi residence permit number (sensitive PII)')}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="iqamaExpiry">{t('form.iqama_expiry', 'Iqama Expiry Date')}</Label>
+                  <Input
+                    id="iqamaExpiry"
+                    type="date"
+                    value={iqamaExpiry}
+                    onChange={(e) => setIqamaExpiry(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 

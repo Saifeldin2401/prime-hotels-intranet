@@ -25,6 +25,21 @@ export interface Profile {
   password_initialized?: boolean
   password_last_changed_at?: string | null
 
+  // Account lifecycle
+  account_status?: 'active' | 'suspended' | 'locked'
+  suspended_at?: string | null
+  suspended_by?: string | null
+  suspend_reason?: string | null
+  suspended_until?: string | null
+  last_login_at?: string | null
+  force_password_reset?: boolean
+
+  // Employment details
+  employment_type?: 'full_time' | 'part_time' | 'contract' | 'probation' | 'intern'
+  contract_end_date?: string | null
+  iqama_number?: string | null
+  iqama_expiry?: string | null
+
   // Relations
   reporting_to_profile?: Profile // Populated when fetching with joins
   roles?: AppRole[]
@@ -674,6 +689,9 @@ export interface MaintenanceTicket {
   material_cost: number | null
   estimated_cost: number | null
   notes: string | null
+  due_at?: string | null
+  sla_hours?: number | null
+  escalated_at?: string | null
   created_at: string
   updated_at: string
   completed_at: string | null

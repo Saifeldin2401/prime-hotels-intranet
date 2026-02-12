@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useMemo, useState } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
@@ -17,7 +17,8 @@ import { Loader2, Building2, MapPin, User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { getUserFriendlyError } from '@/lib/errorMessages'
-import { taskSchema, type TaskFormData } from '@/lib/validationSchemas'
+import { type TaskFormData } from '@/lib/validationSchemas'
+import { addDays, format } from 'date-fns'
 
 
 // Adapt the schema for form use (dates as strings, optional fields)
@@ -203,6 +204,32 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
     })
 
     const isSubmitting = form.formState.isSubmitting
+    const watchedTitle = useWatch({ control: form.control, name: 'title' })
+    const watchedDueDate = useWatch({ control: form.control, name: 'due_date' })
+    const watchedPriority = useWatch({ control: form.control, name: 'priority' })
+    const watchedStatus = useWatch({ control: form.control, name: 'status' })
+
+    const selectedPropertyName = useMemo(() => {
+        if (!selectedPropertyId) return t('all_properties', 'All Properties')
+        return availableProperties.find(p => p.id === selectedPropertyId)?.name || t('all_properties', 'All Properties')
+    }, [availableProperties, selectedPropertyId, t])
+
+    const selectedDepartmentName = useMemo(() => {
+        if (!selectedDepartmentId || selectedDepartmentId === 'none') return t('all_departments')
+        return departments.find(d => d.id === selectedDepartmentId)?.name || t('all_departments')
+    }, [departments, selectedDepartmentId, t])
+
+    const selectedAssigneeName = useMemo(() => {
+        if (!selectedAssigneeId || selectedAssigneeId === 'none') return t('unassigned', 'Unassigned')
+        return employees.find(e => e.id === selectedAssigneeId)?.full_name || t('unassigned', 'Unassigned')
+    }, [employees, selectedAssigneeId, t])
+
+    const dueDatePresets = [
+        { label: t('today', 'Today'), days: 0 },
+        { label: t('tomorrow', 'Tomorrow'), days: 1 },
+        { label: t('next_week', 'Next week'), days: 7 },
+        { label: t('two_weeks', 'Two weeks'), days: 14 },
+    ]
 
     const onSubmit = async (values: TaskFormData) => {
         try {
@@ -367,11 +394,64 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                 <div className="grid gap-2">
                     <Label htmlFor="due_date">{t('due_date')}</Label>
                     <Input id="due_date" type="date" {...form.register('due_date')} />
+                    <div className="flex flex-wrap gap-2">
+                        {dueDatePresets.map((preset) => (
+                            <Button
+                                key={preset.label}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    const dateValue = format(addDays(new Date(), preset.days), 'yyyy-MM-dd')
+                                    form.setValue('due_date', dateValue)
+                                }}
+                            >
+                                {preset.label}
+                            </Button>
+                        ))}
+                    </div>
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="estimated_hours">{t('est_hours')}</Label>
                     <Input id="estimated_hours" type="number" step="0.5" {...form.register('estimated_hours')} />
                 </div>
+            </div>
+
+            <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t('summary', 'Summary')}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <p className="text-muted-foreground">{t('title')}</p>
+                        <p className="font-medium">{watchedTitle || t('untitled', 'Untitled')}</p>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground">{t('assign_to', 'Assign To')}</p>
+                        <p className="font-medium">{selectedAssigneeName}</p>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground">{t('property', 'Property')}</p>
+                        <p className="font-medium">{selectedPropertyName}</p>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground">{t('department')}</p>
+                        <p className="font-medium">{selectedDepartmentName}</p>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground">{t('priority')}</p>
+                        <p className="font-medium capitalize">{watchedPriority || 'medium'}</p>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground">{t('status')}</p>
+                        <p className="font-medium capitalize">{watchedStatus || 'todo'}</p>
+                    </div>
+                </div>
+                {watchedDueDate && (
+                    <p className="text-[11px] text-muted-foreground">
+                        {t('due_date')}: {format(new Date(watchedDueDate), 'PPP')}
+                    </p>
+                )}
             </div>
 
             <div className="flex justify-end pt-4 gap-2">

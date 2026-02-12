@@ -69,12 +69,17 @@
         "select_file": "اختر ملفاً",
         "category": "الفئة"
     },
-    "employment": "Employment",
-    "hire_date": "Hire ?????",
+    "employment": "التوظيف",
+    "employment_type": "نوع التوظيف",
+    "contract_end_date": "تاريخ انتهاء العقد",
+    "iqama_number": "رقم الإقامة / الهوية",
+    "iqama_expiry": "تاريخ انتهاء الهوية",
+    "employment_details": "التوظيف والامتثال",
+    "hire_date": "تاريخ التعيين",
     "messages": {
-        "profile_updated_desc": "????? ?????? Updated ?????",
-        "profile_updated": "????? ?????? Updated",
-        "avatar_updated": "Avatar Updated",
-        "avatar_updated_desc": "Avatar Updated ?????"
+        "profile_updated_desc": "تم تحديث بيانات الملف الشخصي بنجاح",
+        "profile_updated": "تم تحديث الملف الشخصي",
+        "avatar_updated": "تم تحديث الصورة الرمزية",
+        "avatar_updated_desc": "تم تحديث صورتك الشخصية بنجاح"
     }
 }

@@ -73,6 +73,7 @@ interface Property {
 interface Department {
     id: string;
     name: string;
+    property_id?: string | null;
 }
 
 interface TransferEmployeeDialogProps {
@@ -146,7 +147,7 @@ export function TransferEmployeeDialog({
             // Fetch Departments
             const { data: depts, error: deptsError } = await supabase
                 .from("departments")
-                .select("id, name")
+                .select("id, name, property_id")
                 .order("name");
 
             if (deptsError) throw deptsError;
@@ -188,6 +189,20 @@ export function TransferEmployeeDialog({
             toast.error(errorMessage);
         }
     };
+
+    const selectedEmployee = employees.find(emp => emp.id === form.watch('employeeId'));
+    const selectedProperty = properties.find(prop => prop.id === form.watch('targetPropertyId'));
+    const selectedDepartment = departments.find(dept => dept.id === form.watch('targetDepartmentId'));
+    const effectiveDateValue = form.watch('effectiveDate');
+    const currentProp = selectedEmployee?.user_properties?.[0]?.properties;
+    const currentPropName = Array.isArray(currentProp) ? currentProp[0]?.name : currentProp?.name;
+    const filteredDepartments = departments.filter((dept) =>
+        !form.watch('targetPropertyId') || dept.property_id === form.watch('targetPropertyId')
+    );
+
+    const isEffectiveDatePast = effectiveDateValue
+        ? new Date(format(effectiveDateValue, "yyyy-MM-dd")) < new Date(format(new Date(), "yyyy-MM-dd"))
+        : false;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -287,7 +302,7 @@ export function TransferEmployeeDialog({
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {departments.map((dept) => (
+                                            {filteredDepartments.map((dept) => (
                                                 <SelectItem key={dept.id} value={dept.id}>
                                                     {dept.name}
                                                 </SelectItem>
@@ -355,6 +370,37 @@ export function TransferEmployeeDialog({
                                 </FormItem>
                             )}
                         />
+
+                        <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Summary</p>
+                            <div className="grid grid-cols-1 gap-2">
+                                <div>
+                                    <p className="text-muted-foreground">Employee</p>
+                                    <p className="font-medium">{selectedEmployee?.full_name || '-'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">Current Property</p>
+                                    <p className="font-medium">{currentPropName || '-'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">New Property</p>
+                                    <p className="font-medium">{selectedProperty?.name || '-'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">New Department</p>
+                                    <p className="font-medium">{selectedDepartment?.name || '—'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">Effective Date</p>
+                                    <p className="font-medium">{effectiveDateValue ? format(effectiveDateValue, "PPP") : '-'}</p>
+                                </div>
+                            </div>
+                            {isEffectiveDatePast && (
+                                <p className="text-[11px] text-amber-600">
+                                    Effective date is in the past. The transfer will apply immediately after approval.
+                                </p>
+                            )}
+                        </div>
 
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
