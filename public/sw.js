@@ -1,11 +1,11 @@
 /**
- * Service Worker for Prime Hotels PWA (v5)
+ * Service Worker for Prime Hotels PWA (v6)
  * 
  * Provides offline caching for static assets and API responses.
  * Implements a "Clean Shell" strategy to resolve navigation redirect errors.
  */
 
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE_NAME = `prime-hotels-${VERSION}`;
 const STATIC_CACHE = `prime-hotels-static-${VERSION}`;
 const DYNAMIC_CACHE = `prime-hotels-dynamic-${VERSION}`;
@@ -52,6 +52,13 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
+// Allow the page to activate a waiting service worker immediately.
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 // Fetch event handler
 self.addEventListener('fetch', (event) => {
     const { request } = event;
@@ -69,8 +76,9 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             (async () => {
                 try {
-                    // Use URL fetch with explicit redirect-follow to avoid manual redirect failures.
-                    const response = await fetch(request.url, {
+                    // Always fetch the SPA shell directly to avoid path-level redirect edge cases.
+                    const shellUrl = new URL('/index.html', self.location.origin).toString();
+                    const response = await fetch(shellUrl, {
                         redirect: 'follow',
                         credentials: 'same-origin',
                         cache: 'no-store',

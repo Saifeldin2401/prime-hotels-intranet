@@ -65,9 +65,25 @@ createRoot(document.getElementById('root')!).render(
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
+    let refreshing = false
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return
+      refreshing = true
+      window.location.reload()
+    })
+
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
+        const activateWaitingWorker = () => {
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+          }
+        }
+
+        // If an update is already waiting when the page loads, activate it now.
+        activateWaitingWorker()
+
         // Check for updates every hour
         setInterval(() => {
           registration.update();
@@ -79,8 +95,9 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
             installingWorker.onstatechange = () => {
               if (installingWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
-                  // New content is available; please refresh.
-                  console.log('[PWA] New content available, refresh to update.');
+                  // New content is available; activate and reload automatically.
+                  console.log('[PWA] New content available, activating update.');
+                  activateWaitingWorker()
                 }
               }
             };
