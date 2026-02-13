@@ -44,6 +44,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ChartViewport } from '@/components/ui/ChartViewport'
 import { useProperty } from '@/contexts/PropertyContext'
 import {
     useOperationsKPIs,
@@ -480,7 +481,7 @@ export default function OperationsDashboard() {
                             <CardDescription>Visualizing rooms sold vs availability over time</CardDescription>
                         </CardHeader>
                         <CardContent className="pt-0">
-                            <div className="h-[300px] w-full">
+                            <ChartViewport className="h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={[...(occupancyData || [])].reverse()} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                         <defs>
@@ -506,7 +507,7 @@ export default function OperationsDashboard() {
                                         <Area type="monotone" dataKey="rooms_sold" name="Rooms Sold" stroke="#10b981" fillOpacity={0} strokeWidth={2} />
                                     </AreaChart>
                                 </ResponsiveContainer>
-                            </div>
+                            </ChartViewport>
                         </CardContent>
                     </Card>
 
@@ -654,7 +655,7 @@ export default function OperationsDashboard() {
                                 <CardDescription>Tracking daily revenue fluctuations</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[300px] w-full">
+                                <ChartViewport className="h-[300px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={[...(revenueData || [])].reverse()} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -675,7 +676,7 @@ export default function OperationsDashboard() {
                                             <Bar dataKey="fb_revenue" name="F&B Revenue" fill="#34d399" radius={[4, 4, 0, 0]} />
                                         </BarChart>
                                     </ResponsiveContainer>
-                                </div>
+                                </ChartViewport>
                             </CardContent>
                         </Card>
 
@@ -685,7 +686,7 @@ export default function OperationsDashboard() {
                                 <CardDescription>ADR vs RevPAR performance</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[300px] w-full">
+                                <ChartViewport className="h-[300px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={[...(revenueData || [])].reverse()}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -702,7 +703,7 @@ export default function OperationsDashboard() {
                                             <Area type="step" dataKey="revpar" name="RevPAR" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.05} />
                                         </AreaChart>
                                     </ResponsiveContainer>
-                                </div>
+                                </ChartViewport>
                             </CardContent>
                         </Card>
                     </div>

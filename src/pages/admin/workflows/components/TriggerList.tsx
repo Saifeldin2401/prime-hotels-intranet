@@ -34,7 +34,7 @@ import { TriggerEditor } from './TriggerEditor'
 import type { TriggerRule } from '@/hooks/useTriggers'
 
 export function TriggerList() {
-    const { data: triggers, isLoading } = useTriggers()
+    const { data: triggers, isLoading, error } = useTriggers()
     const updateMutation = useUpdateTrigger()
     const deleteMutation = useDeleteTrigger()
     const { toast } = useToast()
@@ -86,6 +86,13 @@ export function TriggerList() {
 
     if (isLoading) {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    }
+    if (error) {
+        return (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                Failed to load trigger rules: {error instanceof Error ? error.message : 'Unknown error'}
+            </div>
+        )
     }
 
     return (

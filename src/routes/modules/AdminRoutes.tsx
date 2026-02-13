@@ -14,6 +14,7 @@ const EscalationRules = lazy(() => import('@/pages/admin/EscalationRules'))
 const WorkflowDashboard = lazy(() => import('@/pages/admin/workflows/WorkflowDashboard'))
 const NotificationBatches = lazy(() => import('@/pages/admin/notifications/NotificationBatches'))
 const AIToolsPage = lazy(() => import('@/pages/admin/AIToolsPage'))
+const AIGovernance = lazy(() => import('@/pages/admin/AIGovernance'))
 const AdminAnalyticsDashboard = lazy(() => import('@/pages/admin/AdminAnalyticsDashboard'))
 const OnboardingTemplates = lazy(() => import('@/pages/onboarding/OnboardingTemplates'))
 const TemplateEditor = lazy(() => import('@/pages/onboarding/TemplateEditor'))
@@ -143,6 +144,18 @@ export const AdminRoutes = () => (
                     <AppLayout>
                         <MotionWrapper>
                             <AIToolsPage />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/ai-governance"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <AIGovernance />
                         </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>

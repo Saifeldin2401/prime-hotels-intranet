@@ -8,6 +8,11 @@ This system runs scheduled background tasks using Supabase Edge Functions and `p
 |----------|---------|-------------|
 | `daily-workflows` | Daily (9:00 AM UTC) | Sends training reminders, task notifications, and leave balance alerts. |
 | `approval-escalation` | Every 6 hours | Checks for pending approvals > 48h and escalates them. |
+| `ai-metrics-collector` | Hourly | Captures operational metrics for AI governance. |
+| `ai-optimizer` | Daily | Generates AI policy proposals from metrics. |
+| `ai-safety-validator` | On-demand | Validates AI proposals against schemas and constraints. |
+| `ai-policy-applier` | On-demand | Applies validated policy proposals. |
+| `ai-rollback-engine` | Hourly | Rolls back policies when metrics degrade. |
 
 ## Deployment Status
 ✅ **Database Migration:** Applied (`009_workflow_system.sql`)
@@ -44,6 +49,45 @@ select cron.schedule(
   select
     net.http_post(
       url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/approval-escalation',
+      headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
+    ) as request_id;
+  $$
+);
+
+-- 3. AI Metrics Collector (Hourly)
+select cron.schedule(
+  'ai-metrics-collector-job',
+  '0 * * * *',
+  $$
+  select
+    net.http_post(
+      url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-metrics-collector',
+      headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
+    ) as request_id;
+  $$
+);
+
+-- 4. AI Optimizer (Daily at 2 AM UTC)
+select cron.schedule(
+  'ai-optimizer-job',
+  '0 2 * * *',
+  $$
+  select
+    net.http_post(
+      url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-optimizer',
+      headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
+    ) as request_id;
+  $$
+);
+
+-- 5. AI Rollback Engine (Hourly, after metrics)
+select cron.schedule(
+  'ai-rollback-engine-job',
+  '15 * * * *',
+  $$
+  select
+    net.http_post(
+      url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-rollback-engine',
       headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
     ) as request_id;
   $$

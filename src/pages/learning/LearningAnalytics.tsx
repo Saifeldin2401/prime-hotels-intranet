@@ -180,7 +180,7 @@ export default function LearningAnalytics() {
             })) || []
 
             // Recent activity
-            const { data: recentAttempts } = await supabase
+            const buildRecentAttemptsQuery = () => supabase
                 .from('quiz_attempts')
                 .select(`
                     id,
@@ -189,8 +189,17 @@ export default function LearningAnalytics() {
                     user:profiles!quiz_attempts_user_id_fkey(id, first_name, last_name),
                     quiz:learning_quizzes!quiz_attempts_quiz_id_fkey(title)
                 `)
-                .order('completed_at', { ascending: false })
                 .limit(10)
+
+            let { data: recentAttempts, error: recentAttemptsError } = await buildRecentAttemptsQuery()
+                .order('completed_at', { ascending: false })
+
+            if (recentAttemptsError) {
+                const fallback = await buildRecentAttemptsQuery().order('created_at', { ascending: false })
+                if (!fallback.error) {
+                    recentAttempts = fallback.data
+                }
+            }
 
             const recentActivity = recentAttempts?.map(a => ({
                 user_id: (a.user as any)?.id || '',

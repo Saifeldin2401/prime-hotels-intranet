@@ -47,7 +47,9 @@ export function useTrainingRules() {
             if (error) throw error
             return data
         },
-        enabled: !!user
+        enabled: !!user,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true
     })
 }
 

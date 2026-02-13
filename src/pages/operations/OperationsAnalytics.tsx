@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ChartViewport } from '@/components/ui/ChartViewport'
 import {
     Select,
     SelectContent,
@@ -77,34 +78,36 @@ function SimpleBarChart({ data, dataKey, color = 'hsl(var(--primary))' }: {
     const chartColor = getColor(color)
 
     return (
-        <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 10 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={50}
-                />
-                <YAxis tick={{ fontSize: 10 }} width={40} />
-                <Tooltip
-                    contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        fontSize: '12px'
-                    }}
-                    labelStyle={{ fontWeight: 'bold' }}
-                />
-                <Bar
-                    dataKey={dataKey as string}
-                    fill={chartColor}
-                    radius={[4, 4, 0, 0]}
-                    animationDuration={500}
-                />
-            </BarChart>
-        </ResponsiveContainer>
+        <ChartViewport minHeight={200}>
+            <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 10 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={50}
+                    />
+                    <YAxis tick={{ fontSize: 10 }} width={40} />
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: 'hsl(var(--background))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                        }}
+                        labelStyle={{ fontWeight: 'bold' }}
+                    />
+                    <Bar
+                        dataKey={dataKey as string}
+                        fill={chartColor}
+                        radius={[4, 4, 0, 0]}
+                        animationDuration={500}
+                    />
+                </BarChart>
+            </ResponsiveContainer>
+        </ChartViewport>
     )
 }
 
@@ -151,8 +154,9 @@ function SimpleLineChart({ data, lines }: {
             </div>
 
             {/* Chart */}
-            <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ChartViewport minHeight={220}>
+                <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                         {stats.map(s => (
                             <linearGradient key={s.key} id={`gradient-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -185,8 +189,9 @@ function SimpleLineChart({ data, lines }: {
                             animationDuration={500}
                         />
                     ))}
-                </AreaChart>
-            </ResponsiveContainer>
+                    </AreaChart>
+                </ResponsiveContainer>
+            </ChartViewport>
 
             {/* Stats Table */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
@@ -233,7 +238,7 @@ function SimplePieChart({ data }: {
     return (
         <div className="flex flex-col sm:flex-row gap-4">
             {/* Donut Chart */}
-            <div className="flex-1">
+            <ChartViewport className="flex-1" minHeight={200}>
                 <ResponsiveContainer width="100%" height={180}>
                     <RechartsPie>
                         <Pie
@@ -266,7 +271,7 @@ function SimplePieChart({ data }: {
                         />
                     </RechartsPie>
                 </ResponsiveContainer>
-            </div>
+            </ChartViewport>
 
             {/* Legend */}
             <div className="flex-1 space-y-2">

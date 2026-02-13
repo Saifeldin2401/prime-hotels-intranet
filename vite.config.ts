@@ -66,44 +66,41 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  optimizeDeps: {
-    include: ['@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-bubble-menu', '@tiptap/extension-floating-menu']
-  },
   server: {
-    host: '127.0.0.1',
-    port: 5173,
-    strictPort: true,
-    // Security: CORS configuration
-    cors: {
-      origin: process.env.NODE_ENV === 'production'
-        ? ['https://yourdomain.com'] // Replace with actual domains in production
-        : ['http://localhost:5173', 'http://localhost:3000'],
-      credentials: true
-    },
-    // Security: Rate limiting middleware
-    middlewareMode: false,
+  host: '127.0.0.1',
+  port: 5173,
+  strictPort: true,
+  // Security: CORS configuration
+  cors: {
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://yourdomain.com'] // Replace with actual domains in production
+      : ['http://localhost:5173', 'http://localhost:3000'],
+    credentials: true
   },
+  // Security: Rate limiting middleware
+  middlewareMode: false,
+},
   build: {
-    // Security: Build optimizations
-    minify: 'terser',
-    sourcemap: enableSentryUpload || process.env.NODE_ENV !== 'production',
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          supabase: ['@supabase/supabase-js'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-tabs']
-        }
+  // Security: Build optimizations
+  minify: 'terser',
+  sourcemap: enableSentryUpload || process.env.NODE_ENV !== 'production',
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        vendor: ['react', 'react-dom'],
+        supabase: ['@supabase/supabase-js'],
+        ui: ['@radix-ui/react-dialog', '@radix-ui/react-tabs']
       }
     }
-  },
+  }
+},
   define: {
-    'process.env': {},
-    'process.browser': true,
-    global: 'globalThis',
-    'import.meta.env.VITE_RELEASE': JSON.stringify(sentryRelease || ''),
-    'import.meta.env.VITE_SENTRY_ENV': JSON.stringify(sentryEnv || ''),
-  },
+  'process.env': {},
+  'process.browser': true,
+  global: 'globalThis',
+  'import.meta.env.VITE_RELEASE': JSON.stringify(sentryRelease || ''),
+  'import.meta.env.VITE_SENTRY_ENV': JSON.stringify(sentryEnv || ''),
+},
   // Security: Environment variable validation
   envPrefix: 'VITE_',
 })

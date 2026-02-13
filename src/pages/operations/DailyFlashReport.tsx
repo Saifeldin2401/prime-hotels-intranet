@@ -50,6 +50,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useDailyOccupancy, useDailyRevenue, useMarketSegments, usePMSSystems } from '@/hooks/useOperations'
 import { cn } from '@/lib/utils'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
+import { ChartViewport } from '@/components/ui/ChartViewport'
 
 import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
 
@@ -627,7 +628,7 @@ export default function DailyFlashReport() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[240px] w-full">
+                                <ChartViewport className="h-[240px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
@@ -660,7 +661,7 @@ export default function DailyFlashReport() {
                                             <Legend verticalAlign="bottom" height={36} />
                                         </PieChart>
                                     </ResponsiveContainer>
-                                </div>
+                                </ChartViewport>
                             </CardContent>
                         </Card>
 
@@ -673,7 +674,7 @@ export default function DailyFlashReport() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[240px] w-full">
+                                <ChartViewport className="h-[240px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart
                                             data={segmentData?.slice(0, 8) || []}
@@ -703,7 +704,7 @@ export default function DailyFlashReport() {
                                             />
                                         </BarChart>
                                     </ResponsiveContainer>
-                                </div>
+                                </ChartViewport>
                             </CardContent>
                         </Card>
                     </div>

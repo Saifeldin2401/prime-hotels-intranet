@@ -79,14 +79,25 @@ export function AppLayout({ children }: AppLayoutProps) {
   // But since this is a layout component, we might want to return MobileLayout directly if isMobile is true
   // However, AppLayout is often used as a wrapper. Let's add the check.
 
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 1024)
+  // Check for mobile view using matchMedia for better performance
+  const [isMobileView, setIsMobileView] = useState(false)
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth < 1024)
+    const mediaQuery = window.matchMedia('(max-width: 1023px)')
+
+    // Set initial value
+    setIsMobileView(mediaQuery.matches)
+
+    // Handler for changes
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      setIsMobileView(e.matches)
     }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+
+    // Add listener
+    mediaQuery.addEventListener('change', handleMediaChange)
+
+    // Cleanup
+    return () => mediaQuery.removeEventListener('change', handleMediaChange)
   }, [])
 
   if (isMobileView) {

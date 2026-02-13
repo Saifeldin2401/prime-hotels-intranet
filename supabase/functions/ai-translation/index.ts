@@ -20,7 +20,6 @@ serve(async (req) => {
         const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
         const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
         const hfToken = Deno.env.get('HUGGINGFACE_TOKEN') ?? ''
-        const openAiKey = Deno.env.get('OPENAI_API_KEY') ?? ''
 
         const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
             global: { headers: { Authorization: authHeader } }
@@ -216,77 +215,7 @@ serve(async (req) => {
             return { text: translatedText, modelId: hfModel }
         }
 
-        const translateWithOpenAI = async () => {
-            if (!openAiKey) {
-                throw new Error('OPENAI_API_KEY is missing. Configure it in Supabase project secrets.')
-            }
-
-            const maxChunkSize = 1200
-            const chunks = chunkText(text, maxChunkSize)
-            let translatedText = ''
-
-            for (const chunk of chunks) {
-                let response: Response
-                try {
-                    response = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${openAiKey}`,
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            model: 'gpt-3.5-turbo',
-                            messages: [
-                                {
-                                    role: 'system',
-                                    content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only the translated text.`
-                                },
-                                { role: 'user', content: chunk }
-                            ],
-                            temperature: 0.2,
-                        }),
-                    })
-                } catch (fetchError: any) {
-                    throw new Error(`OpenAI request failed: ${fetchError?.message || fetchError}`)
-                }
-
-                const rawText = await response.text()
-                let data: any = null
-                try {
-                    data = rawText ? JSON.parse(rawText) : null
-                } catch {
-                    data = rawText
-                }
-
-                if (!response.ok) {
-                    const message = (data && typeof data === 'object' && (data.error?.message || data.error || data.message)) || rawText || response.statusText
-                    throw new Error(`OpenAI HTTP ${response.status}: ${message}`)
-                }
-
-                if (data?.error) {
-                    throw new Error(data.error?.message || data.error || 'OpenAI API error')
-                }
-
-                const translatedChunk = data?.choices?.[0]?.message?.content?.trim() || ''
-                if (!translatedChunk) {
-                    throw new Error('OpenAI returned an empty translation.')
-                }
-                translatedText += translatedChunk
-            }
-
-            return { text: translatedText, modelId: 'openai/gpt-3.5-turbo' }
-        }
-
-        let translatedResult: { text: string; modelId: string }
-        try {
-            translatedResult = await translateWithHuggingFace()
-        } catch (hfError) {
-            if (openAiKey) {
-                translatedResult = await translateWithOpenAI()
-            } else {
-                throw hfError
-            }
-        }
+        const translatedResult: { text: string; modelId: string } = await translateWithHuggingFace()
 
         const translatedText = translatedResult.text
         if (!translatedText) throw new Error('Translation failed - no output from model')

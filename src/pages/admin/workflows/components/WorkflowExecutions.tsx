@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
     Table,
     TableBody,
@@ -19,14 +19,23 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Loader2, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { useWorkflowExecutions } from '@/hooks/useWorkflows'
 import { format } from 'date-fns'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { useExecuteWorkflow } from '@/hooks/useWorkflows'
 
 export function WorkflowExecutions() {
-    const { data: executions, isLoading } = useWorkflowExecutions(undefined, 50)
+    const { data: executions, isLoading, error } = useWorkflowExecutions(undefined, 50)
     const [selectedExecution, setSelectedExecution] = useState<any>(null)
-
-    if (isLoading) {
-        return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
-    }
+    const [statusFilter, setStatusFilter] = useState<string>('all')
+    const [searchText, setSearchText] = useState('')
+    const executeMutation = useExecuteWorkflow()
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -37,8 +46,57 @@ export function WorkflowExecutions() {
         }
     }
 
+    const filteredExecutions = useMemo(() => {
+        const list = executions || []
+        return list.filter((exec) => {
+            const matchesStatus = statusFilter === 'all' || exec.status === statusFilter
+            const matchesSearch = !searchText
+                || exec.workflow_definitions?.name?.toLowerCase().includes(searchText.toLowerCase())
+                || exec.id.toLowerCase().includes(searchText.toLowerCase())
+            return matchesStatus && matchesSearch
+        })
+    }, [executions, statusFilter, searchText])
+
+    if (isLoading) {
+        return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    }
+    if (error) {
+        return (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                Failed to load execution logs: {error instanceof Error ? error.message : 'Unknown error'}
+            </div>
+        )
+    }
+
     return (
-        <div className="rounded-md border">
+        <div className="space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[160px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="running">Running</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Input
+                        placeholder="Search by workflow or execution ID..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="w-[260px]"
+                    />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                    Showing {filteredExecutions.length} of {executions?.length || 0} executions
+                </div>
+            </div>
+
+            <div className="rounded-md border">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -50,7 +108,7 @@ export function WorkflowExecutions() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {executions?.map((exec) => (
+                    {filteredExecutions.map((exec) => (
                         <TableRow
                             key={exec.id}
                             className="cursor-pointer hover:bg-muted/50"
@@ -75,15 +133,16 @@ export function WorkflowExecutions() {
                             </TableCell>
                         </TableRow>
                     ))}
-                    {!executions?.length && (
+                    {filteredExecutions.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                                No execution history found.
+                                No execution history found for the selected filters.
                             </TableCell>
                         </TableRow>
                     )}
                 </TableBody>
             </Table>
+            </div>
 
             <Sheet open={!!selectedExecution} onOpenChange={(open) => !open && setSelectedExecution(null)}>
                 <SheetContent className="w-[400px] sm:w-[540px]">
@@ -116,6 +175,23 @@ export function WorkflowExecutions() {
                                         {selectedExecution.execution_time_ms}ms
                                     </p>
                                 </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-medium">Workflow</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                        {selectedExecution.workflow_definitions?.name || selectedExecution.workflow_id}
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => executeMutation.mutate({ workflowId: selectedExecution.workflow_id, metadata: { retry_of: selectedExecution.id } })}
+                                    disabled={executeMutation.isPending}
+                                >
+                                    Retry Run
+                                </Button>
                             </div>
 
                             {selectedExecution.error && (

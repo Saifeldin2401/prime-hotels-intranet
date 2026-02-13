@@ -322,24 +322,36 @@ export function useUnifiedSocialFeed() {
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       let achievements: any[] = []
       if (shouldScopeToTeam || allowGlobalFallback) {
-        let achievementsQuery = supabase
-          .from('training_progress')
-          .select(`
-            *,
-            user:profiles!training_progress_user_id_fkey(id, full_name, avatar_url),
-            training:training_modules!training_progress_training_id_fkey(id, title)
-          `)
-          .eq('status', 'completed')
-          .gte('completed_at', sevenDaysAgo.toISOString())
-          .neq('user_id', user.id)
-          .order('completed_at', { ascending: false })
-          .limit(10)
+        const buildAchievementsQuery = () => {
+          let base = supabase
+            .from('training_progress')
+            .select(`
+              *,
+              user:profiles!training_progress_user_id_fkey(id, full_name, avatar_url),
+              training:training_modules!training_progress_training_id_fkey(id, title)
+            `)
+            .eq('status', 'completed')
+            .gte('completed_at', sevenDaysAgo.toISOString())
+            .neq('user_id', user.id)
+            .limit(10)
 
-        if (shouldScopeToTeam) {
-          achievementsQuery = achievementsQuery.in('user_id', scopedTeamUserIds)
+          if (shouldScopeToTeam) {
+            base = base.in('user_id', scopedTeamUserIds)
+          }
+
+          return base
         }
 
-        const { data } = await achievementsQuery
+        let { data, error } = await buildAchievementsQuery()
+          .order('completed_at', { ascending: false })
+
+        if (error) {
+          const fallback = await buildAchievementsQuery().order('updated_at', { ascending: false })
+          if (!fallback.error) {
+            data = fallback.data
+          }
+        }
+
         achievements = data || []
       }
 

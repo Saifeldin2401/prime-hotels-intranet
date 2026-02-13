@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,12 +47,18 @@ function toCsv(rows: any[]) {
   return csvRows.join('\n')
 }
 
-async function fetchReportData(reportType: string) {
+async function fetchReportData(reportType: string, dateFrom?: string, dateTo?: string) {
+  const createdAtRange = (query: any, column: string) => {
+    let scoped = query
+    if (dateFrom) scoped = scoped.gte(column, dateFrom)
+    if (dateTo) scoped = scoped.lte(column, dateTo)
+    return scoped
+  }
   switch (reportType) {
     case 'operations': {
       const [tasks, maintenance] = await Promise.all([
-        supabase.from('tasks').select('id,title,status,priority,created_at').limit(500),
-        supabase.from('maintenance_tickets').select('id,title,status,priority,created_at').limit(500)
+        createdAtRange(supabase.from('tasks').select('id,title,status,priority,created_at'), 'created_at').limit(500),
+        createdAtRange(supabase.from('maintenance_tickets').select('id,title,status,priority,created_at'), 'created_at').limit(500)
       ])
       return {
         tasks: tasks.data || [],
@@ -61,8 +67,8 @@ async function fetchReportData(reportType: string) {
     }
     case 'hr': {
       const [profiles, leave] = await Promise.all([
-        supabase.from('profiles').select('id,full_name,job_title,is_active,created_at').limit(500),
-        supabase.from('leave_requests').select('id,type,status,start_date,end_date,created_at').limit(500)
+        createdAtRange(supabase.from('profiles').select('id,full_name,job_title,is_active,created_at'), 'created_at').limit(500),
+        createdAtRange(supabase.from('leave_requests').select('id,type,status,start_date,end_date,created_at'), 'created_at').limit(500)
       ])
       return {
         profiles: profiles.data || [],
@@ -71,8 +77,8 @@ async function fetchReportData(reportType: string) {
     }
     case 'training': {
       const [assignments, progress] = await Promise.all([
-        supabase.from('learning_assignments').select('id,status,due_date,created_at').limit(500),
-        supabase.from('learning_progress').select('id,status,completion_percentage,updated_at').limit(500)
+        createdAtRange(supabase.from('learning_assignments').select('id,status,due_date,created_at'), 'created_at').limit(500),
+        createdAtRange(supabase.from('learning_progress').select('id,status,completion_percentage,updated_at'), 'updated_at').limit(500)
       ])
       return {
         learning_assignments: assignments.data || [],
@@ -81,8 +87,8 @@ async function fetchReportData(reportType: string) {
     }
     case 'audits': {
       const [runs, findings] = await Promise.all([
-        supabase.from('audit_runs').select('id,status,created_at').limit(500),
-        supabase.from('audit_findings').select('id,status,notes,created_at').limit(500)
+        createdAtRange(supabase.from('audit_runs').select('id,status,created_at'), 'created_at').limit(500),
+        createdAtRange(supabase.from('audit_findings').select('id,status,notes,created_at'), 'created_at').limit(500)
       ])
       return {
         audit_runs: runs.data || [],
@@ -118,6 +124,13 @@ export function ReportsControlCenter() {
   const [reportType, setReportType] = useState('operations')
   const [scopeType, setScopeType] = useState('property')
   const [scheduleFrequency, setScheduleFrequency] = useState('none')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const isDateRangeInvalid = useMemo(() => {
+    if (!dateFrom || !dateTo) return false
+    return new Date(dateFrom) > new Date(dateTo)
+  }, [dateFrom, dateTo])
 
   const handleCreate = async () => {
     if (!name.trim()) return
@@ -126,7 +139,10 @@ export function ReportsControlCenter() {
       description,
       report_type: reportType,
       scope_type: scopeType as any,
-      filters: {},
+      filters: {
+        date_from: dateFrom || null,
+        date_to: dateTo || null
+      },
       schedule_frequency: scheduleFrequency === 'none' ? null : (scheduleFrequency as any)
     })
     setName('')
@@ -135,7 +151,7 @@ export function ReportsControlCenter() {
 
   const handleRun = async (reportId: string, reportTypeValue: string) => {
     try {
-      const dataMap = await fetchReportData(reportTypeValue)
+      const dataMap = await fetchReportData(reportTypeValue, dateFrom || undefined, dateTo || undefined)
       const csvChunks = Object.entries(dataMap).map(([key, rows]) => {
         const header = `# ${key}`
         const csv = toCsv(rows as any[])
@@ -198,9 +214,35 @@ export function ReportsControlCenter() {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={handleCreate} disabled={!name.trim()}>
+          <div className="flex flex-col gap-2 lg:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                placeholder="Start date"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                placeholder="End date"
+              />
+            </div>
+            {isDateRangeInvalid && (
+              <p className="text-xs text-red-600">
+                End date must be after start date.
+              </p>
+            )}
+          </div>
+          <Button onClick={handleCreate} disabled={!name.trim() || isDateRangeInvalid}>
             {t('report_builder.actions.create', { defaultValue: 'Create Report' })}
           </Button>
+        </CardContent>
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">
+            Reports are capped at 500 rows per dataset for performance. Use date filters to narrow results.
+          </p>
         </CardContent>
       </Card>
 

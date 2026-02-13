@@ -106,7 +106,7 @@ export function TrainingCertificateGenerator({
       const targetUserId = userId || user?.id
       if (!targetUserId) return []
 
-      const { data, error } = await supabase
+      const buildCompletionsQuery = () => supabase
         .from('training_progress')
         .select(`
           *,
@@ -114,7 +114,17 @@ export function TrainingCertificateGenerator({
         `)
         .eq('user_id', targetUserId)
         .eq('status', 'completed')
+
+      let { data, error } = await buildCompletionsQuery()
         .order('completed_at', { ascending: false })
+
+      if (error) {
+        const fallback = await buildCompletionsQuery().order('updated_at', { ascending: false })
+        if (!fallback.error) {
+          data = fallback.data
+          error = null
+        }
+      }
 
       if (error) throw error
       return data

@@ -5,7 +5,7 @@ import { Quote, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '@/lib/supabase'
-import { Skeleton } from '@/components/ui/skeleton'
+import { WidgetSkeleton } from '@/components/dashboard/WidgetSkeleton'
 
 interface MotivationalQuote {
     id: string
@@ -52,14 +52,7 @@ export function MotivationWidget() {
     }, [])
 
     if (loading) {
-        return (
-            <Card className="col-span-1 h-full bg-gradient-to-br from-hotel-navy/5 to-hotel-gold/5 border-none shadow-sm">
-                <CardContent className="flex flex-col items-center justify-center p-6 h-full space-y-4">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                </CardContent>
-            </Card>
-        )
+        return <WidgetSkeleton rows={1} title={false} className="bg-gradient-to-br from-hotel-navy/5 to-hotel-gold/5 border-none shadow-sm" />
     }
 
     if (!quote) return null

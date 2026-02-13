@@ -104,6 +104,7 @@ export default function DelegationSettings() {
     const [reason, setReason] = useState('')
     const [startsAt, setStartsAt] = useState('')
     const [endsAt, setEndsAt] = useState('')
+    const [acknowledgeWarnings, setAcknowledgeWarnings] = useState(false)
 
     // Auto-expire on mount
     useEffect(() => {
@@ -145,21 +146,6 @@ export default function DelegationSettings() {
     const startDate = useMemo(() => (startsAt ? new Date(startsAt) : null), [startsAt])
     const endDate = useMemo(() => (endsAt ? new Date(endsAt) : null), [endsAt])
 
-    const validationErrors = useMemo(() => {
-        const errors: string[] = []
-        if (!delegateId) errors.push('Select a delegate.')
-        if (!startsAt) errors.push('Choose a start time.')
-        if (!endsAt) errors.push('Choose an end time.')
-        if (startDate && endDate && endDate <= startDate) errors.push('End time must be after the start time.')
-        if (delegationType === 'specific_permissions' && selectedPermissions.length === 0) {
-            errors.push('Select at least one permission or switch to another delegation type.')
-        }
-        if (maxApprovals && Number(maxApprovals) < 1) {
-            errors.push('Max approvals must be at least 1.')
-        }
-        return errors
-    }, [delegateId, startsAt, endsAt, startDate, endDate, delegationType, selectedPermissions.length, maxApprovals])
-
     const warningMessages = useMemo(() => {
         if (!delegateId || !startDate || !endDate) return []
         const warnings: string[] = []
@@ -185,11 +171,53 @@ export default function DelegationSettings() {
     }, [activeDelegations, delegateId, endDate, startDate, user?.id])
 
     useEffect(() => {
+        if (warningMessages.length === 0) {
+            setAcknowledgeWarnings(false)
+        }
+    }, [warningMessages.length])
+
+    const validationErrors = useMemo(() => {
+        const errors: string[] = []
+        if (!delegateId) errors.push('Select a delegate.')
+        if (!startsAt) errors.push('Choose a start time.')
+        if (!endsAt) errors.push('Choose an end time.')
+        if (startDate && endDate && endDate <= startDate) errors.push('End time must be after the start time.')
+        if (delegationType === 'specific_permissions' && selectedPermissions.length === 0) {
+            errors.push('Select at least one permission or switch to another delegation type.')
+        }
+        if (maxApprovals && Number(maxApprovals) < 1) {
+            errors.push('Max approvals must be at least 1.')
+        }
+        if (warningMessages.length > 0 && !reason.trim()) {
+            errors.push('Add a reason because this delegation has warnings.')
+        }
+        if (warningMessages.length > 0 && !acknowledgeWarnings) {
+            errors.push('Acknowledge the warnings to proceed.')
+        }
+        return errors
+    }, [
+        delegateId,
+        startsAt,
+        endsAt,
+        startDate,
+        endDate,
+        delegationType,
+        selectedPermissions.length,
+        maxApprovals,
+        warningMessages.length,
+        reason,
+        acknowledgeWarnings,
+    ])
+
+    useEffect(() => {
         if (!showDialog) return
         if (editingDelegation) {
             setDelegateId(editingDelegation.delegate_id)
             setDelegationType(editingDelegation.delegation_type)
-            setSelectedPermissions(editingDelegation.permissions || [])
+            const normalizedPermissions = (editingDelegation.permissions || []).filter(
+                (permission): permission is Permission => ALL_PERMISSIONS.includes(permission as Permission)
+            )
+            setSelectedPermissions(normalizedPermissions)
             setPermissionsInitialized(true)
             setMaxApprovals(editingDelegation.max_approvals ? String(editingDelegation.max_approvals) : '')
             setAllowRedelegate(!!editingDelegation.allow_redelegate)
@@ -218,6 +246,7 @@ export default function DelegationSettings() {
         setNotifyOnAction(true)
         setNotifyOnExpiry(true)
         setReason('')
+        setAcknowledgeWarnings(false)
         setStartsAt(toLocalInputValue(start))
         setEndsAt(toLocalInputValue(end))
     }, [editingDelegation, showDialog])
@@ -602,6 +631,16 @@ export default function DelegationSettings() {
                                             <p key={message}>{message}</p>
                                         ))}
                                     </div>
+                                </div>
+                                <div className="mt-3 flex items-start gap-2 text-amber-900">
+                                    <Checkbox
+                                        checked={acknowledgeWarnings}
+                                        onCheckedChange={(value) => setAcknowledgeWarnings(value === true)}
+                                        id="acknowledge-warnings"
+                                    />
+                                    <Label htmlFor="acknowledge-warnings" className="text-xs">
+                                        I understand the warnings and want to proceed.
+                                    </Label>
                                 </div>
                             </div>
                         )}

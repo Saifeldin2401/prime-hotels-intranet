@@ -46,7 +46,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
           to="/"
           onClick={handleHaptic}
           className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200",
+            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px]",
             location.pathname === '/'
               ? "text-hotel-primary"
               : "text-gray-400 hover:text-gray-600"
@@ -63,7 +63,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
           to="/training"
           onClick={handleHaptic}
           className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200",
+            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px]",
             location.pathname.startsWith('/training')
               ? "text-hotel-primary"
               : "text-gray-400 hover:text-gray-600"
@@ -119,7 +119,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
           to="/messaging"
           onClick={handleHaptic}
           className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200",
+            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px]",
             location.pathname.startsWith('/messaging')
               ? "text-hotel-primary"
               : "text-gray-400 hover:text-gray-600"
@@ -139,7 +139,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
             onMenuClick?.()
           }}
           className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-600"
+            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-600 min-h-[44px]"
           )}
         >
           <div className="p-1.5 rounded-full">

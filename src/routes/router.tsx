@@ -1,6 +1,6 @@
 import { createBrowserRouter, createRoutesFromElements, Route, Navigate, Outlet } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
-import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { RouteErrorBoundary } from '@/components/common'
 import { useAuth } from '@/hooks/useAuth'
 
 import { AuthRoutes } from './modules/AuthRoutes'
@@ -56,7 +56,7 @@ const RootIndex = () => {
 
 export const router = createBrowserRouter(
     createRoutesFromElements(
-        <Route element={<RootLayout />} errorElement={<ErrorBoundary fallback={<div>Something went wrong</div>}><Outlet /></ErrorBoundary>}>
+        <Route element={<RootLayout />} errorElement={<RouteErrorBoundary section="App"><Outlet /></RouteErrorBoundary>}>
             <Route path="/" element={<RootIndex />} />
 
             {AuthRoutes()}

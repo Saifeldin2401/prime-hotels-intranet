@@ -1,6 +1,7 @@
 import { useAnalyticsStats } from '@/hooks/useAnalyticsStats'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ChartViewport } from '@/components/ui/ChartViewport'
 import { Loader2, Users, Activity, MousePointer2, Search } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { useTranslation } from 'react-i18next'
@@ -70,7 +71,7 @@ export default function AdminAnalyticsDashboard() {
                             <CardTitle>{t('analytics:dau_30_days')}</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="w-full">
+                            <ChartViewport minHeight={300}>
                                 <ResponsiveContainer width="100%" height={300}>
                                     <LineChart data={data.dau}>
                                         <CartesianGrid strokeDasharray="3 3" />
@@ -85,7 +86,7 @@ export default function AdminAnalyticsDashboard() {
                                         <Line type="monotone" dataKey="active_users" stroke="#2563eb" strokeWidth={2} />
                                     </LineChart>
                                 </ResponsiveContainer>
-                            </div>
+                            </ChartViewport>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -143,7 +144,7 @@ export default function AdminAnalyticsDashboard() {
                             <CardTitle>{t('analytics:top_system_interactions')}</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="w-full">
+                            <ChartViewport minHeight={400}>
                                 <ResponsiveContainer width="100%" height={400}>
                                     <BarChart layout="vertical" data={data.topEvents} margin={{ left: 100 }}>
                                         <CartesianGrid strokeDasharray="3 3" />
@@ -153,7 +154,7 @@ export default function AdminAnalyticsDashboard() {
                                         <Bar dataKey="count" fill="#8884d8" radius={[0, 4, 4, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
-                            </div>
+                            </ChartViewport>
                         </CardContent>
                     </Card>
                 </TabsContent>

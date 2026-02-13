@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { ManagerSelect } from './ManagerSelect'
 import { useUpdateReportingLine, useReportingChain } from '@/hooks/useOrganization'
-import { AlertTriangle, ArrowRight, User, Users } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { OrgTreeNode } from '@/hooks/useOrganization'
 
@@ -33,13 +33,6 @@ export function ReportingLineEditor({
     const [newManagerId, setNewManagerId] = useState<string | null>(null)
     const updateReportingLine = useUpdateReportingLine()
     const { data: reportingChain } = useReportingChain(employee?.id || '')
-
-    // Sync newManagerId with employee when employee changes or dialog opens
-    useEffect(() => {
-        if (employee) {
-            setNewManagerId(employee.reporting_to || null)
-        }
-    }, [employee])
 
     const handleOpenChange = (isOpen: boolean) => {
         if (isOpen && employee) {

@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Play, Loader2, Settings2, Plus } from 'lucide-react'
-import { useWorkflows, useToggleWorkflow, useExecuteWorkflow } from '@/hooks/useWorkflows'
+import { useWorkflows, useToggleWorkflow, useExecuteWorkflow, useDeleteWorkflow } from '@/hooks/useWorkflows'
 import { format } from 'date-fns'
 import { useToast } from '@/components/ui/use-toast'
 import {
@@ -25,13 +25,15 @@ import { WorkflowEditor } from './WorkflowEditor'
 import type { WorkflowDefinition } from '@/services/workflowEngine'
 
 export function WorkflowList() {
-    const { data: workflows, isLoading } = useWorkflows()
+    const { data: workflows, isLoading, error } = useWorkflows()
     const toggleMutation = useToggleWorkflow()
     const executeMutation = useExecuteWorkflow()
+    const deleteMutation = useDeleteWorkflow()
     const { toast } = useToast()
     const [executingId, setExecutingId] = useState<string | null>(null)
     const [editingWorkflow, setEditingWorkflow] = useState<WorkflowDefinition | null>(null)
     const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const [deleteId, setDeleteId] = useState<string | null>(null)
 
     const handleToggle = (id: string, currentStatus: boolean) => {
         toggleMutation.mutate(
@@ -78,8 +80,44 @@ export function WorkflowList() {
         )
     }
 
+    const handleDelete = () => {
+        if (!deleteId) return
+        deleteMutation.mutate(deleteId, {
+            onSuccess: () => {
+                toast({
+                    title: 'Workflow Deleted',
+                    description: 'Workflow has been archived and removed from the active list.',
+                })
+                setDeleteId(null)
+            },
+            onError: (error) => {
+                toast({
+                    title: 'Delete Failed',
+                    description: error instanceof Error ? error.message : 'Failed to delete workflow',
+                    variant: 'destructive',
+                })
+                setDeleteId(null)
+            }
+        })
+    }
+
+    const getTriggerLabel = (workflow: WorkflowDefinition) => {
+        if (workflow.trigger_config?.cron) return workflow.trigger_config.cron
+        if (workflow.trigger_config?.event || workflow.trigger_config?.event_type) {
+            return workflow.trigger_config.event || workflow.trigger_config.event_type
+        }
+        return 'Manual'
+    }
+
     if (isLoading) {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    }
+    if (error) {
+        return (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                Failed to load workflows: {error instanceof Error ? error.message : 'Unknown error'}
+            </div>
+        )
     }
 
     return (
@@ -115,7 +153,7 @@ export function WorkflowList() {
                                     <Badge variant="outline">{workflow.type}</Badge>
                                 </TableCell>
                                 <TableCell className="font-mono text-xs">
-                                    {workflow.trigger_config.cron || 'Manual'}
+                                    {getTriggerLabel(workflow)}
                                 </TableCell>
                                 <TableCell>
                                     {workflow.updated_at ? format(new Date(workflow.updated_at), 'MMM d, yyyy') : '-'}
@@ -155,6 +193,14 @@ export function WorkflowList() {
                                             )}
                                             Run
                                         </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-destructive hover:text-destructive"
+                                            onClick={() => setDeleteId(workflow.id)}
+                                        >
+                                            Delete
+                                        </Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -181,6 +227,25 @@ export function WorkflowList() {
                             onClose={() => setEditingWorkflow(null)}
                         />
                     )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Workflow?</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            This will archive the workflow and remove it from active lists. Existing executions remain in history.
+                        </p>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                                Delete
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
 

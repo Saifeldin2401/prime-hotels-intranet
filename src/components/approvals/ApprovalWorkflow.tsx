@@ -14,6 +14,7 @@ import {
   MessageSquare,
   RotateCcw
 } from 'lucide-react'
+import { differenceInMinutes } from 'date-fns'
 import { formatRelativeTime } from '@/lib/utils'
 import { getApproverForRequest } from '@/lib/approvalService'
 import { toast } from 'sonner'
@@ -212,6 +213,23 @@ export function ApprovalWorkflow({
 
   // Sort steps by order
   const sortedSteps = [...(request.request_steps || [])].sort((a, b) => a.step_order - b.step_order)
+  const dueAt = request.due_at ? new Date(request.due_at) : null
+  const dueStatus = dueAt ? (() => {
+    const now = new Date()
+    const minutes = Math.abs(differenceInMinutes(dueAt, now))
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+    const remainderHours = hours % 24
+    const labelParts: string[] = []
+    if (days > 0) labelParts.push(`${days}d`)
+    if (remainderHours > 0) labelParts.push(`${remainderHours}h`)
+    if (labelParts.length === 0) labelParts.push(`${minutes}m`)
+    const isOverdue = dueAt < now
+    return {
+      isOverdue,
+      label: isOverdue ? `Overdue by ${labelParts.join(' ')}` : `Due in ${labelParts.join(' ')}`,
+    }
+  })() : null
 
   return (
     <Card>
@@ -231,9 +249,16 @@ export function ApprovalWorkflow({
                 Requested by {request.requester?.full_name || 'Unknown'} • {formatRelativeTime(request.created_at)}
               </p>
             </div>
-            <Badge className={statusColors[request.status] || statusColors.draft}>
-              {request.status.replace(/_/g, ' ')}
-            </Badge>
+            <div className="flex flex-col items-end gap-2">
+              <Badge className={statusColors[request.status] || statusColors.draft}>
+                {request.status.replace(/_/g, ' ')}
+              </Badge>
+              {dueStatus && (
+                <Badge className={dueStatus.isOverdue ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}>
+                  {dueStatus.label}
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Approval Steps */}
@@ -301,11 +326,16 @@ export function ApprovalWorkflow({
             <div className="space-y-3 pt-4 border-t">
               <h4 className="font-medium">Your Action Required</h4>
               <Textarea
-                placeholder="Add a comment (optional)..."
+                placeholder="Add a comment (required for return/reject)..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
               />
+              {!comment.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  A comment is required to return or reject.
+                </p>
+              )}
               <div className="flex gap-2">
                 <Button
                   onClick={() => applyActionMutation.mutate({ action: 'approve' })}
@@ -318,7 +348,7 @@ export function ApprovalWorkflow({
                 <Button
                   onClick={() => applyActionMutation.mutate({ action: 'return' })}
                   variant="outline"
-                  disabled={applyActionMutation.isPending}
+                  disabled={applyActionMutation.isPending || !comment.trim()}
                   className="flex-1"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
@@ -327,7 +357,7 @@ export function ApprovalWorkflow({
                 <Button
                   onClick={() => applyActionMutation.mutate({ action: 'reject' })}
                   variant="destructive"
-                  disabled={applyActionMutation.isPending}
+                  disabled={applyActionMutation.isPending || !comment.trim()}
                   className="flex-1"
                 >
                   <XCircle className="w-4 h-4 mr-2" />

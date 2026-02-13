@@ -483,5 +483,65 @@
         "no_description": "No Description",
         "recent_runs": "Recent Runs",
         "title": "Report Builder"
+    },
+    "ai_governance": {
+        "title": "AI Governance",
+        "description": "Operational control plane for autonomous policy governance, validation, and reporting.",
+        "actions": {
+            "full_cycle": "Run Full Cycle",
+            "metrics_only": "Collect Metrics",
+            "optimizer_only": "Run Optimizer",
+            "validate_pending": "Validate Pending",
+            "apply_pending": "Apply Validated",
+            "daily_report": "Generate Report"
+        },
+        "reports": {
+            "title": "Daily Reports",
+            "description": "Last 14 AI governance summaries",
+            "empty": "No reports generated yet.",
+            "view": "View",
+            "detail_title": "Daily Report",
+            "close": "Close",
+            "kpi": {
+                "proposals": "Proposals",
+                "decisions": "Decisions",
+                "changes": "Policy Changes",
+                "audit": "Audit Events"
+            },
+            "metrics_section": "Metrics Snapshot",
+            "metrics_items": "{{count}} metrics captured",
+            "metrics_empty": "No metrics snapshot recorded.",
+            "recent_proposals": "Recent Proposals",
+            "recent_changes": "Recent Policy Changes",
+            "none": "None"
+        },
+        "toast_running": "Running {{action}}...",
+        "toast_completed": "Completed {{action}}",
+        "toast_failed": "Failed {{action}}",
+        "metrics": {
+            "title": "Latest Metrics",
+            "description": "Most recent telemetry snapshot",
+            "window": "Window: {{start}} \u2192 {{end}}",
+            "tracked": "{{count}} metrics tracked",
+            "empty": "No metrics snapshot yet."
+        },
+        "policy_sets": {
+            "title": "Policy Sets",
+            "description": "Active governance configurations",
+            "empty": "No policy sets found."
+        },
+        "proposals": {
+            "title": "Recent Proposals",
+            "description": "Latest AI optimization recommendations",
+            "empty": "No proposals found.",
+            "risk": "Risk: {{value}}",
+            "created": "Created: {{value}}"
+        },
+        "audit": {
+            "title": "Audit Trail",
+            "description": "Latest governance events",
+            "empty": "No audit events recorded.",
+            "entity": "Entity: {{value}}"
+        }
     }
 }

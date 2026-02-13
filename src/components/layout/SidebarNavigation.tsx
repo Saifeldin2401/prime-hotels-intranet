@@ -324,6 +324,7 @@ export function SidebarNavigation({
                 size="icon"
                 onClick={onClose}
                 className="absolute right-6 top-0 text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors"
+                aria-label={t('common:actions.close', "Close sidebar")}
               >
                 <X className="h-6 w-6" />
               </Button>
@@ -334,7 +335,7 @@ export function SidebarNavigation({
                 size="icon"
                 onClick={onToggleCollapse}
                 className="absolute right-2 text-gray-400 hover:bg-hotel-navy-light hover:text-white h-8 w-8 transition-colors"
-                aria-label="Collapse sidebar"
+                aria-label={t('nav.collapse', "Collapse sidebar")}
               >
                 <ChevronDown className="h-4 w-4 ltr:rotate-90 rtl:-rotate-90" />
               </Button>
@@ -348,6 +349,7 @@ export function SidebarNavigation({
                   <Button
                     variant="ghost"
                     className="w-full relative h-auto py-3 px-3 rounded-xl bg-hotel-navy-dark/50 hover:bg-hotel-navy-light border border-white/5 hover:border-hotel-gold/20 shadow-sm transition-all duration-200 group flex items-center gap-3 justify-start"
+                    aria-label={t('nav.user_menu', "User menu")}
                   >
                     <div className="relative">
                       <Avatar className="h-10 w-10 border-2 border-hotel-gold/20 group-hover:border-hotel-gold transition-colors shadow-sm">
@@ -524,10 +526,11 @@ export function SidebarNavigation({
                 "text-white/60 hover:text-red-300 hover:bg-red-500/10 transition-colors w-full border border-transparent",
                 !collapsed && "justify-start"
               )}
-              title="Sign Out"
+              title={t('nav.logout', "Sign out")}
+              aria-label={t('nav.logout', "Sign out")}
             >
               <LogOut className="h-4 w-4 me-2" />
-              {!collapsed && "Sign Out"}
+              {!collapsed && t('nav.logout', "Sign out")}
             </Button>
           </div>
         </div>

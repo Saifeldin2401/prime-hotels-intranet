@@ -104,8 +104,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        serif: ["var(--font-serif)", "Georgia", "serif"],
+        sans: ["var(--font-body)", "Inter", "system-ui", "sans-serif"],
+        serif: ["var(--font-heading)", "Playfair Display", "Georgia", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

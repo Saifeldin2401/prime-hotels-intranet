@@ -40,6 +40,24 @@ Deno.serve(async (req: Request) => {
 
         console.log('Starting daily workflows execution...')
 
+        const { data: workflowPolicyRows, error: workflowPolicyError } = await supabaseClient
+            .rpc('get_active_policy', { p_domain: 'workflow' })
+
+        if (workflowPolicyError) {
+            console.warn('Failed to load workflow policy:', workflowPolicyError.message)
+        }
+
+        const workflowPolicy = workflowPolicyRows?.[0]?.policy_json ?? null
+
+        const { data: taskPolicyRows, error: taskPolicyError } = await supabaseClient
+            .rpc('get_active_policy', { p_domain: 'task' })
+
+        if (taskPolicyError) {
+            console.warn('Failed to load task policy:', taskPolicyError.message)
+        }
+
+        const taskPolicy = taskPolicyRows?.[0]?.policy_json ?? null
+
         // Get all active scheduled workflows that should run daily
         const { data: workflows, error: workflowError } = await supabaseClient
             .from('workflow_definitions')
@@ -80,7 +98,7 @@ Deno.serve(async (req: Request) => {
 
                 try {
                     // Execute the workflow action
-                    const result = await executeWorkflowAction(supabaseClient, workflow)
+                    const result = await executeWorkflowAction(supabaseClient, workflow, workflowPolicy, taskPolicy)
 
                     // Update execution as completed
                     const executionTime = Date.now() - startTime
@@ -152,15 +170,15 @@ Deno.serve(async (req: Request) => {
     }
 })
 
-async function executeWorkflowAction(supabaseClient: any, workflow: any) {
+async function executeWorkflowAction(supabaseClient: any, workflow: any, workflowPolicy: any, taskPolicy: any) {
     const { action_config } = workflow
 
     switch (action_config.action) {
         case 'send_training_reminders':
-            return await sendTrainingReminders(supabaseClient, action_config)
+            return await sendTrainingReminders(supabaseClient, action_config, workflowPolicy)
 
         case 'notify_overdue_tasks':
-            return await notifyOverdueTasks(supabaseClient, action_config)
+            return await notifyOverdueTasks(supabaseClient, action_config, taskPolicy)
 
         case 'send_leave_balance_alerts':
             return await sendLeaveBalanceAlerts(supabaseClient, action_config)
@@ -170,8 +188,9 @@ async function executeWorkflowAction(supabaseClient: any, workflow: any) {
     }
 }
 
-async function sendTrainingReminders(supabaseClient: any, config: any) {
-    const daysBeforeArray = config.days_before || [3, 1]
+async function sendTrainingReminders(supabaseClient: any, config: any, policy: any) {
+    const policyDays = policy?.scheduled_workflows?.training_reminders?.days_before
+    const daysBeforeArray = policyDays || config.days_before || [3, 1]
     let totalSent = 0
 
     for (const daysBefore of daysBeforeArray) {
@@ -248,16 +267,22 @@ async function sendTrainingReminders(supabaseClient: any, config: any) {
     return { reminders_sent: totalSent }
 }
 
-async function notifyOverdueTasks(supabaseClient: any, config: any) {
+async function notifyOverdueTasks(supabaseClient: any, config: any, policy: any) {
     const now = new Date().toISOString()
     let totalNotified = 0
+
+    const overdueHours = policy?.escalation_rules?.overdue_hours
+    let cutoffDate = new Date()
+    if (typeof overdueHours === 'number' && Number.isFinite(overdueHours)) {
+        cutoffDate = new Date(Date.now() - overdueHours * 60 * 60 * 1000)
+    }
 
     const { data: tasks } = await supabaseClient
         .from('tasks')
         .select('id, title, assigned_to_id, due_date')
         .in('status', ['todo', 'in_progress', 'review'])
         .not('due_date', 'is', null)
-        .lt('due_date', new Date().toISOString().split('T')[0])
+        .lt('due_date', cutoffDate.toISOString().split('T')[0])
         .eq('is_deleted', false)
 
     if (!tasks) return { tasks_notified: 0 }

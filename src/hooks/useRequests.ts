@@ -48,6 +48,16 @@ export interface RequestRow {
   property_id: string | null
   department_id?: string | null
   requester?: {
+    id: string
+    full_name: string
+    email: string
+    phone: string | null
+    job_title: string | null
+  }
+  supervisor?: {
+    id: string
+    full_name: string
+    email: string
     phone: string | null
     job_title: string | null
   }

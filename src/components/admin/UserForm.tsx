@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
-import { ToastAction } from '@/components/ui/toast'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,7 +19,7 @@ import { ZodError } from 'zod'
 
 import type { Profile, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useDepartments } from '@/hooks/useDepartments'
 import {
   Command,
@@ -55,6 +54,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [phone, setPhone] = useState('')
   const [jobTitle, setJobTitle] = useState('')
   const [role, setRole] = useState<AppRole | ''>('')
+  const [originalRole, setOriginalRole] = useState<AppRole | ''>('')
   const [isActive, setIsActive] = useState(true)
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
@@ -122,7 +122,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
       // Show credentials in a persistent toast - NO auto-download needed
       toast({
-        title: `✅ ${t('form.success.created_title')}`,
+        title: t('form.success.created_title'),
         description: (
           <div className="mt-2 space-y-2">
             <p><strong>{t('form.email')}:</strong> {email}</p>
@@ -259,6 +259,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
     if (rolesData && rolesData.length > 0) {
       setRole(rolesData[0].role)
+      setOriginalRole(rolesData[0].role)
     }
 
     // Load properties
@@ -302,42 +303,45 @@ export function UserForm({ user, onClose }: UserFormProps) {
     }
   }, [user])
 
+  const hydrateStateFromUser = useCallback((sourceUser: Profile) => {
+    setEmail(sourceUser.email)
+    setFullName(sourceUser.full_name || '')
+    setPhone(sourceUser.phone || '')
+    setJobTitle(sourceUser.job_title || '')
+    setIsActive(sourceUser.is_active !== false) // Default to true if undefined
+    setReportingTo(sourceUser.reporting_to || null)
+    setStaffId(sourceUser.staff_id || '')
+    setDateOfBirth(sourceUser.date_of_birth || '')
+    setEmploymentType(sourceUser.employment_type || 'full_time')
+    setContractEndDate(sourceUser.contract_end_date || '')
+    setIqamaNumber(sourceUser.iqama_number || '')
+    setIqamaExpiry(sourceUser.iqama_expiry || '')
+  }, [])
+
   useEffect(() => {
     if (user) {
-      setEmail(user.email)
-      setFullName(user.full_name || '')
-      setPhone(user.phone || '')
-      setJobTitle(user.job_title || '')
-      setIsActive(user.is_active !== false) // Default to true if undefined
-      setReportingTo(user.reporting_to || null)
-      setStaffId(user.staff_id || '')
-      setDateOfBirth(user.date_of_birth || '')
-      setEmploymentType(user.employment_type || 'full_time')
-      setContractEndDate(user.contract_end_date || '')
-      setIqamaNumber(user.iqama_number || '')
-      setIqamaExpiry(user.iqama_expiry || '')
+      hydrateStateFromUser(user)
       // Load user's roles, properties, departments
       loadUserData()
     }
-  }, [user, loadUserData])
+  }, [user, loadUserData, hydrateStateFromUser])
 
   // Auto-suggest manager when department changes (for new users)
-  useEffect(() => {
-    // Only auto-suggest for new users and if no manager already selected
+  const maybeAutoSuggestManager = useCallback((managers: any[] | undefined) => {
     if (user || reportingTo) return
+    if (!managers || managers.length === 0) return
+    const deptHead = managers.find((m: any) => m.isDeptHead)
+    if (!deptHead) return
+    setReportingTo(deptHead.id)
+    toast({
+      title: t('form.success.manager_suggested'),
+      description: t('form.success.manager_suggested_desc', { name: deptHead.full_name, jobTitle: deptHead.job_title || 'Manager' }),
+    })
+  }, [reportingTo, t, toast, user])
 
-    // When potentialManagers loads and has data, suggest the first dept head
-    if (potentialManagers && potentialManagers.length > 0) {
-      const deptHead = potentialManagers.find((m: any) => m.isDeptHead)
-      if (deptHead) {
-        setReportingTo(deptHead.id)
-        toast({
-          title: t('form.success.manager_suggested'),
-          description: t('form.success.manager_suggested_desc', { name: deptHead.full_name, jobTitle: deptHead.job_title || 'Manager' }),
-        })
-      }
-    }
-  }, [potentialManagers, user, reportingTo])
+  useEffect(() => {
+    maybeAutoSuggestManager(potentialManagers as any[] | undefined)
+  }, [potentialManagers, maybeAutoSuggestManager])
 
   // Handle job title selection from DB
   const handleJobTitleSelect = (selectedTitle: string) => {
@@ -463,6 +467,12 @@ export function UserForm({ user, onClose }: UserFormProps) {
         title: t('form.success.updated_title', { defaultValue: 'User Updated' }),
         description: t('form.success.updated_message', { defaultValue: 'User information has been updated successfully.' })
       })
+
+      if (user && originalRole && role && originalRole !== role) {
+        triggerService.onRoleChange(user.id, originalRole, role, selectedDepartments[0] || '')
+        setOriginalRole(role)
+      }
+
       onClose()
     },
     onError: (error) => {

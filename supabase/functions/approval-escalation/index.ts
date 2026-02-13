@@ -43,16 +43,38 @@ serve(async (req) => {
         const now = new Date()
         const today = now.toISOString().split('T')[0]
 
-        const { data: rules, error: rulesError } = await supabaseClient
-            .from('escalation_rules')
-            .select('action_type, threshold_hours, next_role, is_active')
-            .eq('is_active', true)
+        const { data: slaPolicyRows, error: slaPolicyError } = await supabaseClient
+            .rpc('get_active_policy', { p_domain: 'sla' })
 
-        if (rulesError) throw rulesError
+        if (slaPolicyError) {
+            console.warn('Failed to load SLA policy:', slaPolicyError.message)
+        }
 
-        const rulesByType = new Map<string, { threshold_hours: number; next_role: string }>()
-        for (const r of rules || []) {
-            rulesByType.set(r.action_type, { threshold_hours: r.threshold_hours, next_role: r.next_role })
+        const policyEscalations = Array.isArray(slaPolicyRows?.[0]?.policy_json?.escalation_rules)
+            ? slaPolicyRows?.[0]?.policy_json?.escalation_rules
+            : []
+
+        let rulesByType = new Map<string, { threshold_hours: number; next_role: string }>()
+
+        if (policyEscalations.length > 0) {
+            for (const r of policyEscalations) {
+                if (!r?.action_type || !r?.threshold_hours || !r?.next_role) continue
+                rulesByType.set(r.action_type, {
+                    threshold_hours: Number(r.threshold_hours),
+                    next_role: String(r.next_role)
+                })
+            }
+        } else {
+            const { data: rules, error: rulesError } = await supabaseClient
+                .from('escalation_rules')
+                .select('action_type, threshold_hours, next_role, is_active')
+                .eq('is_active', true)
+
+            if (rulesError) throw rulesError
+
+            for (const r of rules || []) {
+                rulesByType.set(r.action_type, { threshold_hours: r.threshold_hours, next_role: r.next_role })
+            }
         }
 
         let totalEscalated = 0

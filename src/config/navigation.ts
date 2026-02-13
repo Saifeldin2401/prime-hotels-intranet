@@ -763,6 +763,15 @@ export const ROUTES: RouteConfig[] = [
         order: 3.7
     },
     {
+        path: '/admin/ai-governance',
+        title: 'ai_governance',
+        icon: Brain,
+        description: 'Autonomous AI governance controls and telemetry',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'administration',
+        order: 3.75
+    },
+    {
         path: '/admin/notifications',
         title: 'notification_batches',
         icon: Bell,

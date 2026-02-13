@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Plus, Trash2, GripVertical, Loader2, Save } from 'lucide-react'
-import { useWorkflowSteps, useUpdateWorkflow, useUpdateWorkflowSteps } from '@/hooks/useWorkflows'
+import { useWorkflowSteps, useUpdateWorkflow, useUpdateWorkflowSteps, useCreateWorkflow } from '@/hooks/useWorkflows'
 import { useToast } from '@/components/ui/use-toast'
 import type { WorkflowDefinition, WorkflowStep } from '@/hooks/useWorkflows'
 import {
@@ -14,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { supabase } from '@/lib/supabase'
 
 interface WorkflowEditorProps {
     workflow: WorkflowDefinition
@@ -23,11 +24,19 @@ interface WorkflowEditorProps {
 export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
     const { data: steps, isLoading: stepsLoading } = useWorkflowSteps(workflow.id)
     const updateWorkflowMutation = useUpdateWorkflow()
+    const createWorkflowMutation = useCreateWorkflow()
     const updateStepsMutation = useUpdateWorkflowSteps(workflow.id)
     const { toast } = useToast()
 
     const [name, setName] = useState(workflow.name)
     const [description, setDescription] = useState(workflow.description || '')
+    const [type, setType] = useState<WorkflowDefinition['type']>(workflow.type || 'event-based')
+    const [triggerConfig, setTriggerConfig] = useState(
+        JSON.stringify(workflow.trigger_config || {}, null, 2)
+    )
+    const [actionConfig, setActionConfig] = useState(
+        JSON.stringify(workflow.action_config || {}, null, 2)
+    )
     const [localSteps, setLocalSteps] = useState<Partial<WorkflowStep>[]>([])
 
     useEffect(() => {
@@ -56,13 +65,58 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
 
     const handleSave = async () => {
         try {
-            await updateWorkflowMutation.mutateAsync({
-                id: workflow.id,
-                name,
-                description
-            })
+            let workflowId = workflow.id
+            let parsedTrigger = {}
+            let parsedAction = {}
 
-            await updateStepsMutation.mutateAsync(localSteps as any)
+            try {
+                parsedTrigger = triggerConfig ? JSON.parse(triggerConfig) : {}
+            } catch (err) {
+                throw new Error('Trigger config JSON is invalid')
+            }
+
+            try {
+                parsedAction = actionConfig ? JSON.parse(actionConfig) : {}
+            } catch (err) {
+                throw new Error('Action config JSON is invalid')
+            }
+
+            if (workflow.id) {
+                await updateWorkflowMutation.mutateAsync({
+                    id: workflow.id,
+                    name,
+                    description,
+                    type,
+                    trigger_config: parsedTrigger,
+                    action_config: parsedAction
+                })
+            } else {
+                const created = await createWorkflowMutation.mutateAsync({
+                    name,
+                    description,
+                    type,
+                    trigger_config: parsedTrigger,
+                    action_config: parsedAction,
+                    is_active: true
+                } as any)
+                workflowId = created.id
+            }
+
+            if (workflowId) {
+                if (workflow.id) {
+                    await updateStepsMutation.mutateAsync(localSteps as any)
+                } else if (localSteps.length > 0) {
+                    const stepsPayload = localSteps.map((s, i) => ({
+                        ...s,
+                        step_order: i + 1
+                    }))
+                    const { error } = await supabase.rpc('replace_workflow_steps', {
+                        p_workflow_id: workflowId,
+                        p_steps: stepsPayload
+                    })
+                    if (error) throw error
+                }
+            }
 
             toast({
                 title: 'Success',
@@ -79,7 +133,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         }
     }
 
-    if (stepsLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    if (stepsLoading && workflow.id) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
 
     return (
         <div className="space-y-6">
@@ -96,6 +150,40 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="What does this workflow do?"
                     />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="type">Workflow Type</Label>
+                    <Select value={type} onValueChange={(val) => setType(val as WorkflowDefinition['type'])}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                            <SelectItem value="event-based">Event Based</SelectItem>
+                            <SelectItem value="manual">Manual</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="trigger_config">Trigger Config (JSON)</Label>
+                    <Textarea
+                        id="trigger_config"
+                        value={triggerConfig}
+                        onChange={(e) => setTriggerConfig(e.target.value)}
+                        className="font-mono text-xs h-28"
+                    />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="action_config">Workflow Action Config (JSON)</Label>
+                    <Textarea
+                        id="action_config"
+                        value={actionConfig}
+                        onChange={(e) => setActionConfig(e.target.value)}
+                        className="font-mono text-xs h-28"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        Used when no steps are defined. Example: {"{\"action\":\"send_training_reminders\"}"}
+                    </p>
                 </div>
             </div>
 
@@ -138,7 +226,6 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                                 <SelectItem value="send_notification">Send Notification</SelectItem>
                                                 <SelectItem value="create_task">Create Task</SelectItem>
                                                 <SelectItem value="assign_training">Assign Training</SelectItem>
-                                                <SelectItem value="wait_for_approval">Wait for Approval</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -176,8 +263,8 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
 
             <div className="flex justify-end gap-3 pt-6 border-t">
                 <Button variant="outline" onClick={onClose}>Cancel</Button>
-                <Button onClick={handleSave} disabled={updateWorkflowMutation.isPending || updateStepsMutation.isPending}>
-                    {updateWorkflowMutation.isPending || updateStepsMutation.isPending ? (
+                <Button onClick={handleSave} disabled={updateWorkflowMutation.isPending || updateStepsMutation.isPending || createWorkflowMutation.isPending}>
+                    {updateWorkflowMutation.isPending || updateStepsMutation.isPending || createWorkflowMutation.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                         <Save className="mr-2 h-4 w-4" />

@@ -108,6 +108,7 @@ export default function OnboardingDashboard() {
                                 <Checkbox
                                     checked={task.is_completed}
                                     onCheckedChange={() => handleTaskToggle(task.id, task.is_completed)}
+                                    disabled={task.assigned_to_id !== onboarding.user_id}
                                     className="mt-1 h-5 w-5 shrink-0"
                                 />
                                 <div className="space-y-1 flex-1 min-w-0">
@@ -115,12 +116,22 @@ export default function OnboardingDashboard() {
                                         <span className={cn("font-medium text-sm sm:text-base", task.is_completed && "line-through text-muted-foreground")}>
                                             {task.title}
                                         </span>
+                                        {task.due_date && !task.is_completed && new Date(task.due_date) < new Date() && (
+                                            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-red-800 whitespace-nowrap">
+                                                {t('dashboard.overdue', 'Overdue')}
+                                            </span>
+                                        )}
                                         {task.assigned_to_id !== onboarding.user_id && (
                                             <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-yellow-800 whitespace-nowrap">
                                                 {t('dashboard.assigned_manager')}
                                             </span>
                                         )}
                                     </div>
+                                    {task.assigned_to_id !== onboarding.user_id && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {t('dashboard.manager_required', 'This task must be completed by your manager.')}
+                                        </p>
+                                    )}
                                     {task.description && (
                                         <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-none">
                                             {task.description}

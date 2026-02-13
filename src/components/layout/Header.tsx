@@ -299,6 +299,7 @@ export function Header({
                   <Button
                     variant="ghost"
                     className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark transition-all duration-200 group"
+                    aria-label={t('nav.user_menu', "User menu")}
                   >
                     <div className="hidden md:flex flex-col items-end">
                       <span className="text-sm font-medium text-white leading-none mb-1 group-hover:text-hotel-gold transition-colors">

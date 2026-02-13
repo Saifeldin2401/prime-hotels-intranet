@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -13,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { RichTextEditor } from '@/components/ui/RichTextEditor'
+// Lazy load heavy RichTextEditor
+const RichTextEditor = lazy(() => import('@/components/ui/RichTextEditor'))
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
   Plus,
@@ -830,12 +831,12 @@ export function TrainingBuilder() {
 
   useEffect(() => {
     if (lastStepRef.current === builderStep) return
-      analytics.track('lms_builder_step_enter', {
-        module_id: moduleId || null,
-        step: builderStep,
-        is_new: !moduleId,
-        template_id: templatePreset && templatePreset !== 'none' ? templatePreset : null
-      })
+    analytics.track('lms_builder_step_enter', {
+      module_id: moduleId || null,
+      step: builderStep,
+      is_new: !moduleId,
+      template_id: templatePreset && templatePreset !== 'none' ? templatePreset : null
+    })
     lastStepRef.current = builderStep
   }, [builderStep, moduleId, templatePreset])
 

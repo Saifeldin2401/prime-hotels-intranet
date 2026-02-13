@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -34,6 +34,40 @@ interface TrainingProgressVisualizationProps {
   className?: string
 }
 
+function ChartViewport({ height, children }: { height: number; children: ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateReadyState = () => {
+      const rect = container.getBoundingClientRect()
+      setIsReady(rect.width > 0 && rect.height > 0)
+    }
+
+    updateReadyState()
+    if (typeof ResizeObserver === 'undefined') {
+      return
+    }
+    const observer = new ResizeObserver(updateReadyState)
+    observer.observe(container)
+
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full"
+      style={{ height, minHeight: height }}
+    >
+      {isReady ? children : null}
+    </div>
+  )
+}
+
 export function TrainingProgressVisualization({ className }: TrainingProgressVisualizationProps) {
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
@@ -62,7 +96,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
           break
       }
 
-      const { data, error } = await supabase
+      const buildProgressQuery = () => supabase
         .from('training_progress')
         .select(`
           *,
@@ -71,7 +105,17 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
         `)
         .eq('user_id', user.id)
         .gte('completed_at', startDate.toISOString())
+
+      let { data, error } = await buildProgressQuery()
         .order('completed_at', { ascending: true })
+
+      if (error) {
+        const fallback = await buildProgressQuery().order('updated_at', { ascending: true })
+        if (!fallback.error) {
+          data = fallback.data
+          error = null
+        }
+      }
 
       if (error) throw error
       return data
@@ -352,8 +396,8 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[250px] min-h-[250px] w-full" style={{ minHeight: 250 }}>
-                  <ResponsiveContainer width="100%" height={250} minWidth={0} debounce={50}>
+                <ChartViewport height={250}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                     <AreaChart data={userDailyProgress}>
                       <defs>
                         <linearGradient id="colorCompletions" x1="0" y1="0" x2="0" y2="1">
@@ -378,7 +422,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                       />
                     </AreaChart>
                   </ResponsiveContainer>
-                </div>
+                </ChartViewport>
               </CardContent>
             </Card>
 
@@ -391,8 +435,8 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] min-h-[300px] w-full" style={{ minHeight: 300 }}>
-                  <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={50}>
+                <ChartViewport height={300}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                     <PieChart>
                       <Pie
                         data={userCategoryData}
@@ -411,7 +455,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                       <Tooltip content={<ChartTooltipContent />} />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
+                </ChartViewport>
               </CardContent>
             </Card>
 
@@ -424,9 +468,9 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] min-h-[300px] w-full" style={{ minHeight: 300 }}>
+                <ChartViewport height={300}>
                   {userCategoryData.length > 2 ? (
-                    <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={50}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                       <RadarChart cx="50%" cy="50%" outerRadius="80%" data={userCategoryData}>
                         <PolarGrid />
                         <PolarAngleAxis dataKey="category" tick={{ fontSize: 12 }} />
@@ -447,7 +491,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                       <p>{t('visualization.needMoreDataForRadar')}</p>
                     </div>
                   )}
-                </div>
+                </ChartViewport>
               </CardContent>
             </Card>
           </div>
@@ -466,8 +510,8 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[250px] min-h-[250px] w-full" style={{ minHeight: 250 }}>
-                  <ResponsiveContainer width="100%" height={250} minWidth={0} debounce={50}>
+                <ChartViewport height={250}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                     <BarChart data={departmentDailyProgress}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis
@@ -480,7 +524,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                       <Bar dataKey="completions" fill="#00C49F" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </ChartViewport>
               </CardContent>
             </Card>
 
@@ -493,8 +537,8 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[250px] min-h-[250px] w-full" style={{ minHeight: 250 }}>
-                  <ResponsiveContainer width="100%" height={250} minWidth={0} debounce={50}>
+                <ChartViewport height={250}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                     <BarChart data={departmentCategoryData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" tick={{ fontSize: 12 }} />
@@ -503,7 +547,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                       <Bar dataKey="count" fill="#FFBB28" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </ChartViewport>
               </CardContent>
             </Card>
           </div>

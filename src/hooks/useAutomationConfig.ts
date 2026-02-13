@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from './useAuth'
 
 export interface AutomationConfig {
     id: 'smart_leave' | 'auto_training' | 'recurring_tasks'
@@ -9,6 +10,7 @@ export interface AutomationConfig {
 }
 
 export function useAutomationConfigs() {
+    const { user } = useAuth()
     return useQuery({
         queryKey: ['automation-configs'],
         queryFn: async () => {
@@ -18,7 +20,10 @@ export function useAutomationConfigs() {
                 .order('id')
             if (error) throw error
             return data as AutomationConfig[]
-        }
+        },
+        enabled: !!user,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true
     })
 }
 

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from './useAuth'
 import { executeWorkflow, getWorkflowExecutions } from '@/services/workflowEngine'
 
 export interface WorkflowDefinition {
@@ -10,6 +11,7 @@ export interface WorkflowDefinition {
     trigger_config: Record<string, any>
     action_config: Record<string, any>
     is_active: boolean
+    is_deleted?: boolean
     updated_at?: string
 }
 
@@ -43,16 +45,21 @@ export interface WorkflowStep {
  * Hook to fetch all workflows
  */
 export function useWorkflows() {
+    const { user } = useAuth()
     return useQuery({
         queryKey: ['workflows'],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('workflow_definitions')
                 .select('*')
+                .eq('is_deleted', false)
                 .order('name')
             if (error) throw error
             return data as WorkflowDefinition[]
-        }
+        },
+        enabled: !!user,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true
     })
 }
 
@@ -60,9 +67,10 @@ export function useWorkflows() {
  * Hook to fetch workflow steps
  */
 export function useWorkflowSteps(workflowId: string) {
+    const { user } = useAuth()
     return useQuery({
         queryKey: ['workflow-steps', workflowId],
-        enabled: !!workflowId,
+        enabled: !!workflowId && !!user,
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('workflow_steps')
@@ -79,9 +87,13 @@ export function useWorkflowSteps(workflowId: string) {
  * Hook to fetch workflow execution history
  */
 export function useWorkflowExecutions(workflowId?: string, limit: number = 50) {
+    const { user } = useAuth()
     return useQuery({
         queryKey: ['workflow-executions', workflowId, limit],
-        queryFn: () => getWorkflowExecutions(workflowId, limit)
+        queryFn: () => getWorkflowExecutions(workflowId, limit),
+        enabled: !!user,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true
     })
 }
 
@@ -191,6 +203,34 @@ export function useToggleWorkflow() {
             const { data, error } = await supabase
                 .from('workflow_definitions')
                 .update({ is_active: isActive })
+                .eq('id', workflowId)
+                .select()
+                .single()
+
+            if (error) throw error
+            return data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['workflows'] })
+        }
+    })
+}
+
+/**
+ * Soft-delete a workflow definition
+ */
+export function useDeleteWorkflow() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async (workflowId: string) => {
+            const { data, error } = await supabase
+                .from('workflow_definitions')
+                .update({
+                    is_deleted: true,
+                    is_active: false,
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', workflowId)
                 .select()
                 .single()

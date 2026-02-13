@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, lazy, Suspense } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -38,7 +38,9 @@ import { ModuleTemplateSelector } from '@/components/training/hub/ModuleTemplate
 import { ModuleCreationWizard } from '@/components/training/hub/ModuleCreationWizard'
 import { ModuleQuickActions } from '@/components/training/hub/ModuleQuickActions'
 import { ModuleAnalyticsCard } from '@/components/training/hub/ModuleAnalyticsCard'
-import { TrainingProgressVisualization } from '@/components/training/TrainingProgressVisualization'
+
+// Lazy load heavy chart component
+const TrainingProgressVisualization = lazy(() => import('@/components/training/TrainingProgressVisualization').then(m => ({ default: m.TrainingProgressVisualization })))
 
 type ModuleStatus = 'draft' | 'published' | 'archived'
 type ViewMode = 'list' | 'builder' | 'assignments' | 'insights'
@@ -831,7 +833,9 @@ export default function TrainingHub() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-hotel-navy">{t('visualization.title')}</h3>
                 </div>
-                <TrainingProgressVisualization />
+                <Suspense fallback={<div className="h-[400px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-muted-foreground">{t('loadingCharts')}</div>}>
+                  <TrainingProgressVisualization />
+                </Suspense>
               </div>
 
               <TrainingAssignmentsPanel

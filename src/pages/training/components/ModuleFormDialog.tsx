@@ -1,9 +1,6 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useProperty } from '@/contexts/PropertyContext'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import {
@@ -30,22 +27,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-} from '@/components/ui/command'
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronsUpDown, Plus } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 export const moduleFormSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -90,32 +73,6 @@ export function ModuleFormDialog({
 }: ModuleFormDialogProps) {
     const { t, i18n } = useTranslation(['training', 'common'])
     const isRTL = i18n.dir() === 'rtl'
-    const { currentProperty } = useProperty()
-    const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false)
-    const [openDurationCombobox, setOpenDurationCombobox] = useState(false)
-    const [searchCategoryValue, setSearchCategoryValue] = useState("")
-    const [searchDurationValue, setSearchDurationValue] = useState("")
-
-    // Fetch departments for current property (or all when "All Properties" is selected)
-    const propertyId = currentProperty?.id
-    const isAllProperties = propertyId === 'all'
-    const { data: departments = [] } = useQuery({
-        queryKey: ['departments', isAllProperties ? 'all' : propertyId],
-        queryFn: async () => {
-            if (!propertyId) return []
-            let query = supabase
-                .from('departments')
-                .select('id, name')
-                .order('name')
-            if (!isAllProperties && propertyId) {
-                query = query.eq('property_id', propertyId)
-            }
-            const { data, error } = await query
-            if (error) throw error
-            return data
-        },
-        enabled: !!propertyId
-    })
 
     const form = useForm<ModuleFormValues>({
         resolver: zodResolver(moduleFormSchema),
@@ -133,8 +90,6 @@ export function ModuleFormDialog({
 
     useEffect(() => {
         if (open) {
-            setSearchCategoryValue("")
-            setSearchDurationValue("")
             if (initialData) {
                 form.reset({
                     title: initialData.title || '',
@@ -160,10 +115,6 @@ export function ModuleFormDialog({
             }
         }
     }, [open, initialData, form])
-
-    const handleSubmit = async (values: ModuleFormValues) => {
-        await onSubmit(values)
-    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

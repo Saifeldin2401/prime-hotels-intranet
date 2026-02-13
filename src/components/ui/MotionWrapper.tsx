@@ -41,7 +41,7 @@ export function MotionWrapper({ children, className, mode = 'fade-slide-up' }: M
     return (
         <motion.div
             {...getVariants()}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className={className}
         >
             {children}

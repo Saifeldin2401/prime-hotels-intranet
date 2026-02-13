@@ -9,9 +9,10 @@ import { useAutomationConfigs, useUpdateAutomationConfig } from '@/hooks/useAuto
 import type { AutomationConfig } from '@/hooks/useAutomationConfig'
 import { Loader2, Save, Sparkles, GraduationCap, CalendarDays } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
+import { supabase } from '@/lib/supabase'
 
 export function AutomationSettings() {
-    const { data: configs, isLoading } = useAutomationConfigs()
+    const { data: configs, isLoading, error } = useAutomationConfigs()
     const updateMutation = useUpdateAutomationConfig()
     const { toast } = useToast()
     const [localConfigs, setLocalConfigs] = useState<Partial<Record<AutomationConfig['id'], any>>>({})
@@ -27,12 +28,26 @@ export function AutomationSettings() {
         })
     }
 
-    const handleSaveConfig = (id: AutomationConfig['id']) => {
+    const handleSaveConfig = async (id: AutomationConfig['id']) => {
         const config = localConfigs[id]
         if (!config) return
 
         updateMutation.mutate({ id, config }, {
-            onSuccess: () => {
+            onSuccess: async () => {
+                if (id === 'recurring_tasks' && config.run_time) {
+                    const { error } = await supabase.rpc('update_recurring_tasks_schedule', {
+                        p_run_time: config.run_time
+                    })
+                    if (error) {
+                        toast({
+                            title: 'Schedule Update Failed',
+                            description: error.message,
+                            variant: 'destructive'
+                        })
+                        return
+                    }
+                }
+
                 toast({
                     title: 'Settings Saved',
                     description: `Parameters for ${id.replace('_', ' ')} have been updated.`
@@ -42,6 +57,13 @@ export function AutomationSettings() {
     }
 
     if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    if (error) {
+        return (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                Failed to load automation settings: {error instanceof Error ? error.message : 'Unknown error'}
+            </div>
+        )
+    }
 
     return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -71,6 +93,21 @@ export function AutomationSettings() {
                             onChange={(e) => setLocalConfigs({
                                 ...localConfigs,
                                 smart_leave: { ...configs?.find(c => c.id === 'smart_leave')?.config, max_days: parseInt(e.target.value) }
+                            })}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Allowed Leave Types (comma separated)</Label>
+                        <Input
+                            type="text"
+                            placeholder="sick, annual"
+                            defaultValue={(configs?.find(c => c.id === 'smart_leave')?.config.allowed_types || []).join(', ')}
+                            onChange={(e) => setLocalConfigs({
+                                ...localConfigs,
+                                smart_leave: {
+                                    ...configs?.find(c => c.id === 'smart_leave')?.config,
+                                    allowed_types: e.target.value.split(',').map(v => v.trim()).filter(Boolean)
+                                }
                             })}
                         />
                     </div>

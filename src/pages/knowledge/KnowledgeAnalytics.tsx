@@ -46,6 +46,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ChartViewport } from '@/components/ui/ChartViewport'
 import { cn } from '@/lib/utils'
 import { useArticles, useFeedbackStats, useRecentFeedback, useFeedbackTrends } from '@/hooks/useKnowledge'
 import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
@@ -561,8 +562,8 @@ function FeedbackTrendsChart() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[300px] w-full min-w-[300px]">
-                    <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+                <ChartViewport className="h-[300px] min-w-[300px]" minHeight={300}>
+                    <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={trends} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorHelpful" x1="0" y1="0" x2="0" y2="1">
@@ -617,7 +618,7 @@ function FeedbackTrendsChart() {
                             />
                         </AreaChart>
                     </ResponsiveContainer>
-                </div>
+                </ChartViewport>
             </CardContent>
         </Card>
     )

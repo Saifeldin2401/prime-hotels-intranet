@@ -50,7 +50,7 @@ function RouteFallbackUI({
                     {import.meta.env.DEV && error && (
                         <details className="bg-gray-50 p-4 rounded-lg text-sm border">
                             <summary className="cursor-pointer font-medium text-gray-700 flex items-center gap-2">
-                                <span>🐛</span> Developer Info
+                                <span>Bug</span> Developer Info
                             </summary>
                             <div className="mt-3 space-y-2">
                                 <div className="font-mono text-xs">

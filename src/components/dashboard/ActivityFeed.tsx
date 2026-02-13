@@ -155,7 +155,7 @@ async function fetchFeedItems({ user, roles, departments, properties, t }: Fetch
         }
 
         // Fetch training completions (achievements)
-        const { data: achievements } = await supabase
+        const buildAchievementsQuery = () => supabase
             .from('training_progress')
             .select(`
         id,
@@ -165,8 +165,17 @@ async function fetchFeedItems({ user, roles, departments, properties, t }: Fetch
       `)
             .eq('status', 'completed')
             .gte('completed_at', thirtyDaysAgo.toISOString())
-            .order('completed_at', { ascending: false })
             .limit(10)
+
+        let { data: achievements, error: achievementsError } = await buildAchievementsQuery()
+            .order('completed_at', { ascending: false })
+
+        if (achievementsError) {
+            const fallback = await buildAchievementsQuery().order('updated_at', { ascending: false })
+            if (!fallback.error) {
+                achievements = fallback.data
+            }
+        }
 
         if (achievements) {
             items.push(...achievements.map((a: any) => ({

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from './useAuth'
 
 export interface TriggerRule {
     id: string
@@ -14,6 +15,7 @@ export interface TriggerRule {
 }
 
 export function useTriggers() {
+    const { user } = useAuth()
     return useQuery({
         queryKey: ['trigger-rules'],
         queryFn: async () => {
@@ -24,7 +26,10 @@ export function useTriggers() {
 
             if (error) throw error
             return data as TriggerRule[]
-        }
+        },
+        enabled: !!user,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true
     })
 }
 

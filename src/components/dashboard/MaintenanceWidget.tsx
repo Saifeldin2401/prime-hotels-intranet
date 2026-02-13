@@ -3,10 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Activity } from 'lucide-react'
 import { useMaintenanceStats } from '@/hooks/useMaintenanceStats'
 import { useTranslation } from 'react-i18next'
+import { WidgetSkeleton } from '@/components/dashboard/WidgetSkeleton'
 
 export function MaintenanceWidget() {
-    const { data: stats } = useMaintenanceStats()
+    const { data: stats, isLoading } = useMaintenanceStats()
     const { t } = useTranslation('dashboard')
+
+    if (isLoading) {
+        return <WidgetSkeleton rows={2} />
+    }
 
     return (
         <Card>

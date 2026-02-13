@@ -3,11 +3,16 @@ import { CheckSquare } from 'lucide-react'
 import { useTaskStats } from '@/hooks/useTasks'
 import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
+import { WidgetSkeleton } from '@/components/dashboard/WidgetSkeleton'
 
 export function TaskWidget() {
     const { t } = useTranslation('dashboard')
     const { user } = useAuth()
-    const { data: stats } = useTaskStats(user?.id)
+    const { data: stats, isLoading } = useTaskStats(user?.id)
+
+    if (isLoading) {
+        return <WidgetSkeleton rows={2} />
+    }
 
     return (
         <Card>

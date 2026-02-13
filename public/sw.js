@@ -25,7 +25,15 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(STATIC_CACHE).then((cache) => {
             console.log(`[SW ${VERSION}] Caching static assets`);
-            return cache.addAll(STATIC_ASSETS);
+            return Promise.all(
+                STATIC_ASSETS.map(async (asset) => {
+                    try {
+                        await cache.add(asset);
+                    } catch (error) {
+                        console.warn(`[SW ${VERSION}] Failed to cache asset:`, asset, error);
+                    }
+                })
+            );
         })
     );
     self.skipWaiting();
@@ -84,7 +92,7 @@ self.addEventListener('fetch', (event) => {
                         cache: 'no-store',
                     });
 
-                    const safeNetworkResponse = toSafeNavigationResponse(response);
+                    const safeNetworkResponse = toSafeResponse(request, response);
                     if (safeNetworkResponse) {
                         if (safeNetworkResponse.ok) {
                             const cache = await caches.open(STATIC_CACHE);
@@ -97,7 +105,7 @@ self.addEventListener('fetch', (event) => {
                 }
 
                 const cachedShell = await caches.match('/index.html');
-                const safeCachedShell = toSafeNavigationResponse(cachedShell);
+                const safeCachedShell = toSafeResponse(request, cachedShell);
                 if (safeCachedShell) {
                     return safeCachedShell;
                 }
@@ -133,12 +141,24 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(networkFirst(request));
 });
 
-function toSafeNavigationResponse(response) {
+function toSafeResponse(request, response) {
     if (!response) return null;
+    const requiresNonRedirectResponse = request.redirect !== 'follow';
+    const isRedirectStatus = response.status >= 300 && response.status < 400;
+
     if (!response.redirected && response.type !== 'opaqueredirect') {
+        if (requiresNonRedirectResponse && isRedirectStatus) {
+            return null;
+        }
         return response;
     }
-    if (response.type === 'opaqueredirect') {
+    if (response.type === 'opaqueredirect' && requiresNonRedirectResponse) {
+        return null;
+    }
+    if (!requiresNonRedirectResponse) {
+        return response;
+    }
+    if (isRedirectStatus) {
         return null;
     }
     try {
@@ -155,15 +175,21 @@ function toSafeNavigationResponse(response) {
 // Cache-first strategy
 async function cacheFirst(request) {
     const cached = await caches.match(request);
-    if (cached) return cached;
+    const safeCached = toSafeResponse(request, cached);
+    if (safeCached) return safeCached;
 
     try {
         const response = await fetch(request);
-        if (response.status === 200) {
-            const cache = await caches.open(STATIC_CACHE);
-            cache.put(request, response.clone());
+        const safeResponse = toSafeResponse(request, response);
+        if (!safeResponse) {
+            return new Response('Asset not available offline', { status: 503 });
         }
-        return response;
+
+        if (safeResponse.status === 200) {
+            const cache = await caches.open(STATIC_CACHE);
+            cache.put(request, safeResponse.clone());
+        }
+        return safeResponse;
     } catch {
         return new Response('Asset not available offline', { status: 503 });
     }
@@ -173,14 +199,20 @@ async function cacheFirst(request) {
 async function networkFirst(request) {
     try {
         const response = await fetch(request);
-        if (response.status === 200) {
-            const cache = await caches.open(DYNAMIC_CACHE);
-            cache.put(request, response.clone());
+        const safeResponse = toSafeResponse(request, response);
+        if (!safeResponse) {
+            throw new Error('Unsafe redirect response');
         }
-        return response;
+
+        if (safeResponse.status === 200) {
+            const cache = await caches.open(DYNAMIC_CACHE);
+            cache.put(request, safeResponse.clone());
+        }
+        return safeResponse;
     } catch {
         const cached = await caches.match(request);
-        if (cached) return cached;
+        const safeCached = toSafeResponse(request, cached);
+        if (safeCached) return safeCached;
         return new Response('Network error', { status: 503 });
     }
 }

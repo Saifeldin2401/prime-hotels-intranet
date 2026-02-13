@@ -3,10 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Clock, Megaphone, CheckCircle } from 'lucide-react'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { useTranslation } from 'react-i18next'
+import { WidgetSkeleton } from '@/components/dashboard/WidgetSkeleton'
 
 export function PendingItemsWidget() {
-    const { data: stats } = useDashboardStats()
+    const { data: stats, isLoading } = useDashboardStats()
     const { t } = useTranslation('dashboard')
+
+    if (isLoading) {
+        return <WidgetSkeleton rows={3} />
+    }
 
     return (
         <Card>

@@ -146,6 +146,7 @@ export async function getActiveWorkflows(): Promise<WorkflowDefinition[]> {
         .from('workflow_definitions')
         .select('*')
         .eq('is_active', true)
+        .eq('is_deleted', false)
         .order('name')
 
     if (error) throw error

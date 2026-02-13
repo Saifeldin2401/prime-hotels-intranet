@@ -4,10 +4,15 @@ import { Megaphone, GraduationCap } from 'lucide-react'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
 import { formatRelativeTime } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
+import { WidgetSkeleton } from '@/components/dashboard/WidgetSkeleton'
 
 export function ActivityWidget() {
-    const { data: recentActivity } = useRecentActivity()
+    const { data: recentActivity, isLoading } = useRecentActivity()
     const { t } = useTranslation('dashboard')
+
+    if (isLoading) {
+        return <WidgetSkeleton rows={4} />
+    }
 
     if (!recentActivity || (recentActivity.announcements.length === 0 && recentActivity.assignments.length === 0)) {
         return null

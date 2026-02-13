@@ -55,7 +55,17 @@ Deno.serve(async (req) => {
 
         console.log(`Executing workflow: ${execution_id}`);
 
-        // 1. Get Execution & Definition
+        // 1. Load active workflow policy (config-driven governance)
+        const { data: policyRows, error: policyError } = await supabase
+            .rpc('get_active_policy', { p_domain: 'workflow' });
+
+        if (policyError) {
+            console.warn('Failed to load workflow policy:', policyError.message);
+        }
+
+        const workflowPolicy = policyRows?.[0]?.policy_json ?? null;
+
+        // 2. Get Execution & Definition
         const { data: execution, error: execError } = await supabase
             .from('workflow_executions')
             .select('*, workflow_definitions(*)')
@@ -93,7 +103,7 @@ Deno.serve(async (req) => {
                         .update({ current_step_id: step.id })
                         .eq('id', execution_id);
 
-                    await executeAction(supabase, step.action, step.config, execution.metadata);
+                    await executeAction(supabase, step.action, step.config, execution.metadata, workflowPolicy);
                     results.push({ step_id: step.id, success: true });
                 } catch (err) {
                     console.error(`Step ${step.id} failed:`, err);
@@ -106,7 +116,7 @@ Deno.serve(async (req) => {
             // Execute Single Action from Definition
             if (definition.action_config && definition.action_config.action) {
                 try {
-                    await executeAction(supabase, definition.action_config.action, definition.action_config, execution.metadata);
+                    await executeAction(supabase, definition.action_config.action, definition.action_config, execution.metadata, workflowPolicy);
                     results.push({ success: true, type: 'single_action' });
                 } catch (err) {
                     results.push({ success: false, error: err.message });
@@ -144,22 +154,25 @@ Deno.serve(async (req) => {
 });
 
 // Helper: Execute Action - Real implementations
-async function executeAction(supabase: any, actionType: string, config: any, context: any) {
-    console.log(`Executing action: ${actionType}`, config);
+async function executeAction(supabase: any, actionType: string, config: any, context: any, policy: any) {
+    const actionOverrides = policy?.action_overrides?.[actionType];
+    const effectiveConfig = actionOverrides ? { ...config, ...actionOverrides } : config;
+
+    console.log(`Executing action: ${actionType}`, effectiveConfig);
 
     switch (actionType) {
         case 'send_notification': {
             // Create a notification for the specified user
-            const userId = config.user_id || context?.user_id;
+            const userId = effectiveConfig.user_id || context?.user_id;
             if (!userId) {
                 throw new Error('send_notification requires user_id');
             }
 
             const { error } = await supabase.from('notifications').insert({
                 user_id: userId,
-                type: config.notification_type || 'announcement_new',
-                title: config.title || 'Notification',
-                message: config.message || 'You have a new notification',
+                type: effectiveConfig.notification_type || 'announcement_new',
+                title: effectiveConfig.title || 'Notification',
+                message: effectiveConfig.message || 'You have a new notification',
                 metadata: { ...context, workflow_triggered: true }
             });
 
@@ -201,8 +214,8 @@ async function executeAction(supabase: any, actionType: string, config: any, con
 
         case 'assign_training': {
             // Create a learning assignment for the specified user
-            const userId = config.user_id || context?.user_id;
-            const moduleId = config.module_id || config.content_id;
+            const userId = effectiveConfig.user_id || context?.user_id;
+            const moduleId = effectiveConfig.module_id || effectiveConfig.content_id;
 
             if (!userId || !moduleId) {
                 throw new Error('assign_training requires user_id and module_id');
@@ -213,7 +226,7 @@ async function executeAction(supabase: any, actionType: string, config: any, con
                 content_id: moduleId,
                 content_type: 'module',
                 status: 'pending',
-                deadline: config.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                deadline: effectiveConfig.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
                 assigned_by: context?.triggered_by || null
             });
 
@@ -224,7 +237,7 @@ async function executeAction(supabase: any, actionType: string, config: any, con
                 user_id: userId,
                 type: 'training_assigned',
                 title: 'New Training Assigned',
-                message: config.message || 'You have been assigned a new training module.',
+                message: effectiveConfig.message || 'You have been assigned a new training module.',
                 metadata: { content_id: moduleId, workflow_triggered: true }
             });
 
@@ -234,7 +247,7 @@ async function executeAction(supabase: any, actionType: string, config: any, con
 
         case 'escalate_approval': {
             // Escalate an approval to the next level
-            const approvalId = config.approval_id || context?.approval_id;
+            const approvalId = effectiveConfig.approval_id || context?.approval_id;
             if (!approvalId) {
                 throw new Error('escalate_approval requires approval_id');
             }
@@ -260,9 +273,9 @@ async function executeAction(supabase: any, actionType: string, config: any, con
             if (updateError) throw updateError;
 
             // Notify escalation target
-            if (config.escalate_to) {
+            if (effectiveConfig.escalate_to) {
                 await supabase.from('notifications').insert({
-                    user_id: config.escalate_to,
+                    user_id: effectiveConfig.escalate_to,
                     type: 'escalation_alert',
                     title: 'Approval Escalated to You',
                     message: 'An approval has been escalated and requires your attention.',
@@ -277,19 +290,19 @@ async function executeAction(supabase: any, actionType: string, config: any, con
         case 'create_task': {
             // Create a task
             const { error } = await supabase.from('tasks').insert({
-                title: config.title || 'Workflow Task',
-                description: config.description || '',
+                title: effectiveConfig.title || 'Workflow Task',
+                description: effectiveConfig.description || '',
                 status: 'todo',
-                priority: config.priority || 'medium',
-                assigned_to_id: config.assigned_to_id || context?.user_id,
-                property_id: config.property_id || context?.property_id,
-                department_id: config.department_id || context?.department_id,
-                due_date: config.due_date || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                priority: effectiveConfig.priority || 'medium',
+                assigned_to_id: effectiveConfig.assigned_to_id || context?.user_id,
+                property_id: effectiveConfig.property_id || context?.property_id,
+                department_id: effectiveConfig.department_id || context?.department_id,
+                due_date: effectiveConfig.due_date || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                 created_by_id: context?.triggered_by || null
             });
 
             if (error) throw error;
-            console.log(`✅ Created task: ${config.title}`);
+            console.log(`✅ Created task: ${effectiveConfig.title}`);
             break;
         }
 

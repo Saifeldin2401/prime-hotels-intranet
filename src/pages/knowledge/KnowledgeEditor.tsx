@@ -5,7 +5,7 @@
  * Uses 'documents' table.
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
@@ -25,7 +25,8 @@ import {
 import { marked } from 'marked'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { RichTextEditor } from '@/components/ui/RichTextEditor'
+// Lazy load heavy RichTextEditor
+const RichTextEditor = lazy(() => import('@/components/ui/RichTextEditor'))
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -738,13 +739,15 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         <CardContent>
                             {activeTab === 'edit' ? (
                                 <div className="space-y-6">
-                                    <RichTextEditor
-                                        value={formData.content}
-                                        onChange={v => updateField('content', v)}
-                                        placeholder={t('editor.write_placeholder')}
-                                        minHeight={200}
-                                        direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
-                                    />
+                                    <Suspense fallback={<div className="h-[200px] w-full bg-gray-100 animate-pulse rounded-md" />}>
+                                        <RichTextEditor
+                                            value={formData.content}
+                                            onChange={v => updateField('content', v)}
+                                            placeholder={t('editor.write_placeholder')}
+                                            minHeight={200}
+                                            direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
+                                        />
+                                    </Suspense>
 
                                     {/* Content Type Specific Builders */}
                                     {formData.content_type === 'video' && (

@@ -88,7 +88,7 @@ export function NotificationBell() {
           whileTap={{ scale: 0.95 }}
           className="inline-block"
         >
-          <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-700 hover:bg-gray-100/50">
+          <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-700 hover:bg-gray-100/50" aria-label="Notifications">
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
               <Badge

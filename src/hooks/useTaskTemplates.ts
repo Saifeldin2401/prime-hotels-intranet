@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from './useAuth'
 
 export interface TaskTemplate {
     id: string
@@ -18,6 +19,7 @@ export interface TaskTemplate {
 }
 
 export function useTaskTemplates() {
+    const { user } = useAuth()
     return useQuery({
         queryKey: ['task-templates'],
         queryFn: async () => {
@@ -32,7 +34,10 @@ export function useTaskTemplates() {
                 .order('created_at', { ascending: false })
             if (error) throw error
             return data
-        }
+        },
+        enabled: !!user,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true
     })
 }
 
@@ -44,6 +49,26 @@ export function useCreateTaskTemplate() {
             const { data, error } = await supabase
                 .from('task_templates')
                 .insert(template)
+                .select()
+                .single()
+            if (error) throw error
+            return data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['task-templates'] })
+        }
+    })
+}
+
+export function useUpdateTaskTemplate() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async ({ id, updates }: { id: string; updates: Partial<TaskTemplate> }) => {
+            const { data, error } = await supabase
+                .from('task_templates')
+                .update(updates)
+                .eq('id', id)
                 .select()
                 .single()
             if (error) throw error
