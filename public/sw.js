@@ -1,11 +1,11 @@
 /**
- * Service Worker for Prime Hotels PWA (v4)
+ * Service Worker for Prime Hotels PWA (v5)
  * 
  * Provides offline caching for static assets and API responses.
  * Implements a "Clean Shell" strategy to resolve navigation redirect errors.
  */
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE_NAME = `prime-hotels-${VERSION}`;
 const STATIC_CACHE = `prime-hotels-static-${VERSION}`;
 const DYNAMIC_CACHE = `prime-hotels-dynamic-${VERSION}`;
@@ -64,38 +64,38 @@ self.addEventListener('fetch', (event) => {
     if (!url.protocol.startsWith('http')) return;
 
     // 1. Navigation Redirect Fix (App Shell Pattern)
-    // Navigation requests (mode: navigate) are blocked if the SW returns a "redirected" response.
+    // Navigation requests (mode: navigate) can fail if the SW returns redirected/opaqueredirect responses.
     if (request.mode === 'navigate') {
         event.respondWith(
             (async () => {
-                // ALWAYS try to serve the cached index.html shell first.
-                // This completely bypasses server-side redirects for navigation requests.
-                const cachedShell = await caches.match('/index.html');
-                if (cachedShell) {
-                    return cachedShell;
-                }
-
-                // If shell isn't cached (first load), try network but handle redirects carefully
                 try {
-                    const response = await fetch(request);
+                    // Use URL fetch with explicit redirect-follow to avoid manual redirect failures.
+                    const response = await fetch(request.url, {
+                        redirect: 'follow',
+                        credentials: 'same-origin',
+                        cache: 'no-store',
+                    });
 
-                    // CRITICAL: If the network response is redirected, we MUST "clean" it
-                    // because Browsers (Chrome) throw a Network Error if a FetchEvent 
-                    // returns a redirected response for a navigation request.
-                    if (response.redirected) {
-                        return new Response(response.body, {
-                            status: response.status,
-                            statusText: response.statusText,
-                            headers: response.headers
-                        });
+                    const safeNetworkResponse = toSafeNavigationResponse(response);
+                    if (safeNetworkResponse) {
+                        if (safeNetworkResponse.ok) {
+                            const cache = await caches.open(STATIC_CACHE);
+                            cache.put('/index.html', safeNetworkResponse.clone());
+                        }
+                        return safeNetworkResponse;
                     }
-
-                    return response;
                 } catch (error) {
                     console.error(`[SW ${VERSION}] Navigation fetch failed:`, error);
-                    // Minimal fallback if everything fails
-                    return new Response('Offline', { status: 503 });
                 }
+
+                const cachedShell = await caches.match('/index.html');
+                const safeCachedShell = toSafeNavigationResponse(cachedShell);
+                if (safeCachedShell) {
+                    return safeCachedShell;
+                }
+
+                // Minimal fallback if everything fails
+                return new Response('Offline', { status: 503 });
             })()
         );
         return;
@@ -124,6 +124,25 @@ self.addEventListener('fetch', (event) => {
     // 4. Default - network with cache fallback
     event.respondWith(networkFirst(request));
 });
+
+function toSafeNavigationResponse(response) {
+    if (!response) return null;
+    if (!response.redirected && response.type !== 'opaqueredirect') {
+        return response;
+    }
+    if (response.type === 'opaqueredirect') {
+        return null;
+    }
+    try {
+        return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers,
+        });
+    } catch {
+        return null;
+    }
+}
 
 // Cache-first strategy
 async function cacheFirst(request) {
