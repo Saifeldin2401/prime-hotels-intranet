@@ -24,6 +24,23 @@ export function isAuthorizedServiceRole(authHeader: string | null, serviceRoleKe
 }
 
 /**
+ * Authorize internal calls using either:
+ * 1) Exact service-role key match, or
+ * 2) A JWT with role=service_role.
+ *
+ * IMPORTANT:
+ * - The JWT branch must only be used behind Edge Function verify_jwt=true,
+ *   because this helper only inspects token payload claims.
+ */
+export function isAuthorizedServiceRoleRequest(authHeader: string | null, serviceRoleKey: string): boolean {
+  if (serviceRoleKey && isAuthorizedServiceRole(authHeader, serviceRoleKey)) {
+    return true
+  }
+
+  return getServiceRoleToken(authHeader) !== null
+}
+
+/**
  * Accept either service role key or a shared internal secret.
  * The shared secret should be provided via AI_CRON_SECRET env var.
  */

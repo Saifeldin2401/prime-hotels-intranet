@@ -14,30 +14,40 @@ export function DocumentRecommendations() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Get user's department and role
-      const { data: userData } = await supabase
-        .from('user_profiles')
-        .select('department_id, role')
-        .eq('id', user.id)
-        .single();
+      const [{ data: deptRows }, { data: roleRows }, { data: propRows }] = await Promise.all([
+        supabase.from('user_departments').select('department_id').eq('user_id', user.id),
+        supabase.from('user_roles').select('role').eq('user_id', user.id),
+        supabase.from('user_properties').select('property_id').eq('user_id', user.id),
+      ])
 
-      if (!userData) return [];
+      const departmentIds = [...new Set((deptRows || []).map((d: any) => d.department_id).filter(Boolean))]
+      const roles = [...new Set((roleRows || []).map((r: any) => r.role).filter(Boolean))]
+      const propertyIds = [...new Set((propRows || []).map((p: any) => p.property_id).filter(Boolean))]
 
       // Build query for recommended documents
       let query = supabase
         .from('documents')
-        .select('*')
+        .select('id, title, visibility, property_id, department_id, role, featured, updated_at')
         .eq('status', 'PUBLISHED')
+        .eq('is_deleted', false)
         .neq('created_by', user.id) // Exclude user's own documents
-        .order('last_accessed_at', { ascending: true, nullsFirst: true })
+        .order('featured', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(8);
 
-      // Filter by department if applicable
-      if (userData.department_id) {
-        query = query.or(`department_id.eq.${userData.department_id},is_company_wide.eq.true`);
-      } else {
-        query = query.eq('is_company_wide', true);
+      const orParts: string[] = ['visibility.eq.all_properties']
+      if (propertyIds.length > 0) {
+        orParts.push(`and(visibility.eq.property,property_id.in.(${propertyIds.join(',')}))`)
       }
+      if (departmentIds.length > 0) {
+        orParts.push(`and(visibility.eq.department,department_id.in.(${departmentIds.join(',')}))`)
+      }
+      if (roles.length > 0) {
+        // roles are enum values; safe to use directly
+        orParts.push(`and(visibility.eq.role,role.in.(${roles.join(',')}))`)
+      }
+
+      query = query.or(orParts.join(','))
 
       const { data } = await query;
       return data || [];
@@ -48,9 +58,18 @@ export function DocumentRecommendations() {
   if (!recommendations?.length) return null;
 
   const getRecommendationReason = (doc: any) => {
-    if (doc.is_company_wide) return 'Company-wide';
-    if (doc.department_id) return 'Your Department';
-    return 'Recommended';
+    switch (doc.visibility) {
+      case 'all_properties':
+        return 'All Properties'
+      case 'property':
+        return 'Your Property'
+      case 'department':
+        return 'Your Department'
+      case 'role':
+        return 'Your Role'
+      default:
+        return 'Recommended'
+    }
   };
 
   return (

@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
         // 1. Get feedback details
         const { data: feedback, error: fetchError } = await supabase
-            .from("feedback")
+            .from("document_feedback")
             .select(`
         *,
         documents (
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
         }
 
         // Skip if already analyzed or no text
-        if (feedback.ai_analysis_status === "completed" || !feedback.comment) {
+        if (feedback.ai_analysis_status === "completed" || !feedback.feedback_text) {
             return new Response(JSON.stringify({ success: true, message: "Skipped" }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -86,8 +86,8 @@ Deno.serve(async (req) => {
         const prompt = `You are an AI assistant for a hotel intranet system. Analyze the following feedback left by an employee on a Knowledge Base document (SOP/Policy).
     
     DOCUMENT TITLE: ${feedback.documents?.title || "Unknown"}
-    HELPFUL: ${feedback.is_helpful ? "Yes" : "No"}
-    FEEDBACK TEXT: "${feedback.comment}"
+    HELPFUL: ${feedback.helpful ? "Yes" : "No"}
+    FEEDBACK TEXT: "${feedback.feedback_text}"
 
     Analyze the feedback and provide:
     1. Sentiment: "positive", "neutral", or "negative".
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
 
         // 3. Update database
         const { error: updateError } = await supabase
-            .from("feedback")
+            .from("document_feedback")
             .update({
                 ai_analysis_status: "completed",
                 ai_sentiment: analysis.sentiment,

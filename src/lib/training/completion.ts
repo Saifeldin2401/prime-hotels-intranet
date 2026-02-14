@@ -18,41 +18,51 @@ export async function checkTrainingPrerequisites(
   moduleId: string
 ): Promise<TrainingPrerequisitesResult> {
   try {
-    // Get required documents for this training module
-    const { data: requiredDocs, error: docsError } = await supabase
-      .from('training_module_documents')
-      .select(`
-        document_id,
-        is_required,
-        documents!inner(id, title, status)
-      `)
+    // training_module_documents doesn't exist anymore; documents are modeled as resources.
+    // Since training_module_resources.resource_id is polymorphic, we can't rely on PostgREST joins.
+    const { data: requiredResources, error: resourcesError } = await supabase
+      .from('training_module_resources')
+      .select('resource_id, is_required')
       .eq('training_module_id', moduleId)
+      .eq('resource_type', 'document')
       .eq('is_required', true)
-      .eq('documents.status', 'PUBLISHED');
 
-    if (docsError) throw docsError;
+    if (resourcesError) throw resourcesError
 
-    // Get completed document views for the user
-    const documentIds = requiredDocs?.map(d => d.document_id) || [];
-    const { data: completedDocs, error: completedError } = await supabase
-      .from('document_access_logs')
-      .select('document_id, completed_at')
+    const documentIds = (requiredResources || []).map((r: any) => r.resource_id).filter(Boolean)
+
+    const { data: docs, error: docsError } = await supabase
+      .from('documents')
+      .select('id, title')
+      .in('id', documentIds)
+      .eq('status', 'PUBLISHED')
+      .eq('is_deleted', false)
+
+    if (docsError) throw docsError
+
+    const docTitleById = new Map<string, string>()
+    for (const d of docs || []) {
+      docTitleById.set(d.id, d.title || 'Untitled Document')
+    }
+
+    // Use acknowledgments as the durable completion signal.
+    const { data: acks, error: ackError } = await supabase
+      .from('document_acknowledgments')
+      .select('document_id, acknowledged_at')
       .eq('user_id', userId)
       .in('document_id', documentIds)
-      .eq('action', 'view')
-      .not('completed_at', 'is', null);
 
-    if (completedError) throw completedError;
+    if (ackError) throw ackError
 
-    const completedDocIds = new Set(completedDocs?.map(d => d.document_id) || []);
+    const completedDocIds = new Set((acks || []).filter((a: any) => a.acknowledged_at).map((a: any) => a.document_id))
 
     // Build prerequisites result
-    const documentPrerequisites: TrainingPrerequisite[] = requiredDocs?.map(doc => ({
+    const documentPrerequisites: TrainingPrerequisite[] = (documentIds || []).map((docId: string) => ({
       type: 'document' as const,
-      id: doc.document_id,
-      name: (doc.documents as any)?.title || 'Untitled Document',
-      isCompleted: completedDocIds.has(doc.document_id)
-    })) || [];
+      id: docId,
+      name: docTitleById.get(docId) || 'Untitled Document',
+      isCompleted: completedDocIds.has(docId)
+    }));
 
     const missingRequirements = documentPrerequisites.filter(p => !p.isCompleted);
     const completedRequirements = documentPrerequisites.filter(p => p.isCompleted);
@@ -78,18 +88,20 @@ export async function markDocumentAsCompleted(
   timeSpentSeconds?: number
 ) {
   try {
-    const { error } = await supabase
-      .from('document_access_logs')
-      .update({
-        completed_at: new Date().toISOString(),
-        time_spent_seconds: timeSpentSeconds
-      })
-      .eq('user_id', userId)
-      .eq('document_id', documentId)
-      .eq('action', 'view')
-      .is('completed_at', null);
+    const nowIso = new Date().toISOString()
 
-    if (error) throw error;
+    const { error } = await supabase
+      .from('document_acknowledgments')
+      .upsert(
+        {
+          document_id: documentId,
+          user_id: userId,
+          acknowledged_at: nowIso
+        },
+        { onConflict: 'document_id,user_id' }
+      )
+
+    if (error) throw error
 
     return { success: true };
   } catch (error) {

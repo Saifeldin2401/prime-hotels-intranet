@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Plus, Loader2, CalendarDays, Clock } from 'lucide-react'
-import { useTaskTemplates, useToggleTaskTemplate, useDeleteTaskTemplate, useCreateTaskTemplate, useUpdateTaskTemplate } from '@/hooks/useTaskTemplates'
+import { useTaskTemplates, useToggleTaskTemplate, useDeleteTaskTemplate, useCreateTaskTemplate, useUpdateTaskTemplate, type TaskTemplate } from '@/hooks/useTaskTemplates'
 import { format } from 'date-fns'
 import { useToast } from '@/components/ui/use-toast'
 import {
@@ -46,6 +46,28 @@ import { useProfiles } from '@/hooks/useUsers'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
+type RecurrenceType = TaskTemplate['recurrence_type']
+type AssignmentScope = 'user' | 'department' | 'property' | 'unassigned'
+
+interface TemplateFormState {
+    title: string
+    description: string
+    priority: string
+    recurrence_type: RecurrenceType
+    recurrence_config: string
+    assignment_scope: AssignmentScope
+    assigned_to_id: string
+    property_id: string
+    department_id: string
+    is_active: boolean
+}
+
+const RECURRENCE_TYPES: readonly RecurrenceType[] = ['daily', 'weekly', 'monthly']
+const isRecurrenceType = (value: string): value is RecurrenceType =>
+    RECURRENCE_TYPES.includes(value as RecurrenceType)
+const isAssignmentScope = (value: string): value is AssignmentScope =>
+    value === 'user' || value === 'department' || value === 'property' || value === 'unassigned'
+
 export function TaskTemplateList() {
     const { data: templates, isLoading, error } = useTaskTemplates()
     const toggleMutation = useToggleTaskTemplate()
@@ -60,7 +82,7 @@ export function TaskTemplateList() {
     const { departments } = useDepartments()
     const { data: profiles } = useProfiles({ limit: 200 })
     const { user } = useAuth()
-    const [formState, setFormState] = useState({
+    const [formState, setFormState] = useState<TemplateFormState>({
         title: '',
         description: '',
         priority: 'medium',
@@ -118,7 +140,7 @@ export function TaskTemplateList() {
             title: template.title || '',
             description: template.description || '',
             priority: template.priority || 'medium',
-            recurrence_type: template.recurrence_type || 'daily',
+            recurrence_type: isRecurrenceType(template.recurrence_type) ? template.recurrence_type : 'daily',
             recurrence_config: JSON.stringify(template.recurrence_config || {}, null, 2),
             assignment_scope: template.assigned_to_id ? 'user' : template.department_id ? 'department' : template.property_id ? 'property' : 'unassigned',
             assigned_to_id: template.assigned_to_id || '',
@@ -128,7 +150,7 @@ export function TaskTemplateList() {
         })
     }
 
-    const computeNextRunAt = async (recurrenceType: string) => {
+    const computeNextRunAt = async (recurrenceType: RecurrenceType) => {
         const { data, error } = await supabase.rpc('calculate_next_task_run', {
             recurrence: recurrenceType,
             last_run: new Date().toISOString()
@@ -398,7 +420,11 @@ export function TaskTemplateList() {
                                 <Label>Recurrence</Label>
                                 <Select
                                     value={formState.recurrence_type}
-                                    onValueChange={(val) => setFormState((prev) => ({ ...prev, recurrence_type: val }))}
+                                    onValueChange={(val) => {
+                                        if (isRecurrenceType(val)) {
+                                            setFormState((prev) => ({ ...prev, recurrence_type: val }))
+                                        }
+                                    }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
@@ -423,13 +449,17 @@ export function TaskTemplateList() {
                             <Label>Assignment Scope</Label>
                             <Select
                                 value={formState.assignment_scope}
-                                onValueChange={(val) => setFormState((prev) => ({
-                                    ...prev,
-                                    assignment_scope: val,
-                                    assigned_to_id: '',
-                                    department_id: '',
-                                    property_id: ''
-                                }))}
+                                onValueChange={(val) => {
+                                    if (isAssignmentScope(val)) {
+                                        setFormState((prev) => ({
+                                            ...prev,
+                                            assignment_scope: val,
+                                            assigned_to_id: '',
+                                            department_id: '',
+                                            property_id: ''
+                                        }))
+                                    }
+                                }}
                             >
                                 <SelectTrigger>
                                     <SelectValue />

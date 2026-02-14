@@ -4,6 +4,29 @@ import { useAuth } from '@/hooks/useAuth'
 import { escapeSearchQuery } from '@/lib/utils'
 import type { Document, DocumentApproval, DocumentVersion } from '@/lib/types'
 
+const DOCS_RECENTLY_VIEWED_KEY = 'docs_recently_viewed'
+const MAX_RECENT_DOCS = 20
+
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
+
+function saveRecentlyViewedDocument(userId: string, documentId: string): void {
+  if (!isValidUUID(documentId)) return
+  try {
+    const storageKey = `${DOCS_RECENTLY_VIEWED_KEY}_${userId}`
+    const raw = localStorage.getItem(storageKey)
+    const existing = raw ? (JSON.parse(raw) as { id: string; viewedAt: string }[]) : []
+
+    const filtered = Array.isArray(existing) ? existing.filter((i) => i?.id !== documentId) : []
+    const updated = [{ id: documentId, viewedAt: new Date().toISOString() }, ...filtered].slice(0, MAX_RECENT_DOCS)
+    localStorage.setItem(storageKey, JSON.stringify(updated))
+  } catch (e) {
+    console.warn('Failed to record recently viewed document:', e)
+  }
+}
+
 export function useDocuments(filters?: {
   status?: string
   visibility?: string
@@ -52,8 +75,9 @@ export function useDocuments(filters?: {
 }
 
 export function useDocument(documentId: string) {
+  const { user } = useAuth()
   return useQuery({
-    queryKey: ['document', documentId],
+    queryKey: ['document', documentId, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('documents')
@@ -63,6 +87,10 @@ export function useDocument(documentId: string) {
         .single()
 
       if (error) throw error
+
+      if (user?.id) {
+        saveRecentlyViewedDocument(user.id, documentId)
+      }
       return data as Document
     },
     enabled: !!documentId,

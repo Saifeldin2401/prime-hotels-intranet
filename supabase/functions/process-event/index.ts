@@ -206,8 +206,7 @@ async function executeAction(supabase: any, type: string, config: any, context: 
             type: 'trigger_notification',
             title: config.title || `Event: ${context.event_type}`,
             message: config.message || 'A trigger event occurred',
-            link: context.source_id ? `/${context.source_type}/${context.source_id}` : null,
-            is_read: false
+            link: context.source_id ? `/${context.source_type}/${context.source_id}` : null
         }));
         const { error } = await supabase.from('notifications').insert(notifications);
         if (error) throw error;

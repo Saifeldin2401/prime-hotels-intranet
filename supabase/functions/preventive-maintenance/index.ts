@@ -1,5 +1,5 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isAuthorizedServiceRole } from '../_shared/auth.ts'
+import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from '../_shared/auth.ts'
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -17,8 +17,9 @@ Deno.serve(async (req) => {
         // ===================================
         const authHeader = req.headers.get('Authorization')
         const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        const serviceRoleJwt = getServiceRoleToken(authHeader)
 
-        if (!isAuthorizedServiceRole(authHeader, serviceRoleKey)) {
+        if (!isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
                 status: 401,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
 
         const supabase = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+            serviceRoleJwt ?? serviceRoleKey
         );
 
         // 1. Fetch due schedules

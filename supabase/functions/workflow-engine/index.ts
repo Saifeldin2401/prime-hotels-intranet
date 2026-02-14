@@ -185,16 +185,20 @@ async function executeAction(supabase: any, actionType: string, config: any, con
             // Query overdue training assignments and send reminders
             const { data: overdueAssignments, error: fetchError } = await supabase
                 .from('learning_assignments')
-                .select('id, user_id, content_id, deadline')
-                .lt('deadline', new Date().toISOString())
-                .in('status', ['pending', 'in_progress']);
+                .select('id, content_id, target_type, target_id, due_date, status')
+                .eq('content_type', 'module')
+                .eq('is_deleted', false)
+                .eq('target_type', 'user') // avoid exploding reminders for group-scoped assignments
+                .not('due_date', 'is', null)
+                .lt('due_date', new Date().toISOString())
+                .not('status', 'in', '(completed,cancelled)');
 
             if (fetchError) throw fetchError;
 
             let remindersSent = 0;
             for (const assignment of overdueAssignments || []) {
                 const { error: notifError } = await supabase.from('notifications').insert({
-                    user_id: assignment.user_id,
+                    user_id: assignment.target_id,
                     type: 'training_deadline',
                     title: 'Training Overdue',
                     message: 'You have an overdue training assignment. Please complete it as soon as possible.',
@@ -221,14 +225,20 @@ async function executeAction(supabase: any, actionType: string, config: any, con
                 throw new Error('assign_training requires user_id and module_id');
             }
 
-            const { error } = await supabase.from('learning_assignments').insert({
-                user_id: userId,
-                content_id: moduleId,
-                content_type: 'module',
-                status: 'pending',
-                deadline: effectiveConfig.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-                assigned_by: context?.triggered_by || null
-            });
+            const dueDate = effectiveConfig.due_date || effectiveConfig.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+            const { error } = await supabase
+                .from('learning_assignments')
+                .upsert({
+                    target_type: 'user',
+                    target_id: userId,
+                    content_id: moduleId,
+                    content_type: 'module',
+                    status: 'assigned',
+                    due_date: dueDate,
+                    assigned_by: context?.triggered_by || null,
+                    created_at: new Date().toISOString()
+                }, { onConflict: 'target_id,content_type,content_id' });
 
             if (error) throw error;
 
@@ -246,44 +256,60 @@ async function executeAction(supabase: any, actionType: string, config: any, con
         }
 
         case 'escalate_approval': {
-            // Escalate an approval to the next level
-            const approvalId = effectiveConfig.approval_id || context?.approval_id;
-            if (!approvalId) {
-                throw new Error('escalate_approval requires approval_id');
+            // Escalate an approval request by switching its current approver.
+            // NOTE: The legacy approval_chain_entries/approval_chains tables do not exist in this schema.
+            const approvalRequestId =
+                effectiveConfig.approval_request_id ||
+                effectiveConfig.approval_id ||
+                context?.approval_request_id ||
+                context?.approval_id;
+
+            if (!approvalRequestId) {
+                throw new Error('escalate_approval requires approval_request_id');
             }
 
-            // Get the approval chain entry
-            const { data: approval, error: fetchError } = await supabase
-                .from('approval_chain_entries')
-                .select('*, approval_chains(*)')
-                .eq('id', approvalId)
+            const escalatedTo = effectiveConfig.escalate_to;
+            if (!escalatedTo) {
+                // Fallback: run centralized escalation routine (processes all approvals).
+                await supabase.rpc('check_and_escalate_approvals');
+                console.log('OK Escalation routine executed for approvals');
+                break;
+            }
+
+            const { data: approvalReq, error: fetchError } = await supabase
+                .from('approval_requests')
+                .select('id, current_approver_id')
+                .eq('id', approvalRequestId)
                 .single();
 
-            if (fetchError || !approval) throw new Error('Approval not found');
+            if (fetchError || !approvalReq) throw new Error('Approval request not found');
 
-            // Mark as escalated and notify
             const { error: updateError } = await supabase
-                .from('approval_chain_entries')
+                .from('approval_requests')
                 .update({
-                    status: 'escalated',
-                    escalated_at: new Date().toISOString()
+                    current_approver_id: escalatedTo,
+                    updated_at: new Date().toISOString()
                 })
-                .eq('id', approvalId);
+                .eq('id', approvalRequestId);
 
             if (updateError) throw updateError;
 
-            // Notify escalation target
-            if (effectiveConfig.escalate_to) {
-                await supabase.from('notifications').insert({
-                    user_id: effectiveConfig.escalate_to,
-                    type: 'escalation_alert',
-                    title: 'Approval Escalated to You',
-                    message: 'An approval has been escalated and requires your attention.',
-                    metadata: { approval_id: approvalId, workflow_triggered: true }
-                });
-            }
+            await supabase.from('approval_history').insert({
+                approval_request_id: approvalRequestId,
+                approver_id: escalatedTo,
+                action: 'escalated',
+                original_approver_id: approvalReq.current_approver_id
+            });
 
-            console.log(`✅ Escalated approval ${approvalId}`);
+            await supabase.from('notifications').insert({
+                user_id: escalatedTo,
+                type: 'escalation_alert',
+                title: 'Approval Escalated to You',
+                message: 'An approval has been escalated and requires your attention.',
+                metadata: { approval_request_id: approvalRequestId, workflow_triggered: true }
+            });
+
+            console.log(`OK Escalated approval request ${approvalRequestId}`);
             break;
         }
 

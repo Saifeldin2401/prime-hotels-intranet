@@ -441,10 +441,13 @@ export function UserForm({ user, onClose }: UserFormProps) {
         selectedProperties.filter((id) => isValidUUID(id) && (!propertyIdSet || propertyIdSet.has(id)))
       ))
       if (validPropertyIds.length > 0) {
-        const { error: insPropErr } = await supabase
-          .from('user_properties')
-          .insert(validPropertyIds.map((propertyId) => ({ user_id: user.id, property_id: propertyId })))
-        if (insPropErr) throw insPropErr
+        // Insert individually to avoid PostgREST bulk insert column quoting issues on some deployments
+        for (const propertyId of validPropertyIds) {
+          const { error: insPropErr } = await supabase
+            .from('user_properties')
+            .insert({ user_id: user.id, property_id: propertyId })
+          if (insPropErr) throw insPropErr
+        }
       }
 
       // Update departments
@@ -456,10 +459,13 @@ export function UserForm({ user, onClose }: UserFormProps) {
         selectedDepartments.filter((id) => isValidUUID(id) && (!departmentIdSet || departmentIdSet.has(id)))
       ))
       if (validDepartmentIds.length > 0) {
-        const { error: insDeptErr } = await supabase
-          .from('user_departments')
-          .insert(validDepartmentIds.map((departmentId) => ({ user_id: user.id, department_id: departmentId })))
-        if (insDeptErr) throw insDeptErr
+        // Insert individually to avoid PostgREST bulk insert column quoting issues on some deployments
+        for (const departmentId of validDepartmentIds) {
+          const { error: insDeptErr } = await supabase
+            .from('user_departments')
+            .insert({ user_id: user.id, department_id: departmentId })
+          if (insDeptErr) throw insDeptErr
+        }
       }
     },
     onSuccess: () => {

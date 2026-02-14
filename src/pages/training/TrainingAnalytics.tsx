@@ -201,14 +201,14 @@ export default function TrainingAnalytics() {
         queryFn: async (): Promise<KnowledgeGap[]> => {
             // Get question attempts with accuracy
             const { data: attempts, error } = await supabase
-                .from('question_attempts')
+                .from('knowledge_question_attempts')
                 .select(`
                     is_correct,
                     question:knowledge_questions(
                         id,
                         question_text,
                         category_id,
-                        category:knowledge_categories(name)
+                        category:categories(name)
                     )
                 `)
                 .limit(500)

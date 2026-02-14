@@ -1,5 +1,5 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isAuthorizedServiceRole } from '../_shared/auth.ts'
+import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from '../_shared/auth.ts'
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -16,9 +16,10 @@ Deno.serve(async (req) => {
         // SECURITY CHECK - Internal Crons Only
         // ===================================
         const authHeader = req.headers.get('Authorization')
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        const serviceRoleJwt = getServiceRoleToken(authHeader)
 
-        if (!isAuthorizedServiceRole(authHeader, serviceRoleKey)) {
+        if (!isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
                 status: 401,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -27,47 +28,95 @@ Deno.serve(async (req) => {
 
         const supabase = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+            serviceRoleJwt ?? serviceRoleKey
         );
 
         const now = new Date();
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        // 1. Fetch approaching deadlines (due within 24h) not yet reminded
+        // 1. Fetch approaching deadlines (due within 24h)
         const { data: upcomingAssignments, error: upcomingError } = await supabase
-            .from('training_assignments')
+            .from('learning_assignments')
             .select(`
-            id,
-            deadline,
-            assigned_to_user_id,
-            training_module:training_modules(title)
-        `)
+              id,
+              content_id,
+              due_date,
+              target_type,
+              target_id,
+              status
+            `)
+            .eq('content_type', 'module')
             .eq('is_deleted', false)
-            .eq('reminder_sent', false)
-            .gte('deadline', now.toISOString())
-            .lte('deadline', tomorrow.toISOString())
-            .not('assigned_to_user_id', 'is', null);
+            .not('due_date', 'is', null)
+            .gte('due_date', now.toISOString())
+            .lte('due_date', tomorrow.toISOString());
 
         if (upcomingError) throw upcomingError;
 
         // 2. Process upcoming deadlines
         const notifications = [];
+        const reminderRows = [];
+        const todayIso = now.toISOString().split('T')[0];
+
+        const moduleIds = Array.from(new Set((upcomingAssignments || []).map((a) => a.content_id).filter(Boolean)));
+        const moduleTitleById = new Map<string, string>();
+        if (moduleIds.length > 0) {
+            const { data: modules, error: moduleError } = await supabase
+                .from('training_modules')
+                .select('id, title')
+                .in('id', moduleIds);
+
+            if (moduleError) {
+                console.error('Failed to load training module titles:', moduleError);
+            } else {
+                for (const m of modules || []) {
+                    if (m?.id) moduleTitleById.set(m.id, m.title || 'Training Module');
+                }
+            }
+        }
+
         for (const assignment of upcomingAssignments || []) {
-            if (assignment.assigned_to_user_id) {
+            if (assignment.status === 'completed') continue;
+
+            const recipients = await resolveAssignmentTargets(
+              supabase,
+              assignment.target_type,
+              assignment.target_id
+            );
+
+            const moduleTitle = moduleTitleById.get(assignment.content_id) || 'Training Module';
+
+            for (const userId of recipients) {
+                const { data: existingReminder } = await supabase
+                    .from('scheduled_reminders')
+                    .select('id')
+                    .eq('entity_type', 'training_assignment')
+                    .eq('entity_id', assignment.id)
+                    .eq('user_id', userId)
+                    .eq('reminder_type', 'due_24h')
+                    .gte('sent_at', `${todayIso}T00:00:00Z`)
+                    .maybeSingle();
+
+                if (existingReminder) continue;
+
                 notifications.push({
-                    user_id: assignment.assigned_to_user_id,
+                    user_id: userId,
                     type: 'training_deadline', // Ensure this matches enum
                     title: 'Training Due Soon',
-                    message: `Your training "${assignment.training_module?.title}" is due on ${new Date(assignment.deadline).toLocaleDateString()}.`,
-                    link: `/training/assignments`,
-                    is_read: false
+                    message: `Your training "${moduleTitle}" is due on ${new Date(assignment.due_date).toLocaleDateString()}.`,
+                    link: `/learning/my-learning`
                 });
 
-                // Mark as reminded
-                await supabase.from('training_assignments')
-                    .update({ reminder_sent: true })
-                    .eq('id', assignment.id);
+                reminderRows.push({
+                    entity_type: 'training_assignment',
+                    entity_id: assignment.id,
+                    user_id: userId,
+                    reminder_type: 'due_24h',
+                    scheduled_for: now.toISOString(),
+                    sent_at: now.toISOString(),
+                    status: 'sent'
+                });
             }
         }
 
@@ -102,8 +151,7 @@ Deno.serve(async (req) => {
                     type: 'system', // or specific 'certificate_expiry' type if added
                     title: 'Certificate Expiring',
                     message: `Your certificate for "${cert.training_progress.training_modules.title}" expires in ${daysUntilExpiry} days. Please retake the training.`,
-                    link: `/training/certificates`,
-                    is_read: false
+                    link: `/training/certificates`
                 });
             }
         }
@@ -121,6 +169,14 @@ Deno.serve(async (req) => {
                 .insert(notifications);
 
             if (notifError) console.error('Error sending detailed notifications:', notifError);
+        }
+
+        if (reminderRows.length > 0) {
+            const { error: reminderError } = await supabase
+                .from('scheduled_reminders')
+                .insert(reminderRows);
+
+            if (reminderError) console.error('Error storing reminder tracking rows:', reminderError);
         }
 
         return new Response(
@@ -145,3 +201,32 @@ Deno.serve(async (req) => {
         );
     }
 });
+
+async function resolveAssignmentTargets(supabase: ReturnType<typeof createClient>, targetType: string, targetId: string | null): Promise<string[]> {
+    switch (targetType) {
+        case 'everyone': {
+            const { data } = await supabase.from('profiles').select('id').eq('is_active', true);
+            return (data || []).map((u) => u.id);
+        }
+        case 'user':
+            return targetId ? [targetId] : [];
+        case 'department': {
+            if (!targetId) return [];
+            const { data } = await supabase
+                .from('user_departments')
+                .select('user_id')
+                .eq('department_id', targetId);
+            return (data || []).map((u) => u.user_id);
+        }
+        case 'property': {
+            if (!targetId) return [];
+            const { data } = await supabase
+                .from('user_properties')
+                .select('user_id')
+                .eq('property_id', targetId);
+            return (data || []).map((u) => u.user_id);
+        }
+        default:
+            return [];
+    }
+}

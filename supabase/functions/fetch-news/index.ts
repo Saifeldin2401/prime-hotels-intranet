@@ -1,7 +1,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { parseString } from 'npm:xml2js'
-import { isAuthorizedServiceRole } from '../_shared/auth.ts'
+import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from '../_shared/auth.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -9,8 +9,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing required Supabase environment variables');
 }
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const RSS_FEEDS = [
   // Working Feed
@@ -39,12 +37,15 @@ Deno.serve(async (req) => {
   try {
     // Require service role key for scheduled/internal calls
     const authHeader = req.headers.get('Authorization') || '';
-    if (!isAuthorizedServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY)) {
+    const serviceRoleJwt = getServiceRoleToken(authHeader);
+    if (!isAuthorizedServiceRoleRequest(authHeader, SUPABASE_SERVICE_ROLE_KEY)) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const supabase = createClient(SUPABASE_URL, serviceRoleJwt ?? SUPABASE_SERVICE_ROLE_KEY);
 
     for (const feed of RSS_FEEDS) {
       console.log(`Fetching ${feed.source}...`);

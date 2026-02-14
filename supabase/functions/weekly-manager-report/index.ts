@@ -1,5 +1,5 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isAuthorizedServiceRole } from '../_shared/auth.ts'
+import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from '../_shared/auth.ts'
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -16,9 +16,10 @@ Deno.serve(async (req) => {
         // SECURITY CHECK - Internal Crons Only
         // ===================================
         const authHeader = req.headers.get('Authorization')
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        const serviceRoleJwt = getServiceRoleToken(authHeader)
 
-        if (!isAuthorizedServiceRole(authHeader, serviceRoleKey)) {
+        if (!isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
                 status: 401,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
 
         const supabase = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+            serviceRoleJwt ?? serviceRoleKey
         );
 
         const now = new Date();
@@ -87,27 +88,57 @@ Deno.serve(async (req) => {
                 .eq('status', 'completed')
                 .gte('completed_at', oneWeekAgo.toISOString());
 
-            // B. Overdue (Currently overdue)
-            // Getting overdue assignments
-            const { count: overdueCount } = await supabase
-                .from('training_assignments')
-                .select('*', { count: 'exact', head: true })
-                .in('assigned_to_user_id', staffIds)
-                .lt('deadline', now.toISOString())
-                .eq('is_deleted', false);
-            // Ideally we filter out completed ones, but simplistic SQL is harder here without join check.
-            // For report approximation, let's trust deadline < now is "Overdue" status in assignments table logic usually.
-            // A more accurate way: get assignments where deadline < now, then check if corresponding progress is NOT completed.
-            // Skipping complex join for speed in MVP.
+            const { data: deptMeta } = await supabase
+                .from('departments')
+                .select('property_id')
+                .eq('id', departmentId)
+                .maybeSingle();
+            const propertyId = deptMeta?.property_id ?? null;
 
-            // C. Upcoming (Next 7 Days)
-            const { count: upcomingCount } = await supabase
-                .from('training_assignments')
-                .select('*', { count: 'exact', head: true })
-                .in('assigned_to_user_id', staffIds)
-                .gt('deadline', now.toISOString())
-                .lte('deadline', oneWeekFuture.toISOString())
-                .eq('is_deleted', false);
+            const countTeamAssignments = async (window: 'overdue' | 'upcoming') => {
+                const applyWindow = (query: any) =>
+                    window === 'overdue'
+                        ? query.lt('due_date', now.toISOString())
+                        : query.gt('due_date', now.toISOString()).lte('due_date', oneWeekFuture.toISOString());
+
+                const base = () =>
+                    supabase
+                        .from('learning_assignments')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('content_type', 'module')
+                        .eq('is_deleted', false)
+                        .not('due_date', 'is', null)
+                        .not('status', 'in', '(completed,cancelled)');
+
+                const { count: userScoped } = await applyWindow(
+                    base().eq('target_type', 'user').in('target_id', staffIds)
+                );
+
+                const { count: deptScoped } = await applyWindow(
+                    base().eq('target_type', 'department').eq('target_id', departmentId)
+                );
+
+                const { count: everyoneScoped } = await applyWindow(
+                    base().eq('target_type', 'everyone')
+                );
+
+                let propertyScoped = 0;
+                if (propertyId) {
+                    const { count } = await applyWindow(
+                        base().eq('target_type', 'property').eq('target_id', propertyId)
+                    );
+                    propertyScoped = count || 0;
+                }
+
+                // Scoped assignments can apply to many users; approximate team workload by multiplying by team size.
+                return (userScoped || 0) + ((deptScoped || 0) + propertyScoped + (everyoneScoped || 0)) * staffIds.length;
+            };
+
+            // B. Overdue (currently overdue)
+            const overdueCount = await countTeamAssignments('overdue');
+
+            // C. Upcoming (next 7 days)
+            const upcomingCount = await countTeamAssignments('upcoming');
 
             if ((completedCount || 0) + (overdueCount || 0) + (upcomingCount || 0) === 0) continue;
 
@@ -117,8 +148,7 @@ Deno.serve(async (req) => {
                 type: 'system', // 'report' type might be better if added to enum
                 title: 'Weekly Training Report',
                 message: `Team Update: ${completedCount || 0} completed, ${overdueCount || 0} overdue, ${upcomingCount || 0} due soon.`,
-                link: `/dashboard`, // or a specific reports page
-                is_read: false
+                link: `/dashboard` // or a specific reports page
             });
         }
 

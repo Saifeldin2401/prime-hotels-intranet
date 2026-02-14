@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isAuthorizedServiceRole } from '../_shared/auth.ts'
+import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from '../_shared/auth.ts'
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -19,8 +19,9 @@ Deno.serve(async (req: Request) => {
         // ===================================
         const authHeader = req.headers.get('Authorization')
         const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        const serviceRoleJwt = getServiceRoleToken(authHeader)
 
-        if (!isAuthorizedServiceRole(authHeader, serviceRoleKey)) {
+        if (!isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
                 status: 401,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -29,7 +30,7 @@ Deno.serve(async (req: Request) => {
 
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+            serviceRoleJwt ?? serviceRoleKey,
             {
                 auth: {
                     autoRefreshToken: false,
@@ -200,17 +201,7 @@ async function sendTrainingReminders(supabaseClient: any, config: any, policy: a
 
         const { data: assignments } = await supabaseClient
             .from('learning_assignments')
-            .select(`
-        id,
-        content_id,
-        target_type,
-        target_id,
-        due_date,
-        training_modules:content_id (
-          id,
-          title
-        )
-      `)
+            .select('id, content_id, target_type, target_id, due_date')
             .eq('content_type', 'module')
             .not('due_date', 'is', null)
             .gte('due_date', new Date().toISOString())
@@ -218,9 +209,25 @@ async function sendTrainingReminders(supabaseClient: any, config: any, policy: a
 
         if (!assignments) continue
 
+        const moduleIds = Array.from(new Set((assignments || []).map((a: any) => a.content_id).filter(Boolean)))
+        const moduleTitleById = new Map<string, string>()
+        if (moduleIds.length > 0) {
+            const { data: modules, error: modulesError } = await supabaseClient
+                .from('training_modules')
+                .select('id, title')
+                .in('id', moduleIds)
+            if (modulesError) {
+                console.warn('Failed to load training module titles:', modulesError.message)
+            } else {
+                for (const m of modules || []) {
+                    if (m?.id) moduleTitleById.set(m.id, m.title || 'Training Module')
+                }
+            }
+        }
+
         for (const assignment of assignments) {
             const userIds = await resolveAssignmentTargets(supabaseClient, assignment.target_type, assignment.target_id)
-            const moduleTitle = assignment.training_modules?.title || 'Training Module'
+            const moduleTitle = moduleTitleById.get(assignment.content_id) || 'Training Module'
 
             for (const userId of userIds) {
                 // Check if already sent
