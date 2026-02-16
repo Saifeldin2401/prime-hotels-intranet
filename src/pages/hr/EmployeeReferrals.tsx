@@ -15,10 +15,10 @@ import {
   Plus, Users, CheckCircle, Clock, UserPlus,
   Download, Building2, Eye, ExternalLink, FileDown, LineChart
 } from 'lucide-react'
-import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { toast } from 'sonner'
+import { exportRowsToXlsx } from '@/lib/excel'
 
 const statusColors: Record<string, string> = {
   received: 'bg-blue-100 text-blue-800',
@@ -216,13 +216,18 @@ export default function EmployeeReferrals() {
     }))
   }
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!referrals?.length) return
-    const rows = buildExportRows()
-    const worksheet = XLSX.utils.json_to_sheet(rows)
-    const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Referrals')
-    XLSX.writeFile(workbook, `referrals_${new Date().toISOString().split('T')[0]}.xlsx`)
+    try {
+      const rows = buildExportRows()
+      await exportRowsToXlsx(
+        rows,
+        `referrals_${new Date().toISOString().split('T')[0]}.xlsx`,
+        'Referrals'
+      )
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to export Excel')
+    }
   }
 
   const handleExportPDF = () => {

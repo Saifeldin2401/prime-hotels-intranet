@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { Loader2, Calendar, CheckCircle2, Circle, PlayCircle, FileText, ExternalLink, ArrowRight } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -71,6 +71,12 @@ export default function OnboardingDashboard() {
             window.open(task.link_id, '_blank')
         }
     }
+    const formatSafeDate = (value?: string | null) => {
+        if (!value) return null
+        const parsed = new Date(value)
+        return isValid(parsed) ? format(parsed, 'MMM d, yyyy') : null
+    }
+    const sortedTasks = [...(onboarding.tasks || [])].sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
 
     return (
         <div className="space-y-6 md:space-y-8 p-4 sm:p-6 md:p-8">
@@ -102,7 +108,7 @@ export default function OnboardingDashboard() {
             <div className="space-y-4">
                 <h2 className="text-xl font-semibold tracking-tight">{t('dashboard.checklist')}</h2>
                 <div className="grid gap-4">
-                    {onboarding.tasks?.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).map((task) => (
+                    {sortedTasks.map((task) => (
                         <Card key={task.id} className={cn("transition-all duration-200", task.is_completed ? "bg-muted/50 opacity-70" : "bg-card hover:shadow-md")}>
                             <CardContent className="flex items-start gap-3 sm:gap-4 p-4 sm:p-6">
                                 <Checkbox
@@ -163,7 +169,7 @@ export default function OnboardingDashboard() {
                                     {task.due_date && (
                                         <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
                                             <Calendar className="h-3 w-3" />
-                                            {t('dashboard.due')} {format(new Date(task.due_date), 'MMM d, yyyy')}
+                                            {t('dashboard.due')} {formatSafeDate(task.due_date) || t('dashboard.unknown_date', 'Unknown date')}
                                         </div>
                                     )}
                                 </div>

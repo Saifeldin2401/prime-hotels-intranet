@@ -335,15 +335,22 @@ export async function onSOPPublished(sopId: string, departmentId?: string): Prom
     })
 }
 
+const normalizeDepartmentId = (departmentId?: string): string | undefined => {
+    if (!departmentId) return undefined
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(departmentId)
+        ? departmentId
+        : undefined
+}
+
 /**
  * Trigger when a new user is hired
  */
-export async function onNewHire(userId: string, departmentId: string): Promise<void> {
+export async function onNewHire(userId: string, departmentId?: string): Promise<void> {
     await processTrigger({
         event: 'NEW_HIRE',
         source_id: userId,
         source_type: 'user',
-        department_id: departmentId,
+        department_id: normalizeDepartmentId(departmentId),
         affected_users: [userId]
     })
 }
@@ -355,13 +362,13 @@ export async function onRoleChange(
     userId: string,
     oldRole: string,
     newRole: string,
-    departmentId: string
+    departmentId?: string
 ): Promise<void> {
     await processTrigger({
         event: 'ROLE_CHANGE',
         source_id: userId,
         source_type: 'user',
-        department_id: departmentId,
+        department_id: normalizeDepartmentId(departmentId),
         affected_users: [userId],
         metadata: { old_role: oldRole, new_role: newRole }
     })

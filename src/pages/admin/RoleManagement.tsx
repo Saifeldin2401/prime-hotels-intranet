@@ -153,11 +153,31 @@ export default function RoleManagement() {
   // Assign role mutation
   const assignRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase
+      const { data: existingRoles, error: existingRolesError } = await supabase
         .from('user_roles')
-        .upsert({ user_id: userId, role })
+        .select('role')
+        .eq('user_id', userId)
+      if (existingRolesError) throw existingRolesError
 
-      if (error) throw error
+      const { error: upsertError } = await supabase
+        .from('user_roles')
+        .upsert(
+          { user_id: userId, role },
+          { onConflict: 'user_id,role', ignoreDuplicates: true }
+        )
+      if (upsertError) throw upsertError
+
+      const staleRoles = (existingRoles || [])
+        .map((r) => r.role)
+        .filter((existingRole): existingRole is string => !!existingRole && existingRole !== role)
+      if (staleRoles.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .in('role', staleRoles)
+        if (deleteError) throw deleteError
+      }
     },
     onSuccess: () => {
       setShowAssignDialog(false)

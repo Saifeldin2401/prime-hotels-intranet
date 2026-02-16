@@ -141,7 +141,7 @@ export function useUnifiedApprovals() {
             .forEach(r => items.push({
             id: r.id,
             type: 'request',
-            title: `Request #${r.request_no}`,
+            title: `Request #${r.request_no || r.id}`,
             description: r.current_assignee?.full_name ? `Assigned to: ${r.current_assignee.full_name}` : undefined,
             requester: r.requester?.full_name,
             createdAt: r.created_at || '', // Fallback for safety
@@ -178,7 +178,7 @@ export function useUnifiedApprovals() {
             title: `${l.type?.replace('_', ' ').toUpperCase() || 'LEAVE'} Leave`,
             description: l.reason,
             requester: l.requester?.full_name,
-            createdAt: l.created_at,
+            createdAt: l.created_at || '',
             status: l.status,
             entityMatches: {
                 property: l.property?.name,
@@ -196,10 +196,10 @@ export function useUnifiedApprovals() {
         pendingMaintenance.forEach(m => items.push({
             id: m.id,
             type: 'maintenance',
-            title: m.title,
-            description: m.description,
+            title: m.title || 'Maintenance Ticket',
+            description: m.description || '',
             requester: m.profiles?.full_name,
-            createdAt: m.created_at,
+            createdAt: m.created_at || '',
             status: m.status,
             priority: m.priority as any,
             entityMatches: {
@@ -221,7 +221,7 @@ export function useUnifiedApprovals() {
             const dateB = new Date(b.createdAt).getTime()
             return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA)
         })
-    }, [pendingRequests, pendingDocuments, pendingLeaves, pendingMaintenance])
+    }, [pendingRequests, pendingDocuments, pendingLeaves, pendingMaintenance, roles, primaryRole, user?.id])
 
     return {
         approvals,

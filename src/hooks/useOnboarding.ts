@@ -20,6 +20,8 @@ export function useMyOnboarding() {
         `)
                 .eq('user_id', user.id)
                 .neq('status', 'completed')
+                .order('created_at', { ascending: false })
+                .limit(1)
                 .maybeSingle()
 
             if (error) {

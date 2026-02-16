@@ -60,11 +60,6 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
 
     const [selectedIndex, setSelectedIndex] = useState(0)
 
-    // Reset selection when query changes
-    useEffect(() => {
-        setSelectedIndex(0)
-    }, [debouncedQuery])
-
     // Group results
     const groupedResults = useMemo(() => {
         if (!results.length) return {}
@@ -136,6 +131,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                     value={query}
                     onChange={(e) => {
                         setQuery(e.target.value)
+                        setSelectedIndex(0)
                         setIsOpen(true)
                     }}
                     onFocus={() => setIsOpen(true)}
@@ -147,6 +143,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                         type="button"
                         onClick={() => {
                             setQuery('')
+                            setSelectedIndex(0)
                             setIsOpen(false)
                         }}
                         className="absolute inset-y-0 end-0 pe-3 flex items-center text-gray-400 hover:text-white"

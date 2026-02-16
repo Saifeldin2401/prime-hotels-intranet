@@ -24,7 +24,7 @@ import {
   Filter,
   AlertTriangle
 } from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow, isValid } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import {
   Dialog,
@@ -61,6 +61,21 @@ export default function MyApprovals() {
   const [assignmentNote, setAssignmentNote] = useState('')
   const queryClient = useQueryClient()
   const { notifyRequestApproved, notifyRequestRejected, notifyMaintenanceAssigned } = useNotificationTriggers()
+  const toValidDate = (value?: string | null) => {
+    if (!value) return null
+    const parsed = new Date(value)
+    return isValid(parsed) ? parsed : null
+  }
+  const formatDateSafe = (value?: string | null, pattern = 'MMM d, yyyy') => {
+    const parsed = toValidDate(value)
+    return parsed ? format(parsed, pattern) : t('unknown_date', 'Unknown date')
+  }
+  const formatRelativeSafe = (value?: string | null, prefix = '') => {
+    const parsed = toValidDate(value)
+    if (!parsed) return t('unknown_date', 'Unknown date')
+    const relative = formatDistanceToNow(parsed, { addSuffix: true, locale: dateLocale })
+    return prefix ? `${prefix} ${relative}` : relative
+  }
 
   // Fetch pending document approvals for the current user
   const { data: pendingApprovals, isLoading } = useQuery({
@@ -526,19 +541,24 @@ export default function MyApprovals() {
   }
 
   const handleViewDocument = (document: Document) => {
-    window.open(document.file_url, '_blank')
+    if (!document.file_url) {
+      crudToasts.update.error(t('document', 'document'), t('document_not_available', 'Document is not available'))
+      return
+    }
+    window.open(document.file_url, '_blank', 'noopener,noreferrer')
   }
 
   const filterApprovals = (approvals: any[], query: string) => {
     if (!query) return approvals
     const lowerQuery = query.toLowerCase()
+    const includesQuery = (value?: string | null) => (value || '').toLowerCase().includes(lowerQuery)
     return approvals.filter(approval =>
-      approval.documents?.title?.toLowerCase().includes(lowerQuery) ||
-      approval.documents?.description?.toLowerCase().includes(lowerQuery) ||
-      approval.documents?.file_name?.toLowerCase().includes(lowerQuery) ||
-      approval.title?.toLowerCase().includes(lowerQuery) ||
-      approval.description?.toLowerCase().includes(lowerQuery) ||
-      approval.reason?.toLowerCase().includes(lowerQuery)
+      includesQuery(approval.documents?.title) ||
+      includesQuery(approval.documents?.description) ||
+      includesQuery(approval.documents?.file_name) ||
+      includesQuery(approval.title) ||
+      includesQuery(approval.description) ||
+      includesQuery(approval.reason)
     )
   }
 
@@ -546,10 +566,12 @@ export default function MyApprovals() {
   const filteredPendingLeave = filterApprovals(pendingLeaveRequests || [], searchQuery)
   const filteredPendingMaintenance = filterApprovals(pendingMaintenanceTickets || [], searchQuery)
   const filteredCompleted = filterApprovals(completedApprovals || [], searchQuery)
+  const safePendingDocuments = filteredPendingDocuments.filter((approval: any) => !!approval?.documents)
+  const safeCompletedDocuments = filteredCompleted.filter((approval: any) => !!approval?.documents)
   const selectedMaintenanceTicket = pendingMaintenanceTickets?.find(ticket => ticket.id === selectedTicketId) || null
 
   // Calculate total pending count
-  const totalPendingCount = filteredPendingDocuments.length + filteredPendingLeave.length + filteredPendingMaintenance.length
+  const totalPendingCount = safePendingDocuments.length + filteredPendingLeave.length + filteredPendingMaintenance.length
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -580,9 +602,9 @@ export default function MyApprovals() {
             <TabsTrigger value="documents" className="relative text-xs sm:text-sm whitespace-nowrap">
               <span className="hidden sm:inline">{t('documents_tab')}</span>
               <span className="sm:hidden">{t('documents_tab')}</span>
-              {filteredPendingDocuments.length > 0 && (
+              {safePendingDocuments.length > 0 && (
                 <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
-                  {filteredPendingDocuments.length}
+                  {safePendingDocuments.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -616,7 +638,7 @@ export default function MyApprovals() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="mt-2 text-gray-600">Loading pending document approvals...</p>
             </div>
-          ) : filteredPendingDocuments.length === 0 ? (
+          ) : safePendingDocuments.length === 0 ? (
             <Card>
               <CardContent className="text-center py-8">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
@@ -628,7 +650,7 @@ export default function MyApprovals() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {filteredPendingDocuments.map((approval) => (
+              {safePendingDocuments.map((approval) => (
                 <Card key={approval.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
@@ -655,7 +677,7 @@ export default function MyApprovals() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>{format(new Date(approval.documents.created_at), 'MMM d, yyyy')}</span>
+                            <span>{formatDateSafe(approval.documents.created_at, 'MMM d, yyyy')}</span>
                           </div>
                         </div>
                       </div>
@@ -736,11 +758,11 @@ export default function MyApprovals() {
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>{new Date(leave.start_date).toLocaleDateString()} - {new Date(leave.end_date).toLocaleDateString()}</span>
+                            <span>{formatDateSafe(leave.start_date)} - {formatDateSafe(leave.end_date)}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            <span>Requested {formatDistanceToNow(new Date(leave.created_at), { addSuffix: true, locale: dateLocale })}</span>
+                            <span>{formatRelativeSafe(leave.created_at, t('requested', 'Requested'))}</span>
                           </div>
                         </div>
 
@@ -830,7 +852,7 @@ export default function MyApprovals() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>Reported {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: dateLocale })}</span>
+                            <span>{formatRelativeSafe(ticket.created_at, t('reported', 'Reported'))}</span>
                           </div>
                           {ticket.room_number && (
                             <div className="flex items-center gap-1">
@@ -877,7 +899,7 @@ export default function MyApprovals() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="mt-2 text-gray-600">Loading completed approvals...</p>
             </div>
-          ) : filteredCompleted.length === 0 ? (
+          ) : safeCompletedDocuments.length === 0 ? (
             <Card>
               <CardContent className="text-center py-8">
                 <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -889,7 +911,7 @@ export default function MyApprovals() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {filteredCompleted.map((approval) => (
+              {safeCompletedDocuments.map((approval) => (
                 <Card key={approval.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
@@ -913,8 +935,8 @@ export default function MyApprovals() {
                             <Calendar className="w-4 h-4" />
                             <span>
                               {approval.status === 'approved'
-                                ? `Approved ${formatDistanceToNow(new Date(approval.approved_at!), { addSuffix: true, locale: dateLocale })}`
-                                : `Rejected ${formatDistanceToNow(new Date(approval.rejected_at!), { addSuffix: true, locale: dateLocale })}`
+                                ? formatRelativeSafe(approval.approved_at, t('approved', 'Approved'))
+                                : formatRelativeSafe(approval.rejected_at, t('rejected', 'Rejected'))
                               }
                             </span>
                           </div>

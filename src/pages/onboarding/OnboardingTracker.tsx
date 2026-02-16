@@ -12,7 +12,7 @@ import { useOnboardingTasks } from '@/hooks/useOnboarding'
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AIOnboardingPathGenerator } from '@/components/onboarding/AIOnboardingPathGenerator'
@@ -67,7 +67,7 @@ function TaskDetailList({ processId }: { processId: string }) {
                                 </p>
                             )}
                         </div>
-                        {task.link_type === 'training' && (
+                        {task.link_type === 'training' && task.link_id && (
                             <Link
                                 to={`/learning/training/${task.link_id}`}
                                 className="text-muted-foreground hover:text-primary transition-colors"
@@ -113,9 +113,15 @@ export default function OnboardingTracker() {
     })
 
     // Filter processes based on search
+    const normalize = (value?: string | null) => (value || '').toLowerCase()
+    const safeFormatDate = (value?: string | null) => {
+        if (!value) return t('tracker.unknown_date', 'Unknown date')
+        const parsed = new Date(value)
+        return isValid(parsed) ? format(parsed, 'MMM d, yyyy') : t('tracker.unknown_date', 'Unknown date')
+    }
     const filteredProcesses = processes?.filter(p =>
-        p.user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.template?.title.toLowerCase().includes(searchTerm.toLowerCase())
+        normalize(p.user?.full_name).includes(searchTerm.toLowerCase()) ||
+        normalize(p.template?.title).includes(searchTerm.toLowerCase())
     )
 
     if (isLoading) {
@@ -178,7 +184,7 @@ export default function OnboardingTracker() {
                                 <TableBody>
                                     {filteredProcesses?.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
+                                            <TableCell colSpan={6} className="h-24 text-center">
                                                 {t('tracker.no_data')}
                                             </TableCell>
                                         </TableRow>
@@ -208,13 +214,13 @@ export default function OnboardingTracker() {
                                                             <div className="flex items-center gap-2">
                                                                 <Avatar className="h-8 w-8">
                                                                     <AvatarImage src={process.user?.avatar_url || ''} />
-                                                                    <AvatarFallback>{process.user?.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                                                    <AvatarFallback>{(process.user?.full_name || '??').substring(0, 2).toUpperCase()}</AvatarFallback>
                                                                 </Avatar>
                                                                 <span>{process.user?.full_name}</span>
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>{process.template?.title}</TableCell>
-                                                        <TableCell>{format(new Date(process.start_date), 'MMM d, yyyy')}</TableCell>
+                                                        <TableCell>{safeFormatDate(process.start_date)}</TableCell>
                                                         <TableCell>
                                                             <Badge variant={(process.status as string) === 'completed' ? 'secondary' : 'default'}>
                                                                 {t(`status.${process.status}`)}

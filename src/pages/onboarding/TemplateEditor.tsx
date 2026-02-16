@@ -79,8 +79,12 @@ export default function TemplateEditor() {
                 setRole('all')
                 setJobTitle('')
             }
-            setTasks(existingTemplate.tasks)
-            setRequiredTrainingIds(existingTemplate.required_training_ids || [])
+            setTasks(
+                Array.isArray(existingTemplate.tasks) && existingTemplate.tasks.length > 0
+                    ? existingTemplate.tasks
+                    : [{ title: '', description: '', assignee_role: 'self', due_day_offset: 0 }]
+            )
+            setRequiredTrainingIds(Array.isArray(existingTemplate.required_training_ids) ? existingTemplate.required_training_ids : [])
         }
     }, [existingTemplate])
 
@@ -111,6 +115,10 @@ export default function TemplateEditor() {
         // Basic validation
         if (!title) {
             toast({ title: t('actions.title_required'), variant: "destructive" })
+            return
+        }
+        if (targetType === 'job_title' && !jobTitle.trim()) {
+            toast({ title: t('actions.job_title_required', 'Please select a job title'), variant: "destructive" })
             return
         }
         const validTasks = tasks.filter(t => t.title.trim() !== '')
@@ -400,7 +408,10 @@ export default function TemplateEditor() {
                                             name={`task-due-${index}`}
                                             min="0"
                                             value={task.due_day_offset}
-                                            onChange={(e) => handleTaskChange(index, 'due_day_offset', parseInt(e.target.value))}
+                                            onChange={(e) => {
+                                                const parsed = Number.parseInt(e.target.value, 10)
+                                                handleTaskChange(index, 'due_day_offset', Number.isNaN(parsed) ? 0 : parsed)
+                                            }}
                                         />
                                     </div>
                                 </div>

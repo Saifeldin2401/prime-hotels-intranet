@@ -21,9 +21,9 @@ import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCreateImportLog, useDataImportLogs, useProperties, useDeleteImportLog } from '@/hooks/useOperations'
 import { toast } from '@/components/ui/use-toast'
-import { read, utils } from 'xlsx'
 import { cn } from '@/lib/utils'
 import { detectPropertyByName, detectPropertyFromContext } from '@/lib/propertyDetection'
+import { parseExcelRows } from '@/lib/excel'
 import {
     Dialog,
     DialogContent,
@@ -99,27 +99,14 @@ const ARABIC_MONTHS: Record<string, string> = {
 
 // ========== PARSING HELPERS (Preserved) ==========
 function parseExcel(file: File): Promise<string[][]> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            try {
-                const data = new Uint8Array(e.target?.result as ArrayBuffer)
-                const workbook = read(data, { type: 'array' })
-                let bestSheet = workbook.SheetNames[0]
-                let maxRows = 0
-                for (const name of workbook.SheetNames) {
-                    const sheet = workbook.Sheets[name]
-                    const rows = utils.sheet_to_json<string[]>(sheet, { header: 1 })
-                    if (rows.length > maxRows) { maxRows = rows.length; bestSheet = name; }
-                }
-                const sheet = workbook.Sheets[bestSheet]
-                const rows = utils.sheet_to_json<string[]>(sheet, { header: 1 })
-                const cleanedRows = rows.map(row => row.map(cell => String(cell ?? '').trim())).filter(row => row.some(cell => cell !== ''))
-                resolve(cleanedRows)
-            } catch (err) { reject(err) }
-        }
-        reader.onerror = reject; reader.readAsArrayBuffer(file)
-    })
+    if (file.name.toLowerCase().endsWith('.xls')) {
+        return Promise.reject(
+            new Error(i18n.t('operations:data_import.errors.xls_not_supported', {
+                defaultValue: 'Legacy .xls files are not supported. Please save as .xlsx and try again.'
+            }))
+        )
+    }
+    return parseExcelRows(file)
 }
 
 function parseCSV(text: string): string[][] {
@@ -424,7 +411,8 @@ export default function DataImport() {
 
             try {
                 let rows: string[][] = []
-                if (item.file.name.endsWith('.csv')) rows = parseCSV(await item.file.text())
+                const fileName = item.file.name.toLowerCase()
+                if (fileName.endsWith('.csv')) rows = parseCSV(await item.file.text())
                 else rows = await parseExcel(item.file)
 
                 const extracted = extractDataFromRows(rows, properties, item.file.name)
@@ -465,7 +453,7 @@ export default function DataImport() {
         e.preventDefault()
         setIsDragging(false)
         const droppedFiles = Array.from(e.dataTransfer.files).filter(f =>
-            f.name.endsWith('.csv') || f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
+            f.name.toLowerCase().endsWith('.csv') || f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls')
         )
         if (droppedFiles.length > 0) await processMultipleFiles(droppedFiles)
     }, [processMultipleFiles])
@@ -865,7 +853,7 @@ export default function DataImport() {
                                     <FileUp className="h-4 w-4" />
                                     {t('data_import.pipeline.add_files', { defaultValue: 'Add More Files' })}
                                 </Button>
-                                <input id="file-input" type="file" accept=".csv,.xlsx,.xls" onChange={handleFileSelect} className="hidden" multiple />
+                                <input id="file-input" type="file" accept=".csv,.xlsx" onChange={handleFileSelect} className="hidden" multiple />
 
                                 {fileQueue.length > 0 && (
                                     <Button

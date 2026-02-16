@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2, Edit, FileText, Settings, Users, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { useToast } from '@/components/ui/use-toast'
 import {
     AlertDialog,
@@ -38,6 +38,12 @@ export default function OnboardingTemplates() {
         })
     }
 
+    const formatSafeDate = (value?: string | null) => {
+        if (!value) return t('templates.unknown_date', 'Unknown date')
+        const parsed = new Date(value)
+        return isValid(parsed) ? format(parsed, 'MMM d, yyyy') : t('templates.unknown_date', 'Unknown date')
+    }
+
     if (isLoading) {
         return <div className="flex p-8 justify-center items-center"><Loader2 className="h-8 w-8 animate-spin text-hotel-gold" /> <span className="ml-2">{t('actions.loading')}</span></div>
     }
@@ -63,7 +69,7 @@ export default function OnboardingTemplates() {
                                 <div className="space-y-1">
                                     <CardTitle className="leading-snug">{template.title}</CardTitle>
                                     <CardDescription>
-                                        {template.tasks.length} {t('templates.tasks_defined')}
+                                        {Array.isArray(template.tasks) ? template.tasks.length : 0} {t('templates.tasks_defined')}
                                     </CardDescription>
                                 </div>
                                 {template.is_active ? (
@@ -81,7 +87,7 @@ export default function OnboardingTemplates() {
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <FileText className="h-4 w-4" />
-                                    <span>{t('templates.created')} {format(new Date(template.created_at), 'MMM d, yyyy')}</span>
+                                    <span>{t('templates.created')} {formatSafeDate(template.created_at)}</span>
                                 </div>
                             </div>
                         </CardContent>

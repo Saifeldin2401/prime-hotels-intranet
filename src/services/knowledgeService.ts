@@ -304,17 +304,11 @@ export async function acknowledgeArticle(documentId: string, userId: string): Pr
 // ============================================================================
 
 export async function getContextualHelp(triggerType: string, triggerValue: string): Promise<ContextualHelp[]> {
-    const { data, error } = await supabase.rpc('get_contextual_help', {
-        p_trigger_type: triggerType,
-        p_trigger_value: triggerValue
-    })
-
-    if (error) {
-        console.warn('getContextualHelp error:', error.message)
-        return []
-    }
-
-    return data || []
+    // Contextual help RPC is not present in the current schema.
+    // Keep the API shape and avoid noisy runtime 404/400 logs.
+    void triggerType
+    void triggerValue
+    return []
 }
 
 export async function getComments(documentId: string): Promise<KnowledgeComment[]> {

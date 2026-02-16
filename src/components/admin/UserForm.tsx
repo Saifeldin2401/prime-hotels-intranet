@@ -135,7 +135,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
       // Trigger new hire automation (onboarding, etc)
       if (response.userId) {
-        triggerService.onNewHire(response.userId, selectedDepartments[0] || '')
+        triggerService.onNewHire(response.userId, selectedDepartments[0])
       }
 
       onClose()
@@ -422,50 +422,92 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
       if (profileError) throw profileError
 
-      // Update role
+      // Update role (insert-first, then cleanup stale roles).
+      // This avoids leaving the user with no role if insertion fails.
       if (role) {
-        // Delete existing roles
-        const { error: delRoleErr } = await supabase.from('user_roles').delete().eq('user_id', user.id)
-        if (delRoleErr) throw delRoleErr
-        // Insert new role
-        const { error: insRoleErr } = await supabase.from('user_roles').insert({ user_id: user.id, role })
-        if (insRoleErr) throw insRoleErr
+        const { error: upsertRoleErr } = await supabase
+          .from('user_roles')
+          .upsert({ user_id: user.id, role }, { onConflict: 'user_id,role', ignoreDuplicates: true })
+        if (upsertRoleErr) throw upsertRoleErr
+
+        const { error: cleanupRoleErr } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id)
+          .neq('role', role)
+        if (cleanupRoleErr) throw cleanupRoleErr
       }
 
-      // Update properties
-      const { error: delPropErr } = await supabase.from('user_properties').delete().eq('user_id', user.id)
-      if (delPropErr) throw delPropErr
-
+      // Update properties safely:
+      // 1) upsert missing selections first, 2) remove stale ones.
       const propertyIdSet = properties?.length ? new Set(properties.map((p) => p.id)) : null
       const validPropertyIds = Array.from(new Set(
         selectedProperties.filter((id) => isValidUUID(id) && (!propertyIdSet || propertyIdSet.has(id)))
       ))
-      if (validPropertyIds.length > 0) {
-        // Insert individually to avoid PostgREST bulk insert column quoting issues on some deployments
-        for (const propertyId of validPropertyIds) {
-          const { error: insPropErr } = await supabase
-            .from('user_properties')
-            .insert({ user_id: user.id, property_id: propertyId })
-          if (insPropErr) throw insPropErr
-        }
+      const { data: existingProperties, error: existingPropertiesError } = await supabase
+        .from('user_properties')
+        .select('property_id')
+        .eq('user_id', user.id)
+      if (existingPropertiesError) throw existingPropertiesError
+
+      const existingPropertyIds = new Set(
+        (existingProperties || [])
+          .map((p) => p.property_id)
+          .filter((id): id is string => isValidUUID(String(id)))
+      )
+
+      const propertiesToAdd = validPropertyIds.filter((id) => !existingPropertyIds.has(id))
+      for (const propertyId of propertiesToAdd) {
+        const { error: upsertPropertyErr } = await supabase
+          .from('user_properties')
+          .upsert({ user_id: user.id, property_id: propertyId }, { onConflict: 'user_id,property_id', ignoreDuplicates: true })
+        if (upsertPropertyErr) throw upsertPropertyErr
       }
 
-      // Update departments
-      const { error: delDeptErr } = await supabase.from('user_departments').delete().eq('user_id', user.id)
-      if (delDeptErr) throw delDeptErr
+      const propertiesToRemove = Array.from(existingPropertyIds).filter((id) => !validPropertyIds.includes(id))
+      if (propertiesToRemove.length > 0) {
+        const { error: deletePropertiesErr } = await supabase
+          .from('user_properties')
+          .delete()
+          .eq('user_id', user.id)
+          .in('property_id', propertiesToRemove)
+        if (deletePropertiesErr) throw deletePropertiesErr
+      }
 
+      // Update departments safely:
+      // 1) upsert missing selections first, 2) remove stale ones.
       const departmentIdSet = departments?.length ? new Set(departments.map((d) => d.id)) : null
       const validDepartmentIds = Array.from(new Set(
         selectedDepartments.filter((id) => isValidUUID(id) && (!departmentIdSet || departmentIdSet.has(id)))
       ))
-      if (validDepartmentIds.length > 0) {
-        // Insert individually to avoid PostgREST bulk insert column quoting issues on some deployments
-        for (const departmentId of validDepartmentIds) {
-          const { error: insDeptErr } = await supabase
-            .from('user_departments')
-            .insert({ user_id: user.id, department_id: departmentId })
-          if (insDeptErr) throw insDeptErr
-        }
+      const { data: existingDepartments, error: existingDepartmentsError } = await supabase
+        .from('user_departments')
+        .select('department_id')
+        .eq('user_id', user.id)
+      if (existingDepartmentsError) throw existingDepartmentsError
+
+      const existingDepartmentIds = new Set(
+        (existingDepartments || [])
+          .map((d) => d.department_id)
+          .filter((id): id is string => isValidUUID(String(id)))
+      )
+
+      const departmentsToAdd = validDepartmentIds.filter((id) => !existingDepartmentIds.has(id))
+      for (const departmentId of departmentsToAdd) {
+        const { error: upsertDepartmentErr } = await supabase
+          .from('user_departments')
+          .upsert({ user_id: user.id, department_id: departmentId }, { onConflict: 'user_id,department_id', ignoreDuplicates: true })
+        if (upsertDepartmentErr) throw upsertDepartmentErr
+      }
+
+      const departmentsToRemove = Array.from(existingDepartmentIds).filter((id) => !validDepartmentIds.includes(id))
+      if (departmentsToRemove.length > 0) {
+        const { error: deleteDepartmentsErr } = await supabase
+          .from('user_departments')
+          .delete()
+          .eq('user_id', user.id)
+          .in('department_id', departmentsToRemove)
+        if (deleteDepartmentsErr) throw deleteDepartmentsErr
       }
     },
     onSuccess: () => {
@@ -475,7 +517,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       })
 
       if (user && originalRole && role && originalRole !== role) {
-        triggerService.onRoleChange(user.id, originalRole, role, selectedDepartments[0] || '')
+        triggerService.onRoleChange(user.id, originalRole, role, selectedDepartments[0])
         setOriginalRole(role)
       }
 

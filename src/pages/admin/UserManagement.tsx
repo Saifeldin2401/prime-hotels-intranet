@@ -105,9 +105,11 @@ export default function UserManagement() {
 
   // Filter users by search + status
   const filteredUsers = users?.filter((user) => {
+    const includesSearch = (value?: string | null) =>
+      (value || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSearch =
-      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      includesSearch(user.full_name) ||
+      includesSearch(user.email)
 
     if (!matchesSearch) return false
 
@@ -358,7 +360,7 @@ export default function UserManagement() {
 
                     <div className="w-10 h-10 sm:w-10 sm:h-10 rounded-full bg-hotel-gold/20 flex items-center justify-center border border-hotel-gold/40 flex-shrink-0">
                       <span className="text-hotel-gold font-medium">
-                        {(user.full_name || user.email)[0].toUpperCase()}
+                        {(user.full_name || user.email || '?').charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -22,7 +22,6 @@ import {
     ChevronLeft,
     ChevronRight,
     CheckCircle,
-    PlayCircle,
     FileText,
     Image as ImageIcon,
     Video as VideoIcon,
@@ -32,7 +31,6 @@ import {
     X,
     ArrowLeft,
     Trophy,
-    Award,
     Clock,
     BookOpen,
     Languages,
@@ -42,14 +40,13 @@ import {
     Eye,
     MousePointer2
 } from 'lucide-react'
-import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { QuizComponent } from '@/pages/learning/components/QuizComponent'
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
 import { sanitizeHtml } from '@/lib/sanitize'
-import type { TrainingModule, TrainingContentBlock } from '@/lib/types'
+import type { TrainingContentBlock } from '@/lib/types'
 import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
 import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleViewer'
 import { SmartObserver } from '@/components/training/SmartObserver'
@@ -57,6 +54,17 @@ import { cn } from '@/lib/utils'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { getUserFriendlyError } from '@/lib/errorMessages'
+
+type PersistedModuleProgress = {
+    last_block_index?: number
+    metadata?: {
+        completed_blocks?: string[]
+        completed_media_blocks?: string[]
+    }
+    time_spent_seconds?: number
+    saved_at?: string
+    updated_at?: string
+}
 
 export default function TrainingPlayer() {
     const { t, i18n } = useTranslation('training')
@@ -67,7 +75,6 @@ export default function TrainingPlayer() {
     const navigate = useNavigate()
     const { toast } = useToast()
     const { user, profile } = useAuth()
-    const queryClient = useQueryClient()
 
     const [activeBlockIndex, setActiveBlockIndex] = useState(0)
     const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -210,7 +217,7 @@ export default function TrainingPlayer() {
 
     // Strict Timer (Pauses on blur/idle unless relaxed)
     useEffect(() => {
-        if (!activeBlock) return
+        if (!activeBlock?.id) return
 
         // Check if we should pause
         const shouldPause = () => {
@@ -245,7 +252,7 @@ export default function TrainingPlayer() {
             }
         }, 500)
 
-    }, [activeBlock?.id])
+    }, [activeBlock?.id, contextRules])
 
     // Scroll Observer
     useEffect(() => {
@@ -264,7 +271,7 @@ export default function TrainingPlayer() {
         }
 
         return () => scrollObserver.current?.disconnect()
-    }, [activeBlock?.id, bottomRef.current])
+    }, [activeBlock?.id])
 
     useEffect(() => {
         hasRestoredRef.current = false
@@ -354,7 +361,7 @@ export default function TrainingPlayer() {
 
             try {
                 await skillsService.awardModuleSkills(user.id, moduleData.module.id)
-            } catch (skillError) {
+            } catch (_skillError) {
                 // Silently fail - skills are optional, don't block completion
                 // Error is logged but doesn't prevent certificate generation
             }
@@ -390,7 +397,7 @@ export default function TrainingPlayer() {
             }
 
             setIsFinished(true)
-        } catch (error) {
+        } catch (_error) {
             const errorDetails = getUserFriendlyError(error)
             toast({
                 title: t('error'),
@@ -407,10 +414,9 @@ export default function TrainingPlayer() {
         return `${mins}m ${secs.toString().padStart(2, '0')}s`
     }, [])
 
-    const storageKey = useMemo(() => {
-        if (!user || !moduleData) return null
-        return `training-player-progress:${user.id}:${moduleData.module.id}`
-    }, [user?.id, moduleData?.module.id])
+    const storageKey = user && moduleData
+        ? `training-player-progress:${user.id}:${moduleData.module.id}`
+        : null
 
     const getCurrentSessionSeconds = useCallback(() => {
         const inBlock = Math.max(0, Math.floor((Date.now() - blockStartRef.current) / 1000))
@@ -448,7 +454,7 @@ export default function TrainingPlayer() {
             if (storageKey) {
                 localStorage.removeItem(storageKey)
             }
-        } catch (error) {
+        } catch (_error) {
             // Progress persistence failure is non-critical - continue silently
             // Progress is saved to localStorage as fallback
             if (storageKey) {
@@ -510,7 +516,7 @@ export default function TrainingPlayer() {
                     last_viewed_at: nowIso,
                     time_spent_seconds: blockTime
                 }, { onConflict: 'user_id,block_id' })
-        } catch (error) {
+        } catch (_error) {
             // Block completion recording is non-critical - continue silently
             // Main progress tracking will still work
         }
@@ -520,7 +526,7 @@ export default function TrainingPlayer() {
         return !!block?.content && block.content.trim().length > 0
     }
 
-    const translateCurrentContext = async (targetLang: TranslationTargetLanguage) => {
+    const translateCurrentContext = useCallback(async (targetLang: TranslationTargetLanguage) => {
         if (!moduleData) return
         const targetMeta = SUPPORTED_TRANSLATION_LANGUAGES.find(lang => lang.code === targetLang)
 
@@ -572,7 +578,7 @@ export default function TrainingPlayer() {
         } finally {
             setIsTranslating(false)
         }
-    }
+    }, [activeBlock, blockTranslations, moduleData, moduleTitleTranslations, t, toast, translateAI])
 
     const handleTranslate = async (targetLang: TranslationTargetLanguage) => {
         setTranslationTarget(targetLang)
@@ -589,7 +595,7 @@ export default function TrainingPlayer() {
         if (blockTranslations[activeBlock.id]?.[translationTarget]) return
         if (isTranslating) return
         void translateCurrentContext(translationTarget)
-    }, [translationTarget, activeBlock?.id])
+    }, [translationTarget, activeBlock, blockTranslations, isTranslating, translateCurrentContext])
 
     useEffect(() => {
         if (!user || !moduleData || hasRestoredRef.current) return
@@ -597,9 +603,16 @@ export default function TrainingPlayer() {
         let isActive = true
         const restoreProgress = async () => {
             const localPayload = storageKey ? localStorage.getItem(storageKey) : null
-            const localData = localPayload ? JSON.parse(localPayload) : null
+            let localData: PersistedModuleProgress | null = null
+            if (localPayload) {
+                try {
+                    localData = JSON.parse(localPayload) as PersistedModuleProgress
+                } catch {
+                    localData = null
+                }
+            }
 
-            const applyProgress = (progress: any) => {
+            const applyProgress = (progress: PersistedModuleProgress | null) => {
                 if (!progress || !moduleData) return
                 const nextIndex = typeof progress.last_block_index === 'number'
                     ? Math.min(Math.max(progress.last_block_index, 0), moduleData.blocks.length - 1)
@@ -657,8 +670,10 @@ export default function TrainingPlayer() {
         }
     }, [user, moduleData, storageKey, t])
 
+    const activeBlockId = activeBlock?.id
+
     useEffect(() => {
-        if (!activeBlock) return
+        if (!activeBlockId) return
         const now = Date.now()
         if (lastBlockIdRef.current) {
             const elapsed = Math.max(0, Math.floor((now - blockStartRef.current) / 1000))
@@ -669,7 +684,7 @@ export default function TrainingPlayer() {
             }
         }
         blockStartRef.current = now
-        lastBlockIdRef.current = activeBlock.id
+        lastBlockIdRef.current = activeBlockId
         setTimeSpentSeconds(getCurrentSessionSeconds())
 
         if (user && moduleData) {
@@ -679,13 +694,13 @@ export default function TrainingPlayer() {
                 .upsert({
                     user_id: user.id,
                     training_module_id: moduleData.module.id,
-                    block_id: activeBlock.id,
+                    block_id: activeBlockId,
                     last_viewed_at: nowIso
                 }, { onConflict: 'user_id,block_id' })
         }
 
         scheduleProgressSave()
-    }, [activeBlock?.id, user, moduleData, getCurrentSessionSeconds, scheduleProgressSave])
+    }, [activeBlockId, user, moduleData, getCurrentSessionSeconds, scheduleProgressSave])
 
     useEffect(() => {
         const interval = setInterval(() => {

@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -76,6 +76,10 @@ export function ApprovalCard({
     }
 
     const typeConfig = getTypeConfig(type)
+    const createdDate = createdAt ? new Date(createdAt) : null
+    const createdLabel = createdDate && isValid(createdDate)
+        ? format(createdDate, 'MMM d, h:mm a')
+        : t('unknown_date', 'Unknown date')
 
     return (
         <Card className="group hover:shadow-lg transition-all duration-300 border-muted/60 overflow-hidden flex flex-col h-full">
@@ -105,7 +109,7 @@ export function ApprovalCard({
                     <div className="flex items-center text-xs text-muted-foreground gap-2">
                         <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {format(new Date(createdAt), 'MMM d, h:mm a')}
+                            {createdLabel}
                         </span>
                         {entityMatches?.property && (
                             <>

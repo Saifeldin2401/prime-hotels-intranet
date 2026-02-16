@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, XCircle, FileText, User, Building, MapPin, Clock, Inbox, ArrowRight } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import type { ApprovalItem } from '@/hooks/useUnifiedApprovals'
 import { useNavigate } from 'react-router-dom'
@@ -27,6 +27,11 @@ export function ApprovalDetailsSheet({
 }: ApprovalDetailsSheetProps) {
     const { t } = useTranslation(['approvals', 'common'])
     const navigate = useNavigate()
+    const safeFormat = (value: string | null | undefined, pattern: string, fallback: string) => {
+        if (!value) return fallback
+        const parsed = new Date(value)
+        return isValid(parsed) ? format(parsed, pattern) : fallback
+    }
 
     if (!approval) return null
 
@@ -114,13 +119,13 @@ export function ApprovalDetailsSheet({
                             <div className="p-4 bg-blue-50/50 rounded-lg border border-blue-100">
                                 <span className="text-xs text-blue-600 font-semibold uppercase">Start Date</span>
                                 <p className="text-lg font-bold text-blue-900">
-                                    {format(new Date(approval.raw.start_date), 'MMM d, yyyy')}
+                                    {safeFormat(approval.raw.start_date, 'MMM d, yyyy', t('unknown_date', 'Unknown date'))}
                                 </p>
                             </div>
                             <div className="p-4 bg-blue-50/50 rounded-lg border border-blue-100">
                                 <span className="text-xs text-blue-600 font-semibold uppercase">End Date</span>
                                 <p className="text-lg font-bold text-blue-900">
-                                    {format(new Date(approval.raw.end_date), 'MMM d, yyyy')}
+                                    {safeFormat(approval.raw.end_date, 'MMM d, yyyy', t('unknown_date', 'Unknown date'))}
                                 </p>
                             </div>
                         </div>
@@ -187,7 +192,7 @@ export function ApprovalDetailsSheet({
                         </Badge>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {approval.createdAt ? format(new Date(approval.createdAt), 'MMM d, h:mm a') : 'Unknown Date'}
+                            {safeFormat(approval.createdAt, 'MMM d, h:mm a', t('unknown_date', 'Unknown date'))}
                         </span>
                     </div>
                     <SheetTitle className="text-xl">{approval.title}</SheetTitle>

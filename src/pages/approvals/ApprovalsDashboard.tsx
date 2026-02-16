@@ -50,12 +50,12 @@ export default function ApprovalsDashboard() {
     const [selectedApproval, setSelectedApproval] = useState<ApprovalItem | null>(null)
     const [sheetOpen, setSheetOpen] = useState(false)
 
+    const includesQuery = (value?: string) =>
+        (value || '').toLowerCase().includes(searchTerm.toLowerCase())
+
     // Filtering Logic
     const filteredApprovals = approvals.filter(item => {
-        const matchesSearch =
-            item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.requester?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesSearch = includesQuery(item.title) || includesQuery(item.requester) || includesQuery(item.description)
 
         const matchesPriority = priorityFilter === 'all' || item.priority === priorityFilter
 
@@ -241,7 +241,7 @@ export default function ApprovalsDashboard() {
                                                 {...item}
                                                 // Only pass handlers if direct action is allowed on card (though detail view handles it too)
                                                 onApprove={item.actions.canApprove ? () => handleQuickApprove(item.id, item.type) : undefined}
-                                                onReject={item.actions.canApprove ? () => handleQuickReject(item.id, item.type) : undefined}
+                                                onReject={item.actions.canReject ? () => handleQuickReject(item.id, item.type) : undefined}
                                                 onView={() => handleOpenDetails(item)}
                                                 isActionPending={isActionPending}
                                             />

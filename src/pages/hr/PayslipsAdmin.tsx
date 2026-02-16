@@ -210,13 +210,26 @@ export default function PayslipsAdmin() {
   }
 
   const handleDownload = async (payslipId: string) => {
-    const { data, error } = await supabase.rpc('get_secure_payslip_url', { p_payslip_id: payslipId })
-    if (error || !data) {
+    const { data: securePath, error } = await supabase.rpc('get_secure_payslip_url', { p_payslip_id: payslipId })
+    if (error || !securePath) {
       toast.error(t('hr_admin.messages.payslip_download_failed', 'Unable to generate download link.'))
       return
     }
 
-    window.open(data, '_blank', 'noopener,noreferrer')
+    let downloadUrl = securePath as string
+    if (!/^https?:\/\//i.test(downloadUrl)) {
+      const { data: signed, error: signedError } = await supabase.storage
+        .from('payslips')
+        .createSignedUrl(downloadUrl, 3600)
+
+      if (signedError || !signed?.signedUrl) {
+        toast.error(t('hr_admin.messages.payslip_download_failed', 'Unable to generate download link.'))
+        return
+      }
+      downloadUrl = signed.signedUrl
+    }
+
+    window.open(downloadUrl, '_blank', 'noopener,noreferrer')
   }
 
   return (

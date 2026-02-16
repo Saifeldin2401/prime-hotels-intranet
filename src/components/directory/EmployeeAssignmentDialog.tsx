@@ -170,36 +170,72 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
 
             // 1. Update or insert user_properties
             if (selectedPropertyId) {
-                await supabase
-                    .from('user_properties')
-                    .delete()
-                    .eq('user_id', employee.id)
-
                 const propertyExists = properties.some((p: any) => p.id === selectedPropertyId)
-                if (isValidUUID(selectedPropertyId) && propertyExists) {
-                    const { error: propError } = await supabase
-                        .from('user_properties')
-                        .insert({ user_id: employee.id, property_id: selectedPropertyId })
+                if (!isValidUUID(selectedPropertyId) || !propertyExists) {
+                    throw new Error('Selected property is invalid')
+                }
 
-                    if (propError) throw propError
+                const { data: existingProperties, error: existingPropertiesError } = await supabase
+                    .from('user_properties')
+                    .select('property_id')
+                    .eq('user_id', employee.id)
+                if (existingPropertiesError) throw existingPropertiesError
+
+                const { error: propError } = await supabase
+                    .from('user_properties')
+                    .upsert(
+                        { user_id: employee.id, property_id: selectedPropertyId },
+                        { onConflict: 'user_id,property_id', ignoreDuplicates: true }
+                    )
+                if (propError) throw propError
+
+                const propertiesToRemove = (existingProperties || [])
+                    .map((row) => row.property_id)
+                    .filter((id): id is string => !!id && id !== selectedPropertyId)
+                if (propertiesToRemove.length > 0) {
+                    const { error: removePropertiesError } = await supabase
+                        .from('user_properties')
+                        .delete()
+                        .eq('user_id', employee.id)
+                        .in('property_id', propertiesToRemove)
+                    if (removePropertiesError) throw removePropertiesError
                 }
             }
 
             // 2. Update or insert user_departments
             const actualDeptId = selectedDepartmentId === 'none' ? null : selectedDepartmentId
 
-            await supabase
+            const { data: existingDepartments, error: existingDepartmentsError } = await supabase
                 .from('user_departments')
-                .delete()
+                .select('department_id')
                 .eq('user_id', employee.id)
+            if (existingDepartmentsError) throw existingDepartmentsError
 
             const departmentExists = departments.some((d: any) => d.id === actualDeptId)
-            if (actualDeptId && isValidUUID(actualDeptId) && departmentExists) {
+            if (actualDeptId) {
+                if (!isValidUUID(actualDeptId) || !departmentExists) {
+                    throw new Error('Selected department is invalid')
+                }
+
                 const { error: deptError } = await supabase
                     .from('user_departments')
-                    .insert({ user_id: employee.id, department_id: actualDeptId })
-
+                    .upsert(
+                        { user_id: employee.id, department_id: actualDeptId },
+                        { onConflict: 'user_id,department_id', ignoreDuplicates: true }
+                    )
                 if (deptError) throw deptError
+            }
+
+            const departmentsToRemove = (existingDepartments || [])
+                .map((row) => row.department_id)
+                .filter((id): id is string => !!id && id !== actualDeptId)
+            if (departmentsToRemove.length > 0) {
+                const { error: removeDepartmentsError } = await supabase
+                    .from('user_departments')
+                    .delete()
+                    .eq('user_id', employee.id)
+                    .in('department_id', departmentsToRemove)
+                if (removeDepartmentsError) throw removeDepartmentsError
             }
 
             // 3. Update user role (only if allowed)
@@ -209,16 +245,31 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                     throw new Error('You cannot assign this role')
                 }
 
-                await supabase
+                const { data: existingRoles, error: existingRolesError } = await supabase
                     .from('user_roles')
-                    .delete()
+                    .select('role')
                     .eq('user_id', employee.id)
+                if (existingRolesError) throw existingRolesError
 
                 const { error: roleError } = await supabase
                     .from('user_roles')
-                    .insert({ user_id: employee.id, role: selectedRole })
-
+                    .upsert(
+                        { user_id: employee.id, role: selectedRole },
+                        { onConflict: 'user_id,role', ignoreDuplicates: true }
+                    )
                 if (roleError) throw roleError
+
+                const rolesToRemove = (existingRoles || [])
+                    .map((row) => row.role)
+                    .filter((roleName): roleName is string => !!roleName && roleName !== selectedRole)
+                if (rolesToRemove.length > 0) {
+                    const { error: removeRolesError } = await supabase
+                        .from('user_roles')
+                        .delete()
+                        .eq('user_id', employee.id)
+                        .in('role', rolesToRemove)
+                    if (removeRolesError) throw removeRolesError
+                }
             }
 
             return true

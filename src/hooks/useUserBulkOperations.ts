@@ -33,35 +33,47 @@ export function useUserBulkOperations() {
     const bulkAssignRole = useMutation({
         mutationFn: async ({ userIds, role }: { userIds: string[]; role: AppRole }) => {
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
+            const { data: authData } = await supabase.auth.getUser()
+            const actorId = authData.user?.id ?? null
 
             for (const userId of userIds) {
                 try {
-                    // Check if user already has this role
-                    const { data: existingRole } = await supabase
+                    // Check current roles first so we can preserve at least one role during updates.
+                    const { data: existingRoles, error: existingRolesError } = await supabase
                         .from('user_roles')
-                        .select('id')
+                        .select('role')
                         .eq('user_id', userId)
-                        .eq('role', role)
-                        .maybeSingle()
+                    if (existingRolesError) throw existingRolesError
 
-                    if (existingRole) {
-                        result.success++
-                        continue
+                    const currentRoles = new Set((existingRoles || []).map((r) => r.role))
+                    const staleRoles = [...currentRoles].filter((r) => r !== role)
+
+                    const { error: upsertRoleError } = await supabase
+                        .from('user_roles')
+                        .upsert(
+                            { user_id: userId, role },
+                            { onConflict: 'user_id,role', ignoreDuplicates: true }
+                        )
+                    if (upsertRoleError) throw upsertRoleError
+
+                    if (staleRoles.length > 0) {
+                        const { error: deleteStaleError } = await supabase
+                            .from('user_roles')
+                            .delete()
+                            .eq('user_id', userId)
+                            .in('role', staleRoles)
+                        if (deleteStaleError) throw deleteStaleError
                     }
 
-                    // Remove existing roles and assign new one
-                    await supabase.from('user_roles').delete().eq('user_id', userId)
-                    const { error } = await supabase.from('user_roles').insert({ user_id: userId, role })
-                    if (error) throw error
-
                     // Audit
-                    await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('audit_logs').insert({
                         entity_type: 'user',
                         entity_id: userId,
                         action: 'bulk_role_assign',
-                        user_id: (await supabase.auth.getUser()).data.user?.id,
+                        user_id: actorId,
                         details: { new_role: role, bulk_operation: true },
                     })
+                    if (auditError) throw auditError
 
                     result.success++
                 } catch (err) {
@@ -90,6 +102,8 @@ export function useUserBulkOperations() {
             note?: string
         }) => {
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
+            const { data: authData } = await supabase.auth.getUser()
+            const actorId = authData.user?.id ?? null
 
             for (const userId of userIds) {
                 try {
@@ -107,19 +121,20 @@ export function useUserBulkOperations() {
                     if (error) throw error
 
                     if (note && note.trim()) {
-                        await supabase
+                        const { error: noteError } = await supabase
                             .from('account_action_notes')
                             .insert({
                                 user_id: userId,
                                 action: 'bulk_deactivate',
                                 note: note.trim(),
-                                created_by: (await supabase.auth.getUser()).data.user?.id,
+                                created_by: actorId,
                                 metadata: { suspend_until: suspendUntil || null, notify_user: !!notifyUser }
                             })
+                        if (noteError) throw noteError
                     }
 
                     if (notifyUser) {
-                        await supabase.from('notifications').insert({
+                        const { error: notifyError } = await supabase.from('notifications').insert({
                             user_id: userId,
                             type: 'system',
                             title: 'Account Suspended',
@@ -128,15 +143,17 @@ export function useUserBulkOperations() {
                                 : 'Your account has been suspended by an administrator.',
                             metadata: { action: 'bulk_deactivate', suspend_until: suspendUntil || null }
                         })
+                        if (notifyError) throw notifyError
                     }
 
-                    await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('audit_logs').insert({
                         entity_type: 'user',
                         entity_id: userId,
                         action: 'bulk_deactivate',
-                        user_id: (await supabase.auth.getUser()).data.user?.id,
+                        user_id: actorId,
                         details: { reason, bulk_operation: true, suspend_until: suspendUntil || null },
                     })
+                    if (auditError) throw auditError
 
                     result.success++
                 } catch (err) {
@@ -161,6 +178,8 @@ export function useUserBulkOperations() {
             note?: string
         }) => {
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
+            const { data: authData } = await supabase.auth.getUser()
+            const actorId = authData.user?.id ?? null
 
             for (const userId of userIds) {
                 try {
@@ -179,34 +198,37 @@ export function useUserBulkOperations() {
                     if (error) throw error
 
                     if (note && note.trim()) {
-                        await supabase
+                        const { error: noteError } = await supabase
                             .from('account_action_notes')
                             .insert({
                                 user_id: userId,
                                 action: 'bulk_activate',
                                 note: note.trim(),
-                                created_by: (await supabase.auth.getUser()).data.user?.id,
+                                created_by: actorId,
                                 metadata: { notify_user: !!notifyUser }
                             })
+                        if (noteError) throw noteError
                     }
 
                     if (notifyUser) {
-                        await supabase.from('notifications').insert({
+                        const { error: notifyError } = await supabase.from('notifications').insert({
                             user_id: userId,
                             type: 'system',
                             title: 'Account Activated',
                             message: 'Your account has been activated.',
                             metadata: { action: 'bulk_activate' }
                         })
+                        if (notifyError) throw notifyError
                     }
 
-                    await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('audit_logs').insert({
                         entity_type: 'user',
                         entity_id: userId,
                         action: 'bulk_activate',
-                        user_id: (await supabase.auth.getUser()).data.user?.id,
+                        user_id: actorId,
                         details: { bulk_operation: true },
                     })
+                    if (auditError) throw auditError
 
                     result.success++
                 } catch (err) {
@@ -231,6 +253,8 @@ export function useUserBulkOperations() {
             note?: string
         }) => {
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
+            const { data: authData } = await supabase.auth.getUser()
+            const actorId = authData.user?.id ?? null
 
             for (const userId of userIds) {
                 try {
@@ -245,34 +269,37 @@ export function useUserBulkOperations() {
                     if (error) throw error
 
                     if (note && note.trim()) {
-                        await supabase
+                        const { error: noteError } = await supabase
                             .from('account_action_notes')
                             .insert({
                                 user_id: userId,
                                 action: 'bulk_force_password_reset',
                                 note: note.trim(),
-                                created_by: (await supabase.auth.getUser()).data.user?.id,
+                                created_by: actorId,
                                 metadata: { notify_user: !!notifyUser }
                             })
+                        if (noteError) throw noteError
                     }
 
                     if (notifyUser) {
-                        await supabase.from('notifications').insert({
+                        const { error: notifyError } = await supabase.from('notifications').insert({
                             user_id: userId,
                             type: 'system',
                             title: 'Password Reset Required',
                             message: 'Your account requires a password reset. Please update your password to continue.',
                             metadata: { action: 'bulk_force_password_reset' }
                         })
+                        if (notifyError) throw notifyError
                     }
 
-                    await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('audit_logs').insert({
                         entity_type: 'user',
                         entity_id: userId,
                         action: 'bulk_force_password_reset',
-                        user_id: (await supabase.auth.getUser()).data.user?.id,
+                        user_id: actorId,
                         details: { bulk_operation: true },
                     })
+                    if (auditError) throw auditError
 
                     result.success++
                 } catch (err) {
