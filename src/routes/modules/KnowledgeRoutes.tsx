@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { Route } from 'react-router-dom'
+import { Route, Navigate, useParams } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 
@@ -14,8 +14,21 @@ const QuestionReview = lazy(() => import('@/pages/questions/QuestionReview'))
 const QuestionLibrary = lazy(() => import('@/pages/questions/QuestionLibrary'))
 const QuestionGeneratorPage = lazy(() => import('@/pages/questions/QuestionGeneratorPage'))
 
+const SOPViewerRedirect = () => {
+    const { id } = useParams()
+    return <Navigate to={id ? `/knowledge/${id}` : '/knowledge'} replace />
+}
+
 export const KnowledgeRoutes = () => (
     <>
+        <Route
+            path="/sops"
+            element={<Navigate to="/knowledge" replace />}
+        />
+        <Route
+            path="/sops/:id"
+            element={<SOPViewerRedirect />}
+        />
         <Route
             path="/knowledge"
             element={

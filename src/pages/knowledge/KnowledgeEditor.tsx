@@ -65,6 +65,7 @@ import {
 import { useRelatedArticles, useCategories } from '@/hooks/useKnowledge'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProperties } from '@/hooks/useProperties'
+import { scanFile } from '@/hooks/useVirusScan'
 
 interface ArticleFormData {
     title: string
@@ -72,6 +73,7 @@ interface ArticleFormData {
     summary: string              // TL;DR summary for quick reading
     content: string
     file_url: string
+    storage_path: string
     content_type: string
     visibility: KnowledgeVisibility
     requires_acknowledgment: boolean
@@ -101,6 +103,7 @@ export default function KnowledgeEditor() {
         summary: '',
         content: '',
         file_url: '',
+        storage_path: '',
         content_type: 'document',
         visibility: 'all_properties' as KnowledgeVisibility,
         requires_acknowledgment: false,
@@ -251,6 +254,7 @@ export default function KnowledgeEditor() {
                             summary: data.summary || '',
                             content: data.content || '',
                             file_url: data.file_url || '',
+                            storage_path: data.storage_path || '',
                             content_type: data.content_type || 'document',
                             visibility: data.visibility || 'all_properties',
                             requires_acknowledgment: data.requires_acknowledgment || false,
@@ -458,6 +462,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 summary: finalSummary || null,
                 content: formData.content || null,
                 file_url: formData.file_url || null,
+                storage_bucket: 'documents',
+                storage_path: formData.storage_path || null,
                 content_type: formData.content_type,
                 visibility: formData.visibility,
                 requires_acknowledgment: formData.requires_acknowledgment,
@@ -638,6 +644,14 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
                                             setIsUploading(true)
                                             try {
+                                                const scanResult = await scanFile(file, {
+                                                    bucket: 'documents',
+                                                    context: 'knowledge_editor_upload'
+                                                })
+                                                if (!scanResult.safe) {
+                                                    throw new Error(scanResult.message || 'File failed security scan')
+                                                }
+
                                                 // RLS requires uploading to a folder matching the user ID
                                                 const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
                                                 const { data, error } = await supabase.storage
@@ -651,6 +665,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                                     .getPublicUrl(fileName)
 
                                                 updateField('file_url', publicUrl)
+                                                updateField('storage_path', fileName)
                                                 toast.success(t('editor.alerts.upload_success'))
 
                                                 // Auto-set title if empty

@@ -21,6 +21,11 @@ const TOOL_CARDS = [
     path: '/hr/payslips-management'
   },
   {
+    key: 'expenses',
+    icon: Icons.Receipt,
+    path: '/hr/expenses'
+  },
+  {
     key: 'scheduling',
     icon: Icons.Clock,
     path: '/hr/scheduling'

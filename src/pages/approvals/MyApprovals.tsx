@@ -47,6 +47,7 @@ import type { Document, DocumentApproval, LeaveRequest, MaintenanceTicket } from
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
 
 export default function MyApprovals() {
   const { t, i18n } = useTranslation(['approvals', 'common'])
@@ -545,7 +546,9 @@ export default function MyApprovals() {
       crudToasts.update.error(t('document', 'document'), t('document_not_available', 'Document is not available'))
       return
     }
-    window.open(document.file_url, '_blank', 'noopener,noreferrer')
+    resolveDocumentUrl(document.id, document.file_url).then((secureUrl) => {
+      openUrlInNewTab(secureUrl)
+    })
   }
 
   const filterApprovals = (approvals: any[], query: string) => {

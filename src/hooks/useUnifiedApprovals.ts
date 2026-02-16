@@ -138,21 +138,42 @@ export function useUnifiedApprovals() {
                 ? (r.current_assignee_id === user?.id || !r.current_assignee_id)
                 : r.current_assignee_id === user?.id)
             .filter(r => r.entity_type !== 'leave_request')
-            .forEach(r => items.push({
-            id: r.id,
-            type: 'request',
-            title: `Request #${r.request_no || r.id}`,
-            description: r.current_assignee?.full_name ? `Assigned to: ${r.current_assignee.full_name}` : undefined,
-            requester: r.requester?.full_name,
-            createdAt: r.created_at || '', // Fallback for safety
-            status: r.status,
-            raw: r,
-            actions: {
-                canApprove: true,
-                canReject: true,
-                canView: true
-            }
-        }))
+            .forEach(r => {
+                const metadata = (r.metadata || {}) as Record<string, any>
+                const isExpense = r.entity_type === 'expense_claim'
+                const amount = typeof metadata.amount === 'number'
+                    ? metadata.amount
+                    : (typeof metadata.amount === 'string' ? Number(metadata.amount) : null)
+                const currency = typeof metadata.currency === 'string' ? metadata.currency : 'SAR'
+
+                items.push({
+                    id: r.id,
+                    type: isExpense ? 'expense' : 'request',
+                    title: isExpense
+                        ? `Expense Claim #${r.request_no || r.id}`
+                        : `Request #${r.request_no || r.id}`,
+                    description: isExpense
+                        ? `${metadata.category || 'expense'}${amount ? ` • ${currency} ${Number(amount).toFixed(2)}` : ''}`
+                        : (r.current_assignee?.full_name ? `Assigned to: ${r.current_assignee.full_name}` : undefined),
+                    requester: r.requester?.full_name,
+                    createdAt: r.created_at || '',
+                    status: r.status,
+                    priority: r.priority === 'urgent'
+                        ? 'critical'
+                        : r.priority === 'normal'
+                            ? 'medium'
+                            : (r.priority as any),
+                    entityMatches: {
+                        property: r.property?.name
+                    },
+                    raw: r,
+                    actions: {
+                        canApprove: true,
+                        canReject: true,
+                        canView: true
+                    }
+                })
+            })
 
         // Documents
         pendingDocuments.forEach(d => items.push({

@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.*
+!.env.example
+!.env.example.secure
 
 # Local Netlify folder
 .netlify

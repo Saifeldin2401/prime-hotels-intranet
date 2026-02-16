@@ -16,6 +16,7 @@ const MyAttendance = lazy(() => import('@/pages/hr/MyAttendance'))
 const MyPerformance = lazy(() => import('@/pages/hr/MyPerformance'))
 const MyGoals = lazy(() => import('@/pages/hr/MyGoals'))
 const MyPayslips = lazy(() => import('@/pages/hr/MyPayslips'))
+const MyExpenseClaims = lazy(() => import('@/pages/hr/MyExpenseClaims'))
 const ShiftScheduling = lazy(() => import('@/pages/hr/ShiftScheduling'))
 const HRControlCenter = lazy(() => import('@/pages/hr/HRControlCenter'))
 const PerformanceReviewsAdmin = lazy(() => import('@/pages/hr/PerformanceReviewsAdmin'))
@@ -112,6 +113,16 @@ export const HRRoutes = () => (
                 <ProtectedRoute>
                     <AppLayout>
                         <MyPayslips />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/expenses"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <MyExpenseClaims />
                     </AppLayout>
                 </ProtectedRoute>
             }

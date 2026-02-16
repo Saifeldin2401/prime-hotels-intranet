@@ -22,13 +22,13 @@ const navigationItems = [
   },
   {
     name: 'SOPs',
-    href: '/sop',
+    href: '/knowledge',
     icon: Icons.ClipboardList,
     requiredRole: 'staff' as const
   },
   {
     name: 'Training',
-    href: '/training',
+    href: '/learning/my',
     icon: Icons.GraduationCap,
     requiredRole: 'staff' as const
   },
@@ -64,7 +64,7 @@ const navigationItems = [
   },
   {
     name: 'Messages',
-    href: '/messages',
+    href: '/messaging',
     icon: Icons.MessageSquare,
     requiredRole: 'staff' as const
   },

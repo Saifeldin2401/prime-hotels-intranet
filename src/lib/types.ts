@@ -313,6 +313,8 @@ export interface Document {
   description: string | null
   content?: string | null
   file_url: string
+  storage_bucket?: string | null
+  storage_path?: string | null
   visibility: DocumentVisibility
   property_id: string | null
   department_id: string | null
@@ -335,6 +337,8 @@ export interface DocumentVersion {
   document_id: string
   version_number: number
   file_url: string
+  storage_bucket?: string | null
+  storage_path?: string | null
   change_summary: string | null
   created_by: string
   created_at: string
@@ -670,6 +674,40 @@ export interface LeaveRequest {
   }
 }
 
+export interface ExpenseClaim {
+  id: string
+  requester_id: string
+  property_id: string | null
+  department_id: string | null
+  category: 'travel' | 'meals' | 'accommodation' | 'transport' | 'supplies' | 'training' | 'medical' | 'other'
+  amount: number
+  currency: string
+  expense_date: string
+  vendor_name: string | null
+  description: string | null
+  receipt_bucket: string
+  receipt_path: string | null
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'returned_for_correction' | 'paid' | 'cancelled'
+  workflow_request_id: string | null
+  approved_by_id: string | null
+  approved_at: string | null
+  rejected_by_id: string | null
+  rejected_at: string | null
+  rejection_reason: string | null
+  paid_at: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+  requester?: Profile
+  property?: Property
+  department?: Department
+  workflow?: {
+    id: string
+    request_no: number
+    status?: string
+  } | null
+}
+
 export interface MaintenanceTicket {
   id: string
   title: string
@@ -719,6 +757,8 @@ export interface MaintenanceAttachment {
   uploaded_by_id: string
   file_name: string
   file_path: string
+  storage_bucket?: string | null
+  storage_path?: string | null
   file_type: string
   file_size: number | null
   description: string | null

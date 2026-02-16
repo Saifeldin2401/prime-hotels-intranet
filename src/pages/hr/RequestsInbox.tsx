@@ -30,6 +30,7 @@ const entityConfig: Record<string, { label: string; icon: React.ReactNode }> = {
   leave_request: { label: 'leave_request', icon: <CalendarIcon className="w-4 h-4" /> },
   document: { label: 'document', icon: <FileText className="w-4 h-4" /> },
   transfer: { label: 'transfer', icon: <User className="w-4 h-4" /> },
+  expense_claim: { label: 'expense_claim', icon: <FileText className="w-4 h-4" /> },
 }
 
 const priorityConfig: Record<'low' | 'normal' | 'high' | 'urgent', { label: string; color: string; icon: React.ReactNode }> = {

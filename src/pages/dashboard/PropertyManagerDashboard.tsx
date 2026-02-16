@@ -96,7 +96,7 @@ export function PropertyManagerDashboard() {
       title: t('cards.quick_actions.training', 'Training'),
       description: t('cards.quick_actions.training_desc', 'Lift compliance and completion.'),
       icon: BookOpen,
-      onClick: () => navigate('/training'),
+      onClick: () => navigate('/training/hub'),
       badge: stats.trainingCompletion ? `${stats.trainingCompletion}%` : undefined
     },
     {
@@ -193,7 +193,7 @@ export function PropertyManagerDashboard() {
           </div>
         </EnhancedCard>
 
-        <EnhancedCard clickable onClick={() => navigate('/training')} className="role-property-manager" padding="lg">
+        <EnhancedCard clickable onClick={() => navigate('/training/hub')} className="role-property-manager" padding="lg">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground">{t('cards.staff_compliance')}</p>

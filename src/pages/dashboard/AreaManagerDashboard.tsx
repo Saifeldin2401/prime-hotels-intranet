@@ -68,7 +68,7 @@ export function AreaManagerDashboard() {
       title: t('cards.quick_actions.compliance', 'Compliance'),
       description: t('cards.quick_actions.compliance_desc', 'Track training and SOP coverage.'),
       icon: ShieldCheck,
-      onClick: () => navigate('/training'),
+      onClick: () => navigate('/training/hub'),
       badge: `${areaStats.staffCompliance}%`
     },
     {

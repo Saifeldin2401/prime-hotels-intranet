@@ -66,7 +66,7 @@ export function DepartmentHeadDashboard() {
       title: t('cards.quick_actions.training', 'Training'),
       description: t('cards.quick_actions.training_desc', 'Boost compliance scores.'),
       icon: BookOpen,
-      onClick: () => navigate('/training'),
+      onClick: () => navigate('/training/hub'),
       badge: `${teamStats.trainingCompliance}%`
     },
     {
@@ -129,7 +129,7 @@ export function DepartmentHeadDashboard() {
 
       {/* Department Stats */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
-        <EnhancedCard className="role-department-head" clickable onClick={() => navigate('/department/team')} padding="lg">
+        <EnhancedCard className="role-department-head" clickable onClick={() => navigate('/dashboard/my-team')} padding="lg">
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">{t('cards.team_present_today')}</p>
             <p className="text-2xl font-bold text-green-600">{teamStats.presentToday}/{teamStats.totalStaff}</p>
@@ -138,7 +138,7 @@ export function DepartmentHeadDashboard() {
           </div>
         </EnhancedCard>
 
-        <EnhancedCard className="role-department-head" clickable onClick={() => navigate('/training')} padding="lg">
+        <EnhancedCard className="role-department-head" clickable onClick={() => navigate('/training/hub')} padding="lg">
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">{t('cards.training_compliance')}</p>
             <p className="text-2xl font-bold text-blue-600">{teamStats.trainingCompliance}%</p>
@@ -311,7 +311,7 @@ export function DepartmentHeadDashboard() {
                 <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/approvals')}>
                   {t('actions.review_approvals', 'Review Approvals')}
                 </button>
-                <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/training')}>
+                <button className="w-full px-3 py-2 rounded-md border text-sm hover:bg-accent transition" onClick={() => navigate('/training/hub')}>
                   {t('actions.view_training', 'View Training')}
                 </button>
               </div>

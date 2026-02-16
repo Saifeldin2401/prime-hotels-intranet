@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { Button } from '@/components/ui/button'
-import { X, Download, Loader2 } from 'lucide-react'
+import { Download, Loader2 } from 'lucide-react'
+import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
 
 interface DocumentViewerProps {
   open: boolean
@@ -18,10 +19,38 @@ interface DocumentViewerProps {
 
 export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerProps) {
   const [loading, setLoading] = useState(true)
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
+  const [isResolvingUrl, setIsResolvingUrl] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSecureUrl = async () => {
+      if (!open || !document.id || !document.file_url) {
+        setResolvedUrl(document.file_url || null)
+        return
+      }
+
+      setIsResolvingUrl(true)
+      const secureUrl = await resolveDocumentUrl(document.id, document.file_url)
+      if (!cancelled) {
+        setResolvedUrl(secureUrl || document.file_url)
+        setIsResolvingUrl(false)
+      }
+    }
+
+    loadSecureUrl()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, document.id, document.file_url])
+
+  const activeUrl = resolvedUrl || document.file_url
 
   const handleDownload = () => {
-    if (document.file_url) {
-      window.open(document.file_url, '_blank')
+    if (activeUrl) {
+      openUrlInNewTab(activeUrl)
     }
   }
 
@@ -38,7 +67,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
     return 'other'
   }
 
-  const fileType = getFileType(document.file_url)
+  const fileType = getFileType(activeUrl)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -64,6 +93,12 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
         </DialogHeader>
 
         <div className="flex-1 overflow-auto p-1">
+          {isResolvingUrl && (
+            <div className="flex items-center justify-center h-24">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
           {fileType === 'pdf' && (
             <div className="flex flex-col items-center justify-center h-[80vh] text-center p-8">
               <div className="mb-4">
@@ -82,10 +117,10 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
             </div>
           )}
 
-          {fileType === 'image' && document.file_url && (
+          {fileType === 'image' && activeUrl && (
             <div className="flex items-center justify-center h-full min-h-[50vh]">
               <img
-                src={document.file_url}
+                src={activeUrl}
                 alt={document.title}
                 className="max-w-full max-h-full object-contain"
                 onLoad={() => setLoading(false)}
@@ -134,7 +169,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
               <p className="text-gray-600 mb-4">
                 This content cannot be previewed inline.
               </p>
-              {document.file_url && (
+              {activeUrl && (
                 <Button onClick={handleDownload}>
                   <Download className="w-4 h-4 mr-2" />
                   Download

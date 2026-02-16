@@ -201,7 +201,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
                 title: sop.title,
                 description: sop.description,
                 category: sop.category,
-                url: `/sops/${sop.id}`,
+                url: `/knowledge/${sop.id}`,
                 metadata: { version: sop.version },
                 relevance_score: calculateRelevanceScore(query, sop.title, sop.description)
               })))
@@ -283,7 +283,7 @@ export function useSearchSuggestions(query: string) {
       // 1. Smart Actions (Intent Detection)
       if (queryLower.startsWith('add') || queryLower.startsWith('create') || queryLower.startsWith('new')) {
         const actionMap = [
-          { keywords: ['user', 'staff', 'employee'], text: 'Add New Staff Member', url: '/users/new', icon: 'UserPlus' },
+          { keywords: ['user', 'staff', 'employee'], text: 'Add New Staff Member', url: '/admin/users', icon: 'UserPlus' },
           { keywords: ['task', 'todo'], text: 'Create New Task', url: '/tasks', icon: 'CheckSquare' },
           { keywords: ['announcement', 'news'], text: 'Post Announcement', url: '/announcements', icon: 'Megaphone' },
           { keywords: ['ticket', 'maintenance'], text: 'Raise Maintenance Ticket', url: '/maintenance', icon: 'Wrench' },
@@ -322,7 +322,7 @@ export function useSearchSuggestions(query: string) {
           id: 'help-sop',
           text: 'Search Standard Operating Procedures',
           type: 'help',
-          url: '/sops'
+          url: '/knowledge'
         } as any)
         suggestions.push({
           id: 'help-manual',
@@ -367,7 +367,7 @@ export function useSearchSuggestions(query: string) {
                 id: sop.id,
                 text: sop.title,
                 type: 'document' as const, // Reusing document type for icon consistency
-                url: `/sops/${sop.id}`,
+                url: `/knowledge/${sop.id}`,
                 category: 'SOP'
               })))
             }

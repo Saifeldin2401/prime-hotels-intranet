@@ -27,6 +27,7 @@ import { documentSchema } from '@/lib/validationSchemas'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { useToast } from '@/components/ui/use-toast'
 import { LoadingButton } from '@/components/loading'
+import { scanFile } from '@/hooks/useVirusScan'
 
 interface DocumentUploadDialogProps {
   open: boolean
@@ -52,6 +53,15 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
       setUploading(true)
 
+      const scanResult = await scanFile(file, {
+        bucket: 'documents',
+        context: 'document_upload'
+      })
+
+      if (!scanResult.safe) {
+        throw new Error(scanResult.message || 'File failed security scan')
+      }
+
       // Upload file to Supabase Storage under the current user's folder
       const fileExt = file.name.split('.').pop()
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
@@ -75,6 +85,8 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         title,
         description: description || null,
         file_url: fileUrl,
+        storage_bucket: 'documents',
+        storage_path: filePath,
         visibility,
         status: 'DRAFT' as DocumentStatus,
         requires_acknowledgment: requiresAcknowledgment,
@@ -111,6 +123,8 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         document_id: document.id,
         version_number: 1,
         file_url: fileUrl,
+        storage_bucket: 'documents',
+        storage_path: filePath,
         change_summary: 'Initial version',
         created_by: profile.id,
       })

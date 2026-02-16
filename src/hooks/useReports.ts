@@ -28,7 +28,11 @@ export interface ReportRun {
   started_at?: string | null
   finished_at?: string | null
   output_url?: string | null
+  output_bucket?: string | null
+  output_path?: string | null
   row_count?: number | null
+  error_message?: string | null
+  triggered_via?: string | null
   triggered_by?: string | null
   created_at: string
 }
@@ -143,16 +147,25 @@ export function useCreateReportRun() {
       status?: ReportRun['status']
       row_count?: number | null
       output_url?: string | null
+      output_bucket?: string | null
+      output_path?: string | null
+      error_message?: string | null
+      triggered_via?: string | null
     }) => {
+      const status = payload.status ?? 'queued'
       const { data, error } = await supabase
         .from('report_runs')
         .insert({
           report_id: payload.report_id,
-          status: payload.status ?? 'queued',
+          status,
           row_count: payload.row_count ?? null,
           output_url: payload.output_url ?? null,
-          started_at: new Date().toISOString(),
-          finished_at: payload.status === 'success' ? new Date().toISOString() : null,
+          output_bucket: payload.output_bucket ?? null,
+          output_path: payload.output_path ?? null,
+          error_message: payload.error_message ?? null,
+          triggered_via: payload.triggered_via ?? null,
+          started_at: status === 'queued' ? null : new Date().toISOString(),
+          finished_at: status === 'success' || status === 'failed' ? new Date().toISOString() : null,
           triggered_by: user?.id || null
         })
         .select()

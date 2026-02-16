@@ -25,6 +25,10 @@ const TrainingBuilderRedirect = () => {
 export const TrainingRoutes = () => (
     <>
         <Route
+            path="/training"
+            element={<Navigate to="/training/hub" replace />}
+        />
+        <Route
             path="/training/modules"
             element={<Navigate to="/training/hub?view=list" replace />}
         />
@@ -159,6 +163,10 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+        />
+        <Route
+            path="/learning"
+            element={<Navigate to="/learning/my" replace />}
         />
         <Route
             path="/learning/microlearning/:id"

@@ -133,6 +133,7 @@ export interface RequestAttachmentRow {
   id: string
   request_id: string
   uploader_id: string
+  storage_bucket: string
   file_name: string
   file_path?: string // Keeping for backward compat if needed, but adding storage_path
   storage_path: string

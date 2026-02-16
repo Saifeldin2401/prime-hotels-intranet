@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { Route } from 'react-router-dom'
+import { Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
@@ -18,6 +18,7 @@ const AnnouncementFeed = lazy(() => import('@/pages/announcements/AnnouncementFe
 const AnnouncementDetail = lazy(() => import('@/pages/announcements/AnnouncementDetail'))
 const AnnouncementAnalytics = lazy(() => import('@/pages/announcements/AnnouncementAnalytics'))
 const MaintenanceDashboard = lazy(() => import('@/pages/maintenance/MaintenanceDashboard'))
+const PreventiveMaintenance = lazy(() => import('@/pages/maintenance/PreventiveMaintenance'))
 const SubmitTicket = lazy(() => import('@/pages/maintenance/SubmitTicket'))
 const MaintenanceTicketDetail = lazy(() => import('@/pages/maintenance/MaintenanceTicketDetail'))
 const OnboardingDashboard = lazy(() => import('@/pages/onboarding/OnboardingDashboard'))
@@ -104,6 +105,10 @@ export const MiscRoutes = () => (
             }
         />
         <Route
+            path="/messages"
+            element={<Navigate to="/messaging" replace />}
+        />
+        <Route
             path="/tasks"
             element={
                 <ProtectedRoute>
@@ -180,12 +185,28 @@ export const MiscRoutes = () => (
             }
         />
         <Route
+            path="/help"
+            element={<Navigate to="/knowledge" replace />}
+        />
+        <Route
             path="/maintenance"
             element={
                 <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
                     <AppLayout>
                         <MotionWrapper>
                             <MaintenanceDashboard />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/maintenance/preventive"
+            element={
+                <ProtectedRoute allowedRoles={['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <PreventiveMaintenance />
                         </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>

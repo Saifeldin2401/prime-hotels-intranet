@@ -18,6 +18,7 @@ import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { openUrlInNewTab, resolveMaintenanceAttachmentUrl } from '@/lib/secureFileAccess'
 import {
     Dialog,
     DialogContent,
@@ -303,10 +304,16 @@ export default function MaintenanceTicketDetail() {
                                     {ticket.attachments.map(att => (
                                         <div key={att.id} className="flex items-center justify-between p-2 border rounded hover:bg-muted/50">
                                             <span className="text-sm">{att.file_name}</span>
-                                            <Button variant="ghost" size="sm" asChild className="group">
-                                                <a href={att.file_path} target="_blank" rel="noopener noreferrer">
-                                                    <Download className="w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5" />
-                                                </a>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="group"
+                                                onClick={async () => {
+                                                    const secureUrl = await resolveMaintenanceAttachmentUrl(att.id, att.file_path)
+                                                    openUrlInNewTab(secureUrl)
+                                                }}
+                                            >
+                                                <Download className="w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5" />
                                             </Button>
                                         </div>
                                     ))}

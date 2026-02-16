@@ -37,9 +37,10 @@ import {
   type RequestRow,
   type RequestStatus,
 } from '@/hooks/useRequests'
-import type { LeaveRequest, Profile } from '@/lib/types'
+import type { LeaveRequest, Profile, ExpenseClaim } from '@/lib/types'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { openUrlInNewTab, resolveExpenseReceiptUrl } from '@/lib/secureFileAccess'
 
 function statusBadge(status: RequestStatus) {
   const map: Record<RequestStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -113,6 +114,28 @@ export default function RequestDetail() {
 
       if (error) throw error
       return data as unknown as LeaveRequest
+    },
+  })
+
+  const expenseQuery = useQuery({
+    queryKey: ['expense-claim', request?.entity_id],
+    enabled: !!request && request.entity_type === 'expense_claim',
+    queryFn: async () => {
+      if (!request) throw new Error('Missing request')
+
+      const { data, error } = await supabase
+        .from('expense_claims')
+        .select(`
+          *,
+          requester:profiles!requester_id(id, full_name, email),
+          property:properties(id, name),
+          department:departments(id, name)
+        `)
+        .eq('id', request.entity_id)
+        .maybeSingle()
+
+      if (error) throw error
+      return data as unknown as ExpenseClaim
     },
   })
 
@@ -308,8 +331,8 @@ export default function RequestDetail() {
     if (dbError) throw dbError
   }
 
-  const onOpenAttachment = async (storagePath: string) => {
-    const { data, error } = await supabase.storage.from('requests').createSignedUrl(storagePath, 60 * 10)
+  const onOpenAttachment = async (storagePath: string, storageBucket = 'requests') => {
+    const { data, error } = await supabase.storage.from(storageBucket).createSignedUrl(storagePath, 60 * 10)
     if (error) throw error
     if (data?.signedUrl) window.open(data.signedUrl, '_blank')
   }
@@ -438,6 +461,58 @@ export default function RequestDetail() {
                       </div>
                     ) : (
                       <div className="text-sm text-gray-600">Leave request not found.</div>
+                    )
+                  ) : request.entity_type === 'expense_claim' ? (
+                    expenseQuery.isLoading ? (
+                      <div className="text-sm text-gray-600">Loading expense claim...</div>
+                    ) : expenseQuery.data ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-xs text-gray-500">Category</div>
+                            <div className="font-medium capitalize">{expenseQuery.data.category}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500">Amount</div>
+                            <div className="font-medium">
+                              {expenseQuery.data.currency} {Number(expenseQuery.data.amount || 0).toFixed(2)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500">Expense Date</div>
+                            <div className="font-medium">
+                              {expenseQuery.data.expense_date ? format(new Date(expenseQuery.data.expense_date), 'MMM dd, yyyy') : '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500">Vendor</div>
+                            <div className="font-medium">{expenseQuery.data.vendor_name || '—'}</div>
+                          </div>
+                        </div>
+
+                        {expenseQuery.data.description && (
+                          <div>
+                            <div className="text-xs text-gray-500">Description</div>
+                            <div className="text-sm">{expenseQuery.data.description}</div>
+                          </div>
+                        )}
+
+                        {expenseQuery.data.receipt_path && (
+                          <div className="pt-2">
+                            <Button
+                              variant="outline"
+                              onClick={async () => {
+                                const secureUrl = await resolveExpenseReceiptUrl(expenseQuery.data!.id)
+                                openUrlInNewTab(secureUrl)
+                              }}
+                            >
+                              Open Receipt
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-600">Expense claim not found.</div>
                     )
                   ) : request.entity_type === 'promotion' ? (
                     <div className="space-y-4">
@@ -618,7 +693,7 @@ export default function RequestDetail() {
                               {a.created_at ? ` • ${format(new Date(a.created_at), 'MMM dd, yyyy')}` : ''}
                             </div>
                           </div>
-                          <Button variant="outline" onClick={() => onOpenAttachment(a.storage_path)}>
+                          <Button variant="outline" onClick={() => onOpenAttachment(a.storage_path, a.storage_bucket || 'requests')}>
                             Open
                           </Button>
                         </div>

@@ -7,6 +7,7 @@ import { format, isValid } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import type { ApprovalItem } from '@/hooks/useUnifiedApprovals'
 import { useNavigate } from 'react-router-dom'
+import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
 
 interface ApprovalDetailsSheetProps {
     approval: ApprovalItem | null
@@ -78,6 +79,47 @@ export function ApprovalDetailsSheet({
                         </div>
                     </div>
                 )
+            case 'expense':
+                return (
+                    <div className="space-y-6">
+                        <div className="p-4 bg-muted/30 rounded-lg border">
+                            <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                <FileText className="w-4 h-4" /> Expense Claim
+                            </h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="text-muted-foreground">Request #</span>
+                                    <p className="font-medium">{approval.raw?.request_no || approval.id.slice(0, 8)}</p>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Status</span>
+                                    <p className="font-medium capitalize">{approval.status?.replace(/_/g, ' ')}</p>
+                                </div>
+                                <div className="col-span-2">
+                                    <span className="text-muted-foreground">Details</span>
+                                    <p className="mt-1">{approval.description || 'No additional details.'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm">
+                            <p className="text-blue-800 font-medium mb-1">Requester:</p>
+                            <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-blue-600" />
+                                <span>{approval.requester || 'Unknown'}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-center pt-2">
+                            <Button variant="outline" className="w-full" onClick={() => {
+                                navigate(`/hr/request/${approval.id}`)
+                                onOpenChange(false)
+                            }}>
+                                View Workflow <ArrowRight className="ml-2 w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )
             case 'document':
                 return (
                     <div className="space-y-6">
@@ -103,10 +145,18 @@ export function ApprovalDetailsSheet({
 
                         {approval.raw.document?.file_url && (
                             <div className="flex justify-center">
-                                <Button variant="outline" className="w-full" asChild>
-                                    <a href={approval.raw.document.file_url} target="_blank" rel="noopener noreferrer">
-                                        <FileText className="mr-2 h-4 w-4" /> View Document
-                                    </a>
+                                <Button
+                                    variant="outline"
+                                    className="w-full"
+                                    onClick={async () => {
+                                        const secureUrl = await resolveDocumentUrl(
+                                            approval.raw.document?.id || approval.id,
+                                            approval.raw.document?.file_url
+                                        )
+                                        openUrlInNewTab(secureUrl)
+                                    }}
+                                >
+                                    <FileText className="mr-2 h-4 w-4" /> View Document
                                 </Button>
                             </div>
                         )}

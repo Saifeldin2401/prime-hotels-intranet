@@ -36,7 +36,7 @@ export const SYSTEM_PAGES: SearchablePage[] = [
         id: 'page-sops',
         title: 'SOP Library',
         description: 'Standard Operating Procedures and guidelines',
-        url: '/sops',
+        url: '/knowledge',
         keywords: ['sops', 'procedures', 'rules', 'guidelines', 'policy', 'standards'],
         icon: 'BookOpen',
         category: 'Operations'
@@ -94,7 +94,7 @@ export const SYSTEM_PAGES: SearchablePage[] = [
         id: 'page-messages',
         title: 'Messages',
         description: 'Internal chat and communications',
-        url: '/messages',
+        url: '/messaging',
         keywords: ['chat', 'email', 'inbox', 'conversation', 'dm'],
         icon: 'MessageSquare',
         category: 'System'

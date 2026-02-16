@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDocument, useDocumentVersions } from '@/hooks/useDocuments'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -10,16 +10,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, ArrowLeft, Download, Eye, Calendar, User } from 'lucide-react'
 import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
+import { openUrlInNewTab, resolveDocumentUrl, resolveDocumentVersionUrl } from '@/lib/secureFileAccess'
 
 export default function DocumentDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { t } = useTranslation('documents')
     const [viewerOpen, setViewerOpen] = useState(false)
+    const [secureDocumentUrl, setSecureDocumentUrl] = useState<string | null>(null)
+    const [resolvingDocumentUrl, setResolvingDocumentUrl] = useState(false)
 
     // Hooks
     const { data: document, isLoading: docLoading, error: docError } = useDocument(id!)
     const { data: versions = [], isLoading: versionsLoading } = useDocumentVersions(id!)
+
+    useEffect(() => {
+        let cancelled = false
+        const load = async () => {
+            if (!document?.id) {
+                setSecureDocumentUrl(document?.file_url || null)
+                return
+            }
+            setResolvingDocumentUrl(true)
+            const url = await resolveDocumentUrl(document.id, document.file_url)
+            if (!cancelled) {
+                setSecureDocumentUrl(url || document.file_url)
+                setResolvingDocumentUrl(false)
+            }
+        }
+        load()
+        return () => {
+            cancelled = true
+        }
+    }, [document?.id, document?.file_url])
 
     if (docLoading) {
         return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin" /></div>
@@ -59,7 +82,11 @@ export default function DocumentDetail() {
                                     </CardDescription>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button variant="outline" onClick={() => window.open(document.file_url, '_blank')}>
+                                    <Button
+                                        variant="outline"
+                                        disabled={resolvingDocumentUrl || !secureDocumentUrl}
+                                        onClick={() => openUrlInNewTab(secureDocumentUrl)}
+                                    >
                                         <Download className="w-4 h-4 mr-2" />
                                         {t('actions.download')}
                                     </Button>
@@ -99,11 +126,17 @@ export default function DocumentDetail() {
                         </TabsList>
                         <TabsContent value="preview" className="mt-4">
                             <Card className="overflow-hidden min-h-[500px]">
-                                <iframe
-                                    src={document.file_url}
-                                    className="w-full h-[600px] border-none"
-                                    title={t('detail.preview')}
-                                />
+                                {secureDocumentUrl ? (
+                                    <iframe
+                                        src={secureDocumentUrl}
+                                        className="w-full h-[600px] border-none"
+                                        title={t('detail.preview')}
+                                    />
+                                ) : (
+                                    <div className="h-[600px] flex items-center justify-center text-muted-foreground">
+                                        {resolvingDocumentUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : t('detail.no_preview', { defaultValue: 'Preview unavailable' })}
+                                    </div>
+                                )}
                             </Card>
                         </TabsContent>
                         <TabsContent value="history" className="mt-4">
@@ -142,10 +175,15 @@ export default function DocumentDetail() {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <Button variant="ghost" size="sm" asChild>
-                                                        <a href={version.file_url} target="_blank" rel="noopener noreferrer">
-                                                            <Download className="w-4 h-4" />
-                                                        </a>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={async () => {
+                                                            const secureVersionUrl = await resolveDocumentVersionUrl(version.id, version.file_url)
+                                                            openUrlInNewTab(secureVersionUrl)
+                                                        }}
+                                                    >
+                                                        <Download className="w-4 h-4" />
                                                     </Button>
                                                 </div>
                                             ))}

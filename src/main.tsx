@@ -20,7 +20,7 @@ if (redirectParam) {
   }
 }
 
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || "https://5f5ee68dbba50c2d138d3e9b8772d4b6@o4508792767840256.ingest.de.sentry.io/4510844400238672"
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN
 const SENTRY_ENV = import.meta.env.VITE_SENTRY_ENV || import.meta.env.MODE
 const SENTRY_RELEASE =
   import.meta.env.VITE_RELEASE ||
@@ -28,26 +28,30 @@ const SENTRY_RELEASE =
   import.meta.env.VITE_GIT_COMMIT ||
   undefined
 
-Sentry.init({
-  dsn: SENTRY_DSN,
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration(),
-  ],
-  release: SENTRY_RELEASE,
-  environment: SENTRY_ENV,
-  // Performance Monitoring
-  tracesSampleRate: 1.0, //  Capture 100% of the transactions
-  // Session Replay
-  replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
-  replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
-  // Setting this option to true will send default PII data to Sentry.
-  // For example, automatic IP address collection on events
-  sendDefaultPii: true,
-});
+const sentryEnabled = Boolean(SENTRY_DSN)
+const tracesSampleRate = Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? (import.meta.env.PROD ? 0.1 : 1.0))
+const replaySessionSampleRate = Number(import.meta.env.VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE ?? (import.meta.env.PROD ? 0.02 : 0.1))
+const replayOnErrorSampleRate = Number(import.meta.env.VITE_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE ?? 1.0)
+const sendDefaultPii = import.meta.env.VITE_SENTRY_SEND_DEFAULT_PII === 'true'
+
+if (sentryEnabled) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    release: SENTRY_RELEASE,
+    environment: SENTRY_ENV,
+    tracesSampleRate,
+    replaysSessionSampleRate: replaySessionSampleRate,
+    replaysOnErrorSampleRate: replayOnErrorSampleRate,
+    sendDefaultPii,
+  })
+}
 
 if (redirectPath) {
-  if (import.meta.env.PROD) {
+  if (import.meta.env.PROD && sentryEnabled) {
     Sentry.captureMessage('spa_route_404', {
       level: 'warning',
       extra: { path: redirectPath }

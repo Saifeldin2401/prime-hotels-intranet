@@ -15,6 +15,7 @@ import {
 } from '@/hooks/useReports'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { useTranslation } from 'react-i18next'
+import { openUrlInNewTab, resolveReportRunUrl } from '@/lib/secureFileAccess'
 
 const REPORT_TYPES = [
   { value: 'operations', labelKey: 'report_builder.types.operations' },
@@ -162,11 +163,17 @@ export function ReportsControlCenter() {
       await createRun.mutateAsync({
         report_id: reportId,
         status: 'success',
+        triggered_via: 'manual_download',
         row_count: Object.values(dataMap).reduce((sum, rows: any) => sum + (rows?.length || 0), 0)
       })
     } catch (_error) {
       await createRun.mutateAsync({ report_id: reportId, status: 'failed' })
     }
+  }
+
+  const handleOpenRunOutput = async (runId: string, outputUrl?: string | null) => {
+    const secureUrl = await resolveReportRunUrl(runId, outputUrl)
+    openUrlInNewTab(secureUrl)
   }
 
   return (
@@ -303,10 +310,23 @@ export function ReportsControlCenter() {
                   {t('report_builder.run_label', { defaultValue: 'Run {{id}}', id: run.id.slice(0, 6) })}
                 </p>
                 <p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleString()}</p>
+                {typeof run.row_count === 'number' && (
+                  <p className="text-xs text-muted-foreground">Rows: {run.row_count}</p>
+                )}
+                {run.error_message && (
+                  <p className="text-xs text-red-600">{run.error_message}</p>
+                )}
               </div>
-              <Badge variant={run.status === 'success' ? 'default' : run.status === 'failed' ? 'destructive' : 'secondary'}>
-                {run.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={run.status === 'success' ? 'default' : run.status === 'failed' ? 'destructive' : 'secondary'}>
+                  {run.status}
+                </Badge>
+                {run.status === 'success' && (run.output_path || run.output_url) && (
+                  <Button size="sm" variant="outline" onClick={() => handleOpenRunOutput(run.id, run.output_url)}>
+                    Open
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </CardContent>

@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
-export type ApprovalType = 'document' | 'leave' | 'maintenance' | 'request'
+export type ApprovalType = 'document' | 'leave' | 'maintenance' | 'request' | 'expense'
 
 export interface ApprovalCardProps {
     id: string
@@ -70,6 +70,8 @@ export function ApprovalCard({
                 return { icon: <FileText className="w-3.5 h-3.5" />, color: 'bg-indigo-50 text-indigo-700 border-indigo-200', label: t('documents_tab') }
             case 'request':
                 return { icon: <Inbox className="w-3.5 h-3.5" />, color: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: t('unified_tab', 'Request') }
+            case 'expense':
+                return { icon: <FileText className="w-3.5 h-3.5" />, color: 'bg-amber-50 text-amber-700 border-amber-200', label: t('expenses_tab', 'Expenses') }
             default:
                 return { icon: <FileText className="w-3.5 h-3.5" />, color: 'bg-gray-100 text-gray-800 border-gray-200', label: t('request') }
         }

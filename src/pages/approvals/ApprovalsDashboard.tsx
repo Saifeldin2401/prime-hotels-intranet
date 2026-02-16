@@ -64,6 +64,7 @@ export default function ApprovalsDashboard() {
 
     // Categorized lists
     const requests = filteredApprovals.filter(i => i.type === 'request')
+    const expenses = filteredApprovals.filter(i => i.type === 'expense')
     const documents = filteredApprovals.filter(i => i.type === 'document')
     const leaves = filteredApprovals.filter(i => i.type === 'leave')
     const maintenance = filteredApprovals.filter(i => i.type === 'maintenance')
@@ -82,7 +83,7 @@ export default function ApprovalsDashboard() {
             } else if (type === 'leave') {
                 await approveLeave.mutateAsync({ requestId: id })
                 toast({ title: t('toast.leave_approved', 'Leave request approved') })
-            } else if (type === 'request') {
+            } else if (type === 'request' || type === 'expense') {
                 // Determine next step based on role - specific logic can be complex,
                 // but generalized approval usually means moving forward.
                 // Assuming 'approve' action for now.
@@ -108,7 +109,7 @@ export default function ApprovalsDashboard() {
             } else if (type === 'leave') {
                 await rejectLeave.mutateAsync({ requestId: id, reason })
                 toast({ title: t('toast.leave_rejected', 'Leave request rejected') })
-            } else if (type === 'request') {
+            } else if (type === 'request' || type === 'expense') {
                 await requestAction.mutateAsync({
                     requestId: id,
                     action: 'reject',
@@ -199,6 +200,12 @@ export default function ApprovalsDashboard() {
                         <Badge variant="secondary" className="ml-2 bg-gray-100">{requests.length}</Badge>
                     </TabsTrigger>
 
+                    <TabsTrigger value="expenses" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                        <FileText className="w-4 h-4 mr-2" />
+                        {t('expenses_tab', 'Expenses')}
+                        <Badge variant="secondary" className="ml-2 bg-gray-100">{expenses.length}</Badge>
+                    </TabsTrigger>
+
                     <TabsTrigger value="documents" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
                         <FileText className="w-4 h-4 mr-2" />
                         {t('documents_tab', 'Documents')}
@@ -219,9 +226,10 @@ export default function ApprovalsDashboard() {
                 </TabsList>
 
                 {/* Tab Content Areas */}
-                {['all', 'requests', 'documents', 'leaves', 'maintenance'].map(tabValue => {
+                {['all', 'requests', 'expenses', 'documents', 'leaves', 'maintenance'].map(tabValue => {
                     const items = tabValue === 'all' ? filteredApprovals :
                         tabValue === 'requests' ? requests :
+                            tabValue === 'expenses' ? expenses :
                             tabValue === 'documents' ? documents :
                                 tabValue === 'leaves' ? leaves : maintenance
 

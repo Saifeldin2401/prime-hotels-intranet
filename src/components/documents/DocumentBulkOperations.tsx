@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
 
 interface Document {
   id: string
@@ -87,14 +88,8 @@ export function DocumentBulkOperations({
 
       for (const docItem of documentsToDownload) {
         if (docItem.file_url) {
-          // Create download link
-          const link = document.createElement('a')
-          link.href = docItem.file_url
-          link.download = docItem.title
-          link.target = '_blank'
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
+          const secureUrl = await resolveDocumentUrl(docItem.id, docItem.file_url)
+          openUrlInNewTab(secureUrl)
         }
       }
 
@@ -351,7 +346,10 @@ export function DocumentBulkOperations({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => window.open(document.file_url, '_blank')}
+                    onClick={async () => {
+                      const secureUrl = await resolveDocumentUrl(document.id, document.file_url)
+                      openUrlInNewTab(secureUrl)
+                    }}
                   >
                     <Eye className="h-4 w-4" />
                   </Button>

@@ -427,7 +427,10 @@ export function useUploadMaintenanceAttachment() {
       if (!user?.id) throw new Error('User must be authenticated')
 
       // Perform security scan
-      const scanResult = await scanFile(file)
+      const scanResult = await scanFile(file, {
+        bucket: 'maintenance-attachments',
+        context: 'maintenance_attachment'
+      })
       if (!scanResult.safe) {
         throw new Error(scanResult.message || 'File failed security scan')
       }
@@ -452,7 +455,9 @@ export function useUploadMaintenanceAttachment() {
           ticket_id: ticketId,
           uploaded_by_id: user.id,
           file_name: file.name,
-          file_path: publicUrl,
+          file_path: publicUrl || fileName,
+          storage_bucket: 'maintenance-attachments',
+          storage_path: fileName,
           file_type: file.type,
           file_size: file.size,
           description: description || null

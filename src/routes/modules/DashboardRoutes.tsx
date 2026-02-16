@@ -124,6 +124,10 @@ export const DashboardRoutes = () => (
             }
         />
         <Route
+            path="/department/team"
+            element={<Navigate to="/dashboard/my-team" replace />}
+        />
+        <Route
             path="/properties/:id"
             element={
                 <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr']}>
