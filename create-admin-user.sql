@@ -12,7 +12,7 @@
 
 DO $$
 DECLARE
-  admin_email TEXT := 'admin@primehotels.com'; -- ⚠️ CHANGE THIS to your admin email
+  admin_email TEXT := 'admin@phg-connect.com'; -- ⚠️ CHANGE THIS to your admin email
   admin_user_id UUID;
   test_property_id UUID;
 BEGIN

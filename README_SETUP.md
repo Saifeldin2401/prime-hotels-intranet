@@ -51,7 +51,7 @@ npm run dev
 1. **Go to Supabase Dashboard**: https://supabase.com/dashboard/project/htsvjfrofcpkfzvjpwvx/auth/users
 2. **Click "Add User"** → **"Create new user"**
 3. **Enter**:
-   - Email: `admin@primehotels.com` (or your email)
+   - Email: `admin@phg-connect.com` (or your email)
    - Password: `Admin123!` (or your password)
    - ✅ Check **"Auto Confirm User"**
 4. **Click "Create User"**

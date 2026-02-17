@@ -43,7 +43,7 @@ Or create a `.env` file in the `prime-hotels` folder:
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_RESEND_API_KEY=your_resend_api_key
+RESEND_API_KEY=your_resend_api_key
 ```
 
 ### Issue: "Cannot find module" errors

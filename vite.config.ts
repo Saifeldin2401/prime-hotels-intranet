@@ -73,7 +73,7 @@ export default defineConfig({
   // Security: CORS configuration
   cors: {
     origin: process.env.NODE_ENV === 'production'
-      ? ['https://yourdomain.com'] // Replace with actual domains in production
+      ? (process.env.VITE_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
       : ['http://localhost:5173', 'http://localhost:3000'],
     credentials: true
   },

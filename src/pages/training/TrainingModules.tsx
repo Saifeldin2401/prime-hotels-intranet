@@ -374,7 +374,14 @@ export default function TrainingModules() {
               action: 'create_batch',
               userIds: userIdsToNotify,
               notificationType: 'training_assigned',
-              notificationData
+              businessDomain: 'operations',
+              templateKey: 'operations_incident_alert',
+              channels: ['in_app', 'email'],
+              sendEmail: true,
+              notificationData: {
+                ...notificationData,
+                link: `/learning/training/${assigningModuleId}`
+              }
             })
           })
         }

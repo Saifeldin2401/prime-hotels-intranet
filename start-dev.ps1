@@ -16,7 +16,7 @@ if (Test-Path ".env") {
     # Environment variables should be loaded from .env file by Vite
     Write-Host "     VITE_SUPABASE_URL=your_supabase_project_url" -ForegroundColor Gray
     Write-Host "     VITE_SUPABASE_ANON_KEY=your_supabase_anon_key" -ForegroundColor Gray
-    Write-Host "     VITE_RESEND_API_KEY=your_resend_api_key" -ForegroundColor Gray
+    Write-Host "     RESEND_API_KEY=your_resend_api_key" -ForegroundColor Gray
     Write-Host ""
     $continue = Read-Host "Continue anyway? (y/N)"
     if ($continue -ne "y" -and $continue -ne "Y") {

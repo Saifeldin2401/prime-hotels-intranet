@@ -32,7 +32,7 @@ if exist ".env" (
     echo    Required variables:
     echo      VITE_SUPABASE_URL=your_supabase_project_url
     echo      VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-    echo      VITE_RESEND_API_KEY=your_resend_api_key
+    echo      RESEND_API_KEY=your_resend_api_key
     echo.
     pause
     exit /b 1

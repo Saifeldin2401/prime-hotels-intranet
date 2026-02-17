@@ -87,10 +87,35 @@ export interface BulkNotificationParams {
   skipDbInsert?: boolean
 }
 
+interface EmailNotificationPayload {
+  type: NotificationType
+  title: string
+  message: string
+  link?: string | null
+  metadata?: Record<string, unknown>
+}
+
+const BULK_NOTIFICATION_EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`
+
+function resolveNotificationDomain(type: NotificationType): 'system' | 'user_management' | 'operations' | 'hr' | 'finance' | 'sales' | 'management' {
+  if (type.includes('training') || type.includes('maintenance')) return 'operations'
+  if (type.includes('approval') || type.includes('request') || type.includes('promotion') || type.includes('transfer') || type.includes('referral')) return 'hr'
+  if (type.includes('announcement') || type.includes('escalation')) return 'management'
+  return 'system'
+}
+
+function resolveTemplateKey(type: NotificationType): string {
+  const domain = resolveNotificationDomain(type)
+  if (domain === 'operations') return 'operations_incident_alert'
+  if (domain === 'hr') return 'hr_employee_update'
+  if (domain === 'management') return 'management_kpi_alert'
+  return 'system_generic_alert'
+}
+
 /**
  * Helper: Send email via Edge Function
  */
-async function sendEmailNotification(toUserId: string, subject: string, htmlBody: string) {
+async function sendEmailNotification(toUserId: string, payload: EmailNotificationPayload) {
   try {
     // 1. Get recipient email
     const { data: profile } = await supabase
@@ -108,8 +133,15 @@ async function sendEmailNotification(toUserId: string, subject: string, htmlBody
     const { error } = await supabase.functions.invoke('send-email', {
       body: {
         to: profile.email,
-        subject,
-        html: htmlBody
+        userId: toUserId,
+        subject: payload.title,
+        title: payload.title,
+        message: payload.message,
+        actionUrl: payload.link || '/notifications',
+        templateKey: resolveTemplateKey(payload.type),
+        businessDomain: resolveNotificationDomain(payload.type),
+        notificationType: payload.type,
+        variables: payload.metadata || {}
       }
     })
 
@@ -153,12 +185,13 @@ export async function createNotification(params: CreateNotificationParams): Prom
   ]
 
   if (emailTypes.includes(type)) {
-    sendEmailNotification(userId, `Prime Hotels: ${title}`, `
-      <h1>${title}</h1>
-      <p>${message}</p>
-      <br/>
-      <a href="${window.location.origin}${link || '/notifications'}">View in Dashboard</a>
-    `)
+    sendEmailNotification(userId, {
+      type,
+      title,
+      message,
+      link,
+      metadata
+    })
   }
 }
 
@@ -206,25 +239,34 @@ export async function createBulkNotifications(params: BulkNotificationParams): P
   ]
 
   if (emailTypes.includes(type)) {
-    // Fetch emails for these users
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, email')
-      .in('id', userIds)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      if (!session?.session?.access_token) return
 
-    if (profiles) {
-      profiles.forEach((profile, index) => {
-        if (profile.email) {
-          setTimeout(() => {
-            sendEmailNotification(profile.id, `Prime Hotels: ${title}`, `
-                  <h1>${title}</h1>
-                  <p>${message}</p>
-                  <br/>
-                  <a href="${window.location.origin}${link || '/notifications'}">View in Dashboard</a>
-              `)
-          }, index * 1100) // 1100ms stagger (>1 sec) to safely respect Resend rate limit (2/sec)
-        }
+      await fetch(BULK_NOTIFICATION_EDGE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`
+        },
+        body: JSON.stringify({
+          action: 'create_batch',
+          userIds,
+          notificationType: type,
+          channels: ['email'],
+          sendEmail: true,
+          businessDomain: resolveNotificationDomain(type),
+          templateKey: resolveTemplateKey(type),
+          notificationData: {
+            ...(metadata || {}),
+            title,
+            message,
+            link: link || '/notifications'
+          }
+        })
       })
+    } catch (err) {
+      console.error('Failed to queue bulk email notifications:', err)
     }
   }
 }

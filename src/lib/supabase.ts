@@ -29,7 +29,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   // Security: Add global request headers
   global: {
     headers: {
-      'X-Client-Info': 'prime-hotels-intranet/1.0.0'
+      'X-Client-Info': 'phg-connect/1.0.0'
     }
   },
   // Security: Enable real-time with proper authentication

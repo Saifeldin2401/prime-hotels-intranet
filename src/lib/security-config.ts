@@ -54,7 +54,7 @@ export const securityConfig = {
     // CORS
     cors: {
       allowedOrigins: import.meta.env.PROD
-        ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',') || ['https://yourdomain.com'])
+        ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
         : ['http://localhost:5173', 'http://localhost:3000'],
       allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'apikey'],

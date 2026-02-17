@@ -7,7 +7,7 @@ Create a `.env` file in the `prime-hotels` directory with:
 ```env
 VITE_SUPABASE_URL=https://htsvjfrofcpkfzvjpwvx.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj
-VITE_RESEND_API_KEY=
+RESEND_API_KEY=
 ```
 
 ## Step 2: Install Dependencies

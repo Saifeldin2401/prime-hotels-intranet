@@ -2,13 +2,13 @@
 -- Run this in Supabase SQL Editor after creating a user via Authentication dashboard
 
 -- Step 1: Create a user via Supabase Dashboard → Authentication → Users → Add User
--- Use email: admin@primehotels.com (or your preferred email)
+-- Use email: admin@phg-connect.com (or your preferred email)
 -- Set a password
 
 -- Step 2: Update the email below and run this script
 DO $$
 DECLARE
-  admin_email TEXT := 'admin@primehotels.com'; -- CHANGE THIS to your admin email
+  admin_email TEXT := 'admin@phg-connect.com'; -- CHANGE THIS to your admin email
   admin_user_id UUID;
   test_property_id UUID;
 BEGIN

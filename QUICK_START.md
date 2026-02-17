@@ -6,7 +6,7 @@
    ```env
    VITE_SUPABASE_URL=https://htsvjfrofcpkfzvjpwvx.supabase.co
    VITE_SUPABASE_ANON_KEY=sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj
-   VITE_RESEND_API_KEY=
+   RESEND_API_KEY=
    ```
 
 2. **Install dependencies** (if not already done):
@@ -23,7 +23,7 @@
 2. Navigate to **Authentication** → **Users**
 3. Click **"Add User"** → **"Create new user"**
 4. Enter:
-   - Email: `admin@primehotels.com` (or your email)
+   - Email: `admin@phg-connect.com` (or your email)
    - Password: Choose a strong password
    - Auto Confirm User: ✅ Checked
 5. Click **"Create User"**

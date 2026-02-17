@@ -8,7 +8,7 @@ echo [1/3] Setting environment variables...
 echo ⚠️  Please set your environment variables in a .env file or here:
 echo     VITE_SUPABASE_URL=your_supabase_project_url
 echo     VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-echo     VITE_RESEND_API_KEY=your_resend_api_key
+echo     RESEND_API_KEY=your_resend_api_key
 echo.
 if exist ".env" (
     echo ✅ Using .env file for environment variables

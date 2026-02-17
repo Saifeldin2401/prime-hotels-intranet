@@ -35,7 +35,7 @@ All 11 migrations have been successfully applied:
    ```env
    VITE_SUPABASE_URL=https://htsvjfrofcpkfzvjpwvx.supabase.co
    VITE_SUPABASE_ANON_KEY=sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj
-   VITE_RESEND_API_KEY=your_resend_api_key_here
+   RESEND_API_KEY=your_resend_api_key_here
    ```
 
 2. **Configure Resend API Key**:

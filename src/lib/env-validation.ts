@@ -9,6 +9,8 @@ interface EnvConfig {
   VITE_API_BASE_URL?: string
   VITE_MOCK_AUTH?: string
   VITE_ALLOWED_ORIGINS?: string
+  VITE_APP_URL?: string
+  VITE_CERTIFICATE_VERIFY_URL?: string
 }
 
 // Required environment variables
@@ -39,7 +41,9 @@ export function validateEnvironment(): EnvConfig {
     'VITE_DEV_MODE',
     'VITE_API_BASE_URL',
     'VITE_MOCK_AUTH',
-    'VITE_ALLOWED_ORIGINS'
+    'VITE_ALLOWED_ORIGINS',
+    'VITE_APP_URL',
+    'VITE_CERTIFICATE_VERIFY_URL'
   ]
 
   for (const varName of OPTIONAL_VARS) {
@@ -91,7 +95,7 @@ export const securityHeaders = {
 // CORS configuration
 export const corsConfig = {
   origin: import.meta.env.PROD
-    ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',') || ['https://yourdomain.com'])
+    ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
     : ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

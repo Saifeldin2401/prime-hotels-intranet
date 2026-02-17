@@ -225,6 +225,10 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
                 action: 'create_batch',
                 userIds: uniqueUserIds,
                 notificationType: 'announcement_new',
+                businessDomain: 'management',
+                templateKey: 'management_kpi_alert',
+                channels: data.send_email ? ['in_app', 'email'] : ['in_app'],
+                sendEmail: Boolean(data.send_email),
                 notificationData: {
                   title: announcementTitle,
                   message: `A new announcement has been posted: "${announcementTitle}"`,

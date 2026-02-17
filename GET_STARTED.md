@@ -16,21 +16,21 @@
 1. Go to: https://supabase.com/dashboard/project/htsvjfrofcpkfzvjpwvx/auth/users
 2. Click **"Add User"** → **"Create new user"**
 3. Enter:
-   - Email: `admin@primehotels.com` (or your email)
+   - Email: `admin@phg-connect.com` (or your email)
    - Password: `Admin123!` (or your password)
    - ✅ Check **"Auto Confirm User"**
 4. Click **"Create User"**
 
 **Option B: Via Supabase CLI** (if you have it installed)
 ```bash
-supabase auth users create admin@primehotels.com --password Admin123!
+supabase auth users create admin@phg-connect.com --password Admin123!
 ```
 
 ### Step 2: Set Up Admin Role
 
 1. Go to Supabase Dashboard → **SQL Editor**
 2. Open the file `create-admin-user.sql` from this project
-3. **Change line 5** to match your email: `admin_email TEXT := 'admin@primehotels.com';`
+3. **Change line 5** to match your email: `admin_email TEXT := 'admin@phg-connect.com';`
 4. Click **"Run"**
 
 This will:
@@ -115,7 +115,7 @@ Create `prime-hotels/.env`:
 ```env
 VITE_SUPABASE_URL=https://htsvjfrofcpkfzvjpwvx.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_UZohxDu_vLACkxWTBgv_hQ_ra-Pk_Hj
-VITE_RESEND_API_KEY=
+RESEND_API_KEY=
 ```
 
 ## 🎉 You're All Set!

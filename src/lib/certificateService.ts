@@ -63,6 +63,8 @@ const BRAND_COLORS = {
     text: '#1a202c'
 }
 
+const CERTIFICATE_VERIFY_URL = import.meta.env.VITE_CERTIFICATE_VERIFY_URL || 'verify.phg-connect.com'
+
 /**
  * Generate a professional PDF certificate
  */
@@ -240,7 +242,7 @@ export async function generateCertificatePDF(
     doc.text(`Certificate No: ${certificate.certificateNumber}`, 20, footerY + 5)
 
     // Center: Verification instructions
-    doc.text('Verify at: verify.primehotels.com', pageWidth / 2, footerY + 5, { align: 'center' })
+    doc.text(`Verify at: ${CERTIFICATE_VERIFY_URL}`, pageWidth / 2, footerY + 5, { align: 'center' })
 
     // Right: Verification code
     doc.text(`Code: ${certificate.verificationCode}`, pageWidth - 20, footerY + 5, { align: 'right' })

@@ -1,4 +1,4 @@
-# Prime Hotels Intranet System (PRIME Connect)
+# PHG Connect Intranet Platform
 
 A comprehensive multi-property hotel intranet system built with React, TypeScript, and Supabase, featuring full bilingual support (English/Arabic).
 
@@ -84,7 +84,8 @@ Create a `.env` file in the root directory:
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_RESEND_API_KEY=your_resend_api_key
+VITE_APP_URL=https://phg-connect.com
+VITE_ALLOWED_ORIGINS=https://phg-connect.com,https://www.phg-connect.com
 ```
 
 3. **Set Up Supabase Database**
@@ -111,13 +112,13 @@ Deploy Edge Functions:
 
 ```bash
 supabase functions deploy send-email
-supabase functions deploy process-notification-batch
+supabase functions deploy bulk-notification-processor
 ```
 
 Set required secrets:
 
 ```bash
-supabase secrets set RESEND_API_KEY=your_resend_api_key
+supabase secrets set RESEND_API_KEY=your_resend_api_key APP_BASE_URL=https://phg-connect.com EMAIL_FROM_ADDRESS=notifications@phg-connect.com EMAIL_FROM_NAME="PHG Connect"
 ```
 
 6. **Enable pg_cron (Optional)**
@@ -143,7 +144,7 @@ npm run build
 ## Project Structure
 
 ```
-prime-hotels/
+phg-connect/
 ├── src/
 │   ├── components/        # React components
 │   │   ├── admin/        # Admin-specific components
@@ -210,7 +211,7 @@ The application is designed for deployment on:
 
 ## License
 
-Private - Prime Hotels Internal Use Only
+Private - PHG Connect Internal Use Only
 
 ## Support
 
