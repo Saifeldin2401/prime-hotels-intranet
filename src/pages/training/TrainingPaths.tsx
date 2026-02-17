@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import { EmptyState } from '@/components/shared/EmptyState'
 import {
@@ -149,15 +150,14 @@ export default function TrainingPaths() {
     }
   })
 
-  // Fetch departments for targeting
   const { data: departments } = useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
-        .select('id, name')
+        .select('id, name, property_id')
       if (error) throw error
-      return data as { id: string; name: string }[]
+      return data as { id: string; name: string; property_id: string }[]
     }
   })
 
@@ -664,21 +664,14 @@ export default function TrainingPaths() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('targetDepartment')}</Label>
-                  <Select
+                  <GroupedDepartmentSelector
+                    departments={departments as any}
+                    properties={properties as any}
                     value={formData.target_department_id || 'none'}
                     onValueChange={(value) => setFormData({ ...formData, target_department_id: value === 'none' ? null : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('selectDepartment')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t('allDepartments')}</SelectItem>
-                      {departments?.map(dept => (
-                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder={t('selectDepartment')}
+                    generalLabel={t('allDepartments')}
+                  />
                 </div>
               </div>
 

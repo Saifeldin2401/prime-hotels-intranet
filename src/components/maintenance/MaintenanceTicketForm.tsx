@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -271,21 +272,13 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
 
                 <div className="space-y-2">
                   <Label htmlFor="department">{t('department', { defaultValue: 'Department' })}</Label>
-                  <Select
+                  <GroupedDepartmentSelector
+                    departments={departments}
+                    properties={properties}
                     value={formData.department_id}
                     onValueChange={(value) => updateFormData('department_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('select_department', { defaultValue: 'Select department' })} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments?.map((department) => (
-                        <SelectItem key={department.id} value={department.id}>
-                          {department.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder={t('select_department', { defaultValue: 'Select department' })}
+                  />
                 </div>
               </div>
             </div>

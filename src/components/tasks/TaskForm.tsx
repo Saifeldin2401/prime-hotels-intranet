@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -103,7 +104,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                 // Fetch all departments when no specific property selected
                 const { data, error } = await supabase
                     .from('departments')
-                    .select('id, name')
+                    .select('id, name, property_id')
                     .eq('is_deleted', false)
                     .order('name')
                 if (error) throw error
@@ -111,7 +112,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             }
             const { data, error } = await supabase
                 .from('departments')
-                .select('id, name')
+                .select('id, name, property_id')
                 .eq('property_id', propertyToQuery)
                 .eq('is_deleted', false)
                 .order('name')
@@ -304,22 +305,14 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                     <Building2 className="h-4 w-4" />
                     {t('department')}
                 </Label>
-                <Select
+                <GroupedDepartmentSelector
+                    departments={departments}
+                    properties={availableProperties}
                     value={selectedDepartmentId}
                     onValueChange={handleDepartmentChange}
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder={t('select_department')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="none">{t('all_departments')}</SelectItem>
-                        {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.id}>
-                                {dept.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                    placeholder={t('select_department')}
+                    generalLabel={t('all_departments')}
+                />
             </div>
 
             {/* Employee Assignment */}

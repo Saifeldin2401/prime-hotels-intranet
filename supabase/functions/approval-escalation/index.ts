@@ -18,9 +18,9 @@ serve(async (req) => {
         // ===================================
         const authHeader = req.headers.get('Authorization')
         const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
         const serviceRoleJwt = getServiceRoleToken(authHeader)
 
-        // Timing-safe comparison to prevent timing attacks
         if (!isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
                 status: 401,
@@ -29,7 +29,7 @@ serve(async (req) => {
         }
 
         const supabaseClient = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
+            supabaseUrl,
             serviceRoleJwt ?? serviceRoleKey,
             {
                 auth: {
@@ -79,6 +79,7 @@ serve(async (req) => {
         }
 
         let totalEscalated = 0
+        let emailsSent = 0
 
         const getCutoffIso = (hours: number) => {
             const cutoff = new Date(now)
@@ -126,6 +127,42 @@ serve(async (req) => {
 
             const { error } = await supabaseClient.from('notifications').insert(payload)
             if (error) throw error
+
+            // Trigger Email for these users
+            const { data: profiles } = await supabaseClient
+                .from('profiles')
+                .select('id, email, full_name')
+                .in('id', userIds)
+
+            if (profiles) {
+                for (const profile of profiles) {
+                    if (!profile.email) continue
+
+                    fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${serviceRoleKey}`
+                        },
+                        body: JSON.stringify({
+                            to: profile.email,
+                            templateKey: 'approval_escalated',
+                            title: `Escalation Required: ${title}`,
+                            variables: {
+                                recipient_name: profile.full_name || 'Executive',
+                                title: title,
+                                message: message,
+                                original_approver_name: meta.original_approver_name || 'Assigned Approver',
+                                time_overdue: meta.days_overdue ? `${meta.days_overdue} days` : 'Exceeded SLA',
+                                action_url: meta.link || '/approvals'
+                            },
+                            businessDomain: 'management',
+                            notificationType: 'escalation'
+                        })
+                    }).catch(e => console.error(`Failed to send escalation email to ${profile.email}:`, e))
+                    emailsSent++
+                }
+            }
         }
 
         // Document approvals escalation (action_type: document_approval)
@@ -161,7 +198,7 @@ serve(async (req) => {
                 await notifyUsers(
                     userIds,
                     'escalation_alert',
-                    'Approval Escalated',
+                    'Document Approval Overdue',
                     `Document "${approval.documents?.title ?? 'Document'}" is overdue for approval.`,
                     {
                         entity_type: 'document',
@@ -169,7 +206,7 @@ serve(async (req) => {
                         link: '/approvals',
                         approval_id: approval.id,
                         escalated: true,
-                        threshold_hours: docRule.threshold_hours,
+                        days_overdue: Math.floor(docRule.threshold_hours / 24),
                         next_role: docRule.next_role,
                     }
                 )
@@ -214,14 +251,14 @@ serve(async (req) => {
                 await notifyUsers(
                     userIds,
                     'escalation_alert',
-                    'Leave Request Escalated',
+                    'Leave Request Overdue',
                     `Leave request from ${request.profiles?.full_name ?? 'an employee'} is overdue for approval.`,
                     {
                         entity_type: 'leave_request',
                         entity_id: request.id,
                         link: '/approvals',
                         escalated: true,
-                        threshold_hours: leaveRule.threshold_hours,
+                        days_overdue: Math.floor(leaveRule.threshold_hours / 24),
                         next_role: leaveRule.next_role,
                     }
                 )
@@ -233,12 +270,13 @@ serve(async (req) => {
             }
         }
 
-        console.log(`Escalated ${totalEscalated} approvals`)
+        console.log(`Escalated ${totalEscalated} approvals. Emails triggered: ${emailsSent}`)
 
         return new Response(
             JSON.stringify({
                 success: true,
-                approvals_escalated: totalEscalated
+                approvals_escalated: totalEscalated,
+                emails_triggered: emailsSent
             }),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },

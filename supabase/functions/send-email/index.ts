@@ -185,6 +185,7 @@ function buildContext(body: SendEmailBody, fallbackRecipient: string, appBaseUrl
     message: asText(body.message, "You have a new update in PHG Connect."),
     action_url: actionUrl,
     app_url: appBaseUrl,
+    logo_url: `${appBaseUrl}/prime-logo-white-full.png`,
     recipient_name: fallbackRecipient,
   };
 
@@ -196,7 +197,7 @@ function buildContext(body: SendEmailBody, fallbackRecipient: string, appBaseUrl
 }
 
 function defaultHtmlTemplate(): string {
-  return "<h1>{{title}}</h1><p>{{message}}</p><p><a href=\"{{action_url}}\">Open PHG Connect</a></p><p>phg-connect.com</p>";
+  return "<h1><img src=\"{{logo_url}}\" alt=\"PRIME\" height=\"32\"></h1><p>{{message}}</p><p><a href=\"{{action_url}}\">Open PHG Connect</a></p><p>phg-connect.com</p>";
 }
 
 function defaultTextTemplate(): string {

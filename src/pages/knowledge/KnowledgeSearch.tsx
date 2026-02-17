@@ -44,9 +44,11 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { cn } from '@/lib/utils'
 import { useArticles, useCategories } from '@/hooks/useKnowledge'
 import { useDepartments } from '@/hooks/useDepartments'
+import { useProperties } from '@/hooks/useProperties'
 import type { KnowledgeContentType } from '@/types/knowledge'
 
 /* ─── Type Configuration ───────────────────────────────────── */
@@ -128,6 +130,7 @@ export default function KnowledgeSearch() {
     })
     const { data: categories } = useCategories()
     const { departments } = useDepartments()
+    const { data: properties } = useProperties()
 
     /* Filter + sort */
     const filteredArticles = useMemo(() => {
@@ -416,18 +419,16 @@ export default function KnowledgeSearch() {
                                             <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
                                                 {t('search_page.filters.department_label', 'Department')}
                                             </h3>
-                                            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                                                <SelectTrigger className="w-full h-9 text-xs bg-white border-gray-200">
-                                                    <Building2 className="w-3.5 h-3.5 me-2 text-gray-400" />
-                                                    <SelectValue placeholder={t('search_page.filters.all_departments')} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">{t('search_page.filters.all_departments', 'All Departments')}</SelectItem>
-                                                    {departments?.map(dept => (
-                                                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <GroupedDepartmentSelector
+                                                departments={departments as any}
+                                                properties={properties as any}
+                                                value={selectedDepartment}
+                                                onValueChange={setSelectedDepartment}
+                                                placeholder={t('search_page.filters.all_departments')}
+                                                generalLabel={t('search_page.filters.all_departments', 'All Departments')}
+                                                generalValue="all"
+                                                className="w-full h-9 text-xs bg-white border-gray-200"
+                                            />
                                         </div>
                                         <div>
                                             <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">

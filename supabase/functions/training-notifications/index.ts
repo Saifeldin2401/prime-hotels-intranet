@@ -6,6 +6,9 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
 Deno.serve(async (req) => {
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
@@ -16,7 +19,6 @@ Deno.serve(async (req) => {
         // SECURITY CHECK - Internal Crons Only
         // ===================================
         const authHeader = req.headers.get('Authorization')
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         const serviceRoleJwt = getServiceRoleToken(authHeader)
 
         if (!isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)) {
@@ -27,7 +29,7 @@ Deno.serve(async (req) => {
         }
 
         const supabase = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
+            supabaseUrl,
             serviceRoleJwt ?? serviceRoleKey
         );
 
@@ -57,6 +59,7 @@ Deno.serve(async (req) => {
         // 2. Process upcoming deadlines
         const notifications = [];
         const reminderRows = [];
+        const emailPromises = [];
         const todayIso = now.toISOString().split('T')[0];
 
         const moduleIds = Array.from(new Set((upcomingAssignments || []).map((a) => a.content_id).filter(Boolean)));
@@ -79,21 +82,21 @@ Deno.serve(async (req) => {
         for (const assignment of upcomingAssignments || []) {
             if (assignment.status === 'completed') continue;
 
-            const recipients = await resolveAssignmentTargets(
-              supabase,
-              assignment.target_type,
-              assignment.target_id
+            const targets = await resolveAssignmentTargets(
+                supabase,
+                assignment.target_type,
+                assignment.target_id
             );
 
             const moduleTitle = moduleTitleById.get(assignment.content_id) || 'Training Module';
 
-            for (const userId of recipients) {
+            for (const target of targets) {
                 const { data: existingReminder } = await supabase
                     .from('scheduled_reminders')
                     .select('id')
                     .eq('entity_type', 'training_assignment')
                     .eq('entity_id', assignment.id)
-                    .eq('user_id', userId)
+                    .eq('user_id', target.id)
                     .eq('reminder_type', 'due_24h')
                     .gte('sent_at', `${todayIso}T00:00:00Z`)
                     .maybeSingle();
@@ -101,8 +104,8 @@ Deno.serve(async (req) => {
                 if (existingReminder) continue;
 
                 notifications.push({
-                    user_id: userId,
-                    type: 'training_deadline', // Ensure this matches enum
+                    user_id: target.id,
+                    type: 'training_deadline',
                     title: 'Training Due Soon',
                     message: `Your training "${moduleTitle}" is due on ${new Date(assignment.due_date).toLocaleDateString()}.`,
                     link: `/learning/my-learning`
@@ -111,16 +114,37 @@ Deno.serve(async (req) => {
                 reminderRows.push({
                     entity_type: 'training_assignment',
                     entity_id: assignment.id,
-                    user_id: userId,
+                    user_id: target.id,
                     reminder_type: 'due_24h',
                     scheduled_for: now.toISOString(),
                     sent_at: now.toISOString(),
                     status: 'sent'
                 });
+
+                // Send Email Notification
+                emailPromises.push(
+                    fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${serviceRoleKey}`
+                        },
+                        body: JSON.stringify({
+                            to: target.email,
+                            templateKey: 'learning_deadline_reminder',
+                            title: 'Training Deadline Tomorrow',
+                            variables: {
+                                recipient_name: target.full_name || 'Team Member',
+                                module_title: moduleTitle
+                            },
+                            actionUrl: '/learning/my-learning',
+                            businessDomain: 'hr',
+                            notificationType: 'system'
+                        })
+                    }).catch(err => console.error(`Email failed for ${target.email}:`, err))
+                );
             }
         }
-
-
 
         // 3. Process Certificate Expiry (30 days and 7 days)
         const { data: expiringCertificates, error: expiryError } = await supabase
@@ -131,9 +155,10 @@ Deno.serve(async (req) => {
                 training_progress!inner(
                     user_id,
                     training_modules!inner(title)
-                )
+                ),
+                profiles!inner(email, full_name)
             `)
-            .gt('expires_at', now.toISOString()) // Not already expired
+            .gt('expires_at', now.toISOString())
             .not('expires_at', 'is', null);
 
         if (expiryError) throw expiryError;
@@ -144,11 +169,10 @@ Deno.serve(async (req) => {
             const expiresAt = new Date(cert.expires_at);
             const daysUntilExpiry = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-            // Check for 30 days or 7 days (approximate)
             if (daysUntilExpiry === 30 || daysUntilExpiry === 7) {
                 notifications.push({
                     user_id: cert.training_progress.user_id,
-                    type: 'system', // or specific 'certificate_expiry' type if added
+                    type: 'system',
                     title: 'Certificate Expiring',
                     message: `Your certificate for "${cert.training_progress.training_modules.title}" expires in ${daysUntilExpiry} days. Please retake the training.`,
                     link: `/training/certificates`
@@ -156,13 +180,13 @@ Deno.serve(async (req) => {
             }
         }
 
-        // 2. Fetch overdue assignments (deadline passed, not completed)
-        // Complex query: fetch assignments where deadline < now AND NOT EXISTS (progress where completed_at IS NOT NULL)
-        // For simplicity efficiently, we fetch overdue assignments and check progress in code or second query.
-        // Let's rely on standard notifications for now. If deadline passed, we might have already sent reminder.
-        // Maybe we send "Overdue" notification if not done.
+        // 4. Wait for all email triggers (fire & forget style but awaited for summary)
+        if (emailPromises.length > 0) {
+            console.log(`Triggering ${emailPromises.length} learning emails...`);
+            await Promise.all(emailPromises);
+        }
 
-        // 3. Insert notifications
+        // 5. Insert notifications & Tracking
         if (notifications.length > 0) {
             const { error: notifError } = await supabase
                 .from('notifications')
@@ -182,6 +206,7 @@ Deno.serve(async (req) => {
         return new Response(
             JSON.stringify({
                 processed: notifications.length,
+                emails_triggered: emailPromises.length,
                 message: 'Training notifications processed'
             }),
             {
@@ -192,39 +217,45 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error("Critical error in training-notifications:", error);
-        return new Response(
-            JSON.stringify({ error: error.message }),
-            {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-                status: 500,
-            }
-        );
+        return new Response(JSON.stringify({ error: error.message }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500
+        });
     }
 });
 
-async function resolveAssignmentTargets(supabase: ReturnType<typeof createClient>, targetType: string, targetId: string | null): Promise<string[]> {
+interface TargetUser {
+    id: string;
+    email: string;
+    full_name: string | null;
+}
+
+async function resolveAssignmentTargets(supabase: ReturnType<typeof createClient>, targetType: string, targetId: string | null): Promise<TargetUser[]> {
     switch (targetType) {
         case 'everyone': {
-            const { data } = await supabase.from('profiles').select('id').eq('is_active', true);
-            return (data || []).map((u) => u.id);
+            const { data } = await supabase.from('profiles').select('id, email, full_name').eq('is_active', true);
+            return (data || []) as TargetUser[];
         }
-        case 'user':
-            return targetId ? [targetId] : [];
+        case 'user': {
+            if (!targetId) return [];
+            const { data } = await supabase.from('profiles').select('id, email, full_name').eq('id', targetId).maybeSingle();
+            return data ? [data as TargetUser] : [];
+        }
         case 'department': {
             if (!targetId) return [];
             const { data } = await supabase
                 .from('user_departments')
-                .select('user_id')
+                .select('profiles(id, email, full_name)')
                 .eq('department_id', targetId);
-            return (data || []).map((u) => u.user_id);
+            return (data || []).map((u: any) => u.profiles) as TargetUser[];
         }
         case 'property': {
             if (!targetId) return [];
             const { data } = await supabase
                 .from('user_properties')
-                .select('user_id')
+                .select('profiles(id, email, full_name)')
                 .eq('property_id', targetId);
-            return (data || []).map((u) => u.user_id);
+            return (data || []).map((u: any) => u.profiles) as TargetUser[];
         }
         default:
             return [];

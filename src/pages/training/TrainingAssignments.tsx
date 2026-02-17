@@ -1,6 +1,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -215,7 +216,7 @@ export function TrainingAssignmentsPanel({
   const { data: departments } = useQuery({
     queryKey: ['departments-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('departments').select('id, name, property:properties(name)').order('name')
+      const { data, error } = await supabase.from('departments').select('id, name, property_id, property:properties(name)').order('name')
       if (error) throw error
       // Format with property name for disambiguation
       return (data || []).map((d: any) => ({
@@ -252,21 +253,21 @@ export function TrainingAssignmentsPanel({
       }
 
       if (formTargetType === 'all') {
-          assignments.push({
-            target_type: 'everyone',
-            target_id: null,
-            content_type: 'module',
-            content_id: formModuleId,
-            assigned_by: profile?.id,
-            due_date: formDeadline || null,
-            valid_from: formValidFrom ? new Date(formValidFrom).toISOString() : new Date().toISOString(),
-            expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
-            priority: formPriority,
-            instructions: formInstructions || null,
-            requires_acknowledgement: requiresAcknowledgement,
-            notify_on_due: notifyOnDue,
-            reminder_days_before: reminderDaysBefore
-          })
+        assignments.push({
+          target_type: 'everyone',
+          target_id: null,
+          content_type: 'module',
+          content_id: formModuleId,
+          assigned_by: profile?.id,
+          due_date: formDeadline || null,
+          valid_from: formValidFrom ? new Date(formValidFrom).toISOString() : new Date().toISOString(),
+          expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
+          priority: formPriority,
+          instructions: formInstructions || null,
+          requires_acknowledgement: requiresAcknowledgement,
+          notify_on_due: notifyOnDue,
+          reminder_days_before: reminderDaysBefore
+        })
       } else {
         formTargetIds.forEach(id => {
           assignments.push({
@@ -694,27 +695,16 @@ export function TrainingAssignmentsPanel({
                   className={cn(isRTL ? "pr-9" : "pl-9", "bg-white")}
                 />
               </div>
-              <Select value={overviewFilterDept} onValueChange={setOverviewFilterDept}>
-                <SelectTrigger className="w-[180px] bg-white">
-                  <SelectValue placeholder={t('filterByDept')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('allDepartments')}</SelectItem>
-                  {Object.entries(groupedDepartments).map(([propertyName, depts], index, array) => (
-                    <SelectGroup key={propertyName}>
-                      <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-slate-50">
-                        {propertyName}
-                      </SelectLabel>
-                      {depts.map(d => (
-                        <SelectItem key={d.id} value={d.id} className="pl-4">
-                          {d.rawName || d.name.replace(/\s*\(.+\)$/, '')}
-                        </SelectItem>
-                      ))}
-                      {index < array.length - 1 && <SelectSeparator />}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
+              <GroupedDepartmentSelector
+                departments={departments}
+                properties={properties}
+                value={overviewFilterDept}
+                onValueChange={setOverviewFilterDept}
+                placeholder={t('filterByDept')}
+                generalLabel={t('allDepartments')}
+                generalValue="all"
+                className="w-[180px] bg-white"
+              />
               <Select value={overviewFilterProp} onValueChange={setOverviewFilterProp}>
                 <SelectTrigger className="w-[180px] bg-white">
                   <SelectValue placeholder={t('filterByProp')} />

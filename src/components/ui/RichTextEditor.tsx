@@ -303,6 +303,7 @@ export function RichTextEditor({
                 disabled={disabled}
                 onReady={setupSmartFormatting}
                 config={{
+                    licenseKey: 'GPL',
                     placeholder,
                     language: direction === 'rtl' ? 'ar' : 'en',
                     extraPlugins: [Base64UploadAdapterPlugin],

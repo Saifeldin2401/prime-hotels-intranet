@@ -228,7 +228,9 @@ Deno.serve(async (req: Request) => {
         // 6. Send Welcome Email
         try {
             console.log(`Sending welcome email to ${email}...`);
-            const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+            const welcomeMsg = "Welcome to PHG Connect. Your account has been created with the following temporary credentials:\n\nEmail: " + email + "\nPassword: TempPassword123!\n\nYou will be required to change your password upon your first login.";
+
+            const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -240,7 +242,7 @@ Deno.serve(async (req: Request) => {
                     title: "Portal Access Credentials",
                     variables: {
                         recipient_name: fullName,
-                        message: `Welcome to PHG Connect. Your account has been created with the following temporary credentials:\n\nEmail: ${email}\nPassword: TempPassword123!\n\nYou will be required to change your password upon your first login.`
+                        message: welcomeMsg
                     },
                     actionUrl: "/",
                     businessDomain: "user_management",
@@ -252,7 +254,7 @@ Deno.serve(async (req: Request) => {
                 const errorData = await emailResponse.json().catch(() => ({}));
                 console.error("Failed to send welcome email:", errorData);
             } else {
-                console.log(`Welcome email successfully sent to ${email}`);
+                console.log("Welcome email successfully sent to " + email);
             }
         } catch (emailErr) {
             console.error("Error calling send-email function:", emailErr);

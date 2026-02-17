@@ -43,6 +43,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { supabase } from '@/lib/supabase'
 import { triggerService } from '@/services/triggerService'
 import { createBulkNotifications } from '@/lib/notificationService'
@@ -840,19 +841,19 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         <CardContent className="space-y-4">
                             <div>
                                 <Label>{t('editor.department_label')}</Label>
-                                <Select value={formData.department_id || 'none'} onValueChange={v => {
-                                    updateField('department_id', v === 'none' ? null : v)
-                                    // Reset category when department changes
-                                    updateField('category_id', null)
-                                }}>
-                                    <SelectTrigger className="mt-1"><SelectValue placeholder={t('editor.department_label')} /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">{t('editor.general_department')}</SelectItem>
-                                        {departments?.map(dept => (
-                                            <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <GroupedDepartmentSelector
+                                    departments={departments}
+                                    properties={properties}
+                                    value={formData.department_id || 'none'}
+                                    onValueChange={v => {
+                                        updateField('department_id', v === 'none' ? null : v)
+                                        // Reset category when department changes
+                                        updateField('category_id', null)
+                                    }}
+                                    placeholder={t('editor.department_label')}
+                                    generalLabel={t('editor.general_department')}
+                                    className="mt-1"
+                                />
                                 <p className="text-xs text-gray-500 mt-1">
                                     {t('editor.department_hint')}
                                 </p>

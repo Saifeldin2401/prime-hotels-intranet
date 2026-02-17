@@ -77,6 +77,7 @@ export async function notifyApprovalRequired({
             type: `approval_required_${type}`,
             title: `${priorityEmoji[priority]} ${typeLabels[type]} Pending Approval`,
             message: `${requesterName} has submitted a ${typeLabels[type].toLowerCase()}: "${title}"${description ? ` - ${description}` : ''}`,
+            link,
             metadata: {
                 link,
                 approval_type: type,
@@ -125,6 +126,7 @@ export async function notifyApprovalOutcome({
             message: reason
                 ? `${approverName} has ${status} your ${typeLabels[type]}. Reason: "${reason}"`
                 : `${approverName} has ${status} your ${typeLabels[type]}.`,
+            link,
             metadata: {
                 link,
                 approval_type: type,
@@ -132,7 +134,9 @@ export async function notifyApprovalOutcome({
                 approver_id: approverId,
                 approver_name: approverName,
                 approved,
-                reason
+                reason,
+                header_color: approved ? '#16a34a' : '#dc2626', // Green for approved, Red for rejected
+                reason_html: reason ? `<div style="margin:16px 0;padding:12px;background:#f8fafc;border-left:4px solid ${approved ? '#16a34a' : '#dc2626'};font-style:italic;">"${reason}"</div>` : ''
             }
         })
     } catch (error) {

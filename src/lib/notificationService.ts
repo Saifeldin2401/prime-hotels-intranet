@@ -105,6 +105,13 @@ function resolveNotificationDomain(type: NotificationType): 'system' | 'user_man
 }
 
 function resolveTemplateKey(type: NotificationType): string {
+  // Map specific types to specialized templates
+  if (type.includes('approval_required')) return 'approval_request_new'
+  if (type.includes('approval_approved') || type.includes('approval_rejected') || type.includes('approval_outcome')) return 'approval_outcome'
+  if (type.includes('escalation')) return 'approval_escalated'
+  if (type.includes('training_assigned')) return 'learning_assignment_new'
+  if (type.includes('training_deadline')) return 'learning_deadline_reminder'
+
   const domain = resolveNotificationDomain(type)
   if (domain === 'operations') return 'operations_incident_alert'
   if (domain === 'hr') return 'hr_employee_update'
@@ -180,7 +187,11 @@ export async function createNotification(params: CreateNotificationParams): Prom
     'task_assigned',
     'escalation_alert',
     'approval_required',
+    'approval_approved',
+    'approval_rejected',
+    'approval_outcome',
     'training_overdue',
+    'training_assigned',
     'announcement_new'
   ]
 
