@@ -1,4 +1,3 @@
-
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -17,6 +16,10 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+function isISODate(value: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
 
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight
@@ -38,8 +41,15 @@ Deno.serve(async (req: Request) => {
             dateOfBirth
         } = body;
 
-        if (!email || !fullName) {
-            return new Response(JSON.stringify({ error: "Missing email or fullName" }), {
+        if (!email || !fullName || !dateOfBirth) {
+            return new Response(JSON.stringify({ error: "Missing email, fullName, or dateOfBirth" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        if (!isISODate(dateOfBirth)) {
+            return new Response(JSON.stringify({ error: "Invalid dateOfBirth format. Expected YYYY-MM-DD" }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -90,6 +100,37 @@ Deno.serve(async (req: Request) => {
 
         console.log(`Creating user: ${email}, jobTitle: ${jobTitle}, role: ${role}, reportingTo: ${reportingTo}, by: ${user.email}`);
 
+        // Validate job title against FK target to avoid opaque profile FK errors.
+        let normalizedJobTitle: string | null = null;
+        if (typeof jobTitle === "string" && jobTitle.trim().length > 0) {
+            const trimmedJobTitle = jobTitle.trim();
+            const { data: titleRow, error: titleLookupError } = await adminClient
+                .from("job_titles")
+                .select("title")
+                .ilike("title", trimmedJobTitle)
+                .limit(1)
+                .maybeSingle();
+
+            if (titleLookupError) {
+                console.error("Job title lookup failed:", titleLookupError);
+                return new Response(JSON.stringify({ error: "Failed to validate job title" }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            if (!titleRow?.title) {
+                return new Response(JSON.stringify({
+                    error: `Invalid jobTitle: "${trimmedJobTitle}". Please choose a title from Job Titles.`
+                }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            normalizedJobTitle = titleRow.title;
+        }
+
         // 1. Create Auth User
         let authData, authError;
         try {
@@ -97,7 +138,10 @@ Deno.serve(async (req: Request) => {
                 email,
                 password: "TempPassword123!",
                 email_confirm: true,
-                user_metadata: { full_name: fullName },
+                user_metadata: {
+                    full_name: fullName,
+                    date_of_birth: dateOfBirth,
+                },
             });
             authData = result.data;
             authError = result.error;
@@ -108,7 +152,10 @@ Deno.serve(async (req: Request) => {
 
         if (authError) {
             console.error("Auth creation failed:", authError);
-            return new Response(JSON.stringify({ error: authError.message, details: authError }), {
+            const message = authError.message?.includes("date_of_birth")
+                ? "Failed to create user: date of birth is required by profile constraints."
+                : authError.message;
+            return new Response(JSON.stringify({ error: message, details: authError }), {
                 status: 400, // Return 400 for validation/duplicate/auth errors
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -124,18 +171,17 @@ Deno.serve(async (req: Request) => {
             .update({
                 full_name: fullName,
                 phone: phone || null,
-                job_title: jobTitle || null,
+                job_title: normalizedJobTitle,
                 is_active: true,
                 is_temp_password: true, // FORCE PASSWORD CHANGE ON FIRST LOGIN
                 reporting_to: reportingTo || null,
-                date_of_birth: dateOfBirth || null
+                date_of_birth: dateOfBirth
             })
             .eq('id', userId);
 
         if (profileError) {
             console.error("Profile update failed:", profileError);
-            // Clean up auth user if profile fails? 
-            // await adminClient.auth.admin.deleteUser(userId);
+            await adminClient.auth.admin.deleteUser(userId);
             return new Response(JSON.stringify({ error: "Failed to update profile: " + profileError.message }), {
                 status: 500,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -177,6 +223,39 @@ Deno.serve(async (req: Request) => {
             if (deptError) {
                 console.error("Department assignment failed:", deptError);
             }
+        }
+
+        // 6. Send Welcome Email
+        try {
+            console.log(`Sending welcome email to ${email}...`);
+            const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": authHeader!,
+                },
+                body: JSON.stringify({
+                    to: email,
+                    templateKey: "user_management_welcome",
+                    title: "Portal Access Credentials",
+                    variables: {
+                        recipient_name: fullName,
+                        message: `Welcome to PHG Connect. Your account has been created with the following temporary credentials:\n\nEmail: ${email}\nPassword: TempPassword123!\n\nYou will be required to change your password upon your first login.`
+                    },
+                    actionUrl: "/",
+                    businessDomain: "user_management",
+                    notificationType: "system"
+                }),
+            });
+
+            if (!emailResponse.ok) {
+                const errorData = await emailResponse.json().catch(() => ({}));
+                console.error("Failed to send welcome email:", errorData);
+            } else {
+                console.log(`Welcome email successfully sent to ${email}`);
+            }
+        } catch (emailErr) {
+            console.error("Error calling send-email function:", emailErr);
         }
 
         return new Response(
