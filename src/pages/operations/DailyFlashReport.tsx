@@ -234,7 +234,7 @@ export default function DailyFlashReport() {
     const { t } = useTranslation(['operations', 'common'])
     const { currentProperty, availableProperties } = useProperty()
     const { user, profile } = useAuth()
-    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+    const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
     const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all')
 
     // Fetch data

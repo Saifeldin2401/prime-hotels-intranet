@@ -124,11 +124,26 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                             <div
                                 className="aspect-video rounded-lg overflow-hidden bg-black relative cursor-pointer group"
                                 onClick={() => window.open(value, '_blank')}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        window.open(value, '_blank')
+                                    }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label="Open YouTube video in a new tab"
                             >
                                 <img
                                     src={thumbnailUrl!}
                                     alt="Video thumbnail"
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        // Fallback to a generic background if thumbnail fails
+                                        const target = e.target as HTMLImageElement
+                                        target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60'
+                                        target.style.opacity = '0.5'
+                                    }}
                                 />
                                 {/* Play button overlay */}
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
@@ -147,6 +162,15 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                             <div
                                 className="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-[#1ab7ea] to-[#0d92c8] relative cursor-pointer group"
                                 onClick={() => window.open(value, '_blank')}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        window.open(value, '_blank')
+                                    }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label="Open Vimeo video in a new tab"
                             >
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
                                     <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
@@ -558,12 +582,21 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
                         isUploading ? "border-purple-400 bg-purple-50" : "border-gray-300 hover:border-purple-400 hover:bg-purple-50/50"
                     )}
                     onClick={() => document.getElementById('visual-upload')?.click()}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            document.getElementById('visual-upload')?.click()
+                        }
+                    }}
                     onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
                     onDrop={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                         handleFileUpload(e.dataTransfer.files)
                     }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Upload visual content images"
                 >
                     <input
                         type="file"

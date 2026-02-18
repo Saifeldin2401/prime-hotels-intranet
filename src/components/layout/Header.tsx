@@ -102,7 +102,7 @@ export function Header({
             {/* Property Switcher for Multi-Property Users */}
             {isMultiPropertyUser && (
               <div className="hidden md:flex flex-col items-start me-4">
-                <Select value={currentProperty?.id} onValueChange={switchProperty}>
+                <Select value={currentProperty?.id ?? ''} onValueChange={switchProperty}>
                   <SelectTrigger className={cn(
                     "w-[300px] h-11 bg-hotel-navy-dark/80 border-hotel-gold/30 text-white hover:bg-hotel-navy-light/50 focus:ring-hotel-gold focus:ring-2 transition-all duration-200 rounded-lg shadow-lg",
                     currentProperty?.id === 'all' && "border-hotel-gold bg-hotel-navy-light/30"

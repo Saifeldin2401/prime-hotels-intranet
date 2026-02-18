@@ -263,9 +263,10 @@ export function KnowledgeBaseSidebar({
                             </div>
                         ) : (
                             quizzes?.map((quiz) => (
-                                <div
+                                <button
                                     key={quiz.id}
-                                    className="p-3 rounded-lg border border-gray-100 hover:border-hotel-gold/50 hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                                    type="button"
+                                    className="w-full p-3 rounded-lg border border-gray-100 hover:border-hotel-gold/50 hover:bg-gray-50/50 transition-colors cursor-pointer group text-left"
                                     onClick={() => onLinkQuiz?.(quiz.id)}
                                 >
                                     <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse text-right' : 'flex-row text-left'}`}>
@@ -277,7 +278,7 @@ export function KnowledgeBaseSidebar({
                                         </div>
                                         <ChevronRight className={cn("h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity", isRTL ? "rotate-180" : "")} />
                                     </div>
-                                </div>
+                                </button>
                             ))
                         )}
                     </TabsContent>
@@ -294,9 +295,10 @@ export function KnowledgeBaseSidebar({
                             </div>
                         ) : (
                             questions?.map((q) => (
-                                <div
+                                <button
                                     key={q.id}
-                                    className="p-3 rounded-lg border border-gray-100 hover:border-hotel-gold/50 hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                                    type="button"
+                                    className="w-full p-3 rounded-lg border border-gray-100 hover:border-hotel-gold/50 hover:bg-gray-50/50 transition-colors cursor-pointer group text-left"
                                     onClick={() => onAddQuestions?.([q.id])}
                                 >
                                     <p className="text-sm line-clamp-2">{q.question_text}</p>
@@ -308,7 +310,7 @@ export function KnowledgeBaseSidebar({
                                             {q.difficulty_level}
                                         </Badge>
                                     </div>
-                                </div>
+                                </button>
                             ))
                         )}
 

@@ -12,6 +12,8 @@ const securityHeaders = {
     "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:;",
     `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co'} wss://${(process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co').replace('https://', '')} https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://o4508792767840256.ingest.de.sentry.io https://*.sentry.io`,
+    // Allow YouTube and Vimeo video embeds in knowledge base articles
+    "frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com",
     "frame-ancestors 'none'"
   ].join('; '),
   'X-Content-Type-Options': 'nosniff',
@@ -67,40 +69,40 @@ export default defineConfig({
     },
   },
   server: {
-  host: '127.0.0.1',
-  port: 5173,
-  strictPort: true,
-  // Security: CORS configuration
-  cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? (process.env.VITE_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
-      : ['http://localhost:5173', 'http://localhost:3000'],
-    credentials: true
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: true,
+    // Security: CORS configuration
+    cors: {
+      origin: process.env.NODE_ENV === 'production'
+        ? (process.env.VITE_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
+        : ['http://localhost:5173', 'http://localhost:3000'],
+      credentials: true
+    },
+    // Security: Rate limiting middleware
+    middlewareMode: false,
   },
-  // Security: Rate limiting middleware
-  middlewareMode: false,
-},
   build: {
-  // Security: Build optimizations
-  minify: 'terser',
-  sourcemap: enableSentryUpload || process.env.NODE_ENV !== 'production',
-  rollupOptions: {
-    output: {
-      manualChunks: {
-        vendor: ['react', 'react-dom'],
-        supabase: ['@supabase/supabase-js'],
-        ui: ['@radix-ui/react-dialog', '@radix-ui/react-tabs']
+    // Security: Build optimizations
+    minify: 'terser',
+    sourcemap: enableSentryUpload || process.env.NODE_ENV !== 'production',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-tabs']
+        }
       }
     }
-  }
-},
+  },
   define: {
-  'process.env': {},
-  'process.browser': true,
-  global: 'globalThis',
-  'import.meta.env.VITE_RELEASE': JSON.stringify(sentryRelease || ''),
-  'import.meta.env.VITE_SENTRY_ENV': JSON.stringify(sentryEnv || ''),
-},
+    'process.env': {},
+    'process.browser': true,
+    global: 'globalThis',
+    'import.meta.env.VITE_RELEASE': JSON.stringify(sentryRelease || ''),
+    'import.meta.env.VITE_SENTRY_ENV': JSON.stringify(sentryEnv || ''),
+  },
   // Security: Environment variable validation
   envPrefix: 'VITE_',
 })

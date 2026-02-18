@@ -13,6 +13,7 @@ import type { Property } from '@/lib/types'
 import { useTranslation, Trans } from 'react-i18next'
 import { useToast } from '@/components/ui/use-toast'
 import { useDepartments } from '@/hooks/useDepartments'
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog'
 
 import {
     Dialog,
@@ -54,6 +55,8 @@ const STANDARD_DEPARTMENTS = [
 function DepartmentManager({ property }: { property: Property }) {
     const { departments, createDepartment, updateDepartment, deleteDepartment, isLoading } = useDepartments(property.id)
     const [selectedDept, setSelectedDept] = useState<string>('')
+    const [editingDeptId, setEditingDeptId] = useState<string | null>(null)
+    const [editingDeptName, setEditingDeptName] = useState<string>('')
     const { toast } = useToast()
     const { t } = useTranslation('admin')
 
@@ -86,6 +89,34 @@ function DepartmentManager({ property }: { property: Property }) {
         })
     }
 
+    const startEdit = (dept: { id: string; name: string }) => {
+        setEditingDeptId(dept.id)
+        setEditingDeptName(dept.name)
+    }
+
+    const cancelEdit = () => {
+        setEditingDeptId(null)
+        setEditingDeptName('')
+    }
+
+    const handleSaveEdit = (deptId: string) => {
+        const trimmed = editingDeptName.trim()
+        if (!trimmed) return
+
+        if (departments.some(d => d.name === trimmed && d.id !== deptId)) {
+            toast({ title: t('common.error'), description: t('properties.errors.exists'), variant: 'destructive' })
+            return
+        }
+
+        updateDepartment.mutate({ id: deptId, name: trimmed }, {
+            onSuccess: () => {
+                toast({ title: t('properties.success.dept_updated', { defaultValue: 'Department updated' }) })
+                cancelEdit()
+            },
+            onError: (err) => toast({ title: t('common.error'), description: err.message, variant: 'destructive' })
+        })
+    }
+
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -111,10 +142,44 @@ function DepartmentManager({ property }: { property: Property }) {
                     departments.length === 0 ? <p className="text-sm text-gray-400 italic">{t('properties.no_depts')}</p> :
                         departments.map(dept => (
                             <div key={dept.id} className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 bg-white shadow-sm">
-                                <span className="font-medium text-sm text-gray-800">{dept.name}</span>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => handleDelete(dept.id)}>
-                                    <Trash2 className="w-3 h-3" />
-                                </Button>
+                                {editingDeptId === dept.id ? (
+                                    <div className="flex-1 flex items-center gap-2">
+                                        <Input
+                                            value={editingDeptName}
+                                            onChange={(e) => setEditingDeptName(e.target.value)}
+                                            className="h-8"
+                                            autoFocus
+                                        />
+                                        <Button
+                                            size="sm"
+                                            className="h-8 bg-hotel-gold text-white hover:bg-hotel-gold-dark"
+                                            onClick={() => handleSaveEdit(dept.id)}
+                                            disabled={updateDepartment.isPending || !editingDeptName.trim()}
+                                        >
+                                            {t('common.save', { defaultValue: 'Save' })}
+                                        </Button>
+                                        <Button size="sm" variant="outline" className="h-8" onClick={cancelEdit}>
+                                            {t('common.cancel', { defaultValue: 'Cancel' })}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span className="font-medium text-sm text-gray-800">{dept.name}</span>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                                                onClick={() => startEdit(dept)}
+                                            >
+                                                <Pencil className="w-3 h-3" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => handleDelete(dept.id)}>
+                                                <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ))}
             </div>
@@ -130,6 +195,9 @@ export default function PropertyManagement() {
     const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false)
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
     const [managingProperty, setManagingProperty] = useState<Property | null>(null)
+
+    const [deleteProperty, setDeleteProperty] = useState<Property | null>(null)
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
     // Form State
     const [formData, setFormData] = useState({
@@ -150,6 +218,33 @@ export default function PropertyManagement() {
 
             if (error) throw error
             return data as Property[]
+        }
+    })
+
+    const deleteMutation = useMutation({
+        mutationFn: async (propertyId: string) => {
+            const { error } = await supabase
+                .from('properties')
+                .delete()
+                .eq('id', propertyId)
+
+            if (error) throw error
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['properties'] })
+            setIsDeleteOpen(false)
+            setDeleteProperty(null)
+            toast({
+                title: t('common:common.success', { defaultValue: 'Success' }),
+                description: t('admin:properties.success.deleted', { defaultValue: 'Property deleted successfully.' })
+            })
+        },
+        onError: (error: any) => {
+            toast({
+                title: t('common:common.error', { defaultValue: 'Error' }),
+                description: error.message,
+                variant: 'destructive'
+            })
         }
     })
 
@@ -215,6 +310,16 @@ export default function PropertyManagement() {
         setIsDeptDialogOpen(true)
     }
 
+    const handleOpenDelete = (property: Property) => {
+        setDeleteProperty(property)
+        setIsDeleteOpen(true)
+    }
+
+    const handleConfirmDelete = async () => {
+        if (!deleteProperty) return
+        await deleteMutation.mutateAsync(deleteProperty.id)
+    }
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         mutation.mutate(formData)
@@ -269,6 +374,14 @@ export default function PropertyManagement() {
                                         </Badge>
                                         <Button variant="ghost" size="icon" onClick={() => handleEdit(property)}>
                                             <Pencil className="w-4 h-4 text-gray-500" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleOpenDelete(property)}
+                                            title={t('common:action.delete', { defaultValue: 'Delete' })}
+                                        >
+                                            <Trash2 className="w-4 h-4 text-red-600" />
                                         </Button>
                                     </div>
                                 </div>
@@ -364,6 +477,26 @@ export default function PropertyManagement() {
                     {managingProperty && <DepartmentManager property={managingProperty} />}
                 </DialogContent>
             </Dialog>
+
+            <ConfirmationDialog
+                open={isDeleteOpen}
+                onOpenChange={(open) => {
+                    setIsDeleteOpen(open)
+                    if (!open) setDeleteProperty(null)
+                }}
+                title={t('admin:properties.confirm_delete_title', {
+                    defaultValue: 'Delete {{name}}?',
+                    name: deleteProperty?.name || t('admin:properties.property', { defaultValue: 'property' })
+                })}
+                description={t('admin:properties.confirm_delete_desc', {
+                    defaultValue: 'This will permanently delete the property. Any related departments may also be removed depending on system rules. This action cannot be undone.'
+                })}
+                confirmLabel={t('common:action.delete', { defaultValue: 'Delete' })}
+                cancelLabel={t('common:action.cancel', { defaultValue: 'Cancel' })}
+                variant="danger"
+                onConfirm={handleConfirmDelete}
+                isLoading={deleteMutation.isPending}
+            />
         </div>
     )
 }

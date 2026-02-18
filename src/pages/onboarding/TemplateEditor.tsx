@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useId } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCreateOnboardingTemplate, useOnboardingTemplate, useUpdateOnboardingTemplate } from '@/hooks/useOnboarding'
 import { useQuery } from '@tanstack/react-query'
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
+
 import { useToast } from '@/components/ui/use-toast'
 import { Loader2, Plus, Trash2, ArrowLeft, Link as LinkIcon, Check, ChevronsUpDown } from 'lucide-react'
 import { type AppRole, ROLES } from '@/lib/constants'
@@ -44,6 +44,9 @@ export default function TemplateEditor() {
     const [jobTitle, setJobTitle] = useState('')
     const [openJobTitle, setOpenJobTitle] = useState(false)
     const [requiredTrainingIds, setRequiredTrainingIds] = useState<string[]>([])
+
+    // IDs for accessibility
+    const jobTitleListId = useId()
 
     // Fetch Job Titles
     const { data: jobTitlesList } = useQuery({
@@ -233,6 +236,7 @@ export default function TemplateEditor() {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={openJobTitle}
+                                            aria-controls={jobTitleListId}
                                             className={cn(
                                                 "w-full justify-between",
                                                 !jobTitle && "text-muted-foreground"
@@ -247,7 +251,7 @@ export default function TemplateEditor() {
                                     <PopoverContent className="w-[400px] p-0" align="start">
                                         <Command>
                                             <CommandInput placeholder={t('editor.select_job') + "..."} />
-                                            <CommandList>
+                                            <CommandList id={jobTitleListId}>
                                                 <CommandEmpty>No job title found.</CommandEmpty>
                                                 <CommandGroup>
                                                     {jobTitlesList?.map((item) => (
@@ -288,6 +292,7 @@ export default function TemplateEditor() {
                                 </Popover>
                             </div>
                         )}
+
                     </CardContent>
                 </Card>
 

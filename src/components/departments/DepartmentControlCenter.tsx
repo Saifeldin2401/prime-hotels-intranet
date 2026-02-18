@@ -18,16 +18,16 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
   const { data: profiles = [] } = useProfiles({ property_id: activePropertyId || undefined, limit: 200 })
 
   const [name, setName] = useState('')
-  const [managerId, setManagerId] = useState<string | undefined>()
+  const [managerId, setManagerId] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
-  const [editingManagerId, setEditingManagerId] = useState<string | undefined>()
+  const [editingManagerId, setEditingManagerId] = useState('')
 
   const managers = useMemo(() => profiles.filter(p => p.roles?.some((r: string) => r.includes('manager') || r.includes('hr') || r.includes('admin'))), [profiles])
 
   const resetForm = () => {
     setName('')
-    setManagerId(undefined)
+    setManagerId('')
   }
 
   const handleCreate = async () => {
@@ -35,7 +35,7 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
     await createDepartment.mutateAsync({
       name: name.trim(),
       property_id: activePropertyId,
-      manager_id: managerId
+      manager_id: managerId || null
     })
     resetForm()
   }
@@ -43,13 +43,13 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
   const startEdit = (dept: { id: string; name: string; manager_id?: string | null }) => {
     setEditingId(dept.id)
     setEditingName(dept.name)
-    setEditingManagerId(dept.manager_id || undefined)
+    setEditingManagerId(dept.manager_id || '')
   }
 
   const cancelEdit = () => {
     setEditingId(null)
     setEditingName('')
-    setEditingManagerId(undefined)
+    setEditingManagerId('')
   }
 
   const saveEdit = async () => {
@@ -57,7 +57,7 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
     await updateDepartment.mutateAsync({
       id: editingId,
       name: editingName.trim(),
-      manager_id: editingManagerId
+      manager_id: editingManagerId || null
     })
     cancelEdit()
   }

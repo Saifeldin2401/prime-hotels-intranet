@@ -77,6 +77,12 @@ export function AIFeedbackAnalyzer({
 }: AIFeedbackAnalyzerProps) {
     const { analysis, loading, error, analyzeFeedback, clearAnalysis } = useAIFeedbackAnalyzer()
     const [feedbackText, setFeedbackText] = useState(defaultFeedback)
+    const [prevDefaultFeedback, setPrevDefaultFeedback] = useState(defaultFeedback)
+
+    if (defaultFeedback !== prevDefaultFeedback) {
+        setFeedbackText(defaultFeedback)
+        setPrevDefaultFeedback(defaultFeedback)
+    }
 
     const handleAnalyze = async () => {
         const result = await analyzeFeedback(feedbackText)

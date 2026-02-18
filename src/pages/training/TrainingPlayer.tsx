@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -14,7 +14,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
@@ -66,6 +66,66 @@ type PersistedModuleProgress = {
     updated_at?: string
 }
 
+type RichTextBlockContentProps = {
+    originalHtml: string
+    translatedHtml?: string
+    translationTarget: TranslationTargetLanguage | null
+    showBilingual: boolean
+    translationDir: 'ltr' | 'rtl'
+    originalLabel: string
+    translatedLabel: string
+}
+
+function RichTextBlockContent({
+    originalHtml,
+    translatedHtml,
+    translationTarget,
+    showBilingual,
+    translationDir,
+    originalLabel,
+    translatedLabel
+}: RichTextBlockContentProps) {
+    const originalMarkup = sanitizeHtml(originalHtml)
+    const translatedMarkup = translatedHtml ? sanitizeHtml(translatedHtml) : ''
+
+    if (!translationTarget || !translatedHtml) {
+        return (
+            <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
+                <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
+            </div>
+        )
+    }
+
+    if (showBilingual) {
+        return (
+            <div className="space-y-6">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
+                        {originalLabel}
+                    </div>
+                    <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
+                        <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
+                    </div>
+                </div>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4" dir={translationDir}>
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 mb-2">
+                        {translatedLabel}
+                    </div>
+                    <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed whitespace-pre-wrap">
+                        <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed whitespace-pre-wrap" dir={translationDir}>
+            <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
+        </div>
+    )
+}
+
 export default function TrainingPlayer() {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
@@ -104,16 +164,83 @@ export default function TrainingPlayer() {
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const hasRestoredRef = useRef(false)
     const timeByBlockRef = useRef<Record<string, number>>({})
+    const strictResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const translateAI = useTranslationAI()
 
+    const resetStrictBlockState = useCallback((isStrict: boolean) => {
+        setCurrentBlockStrictTime(0)
+        setHasScrolledToBottom(!isStrict)
 
-
-    // Close sidebar on mobile by default
-    useEffect(() => {
-        if (window.innerWidth < 1024) {
-            setSidebarOpen(false)
+        if (strictResetTimeoutRef.current) {
+            clearTimeout(strictResetTimeoutRef.current)
         }
+
+        strictResetTimeoutRef.current = setTimeout(() => {
+            if (!bottomRef.current) return
+            const rect = bottomRef.current.getBoundingClientRect()
+            if (rect.top < window.innerHeight) {
+                setHasScrolledToBottom(true)
+            }
+        }, 500)
+    }, [])
+
+    const resetModuleInteractionState = useCallback(() => {
+        setTimeSpentSeconds(0)
+        setCompletedBlocks(new Set())
+        setCompletedMediaBlocks(new Set())
+        setResumeNotice(null)
+        setTranslationTarget(null)
+        setShowBilingual(false)
+        setBlockTranslations({})
+        setModuleTitleTranslations({})
+    }, [])
+
+    const applyRestoredProgress = useCallback((
+        progress: PersistedModuleProgress | null,
+        blocks: TrainingContentBlock[]
+    ) => {
+        if (!progress) return
+
+        const maxIndex = Math.max(blocks.length - 1, 0)
+        const nextIndex = typeof progress.last_block_index === 'number'
+            ? Math.min(Math.max(progress.last_block_index, 0), maxIndex)
+            : 0
+
+        if (nextIndex > 0) {
+            setActiveBlockIndex(nextIndex)
+            setResumeNotice(t('resumeNotice', 'Resumed from where you left off.'))
+        }
+
+        if (progress.metadata?.completed_blocks && Array.isArray(progress.metadata.completed_blocks)) {
+            setCompletedBlocks(new Set(progress.metadata.completed_blocks))
+        } else if (nextIndex > 0) {
+            const completedIds = blocks.slice(0, nextIndex).map(b => b.id)
+            setCompletedBlocks(new Set(completedIds))
+        }
+
+        if (progress.metadata?.completed_media_blocks && Array.isArray(progress.metadata.completed_media_blocks)) {
+            setCompletedMediaBlocks(new Set(progress.metadata.completed_media_blocks))
+        }
+
+        if (typeof progress.time_spent_seconds === 'number') {
+            totalTimeRef.current = progress.time_spent_seconds
+            setTimeSpentSeconds(progress.time_spent_seconds)
+        }
+    }, [t])
+
+
+    // Close sidebar on mobile by default and when entering small breakpoints.
+    useEffect(() => {
+        const syncSidebar = () => {
+            if (window.innerWidth < 1024) {
+                setSidebarOpen(false)
+            }
+        }
+
+        syncSidebar()
+        window.addEventListener('resize', syncSidebar)
+        return () => window.removeEventListener('resize', syncSidebar)
     }, [])
 
     // Fetch Module and Blocks
@@ -237,22 +364,16 @@ export default function TrainingPlayer() {
 
     // Reset strict state on block change
     useEffect(() => {
-        setCurrentBlockStrictTime(0)
-        // If not strict (short content), we assume scroll requirement is met or not needed
-        setHasScrolledToBottom(!contextRules.isStrict)
-        console.log("Block changed, resetting anti-cheat state", contextRules)
+        resetStrictBlockState(contextRules.isStrict)
+    }, [activeBlock?.id, contextRules.isStrict, resetStrictBlockState])
 
-        // Small timeout to allow content to render before checking scroll height
-        setTimeout(() => {
-            if (bottomRef.current) {
-                const rect = bottomRef.current.getBoundingClientRect()
-                // If content is already fully visible (short), mark as scrolled
-                const isVisible = rect.top < window.innerHeight
-                if (isVisible) setHasScrolledToBottom(true)
+    useEffect(() => {
+        return () => {
+            if (strictResetTimeoutRef.current) {
+                clearTimeout(strictResetTimeoutRef.current)
             }
-        }, 500)
-
-    }, [activeBlock?.id, contextRules])
+        }
+    }, [])
 
     // Scroll Observer
     useEffect(() => {
@@ -279,15 +400,8 @@ export default function TrainingPlayer() {
         timeByBlockRef.current = {}
         blockStartRef.current = Date.now()
         lastBlockIdRef.current = null
-        setTimeSpentSeconds(0)
-        setCompletedBlocks(new Set())
-        setCompletedMediaBlocks(new Set())
-        setResumeNotice(null)
-        setTranslationTarget(null)
-        setShowBilingual(false)
-        setBlockTranslations({})
-        setModuleTitleTranslations({})
-    }, [moduleData?.module.id])
+        resetModuleInteractionState()
+    }, [moduleData?.module.id, resetModuleInteractionState])
 
     const totalBlocks = moduleData?.blocks.length || 1
     const isLastBlock = activeBlockIndex === totalBlocks - 1
@@ -612,35 +726,8 @@ export default function TrainingPlayer() {
                 }
             }
 
-            const applyProgress = (progress: PersistedModuleProgress | null) => {
-                if (!progress || !moduleData) return
-                const nextIndex = typeof progress.last_block_index === 'number'
-                    ? Math.min(Math.max(progress.last_block_index, 0), moduleData.blocks.length - 1)
-                    : 0
-                if (nextIndex > 0) {
-                    setActiveBlockIndex(nextIndex)
-                    setResumeNotice(t('resumeNotice', 'Resumed from where you left off.'))
-                }
-
-                if (progress.metadata?.completed_blocks && Array.isArray(progress.metadata.completed_blocks)) {
-                    setCompletedBlocks(new Set(progress.metadata.completed_blocks))
-                } else if (nextIndex > 0) {
-                    const completedIds = moduleData.blocks.slice(0, nextIndex).map(b => b.id)
-                    setCompletedBlocks(new Set(completedIds))
-                }
-
-                if (progress.metadata?.completed_media_blocks && Array.isArray(progress.metadata.completed_media_blocks)) {
-                    setCompletedMediaBlocks(new Set(progress.metadata.completed_media_blocks))
-                }
-
-                if (typeof progress.time_spent_seconds === 'number') {
-                    totalTimeRef.current = progress.time_spent_seconds
-                    setTimeSpentSeconds(progress.time_spent_seconds)
-                }
-            }
-
             if (localData && isActive) {
-                applyProgress(localData)
+                applyRestoredProgress(localData, moduleData.blocks)
             }
 
             const { data } = await supabase
@@ -657,7 +744,7 @@ export default function TrainingPlayer() {
                 const localUpdated = localData?.saved_at ? new Date(localData.saved_at).getTime() : 0
                 const dbUpdated = data.updated_at ? new Date(data.updated_at).getTime() : 0
                 if (!localData || dbUpdated >= localUpdated) {
-                    applyProgress(data)
+                    applyRestoredProgress(data, moduleData.blocks)
                 }
             }
         }
@@ -668,7 +755,7 @@ export default function TrainingPlayer() {
         return () => {
             isActive = false
         }
-    }, [user, moduleData, storageKey, t])
+    }, [user, moduleData, storageKey, applyRestoredProgress])
 
     const activeBlockId = activeBlock?.id
 
@@ -738,48 +825,6 @@ export default function TrainingPlayer() {
     const canProceedToNext = (!isGateCompletionRequired || isGateCompleted) &&
         (!isReadingBlock || (isReadingTimeMet && isScrollMet))
 
-    const renderRichText = (originalHtml: string, translatedHtml?: string) => {
-        const originalMarkup = sanitizeHtml(originalHtml)
-        const translatedMarkup = translatedHtml ? sanitizeHtml(translatedHtml) : ''
-
-        if (!translationTarget || !translatedHtml) {
-            return (
-                <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
-                    <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
-                </div>
-            )
-        }
-
-        if (showBilingual) {
-            return (
-                <div className="space-y-6">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
-                            {t('original', 'Original')}
-                        </div>
-                        <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
-                            <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
-                        </div>
-                    </div>
-                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4" dir={translationDir}>
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 mb-2">
-                            {t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
-                        </div>
-                        <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed whitespace-pre-wrap">
-                            <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
-                        </div>
-                    </div>
-                </div>
-            )
-        }
-
-        return (
-            <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed whitespace-pre-wrap" dir={translationDir}>
-                <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
-            </div>
-        )
-    }
-
     const renderBlockContent = (block: TrainingContentBlock) => {
         const variants = {
             initial: { opacity: 0, x: isRTL ? -20 : 20 },
@@ -789,7 +834,7 @@ export default function TrainingPlayer() {
         const translatedBlockContent = getTranslatedBlockContent(block)
 
         return (
-            <motion.div
+            <m.div
                 key={block.id}
                 variants={variants}
                 initial="initial"
@@ -798,7 +843,17 @@ export default function TrainingPlayer() {
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="space-y-6"
             >
-                {block.type === 'text' && renderRichText(block.content, translatedBlockContent)}
+                {block.type === 'text' && (
+                    <RichTextBlockContent
+                        originalHtml={block.content}
+                        translatedHtml={translatedBlockContent}
+                        translationTarget={translationTarget}
+                        showBilingual={showBilingual}
+                        translationDir={translationDir}
+                        originalLabel={t('original', 'Original')}
+                        translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                    />
+                )}
 
                 {block.type === 'video' && (
                     <div className="space-y-6">
@@ -828,7 +883,7 @@ export default function TrainingPlayer() {
                                             src={block.content_url}
                                             className="w-full h-full"
                                             allowFullScreen
-                                            title={t('videoContent')}
+                                            title="Training video content"
                                         />
                                     )
                                 })()
@@ -840,7 +895,7 @@ export default function TrainingPlayer() {
                             )}
                         </div>
                         {block.is_mandatory && (
-                            <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+                            <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
                                 <div>
                                     <p className="text-sm font-semibold text-hotel-navy">
                                         {completedMediaBlocks.has(block.id)
@@ -856,6 +911,7 @@ export default function TrainingPlayer() {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleMarkWatched(block.id)}
+                                        className="w-full sm:w-auto"
                                     >
                                         {t('markWatched', 'Mark as watched')}
                                     </Button>
@@ -864,7 +920,15 @@ export default function TrainingPlayer() {
                         )}
                         {block.content && (
                             <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-                                {renderRichText(block.content, translatedBlockContent)}
+                                <RichTextBlockContent
+                                    originalHtml={block.content}
+                                    translatedHtml={translatedBlockContent}
+                                    translationTarget={translationTarget}
+                                    showBilingual={showBilingual}
+                                    translationDir={translationDir}
+                                    originalLabel={t('original', 'Original')}
+                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                                />
                             </div>
                         )}
                     </div>
@@ -895,7 +959,7 @@ export default function TrainingPlayer() {
                             )}
                         </div>
                         {block.is_mandatory && (
-                            <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+                            <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
                                 <div>
                                     <p className="text-sm font-semibold text-hotel-navy">
                                         {completedMediaBlocks.has(block.id)
@@ -911,6 +975,7 @@ export default function TrainingPlayer() {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleMarkWatched(block.id)}
+                                        className="w-full sm:w-auto"
                                     >
                                         {t('markListened', 'Mark as listened')}
                                     </Button>
@@ -919,7 +984,15 @@ export default function TrainingPlayer() {
                         )}
                         {block.content && (
                             <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-                                {renderRichText(block.content, translatedBlockContent)}
+                                <RichTextBlockContent
+                                    originalHtml={block.content}
+                                    translatedHtml={translatedBlockContent}
+                                    translationTarget={translationTarget}
+                                    showBilingual={showBilingual}
+                                    translationDir={translationDir}
+                                    originalLabel={t('original', 'Original')}
+                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                                />
                             </div>
                         )}
                     </div>
@@ -935,7 +1008,7 @@ export default function TrainingPlayer() {
                                         className="w-full h-full"
                                         allow="clipboard-read; clipboard-write; fullscreen"
                                         sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                                        title={block.title || t('interactiveBlock', 'Interactive content')}
+                                        title="Interactive training content"
                                     />
                                 </div>
                             ) : (
@@ -946,7 +1019,7 @@ export default function TrainingPlayer() {
                             )}
                         </div>
                         {block.is_mandatory && (
-                            <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+                            <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
                                 <div>
                                     <p className="text-sm font-semibold text-hotel-navy">
                                         {completedMediaBlocks.has(block.id)
@@ -962,6 +1035,7 @@ export default function TrainingPlayer() {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleMarkWatched(block.id)}
+                                        className="w-full sm:w-auto"
                                     >
                                         {t('markCompleted', 'Mark as completed')}
                                     </Button>
@@ -970,7 +1044,15 @@ export default function TrainingPlayer() {
                         )}
                         {block.content && (
                             <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-                                {renderRichText(block.content, translatedBlockContent)}
+                                <RichTextBlockContent
+                                    originalHtml={block.content}
+                                    translatedHtml={translatedBlockContent}
+                                    translationTarget={translationTarget}
+                                    showBilingual={showBilingual}
+                                    translationDir={translationDir}
+                                    originalLabel={t('original', 'Original')}
+                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                                />
                             </div>
                         )}
                     </div>
@@ -990,7 +1072,15 @@ export default function TrainingPlayer() {
                         )}
                         {block.content && (
                             <div>
-                                {renderRichText(block.content, translatedBlockContent)}
+                                <RichTextBlockContent
+                                    originalHtml={block.content}
+                                    translatedHtml={translatedBlockContent}
+                                    translationTarget={translationTarget}
+                                    showBilingual={showBilingual}
+                                    translationDir={translationDir}
+                                    originalLabel={t('original', 'Original')}
+                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                                />
                             </div>
                         )}
                     </div>
@@ -1053,7 +1143,7 @@ export default function TrainingPlayer() {
                     />
                 )}
 
-            </motion.div>
+            </m.div>
         )
     }
 
@@ -1074,21 +1164,22 @@ export default function TrainingPlayer() {
 
     if (isFinished) {
         return (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="min-h-screen bg-slate-50 flex items-center justify-center p-6"
-            >
-                <Card className="max-w-xl w-full text-center p-12 shadow-2xl border-0 overflow-hidden relative">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-hotel-gold"></div>
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", damping: 12, stiffness: 100, delay: 0.2 }}
-                        className="h-24 w-24 bg-hotel-gold/10 rounded-full flex items-center justify-center mx-auto mb-8"
-                    >
-                        <Trophy className="h-12 w-12 text-hotel-gold-dark" />
-                    </motion.div>
+            <LazyMotion features={domAnimation}>
+                <m.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="min-h-screen bg-slate-50 flex items-center justify-center p-6"
+                >
+                    <Card className="max-w-xl w-full text-center p-6 sm:p-12 shadow-2xl border-0 overflow-hidden relative">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-hotel-gold"></div>
+                        <m.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", damping: 12, stiffness: 100, delay: 0.2 }}
+                            className="h-24 w-24 bg-hotel-gold/10 rounded-full flex items-center justify-center mx-auto mb-8"
+                        >
+                            <Trophy className="h-12 w-12 text-hotel-gold-dark" />
+                        </m.div>
 
                     <h2 className="text-3xl font-bold text-hotel-navy mb-4 font-serif">
                         {t('congratulations')}
@@ -1097,7 +1188,7 @@ export default function TrainingPlayer() {
                         {t('trainingCompletedMessage', { module: moduleData.module.title })}
                     </p>
 
-                    <div className="grid grid-cols-2 gap-4 mb-10">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                             <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">{t('finalScore')}</p>
                             <p className="text-2xl font-bold text-hotel-navy">{quizScore !== null ? `${quizScore}%` : t('n_a')}</p>
@@ -1108,39 +1199,41 @@ export default function TrainingPlayer() {
                         </div>
                     </div>
 
-                    <div className="space-y-4">
-                        {moduleData.linkedQuizId && (
-                            <Button className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12" onClick={() => navigate(`/learning/quizzes/${moduleData.linkedQuizId}/take`)}>
-                                {t('takeFinalCertification')}
+                        <div className="space-y-4">
+                            {moduleData.linkedQuizId && (
+                                <Button className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12" onClick={() => navigate(`/learning/quizzes/${moduleData.linkedQuizId}/take`)}>
+                                    {t('takeFinalCertification')}
+                                </Button>
+                            )}
+                            <Button variant="outline" className="w-full h-12" onClick={() => navigate('/learning/my')}>
+                                {t('backToMyLearning')}
                             </Button>
-                        )}
-                        <Button variant="outline" className="w-full h-12" onClick={() => navigate('/learning/my')}>
-                            {t('backToMyLearning')}
-                        </Button>
-                    </div>
-                </Card>
-            </motion.div>
+                        </div>
+                    </Card>
+                </m.div>
+            </LazyMotion>
         )
     }
 
     return (
-        <div className={cn(
-            "flex h-[calc(100vh-0rem)] bg-white overflow-hidden",
-            isRTL ? "flex-row-reverse" : "flex-row"
-        )}>
-            {/* Sidebar */}
-            <AnimatePresence mode="wait">
+        <LazyMotion features={domAnimation}>
+            <div className={cn(
+                "flex h-[100dvh] min-h-[100dvh] bg-white overflow-hidden",
+                isRTL ? "flex-row-reverse" : "flex-row"
+            )}>
+                {/* Sidebar */}
+                <AnimatePresence mode="wait">
                 {sidebarOpen && (
-                    <motion.div
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: 320, opacity: 1 }}
-                        exit={{ width: 0, opacity: 0 }}
+                    <m.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         className={cn(
                             "flex flex-col bg-hotel-navy-dark text-white shrink-0 relative z-[60] shadow-2xl transition-all duration-300",
                             "fixed inset-y-0 lg:static lg:h-full",
                             isRTL ? "right-0 border-l border-white/5" : "left-0 border-r border-white/5",
-                            sidebarOpen ? "translate-x-0 w-[280px] md:w-[320px]" : (isRTL ? "translate-x-full w-0" : "-translate-x-full w-0"),
-                            "lg:translate-x-0 lg:w-[320px]"
+                            sidebarOpen ? "translate-x-0 w-[88vw] max-w-[320px]" : (isRTL ? "translate-x-full w-0" : "-translate-x-full w-0"),
+                            "lg:translate-x-0 lg:w-[320px] lg:max-w-none"
                         )}
                     >
                         <div className="p-8 border-b border-white/10 bg-hotel-navy/50">
@@ -1164,7 +1257,7 @@ export default function TrainingPlayer() {
                                     <span className="text-hotel-gold font-bold">{Math.round(progressPercentage)}%</span>
                                 </div>
                                 <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <motion.div
+                                    <m.div
                                         className="h-full bg-gradient-to-r from-hotel-gold to-hotel-gold-light"
                                         initial={{ width: 0 }}
                                         animate={{ width: `${progressPercentage}%` }}
@@ -1188,7 +1281,7 @@ export default function TrainingPlayer() {
                                         )}
                                     >
                                         {idx === activeBlockIndex && (
-                                            <motion.div
+                                            <m.div
                                                 layoutId="active-pill"
                                                 className={cn(
                                                     "absolute top-0 bottom-0 w-1 bg-hotel-gold",
@@ -1226,7 +1319,7 @@ export default function TrainingPlayer() {
                                                 {(block.title ||
                                                     (block.type === 'sop_reference' && block.content_data?.sop_id ? moduleData.referencedTitles?.[block.content_data.sop_id as string] : '') ||
                                                     (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : ''))
-                                                    ? `${t('blockTitle', { number: idx + 1 })} • ${block.type.replace('_', ' ')}`
+                                                    ? `${t('blockTitle', { number: idx + 1 })} â€¢ ${block.type.replace('_', ' ')}`
                                                     : block.type.replace('_', ' ')
                                                 }
                                             </p>
@@ -1238,14 +1331,14 @@ export default function TrainingPlayer() {
                                 ))}
                             </div>
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
-            </AnimatePresence>
+                </AnimatePresence>
 
             {/* Mobile Sidebar Overlay */}
-            <AnimatePresence>
+                <AnimatePresence>
                 {sidebarOpen && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -1253,10 +1346,10 @@ export default function TrainingPlayer() {
                         className="fixed inset-0 bg-black/60 z-50 lg:hidden backdrop-blur-sm"
                     />
                 )}
-            </AnimatePresence>
+                </AnimatePresence>
 
             {/* Main Player Component */}
-            <div className="flex-1 flex flex-col min-w-0 h-full relative z-10 overflow-hidden">
+                <div className="flex-1 flex flex-col min-w-0 h-full relative z-10 overflow-hidden">
                 {/* Header */}
                 <header className={cn(
                     "h-16 md:h-20 bg-white border-b border-slate-100 flex items-center px-4 md:px-10 justify-between shrink-0 sticky top-0 z-20",
@@ -1271,7 +1364,7 @@ export default function TrainingPlayer() {
                         >
                             <Menu className="h-5 w-5 text-hotel-navy" />
                         </Button>
-                        <div className="hidden xs:block">
+                        <div className="hidden sm:block">
                             <span className="text-[10px] uppercase tracking-[0.2em] text-hotel-gold font-bold block mb-0.5">
                                 {t('learningInProgressBar')}
                             </span>
@@ -1279,8 +1372,8 @@ export default function TrainingPlayer() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <div className="bg-slate-100 px-4 py-2 rounded-full flex items-center gap-2 mr-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="hidden sm:flex bg-slate-100 px-4 py-2 rounded-full items-center gap-2 mr-2">
                             <div className="h-1.5 w-1.5 rounded-full bg-hotel-gold animate-pulse" />
                             <span className="text-xs font-bold text-hotel-navy tabular-nums">
                                 {activeBlockIndex + 1} / {moduleData.blocks.length}
@@ -1356,7 +1449,7 @@ export default function TrainingPlayer() {
                 >
                     {/* Anti-Cheat Status Toast/Indicator (Dev/User Feedback) */}
                     {(!isFocused || isIdle) && (
-                        <div className="absolute top-4 right-4 z-50 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-sm animate-pulse">
+                        <div className="absolute top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-sm animate-pulse">
                             {isIdle ? <MousePointer2 className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                             {isIdle ? t('sessionPausedIdle', 'Session Paused (Idle)') : t('sessionPausedFocus', 'Session Paused (Focus lost)')}
                         </div>
@@ -1389,7 +1482,7 @@ export default function TrainingPlayer() {
                                                     ? `${moduleData.module.estimated_duration_minutes} ${t('min', 'min')}`
                                                     : t('unknown', 'Unknown')}
                                             </span>
-                                            <span className="text-slate-300">•</span>
+                                            <span className="text-slate-300">â€¢</span>
                                             <span>{t('timeSpent', 'Time spent')}</span>
                                             <span className="font-semibold text-slate-700">{formatDuration(timeSpentSeconds)}</span>
                                         </div>
@@ -1405,7 +1498,7 @@ export default function TrainingPlayer() {
                             </div>
                         </div>
                         <AnimatePresence mode="wait">
-                            <motion.div
+                            <m.div
                                 key={activeBlock?.id || 'no-content'}
                                 initial={{ opacity: 0, y: 15 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -1428,7 +1521,7 @@ export default function TrainingPlayer() {
                                         </p>
                                     </div>
                                 )}
-                            </motion.div>
+                            </m.div>
                         </AnimatePresence>
 
                         {/* Scroll Marker for Anti-Cheat */}
@@ -1439,7 +1532,7 @@ export default function TrainingPlayer() {
 
                 {/* Navigation Bar */}
                 <footer className={cn(
-                    "h-20 md:h-24 bg-white border-t border-slate-100 flex items-center justify-between px-4 md:px-12 shrink-0 z-20 sticky bottom-0",
+                    "min-h-[5rem] md:min-h-[6rem] bg-white border-t border-slate-100 flex items-center justify-between gap-2 px-3 sm:px-4 md:px-12 py-2 md:py-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-0 shrink-0 z-20 sticky bottom-0",
                     isRTL ? "flex-row-reverse" : "flex-row"
                 )}>
                     <Button
@@ -1448,7 +1541,7 @@ export default function TrainingPlayer() {
                         onClick={handlePrevious}
                         disabled={activeBlockIndex === 0}
                         className={cn(
-                            "h-10 md:h-12 px-4 md:px-6 text-sm md:text-base font-bold tracking-wide border-2 hover:bg-slate-50 transition-all rounded-xl",
+                            "h-10 md:h-12 px-3 sm:px-4 md:px-6 text-sm md:text-base font-bold tracking-wide border-2 hover:bg-slate-50 transition-all rounded-xl",
                             isRTL ? "flex-row-reverse" : ""
                         )}
                     >
@@ -1456,15 +1549,15 @@ export default function TrainingPlayer() {
                             "h-4 w-4 md:h-5 md:w-5",
                             isRTL ? "ml-2 md:ml-3 rotate-180" : "mr-2 md:mr-3"
                         )} />
-                        <span className="hidden xs:inline">{t('previous')}</span>
-                        <ChevronLeft className="h-4 w-4 xs:hidden" />
+                        <span className="hidden md:inline">{t('previous')}</span>
+                        <ChevronLeft className="h-4 w-4 md:hidden" />
                     </Button>
 
                     <div className="hidden md:flex flex-col items-center">
                         <div className="flex gap-2 mb-2">
-                            {moduleData.blocks.map((_, i) => (
+                            {moduleData.blocks.map((block, i) => (
                                 <div
-                                    key={i}
+                                    key={block.id}
                                     className={cn(
                                         "h-1.5 rounded-full transition-all duration-300",
                                         i === activeBlockIndex ? "w-8 bg-hotel-gold" : "w-1.5 bg-slate-200"
@@ -1479,7 +1572,7 @@ export default function TrainingPlayer() {
                         onClick={handleNext}
                         disabled={!canProceedToNext}
                         className={cn(
-                            "h-10 md:h-12 px-4 md:px-8 text-sm md:text-base font-bold tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl rounded-xl",
+                            "h-10 md:h-12 min-w-[7.5rem] sm:min-w-[10rem] justify-center px-3 sm:px-4 md:px-8 text-sm md:text-base font-bold tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl rounded-xl",
                             isLastBlock
                                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                                 : "bg-hotel-navy hover:bg-hotel-navy-light text-white",
@@ -1492,7 +1585,8 @@ export default function TrainingPlayer() {
                                 return (
                                     <>
                                         <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ml-2 md:ml-3" : "mr-2 md:mr-3")} />
-                                        <span>{t('completeModule')}</span>
+                                        <span className="hidden sm:inline">{t('completeModule')}</span>
+                                        <span className="sm:hidden">{t('complete', 'Complete')}</span>
                                     </>
                                 )
                             }
@@ -1501,8 +1595,9 @@ export default function TrainingPlayer() {
                             if (isReadingBlock && !isScrollMet) {
                                 return (
                                     <>
-                                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                                        <span>{t('scrollToBottom', 'Read to bottom')}</span>
+                                        <div className={cn("h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin", isRTL ? "ml-2" : "mr-2")} />
+                                        <span className="hidden sm:inline">{t('scrollToBottom', 'Read to bottom')}</span>
+                                        <span className="sm:hidden">{t('read', 'Read')}</span>
                                     </>
                                 )
                             }
@@ -1510,26 +1605,29 @@ export default function TrainingPlayer() {
                                 const remaining = Math.max(0, minTimeRequired - currentBlockStrictTime)
                                 return (
                                     <>
-                                        <Clock className="h-4 w-4 mr-2 animate-pulse" />
-                                        <span>{t('readingReq', { seconds: remaining })}</span>
+                                        <Clock className={cn("h-4 w-4 animate-pulse", isRTL ? "ml-2" : "mr-2")} />
+                                        <span className="hidden sm:inline">{t('readingReq', { seconds: remaining })}</span>
+                                        <span className="sm:hidden">{`${remaining}s`}</span>
                                     </>
                                 )
                             }
 
                             return (
                                 <>
-                                    <span className="hidden xs:inline">{t('nextStep')}</span>
+                                    <span className="hidden md:inline">{t('nextStep')}</span>
                                     <ChevronRight className={cn(
                                         "h-4 w-4 md:h-5 md:w-5",
                                         isRTL ? "mr-2 md:mr-3 rotate-180" : "ml-2 md:ml-3"
                                     )} />
-                                    <ChevronRight className="h-4 w-4 xs:hidden" />
+                                    <ChevronRight className="h-4 w-4 md:hidden" />
                                 </>
                             )
                         })()}
                     </Button>
                 </footer>
+                </div>
             </div>
-        </div>
+        </LazyMotion>
     )
 }
+

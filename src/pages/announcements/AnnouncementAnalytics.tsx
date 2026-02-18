@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
@@ -25,6 +25,51 @@ interface UserReadStatus {
     read_at?: string
     acknowledged_at?: string
 }
+
+const UserList = ({ users, showAckTime = false }: { users: UserReadStatus[], showAckTime?: boolean }) => (
+    <div className="space-y-2">
+        {users.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No users in this category</p>
+        ) : (
+            users.map(user => (
+                <div key={user.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                            <AvatarImage src={user.avatar_url} />
+                            <AvatarFallback>
+                                <User className="h-5 w-5" />
+                            </AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-medium">{user.full_name}</p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        {showAckTime && user.acknowledged_at && (
+                            <div className="flex items-center gap-1 text-green-600 text-sm">
+                                <ThumbsUp className="w-4 h-4" />
+                                {formatDistanceToNow(new Date(user.acknowledged_at), { addSuffix: true })}
+                            </div>
+                        )}
+                        {!showAckTime && user.read_at && (
+                            <div className="flex items-center gap-1 text-blue-600 text-sm">
+                                <Eye className="w-4 h-4" />
+                                {formatDistanceToNow(new Date(user.read_at), { addSuffix: true })}
+                            </div>
+                        )}
+                        {!user.read_at && (
+                            <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                                <EyeOff className="w-4 h-4" />
+                                Not viewed
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ))
+        )}
+    </div>
+)
 
 export default function AnnouncementAnalytics() {
     const { id } = useParams<{ id: string }>()
@@ -194,51 +239,6 @@ export default function AnnouncementAnalytics() {
     const totalUnread = totalUsers - totalRead
     const readPercent = totalUsers > 0 ? Math.round((totalRead / totalUsers) * 100) : 0
     const ackPercent = totalUsers > 0 ? Math.round((totalAcknowledged / totalUsers) * 100) : 0
-
-    const UserList = ({ users, showAckTime = false }: { users: UserReadStatus[], showAckTime?: boolean }) => (
-        <div className="space-y-2">
-            {users.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No users in this category</p>
-            ) : (
-                users.map(user => (
-                    <div key={user.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                                <AvatarImage src={user.avatar_url} />
-                                <AvatarFallback>
-                                    <User className="h-5 w-5" />
-                                </AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <p className="font-medium">{user.full_name}</p>
-                                <p className="text-sm text-muted-foreground">{user.email}</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            {showAckTime && user.acknowledged_at && (
-                                <div className="flex items-center gap-1 text-green-600 text-sm">
-                                    <ThumbsUp className="w-4 h-4" />
-                                    {formatDistanceToNow(new Date(user.acknowledged_at), { addSuffix: true })}
-                                </div>
-                            )}
-                            {!showAckTime && user.read_at && (
-                                <div className="flex items-center gap-1 text-blue-600 text-sm">
-                                    <Eye className="w-4 h-4" />
-                                    {formatDistanceToNow(new Date(user.read_at), { addSuffix: true })}
-                                </div>
-                            )}
-                            {!user.read_at && (
-                                <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                                    <EyeOff className="w-4 h-4" />
-                                    Not viewed
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))
-            )}
-        </div>
-    )
 
     return (
         <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>

@@ -418,3 +418,74 @@
         /* Secondary safeguard */
     }
 }
+
+/* ================================================
+   RESPONSIVE MEDIA: Images & Video Embeds
+   Fixes mobile layout bugs after rich media insertion
+   ================================================ */
+
+/* Images inside article content */
+.prose img,
+.kb-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    display: block;
+}
+
+/* Prevent any wide content from causing horizontal scroll */
+.prose,
+.kb-prose {
+    overflow-x: hidden;
+}
+
+/* Iframes (YouTube, Vimeo embeds) */
+.prose iframe,
+.kb-prose iframe {
+    max-width: 100%;
+    border-radius: 0.5rem;
+}
+
+/* Responsive 16:9 aspect ratio for video iframes */
+.prose iframe[src*="youtube"],
+.prose iframe[src*="youtu.be"],
+.prose iframe[src*="youtube-nocookie"],
+.prose iframe[src*="vimeo"],
+.kb-prose iframe[src*="youtube"],
+.kb-prose iframe[src*="youtu.be"],
+.kb-prose iframe[src*="youtube-nocookie"],
+.kb-prose iframe[src*="vimeo"] {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto;
+}
+
+@media (max-width: 768px) {
+
+    .prose iframe,
+    .kb-prose iframe {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .prose iframe[src*="youtube"],
+    .prose iframe[src*="youtu.be"],
+    .prose iframe[src*="youtube-nocookie"],
+    .prose iframe[src*="vimeo"],
+    .kb-prose iframe[src*="youtube"],
+    .kb-prose iframe[src*="youtu.be"],
+    .kb-prose iframe[src*="youtube-nocookie"],
+    .kb-prose iframe[src*="vimeo"] {
+        aspect-ratio: 16 / 9;
+        height: auto;
+    }
+
+    /* Tables remain horizontally scrollable on mobile */
+    .prose table,
+    .kb-prose table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}

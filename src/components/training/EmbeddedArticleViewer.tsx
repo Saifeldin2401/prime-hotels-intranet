@@ -18,7 +18,18 @@ interface EmbeddedArticleViewerProps {
     className?: string
 }
 
-export const EmbeddedArticleViewer = ({
+export const EmbeddedArticleViewer = (props: EmbeddedArticleViewerProps) => {
+    // Use a key to force re-mount when critical props change
+    // This is cleaner than useEffect for state resets and fixes the react-doctor error
+    return (
+        <EmbeddedArticleViewerInner
+            key={`${props.sopId}-${props.translationTarget || 'original'}`}
+            {...props}
+        />
+    )
+}
+
+const EmbeddedArticleViewerInner = ({
     sopId,
     showBilingual,
     translationDir = 'ltr',
@@ -26,6 +37,7 @@ export const EmbeddedArticleViewer = ({
     className
 }: EmbeddedArticleViewerProps) => {
     const { t } = useTranslation('training')
+    // ... rest of the component logic ...
     const { data: document, isLoading, error } = useDocument(sopId)
     const [viewMode, setViewMode] = useState<'inline' | 'fallback'>('inline')
 
@@ -34,12 +46,6 @@ export const EmbeddedArticleViewer = ({
     const [translatedContent, setTranslatedContent] = useState<string | null>(null)
     const [translatedTitle, setTranslatedTitle] = useState<string | null>(null)
     const [isTranslating, setIsTranslating] = useState(false)
-
-    // Reset translation when SOP or target changes
-    useEffect(() => {
-        setTranslatedContent(null)
-        setTranslatedTitle(null)
-    }, [sopId, translationTarget])
 
     // Effect to trigger translation
     useEffect(() => {

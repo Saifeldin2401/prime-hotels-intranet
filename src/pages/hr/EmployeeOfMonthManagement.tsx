@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Search, Trophy, Calendar, Save, Trash2, UserPlus, Check, ChevronsUpDown } from 'lucide-react'
+import { Search, Trophy, Calendar, Save, Trash2, UserPlus, Check, ChevronsUpDown, Pencil } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { createNotification, NotificationTemplates } from '@/lib/notificationService'
@@ -29,6 +29,7 @@ interface Profile {
 
 interface EOMWinner {
     id: string
+    property_id: string
     user_id: string
     month: number
     year: number
@@ -49,7 +50,9 @@ export default function EmployeeOfMonthManagement() {
     const [openSearch, setOpenSearch] = useState(false)
     const [selectedEmployee, setSelectedEmployee] = useState<Profile | null>(null)
     const [winners, setWinners] = useState<EOMWinner[]>([])
+    const [editingWinnerId, setEditingWinnerId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
+    const searchListId = useId()
 
     const [form, setForm] = useState({
         month: (new Date().getMonth() + 1).toString(),
@@ -102,6 +105,7 @@ export default function EmployeeOfMonthManagement() {
                 .from('employee_of_the_month')
                 .select(`
                     id,
+                    property_id,
                     user_id,
                     month,
                     year,
@@ -135,6 +139,73 @@ export default function EmployeeOfMonthManagement() {
     useEffect(() => {
         fetchWinners()
     }, [currentProperty])
+
+    const handleSelectEmployee = (profile: Profile) => {
+        setSelectedEmployee(profile)
+        setOpenSearch(false)
+        setProfiles([])
+    }
+
+    const resetComposer = () => {
+        setEditingWinnerId(null)
+        setSelectedEmployee(null)
+        setProfiles([])
+        setSearchQuery('')
+        setForm({
+            month: (new Date().getMonth() + 1).toString(),
+            year: new Date().getFullYear().toString(),
+            reason_en: '',
+            reason_ar: ''
+        })
+    }
+
+    const handleEditWinner = (winner: EOMWinner) => {
+        setEditingWinnerId(winner.id)
+        setSelectedEmployee({
+            id: winner.profile.id,
+            full_name: winner.profile.full_name,
+            avatar_url: winner.profile.avatar_url,
+            job_title: winner.profile.job_title,
+            user_properties: winner.property_id ? [{ property_id: winner.property_id }] : undefined
+        })
+        setForm({
+            month: winner.month.toString(),
+            year: winner.year.toString(),
+            reason_en: winner.reason_en || '',
+            reason_ar: winner.reason_ar || ''
+        })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    const handleDeleteWinner = async (winnerId: string) => {
+        if (!confirm('Delete this winner record?')) return
+
+        try {
+            const { error } = await supabase
+                .from('employee_of_the_month')
+                .delete()
+                .eq('id', winnerId)
+
+            if (error) throw error
+
+            if (editingWinnerId === winnerId) {
+                resetComposer()
+            }
+
+            toast({
+                title: t('common:actions.delete_success'),
+                description: 'Winner record deleted successfully'
+            })
+
+            fetchWinners()
+        } catch (err: any) {
+            toast({
+                title: t('common:errors.delete_failed'),
+                description: err.message,
+                variant: 'destructive'
+            })
+        }
+    }
 
     const handleSave = async () => {
         if (!selectedEmployee) {
@@ -170,44 +241,49 @@ export default function EmployeeOfMonthManagement() {
                 return
             }
 
-            const { error } = await supabase
-                .from('employee_of_the_month')
-                .upsert({
-                    property_id: targetPropertyId,
-                    user_id: selectedEmployee.id,
-                    month: parseInt(form.month),
-                    year: parseInt(form.year),
-                    reason_en: form.reason_en,
-                    reason_ar: form.reason_ar,
-                    created_by: user?.id
-                })
+            const payload = {
+                property_id: targetPropertyId,
+                user_id: selectedEmployee.id,
+                month: parseInt(form.month),
+                year: parseInt(form.year),
+                reason_en: form.reason_en,
+                reason_ar: form.reason_ar,
+                created_by: user?.id
+            }
+
+            const { error } = editingWinnerId
+                ? await supabase
+                    .from('employee_of_the_month')
+                    .update(payload)
+                    .eq('id', editingWinnerId)
+                : await supabase
+                    .from('employee_of_the_month')
+                    .upsert(payload)
 
             if (error) throw error
 
-            // Send notification to the winner
-            const monthLabel = months.find(m => m.value === form.month)?.label || form.month
-            const notif = NotificationTemplates.employeeOfMonthWinner(monthLabel, form.year)
+            if (!editingWinnerId) {
+                // Send notification to the winner only for new announcements
+                const monthLabel = months.find(m => m.value === form.month)?.label || form.month
+                const notif = NotificationTemplates.employeeOfMonthWinner(monthLabel, form.year)
 
-            await createNotification({
-                userId: selectedEmployee.id,
-                type: 'employee_of_the_month_winner',
-                title: notif.title,
-                message: notif.message,
-                link: '/dashboard'
-            })
+                await createNotification({
+                    userId: selectedEmployee.id,
+                    type: 'employee_of_the_month_winner',
+                    title: notif.title,
+                    message: notif.message,
+                    link: '/dashboard'
+                })
+            }
 
             toast({
                 title: t('common:actions.save_success'),
-                description: "Employee of the Month saved successfully"
+                description: editingWinnerId
+                    ? 'Employee of the Month updated successfully'
+                    : 'Employee of the Month saved successfully'
             })
 
-            setForm({
-                ...form,
-                reason_en: '',
-                reason_ar: ''
-            })
-            setSelectedEmployee(null)
-            setProfiles([])
+            resetComposer()
             fetchWinners()
         } catch (err: any) {
             toast({
@@ -245,9 +321,11 @@ export default function EmployeeOfMonthManagement() {
                         <CardHeader>
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <UserPlus className="h-5 w-5 text-hotel-gold" />
-                                Add New Winner
+                                {editingWinnerId ? 'Edit Winner' : 'Add New Winner'}
                             </CardTitle>
-                            <CardDescription>Select employee and period</CardDescription>
+                            <CardDescription>
+                                {editingWinnerId ? 'Update employee and period' : 'Select employee and period'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
@@ -284,6 +362,7 @@ export default function EmployeeOfMonthManagement() {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={openSearch}
+                                            aria-controls={searchListId}
                                             className="w-full justify-between border-hotel-gold/20"
                                         >
                                             {selectedEmployee
@@ -298,7 +377,7 @@ export default function EmployeeOfMonthManagement() {
                                                 placeholder="Type name..."
                                                 onValueChange={(v) => fetchProfiles(v)}
                                             />
-                                            <CommandList>
+                                            <CommandList id={searchListId}>
                                                 {searchQuery.length > 0 && searchQuery.length < 2 && (
                                                     <div className="py-6 text-center text-sm text-hotel-charcoal/40">
                                                         {t('common:labels.typing_search', 'Type at least 2 characters...')}
@@ -312,27 +391,32 @@ export default function EmployeeOfMonthManagement() {
                                                         <CommandItem
                                                             key={p.id}
                                                             value={p.id}
-                                                            onSelect={() => {
-                                                                setSelectedEmployee(p)
-                                                                setOpenSearch(false)
-                                                                setProfiles([])
-                                                            }}
-                                                            className="flex items-center gap-3 p-2"
+                                                            onSelect={() => handleSelectEmployee(p)}
+                                                            className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                         >
-                                                            <Avatar className="h-8 w-8">
-                                                                <AvatarImage src={p.avatar_url || undefined} />
-                                                                <AvatarFallback>{(p.full_name || '?').charAt(0)}</AvatarFallback>
-                                                            </Avatar>
-                                                            <div className="flex-1">
-                                                                <p className="text-sm font-semibold">{p.full_name}</p>
-                                                                <p className="text-xs text-hotel-charcoal/50">{p.job_title}</p>
+                                                            <div
+                                                                className="flex w-full items-center gap-3 p-2 cursor-pointer"
+                                                                onPointerDown={(e) => e.preventDefault()}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    handleSelectEmployee(p)
+                                                                }}
+                                                            >
+                                                                <Avatar className="h-8 w-8">
+                                                                    <AvatarImage src={p.avatar_url || undefined} />
+                                                                    <AvatarFallback>{(p.full_name || '?').charAt(0)}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="flex-1">
+                                                                    <p className="text-sm font-semibold">{p.full_name}</p>
+                                                                    <p className="text-xs text-hotel-charcoal/50">{p.job_title}</p>
+                                                                </div>
+                                                                <Check
+                                                                    className={cn(
+                                                                        "ml-auto h-4 w-4",
+                                                                        selectedEmployee?.id === p.id ? "opacity-100" : "opacity-0"
+                                                                    )}
+                                                                />
                                                             </div>
-                                                            <Check
-                                                                className={cn(
-                                                                    "ml-auto h-4 w-4",
-                                                                    selectedEmployee?.id === p.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
                                                         </CommandItem>
                                                     ))}
                                                 </CommandGroup>
@@ -381,13 +465,33 @@ export default function EmployeeOfMonthManagement() {
                                 />
                             </div>
 
-                            <Button
-                                className="w-full bg-hotel-gold hover:bg-hotel-gold/90 text-white"
-                                onClick={handleSave}
-                                disabled={saving}
-                            >
-                                {saving ? "Saving..." : <><Save className="h-4 w-4 me-2" /> Save Winner</>}
-                            </Button>
+                            <div className="flex gap-2">
+                                {editingWinnerId && (
+                                    <Button
+                                        variant="outline"
+                                        className="w-1/3"
+                                        onClick={resetComposer}
+                                        disabled={saving}
+                                    >
+                                        Cancel
+                                    </Button>
+                                )}
+                                <Button
+                                    className={cn(
+                                        "bg-hotel-gold hover:bg-hotel-gold/90 text-white",
+                                        editingWinnerId ? "w-2/3" : "w-full"
+                                    )}
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                >
+                                    {saving ? "Saving..." : (
+                                        <>
+                                            <Save className="h-4 w-4 me-2" />
+                                            {editingWinnerId ? 'Update Winner' : 'Save Winner'}
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -405,7 +509,13 @@ export default function EmployeeOfMonthManagement() {
                     ) : winners.length > 0 ? (
                         <div className="grid gap-4">
                             {winners.map((w) => (
-                                <Card key={w.id} className="overflow-hidden hover:shadow-md transition-shadow duration-300">
+                                <Card
+                                    key={w.id}
+                                    className={cn(
+                                        "overflow-hidden transition-shadow duration-300 hover:shadow-md",
+                                        editingWinnerId === w.id && "ring-2 ring-hotel-gold/50"
+                                    )}
+                                >
                                     <CardContent className="p-0 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-hotel-gold/10 rtl:divide-x-reverse">
                                         <div className="p-4 md:w-48 bg-hotel-gold/5 flex flex-col items-center justify-center text-center shrink-0">
                                             <Avatar className="h-16 w-16 mb-2 border-2 border-hotel-gold/20">
@@ -418,6 +528,26 @@ export default function EmployeeOfMonthManagement() {
                                             </p>
                                         </div>
                                         <div className="p-6 flex-1 bg-white">
+                                            <div className="mb-4 flex items-center justify-end gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-8 px-2"
+                                                    onClick={() => handleEditWinner(w)}
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-8 px-2 text-destructive hover:text-destructive"
+                                                    onClick={() => handleDeleteWinner(w.id)}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                    Delete
+                                                </Button>
+                                            </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div className="space-y-1">
                                                     <Badge variant="outline" className="text-[10px] uppercase tracking-widest text-hotel-charcoal/40 mb-1">English</Badge>

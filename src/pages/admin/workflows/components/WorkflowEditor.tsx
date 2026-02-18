@@ -31,10 +31,10 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
     const [name, setName] = useState(workflow.name)
     const [description, setDescription] = useState(workflow.description || '')
     const [type, setType] = useState<WorkflowDefinition['type']>(workflow.type || 'event-based')
-    const [triggerConfig, setTriggerConfig] = useState(
+    const [triggerConfig, setTriggerConfig] = useState(() =>
         JSON.stringify(workflow.trigger_config || {}, null, 2)
     )
-    const [actionConfig, setActionConfig] = useState(
+    const [actionConfig, setActionConfig] = useState(() =>
         JSON.stringify(workflow.action_config || {}, null, 2)
     )
     const [localSteps, setLocalSteps] = useState<Partial<WorkflowStep>[]>([])

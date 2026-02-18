@@ -2,8 +2,19 @@ import DOMPurify from 'dompurify';
 
 let hooksInitialized = false
 
+// Trusted video embed domains for iframe src validation
+const TRUSTED_IFRAME_ORIGINS = [
+    'https://www.youtube.com',
+    'https://youtube.com',
+    'https://www.youtube-nocookie.com',
+    'https://player.vimeo.com',
+    'https://vimeo.com',
+]
+
 function ensureHooksInitialized() {
     if (hooksInitialized) return
+
+    // Secure anchor tags opened in new tabs
     DOMPurify.addHook('afterSanitizeAttributes', (node) => {
         if (node instanceof HTMLAnchorElement) {
             const target = node.getAttribute('target')
@@ -15,14 +26,30 @@ function ensureHooksInitialized() {
                 node.setAttribute('rel', Array.from(relParts).join(' '))
             }
         }
+
+        // Validate iframe src — only allow trusted video embed origins
+        if (node instanceof HTMLIFrameElement) {
+            const src = node.getAttribute('src') || ''
+            const isTrusted = TRUSTED_IFRAME_ORIGINS.some(origin => src.startsWith(origin))
+            if (!isTrusted) {
+                node.remove()
+            } else {
+                // Enforce safe sandbox attributes
+                node.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture')
+                node.setAttribute('allowfullscreen', '')
+                node.setAttribute('loading', 'lazy')
+            }
+        }
     })
+
     hooksInitialized = true
 }
 
 /**
  * Sanitizes HTML content to prevent XSS attacks.
  * Uses DOMPurify to strip dangerous attributes and tags.
- * 
+ * Allows safe rich media: images, YouTube/Vimeo iframes, figures, tables.
+ *
  * @param html The HTML string to sanitize
  * @returns Sanitized HTML string
  */
@@ -33,12 +60,39 @@ export const sanitizeHtml = (html: string | null | undefined): string => {
 
     return DOMPurify.sanitize(html, {
         ALLOWED_TAGS: [
+            // Text structure
             'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-            'blockquote', 'p', 'a', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
-            'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'img', 'span', 'details', 'summary'
+            'p', 'blockquote', 'pre', 'code', 'hr', 'br',
+            'div', 'span', 'details', 'summary', 'nl',
+            // Inline formatting
+            'b', 'i', 'strong', 'em', 'strike', 'u', 'mark', 'sub', 'sup',
+            // Lists
+            'ul', 'ol', 'li',
+            // Links
+            'a',
+            // Tables
+            'table', 'thead', 'tbody', 'tfoot', 'caption', 'tr', 'th', 'td', 'colgroup', 'col',
+            // Media
+            'img', 'figure', 'figcaption',
+            // Video embeds (YouTube/Vimeo) — validated in hook above
+            'iframe',
         ],
         ALLOWED_ATTR: [
-            'href', 'name', 'target', 'src', 'alt', 'title', 'class', 'style', 'id', 'dir'
-        ]
+            // Universal
+            'id', 'class', 'style', 'dir', 'lang', 'title',
+            // Links & images
+            'href', 'src', 'alt', 'name', 'target', 'rel',
+            // Images
+            'width', 'height', 'loading',
+            // Iframes
+            'allow', 'allowfullscreen', 'frameborder', 'scrolling',
+            // Tables
+            'colspan', 'rowspan', 'scope', 'align',
+        ],
+        // Allow data URIs for images only (legacy base64 images still render)
+        ALLOW_DATA_ATTR: false,
+        ADD_TAGS: ['iframe'],
+        ADD_ATTR: ['allowfullscreen', 'allow', 'loading'],
     });
 };
+

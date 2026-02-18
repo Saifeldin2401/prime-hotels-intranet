@@ -25,6 +25,8 @@ export type KnowledgeVisibility =
     | 'all_properties'
     | 'property'
     | 'department'
+    | 'group_department'
+    | 'specific_departments'
     | 'role'
 
 export type KnowledgeStatus =
@@ -52,6 +54,7 @@ export interface KnowledgeArticle {
     status: KnowledgeStatus
     version: number
     visibility_scope: KnowledgeVisibility
+    department_access_ids?: string[] // For 'specific_departments' visibility
     translation_status?: 'pending' | 'automated' | 'reviewed'
     last_translated_at?: string
     content_ar?: string

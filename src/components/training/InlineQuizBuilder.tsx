@@ -83,6 +83,12 @@ export function InlineQuizBuilder({
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
     const [questions, setQuestions] = useState<InlineQuestion[]>(initialQuestions)
+    const [prevInitialQuestions, setPrevInitialQuestions] = useState(initialQuestions)
+
+    if (initialQuestions !== prevInitialQuestions) {
+        setQuestions(initialQuestions)
+        setPrevInitialQuestions(initialQuestions)
+    }
     const [editingQuestion, setEditingQuestion] = useState<InlineQuestion | null>(null)
     const [showAddDialog, setShowAddDialog] = useState(false)
     const [showImportDialog, setShowImportDialog] = useState(false)

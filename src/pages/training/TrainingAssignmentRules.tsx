@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, Shield } from 'lucide-react'
+import { Pencil, Plus, Trash2, Shield } from 'lucide-react'
 import { useTrainingRules, useCreateTrainingRule, useDeleteTrainingRule, useUpdateTrainingRule, useTrainingModulesList } from '@/hooks/useTrainingRules'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
@@ -23,6 +23,7 @@ export default function TrainingAssignmentRules() {
     const updateMutation = useUpdateTrainingRule()
 
     const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const [editingRule, setEditingRule] = useState<any>(null)
     const [targetType, setTargetType] = useState<'role' | 'job_title'>('role')
     const [newRule, setNewRule] = useState({
         training_module_id: '',
@@ -49,29 +50,59 @@ export default function TrainingAssignmentRules() {
         'staff'
     ]
 
-    const handleCreate = async () => {
+    const resetForm = () => {
+        setNewRule({
+            training_module_id: '',
+            target_role: '',
+            job_title_id: '',
+            is_active: true
+        })
+        setTargetType('role')
+        setEditingRule(null)
+    }
+
+    const handleSave = async () => {
         try {
             if (!newRule.training_module_id) return
             if (targetType === 'role' && !newRule.target_role) return
             if (targetType === 'job_title' && !newRule.job_title_id) return
 
-            await createMutation.mutateAsync({
-                training_module_id: newRule.training_module_id,
-                target_role: targetType === 'role' ? newRule.target_role : null,
-                job_title_id: targetType === 'job_title' ? newRule.job_title_id : null,
-                is_active: newRule.is_active
-            } as any)
+            if (editingRule?.id) {
+                await updateMutation.mutateAsync({
+                    id: editingRule.id,
+                    updates: {
+                        training_module_id: newRule.training_module_id,
+                        target_role: targetType === 'role' ? newRule.target_role : null,
+                        job_title_id: targetType === 'job_title' ? newRule.job_title_id : null,
+                        is_active: newRule.is_active
+                    }
+                })
+            } else {
+                await createMutation.mutateAsync({
+                    training_module_id: newRule.training_module_id,
+                    target_role: targetType === 'role' ? newRule.target_role : null,
+                    job_title_id: targetType === 'job_title' ? newRule.job_title_id : null,
+                    is_active: newRule.is_active
+                } as any)
+            }
 
             setIsCreateOpen(false)
-            setNewRule({
-                training_module_id: '',
-                target_role: '',
-                job_title_id: '',
-                is_active: true
-            })
+            resetForm()
         } catch (error) {
             console.error('Failed to create rule:', error)
         }
+    }
+
+    const startEdit = (rule: any) => {
+        setEditingRule(rule)
+        setTargetType(rule.job_title_id ? 'job_title' : 'role')
+        setNewRule({
+            training_module_id: rule.training_module_id || '',
+            target_role: rule.target_role || '',
+            job_title_id: rule.job_title_id || '',
+            is_active: rule.is_active ?? true
+        })
+        setIsCreateOpen(true)
     }
 
     const handleDelete = async (id: string) => {
@@ -102,7 +133,13 @@ export default function TrainingAssignmentRules() {
                     title={t('rules.title')}
                     description={t('rules.description')}
                 />
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <Dialog
+                    open={isCreateOpen}
+                    onOpenChange={(open) => {
+                        setIsCreateOpen(open)
+                        if (!open) resetForm()
+                    }}
+                >
                     <DialogTrigger asChild>
                         <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
                             <Plus className="w-4 h-4 mr-2" />
@@ -111,7 +148,7 @@ export default function TrainingAssignmentRules() {
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>{t('rules.create_title')}</DialogTitle>
+                            <DialogTitle>{editingRule ? t('rules.edit_title', { defaultValue: 'Edit Rule' }) : t('rules.create_title')}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
 
@@ -188,8 +225,16 @@ export default function TrainingAssignmentRules() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <Button onClick={handleCreate} className="w-full" disabled={createMutation.isPending || (targetType === 'role' && !newRule.target_role) || (targetType === 'job_title' && !newRule.job_title_id) || !newRule.training_module_id}>
-                                {createMutation.isPending ? t('rules.creating') : t('rules.create_rule')}
+                            <Button
+                                onClick={handleSave}
+                                className="w-full"
+                                disabled={(createMutation.isPending || updateMutation.isPending) || (targetType === 'role' && !newRule.target_role) || (targetType === 'job_title' && !newRule.job_title_id) || !newRule.training_module_id}
+                            >
+                                {(createMutation.isPending || updateMutation.isPending)
+                                    ? t('rules.creating')
+                                    : editingRule
+                                        ? t('common:action.save', { defaultValue: 'Save' })
+                                        : t('rules.create_rule')}
                             </Button>
                         </div>
                     </DialogContent>
@@ -230,6 +275,13 @@ export default function TrainingAssignmentRules() {
                                         onClick={() => handleToggle(rule.id, rule.is_active)}
                                     >
                                         {rule.is_active ? t('rules.deactivate') : t('rules.activate')}
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => startEdit(rule)}
+                                    >
+                                        <Pencil className="w-4 h-4" />
                                     </Button>
                                     <Button
                                         variant="ghost"

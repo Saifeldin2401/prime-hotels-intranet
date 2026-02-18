@@ -81,9 +81,9 @@ export default function ShiftScheduling() {
   defaultEnd.setDate(defaultEnd.getDate() + 7)
 
   const [departmentId, setDepartmentId] = useState<string>('all')
-  const [dateStart, setDateStart] = useState(format(defaultStart, 'yyyy-MM-dd'))
-  const [dateEnd, setDateEnd] = useState(format(defaultEnd, 'yyyy-MM-dd'))
-  const [attendanceDate, setAttendanceDate] = useState(format(today, 'yyyy-MM-dd'))
+  const [dateStart, setDateStart] = useState(() => format(defaultStart, 'yyyy-MM-dd'))
+  const [dateEnd, setDateEnd] = useState(() => format(defaultEnd, 'yyyy-MM-dd'))
+  const [attendanceDate, setAttendanceDate] = useState(() => format(today, 'yyyy-MM-dd'))
 
   const [shiftForm, setShiftForm] = useState(defaultShiftForm)
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null)

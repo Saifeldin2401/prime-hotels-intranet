@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,7 @@ import {
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { useTranslation } from 'react-i18next'
 import { openUrlInNewTab, resolveReportRunUrl } from '@/lib/secureFileAccess'
+import { Pencil, X } from 'lucide-react'
 
 const REPORT_TYPES = [
   { value: 'operations', labelKey: 'report_builder.types.operations' },
@@ -120,6 +121,8 @@ export function ReportsControlCenter() {
   const deleteReport = useDeleteReportDefinition()
   const createRun = useCreateReportRun()
 
+  const [editingReportId, setEditingReportId] = useState<string | null>(null)
+
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [reportType, setReportType] = useState('operations')
@@ -133,9 +136,39 @@ export function ReportsControlCenter() {
     return new Date(dateFrom) > new Date(dateTo)
   }, [dateFrom, dateTo])
 
-  const handleCreate = async () => {
+  const editingReport = useMemo(
+    () => reports.find((r) => r.id === editingReportId) || null,
+    [reports, editingReportId]
+  )
+
+  useEffect(() => {
+    if (!editingReport) return
+    setName(editingReport.name || '')
+    setDescription(editingReport.description || '')
+    setReportType(editingReport.report_type || 'operations')
+    setScopeType(editingReport.scope_type || 'property')
+    setScheduleFrequency(editingReport.schedule_frequency || 'none')
+
+    const df = (editingReport.filters as any)?.date_from
+    const dt = (editingReport.filters as any)?.date_to
+    setDateFrom(df || '')
+    setDateTo(dt || '')
+  }, [editingReport])
+
+  const resetForm = () => {
+    setEditingReportId(null)
+    setName('')
+    setDescription('')
+    setReportType('operations')
+    setScopeType('property')
+    setScheduleFrequency('none')
+    setDateFrom('')
+    setDateTo('')
+  }
+
+  const handleSave = async () => {
     if (!name.trim()) return
-    await createReport.mutateAsync({
+    const payload = {
       name: name.trim(),
       description,
       report_type: reportType,
@@ -145,9 +178,16 @@ export function ReportsControlCenter() {
         date_to: dateTo || null
       },
       schedule_frequency: scheduleFrequency === 'none' ? null : (scheduleFrequency as any)
-    })
-    setName('')
-    setDescription('')
+    }
+
+    if (editingReportId) {
+      await updateReport.mutateAsync({ id: editingReportId, ...payload })
+      resetForm()
+    } else {
+      await createReport.mutateAsync(payload as any)
+      setName('')
+      setDescription('')
+    }
   }
 
   const handleRun = async (reportId: string, reportTypeValue: string) => {
@@ -242,9 +282,18 @@ export function ReportsControlCenter() {
               </p>
             )}
           </div>
-          <Button onClick={handleCreate} disabled={!name.trim() || isDateRangeInvalid}>
-            {t('report_builder.actions.create', { defaultValue: 'Create Report' })}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleSave} disabled={!name.trim() || isDateRangeInvalid}>
+              {editingReportId
+                ? t('report_builder.actions.save', { defaultValue: 'Save Changes' })
+                : t('report_builder.actions.create', { defaultValue: 'Create Report' })}
+            </Button>
+            {editingReportId && (
+              <Button type="button" variant="outline" onClick={resetForm} title={t('common:action.cancel', { defaultValue: 'Cancel' })}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </CardContent>
         <CardContent className="pt-0">
           <p className="text-xs text-muted-foreground">
@@ -281,6 +330,17 @@ export function ReportsControlCenter() {
               <div className="flex flex-col gap-2">
                 <Button size="sm" onClick={() => handleRun(report.id, report.report_type)}>
                   {t('report_builder.actions.run', { defaultValue: 'Run' })}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditingReportId(report.id)}
+                  disabled={updateReport.isPending}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Pencil className="h-4 w-4" />
+                    {t('report_builder.actions.edit', { defaultValue: 'Edit' })}
+                  </span>
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => updateReport.mutate({ id: report.id, is_active: !report.is_active })}>
                   {report.is_active

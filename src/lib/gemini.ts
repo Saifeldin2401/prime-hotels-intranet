@@ -316,6 +316,157 @@ export const aiService = {
     return heuristicImprovement(text, instruction)
   },
 
+  async beautifyArticle(
+    content: string,
+    contentType: string = 'document',
+    language: string = 'English',
+    style: string = 'professional'
+  ): Promise<string | null> {
+    if (!content || content.trim().length < 10) {
+      return content
+    }
+
+    const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
+    const targetLanguage = isArabic ? 'Arabic' : language
+
+    const prompt = `You are an expert Hotel Content Architect and Formatting Specialist. Transform this plain text into beautifully structured, professionally formatted HTML with advanced styling.
+
+CONTENT ANALYSIS:
+First analyze the content to determine:
+- Document type (SOP, Policy, Training Guide, Meeting Notes, Report, Manual, Checklist, FAQ)
+- Content structure and complexity
+- Target audience and purpose
+- Existing formatting patterns
+
+ADVANCED FORMATTING REQUIREMENTS:
+1. **Semantic Structure**:
+   - Use proper HTML5 semantic tags (header, nav, main, section, article, h1-h6, p, ul, ol, li, strong, em, blockquote, hr, table, thead, tbody, tr, th, td)
+   - Create logical document hierarchy
+   - Add proper navigation anchors for long documents
+
+2. **Professional Hotel Styling**:
+   - Apply hotel-brand appropriate colors and typography
+   - Use consistent spacing and visual hierarchy
+   - Create clean, modern layouts
+   - Ensure accessibility and readability
+
+3. **Smart Content Detection**:
+   - Automatically detect and format different content types
+   - Apply appropriate templates and structures
+   - Recognize common hotel industry patterns
+
+4. **Advanced Elements**:
+   - **Tables**: Auto-detect tabular data and create responsive tables
+   - **Lists**: Smart numbered and bulleted lists with proper nesting
+   - **Callouts**: Color-coded alert boxes (IMPORTANT, WARNING, NOTE, TIP, REMEMBER)
+   - **Quotes**: Blockquotes for testimonials or important statements
+   - **Sections**: Clear divisions with proper headings
+   - **Emphasis**: Bold and italic for key points
+   - **Links**: Auto-detect URLs and make them clickable
+   - **Media**: Placeholder for images or videos
+
+5. **Content Type Specific Formatting**:
+   - **SOP**: Purpose → Scope → Responsibilities → Procedure → Compliance
+   - **Policy**: Overview → Scope → Policy Statement → Procedures → Enforcement
+   - **Training**: Objectives → Materials → Content → Assessment → Resources
+   - **Meeting**: Date → Attendees → Agenda → Discussion → Action Items → Next Steps
+   - **Report**: Executive Summary → Introduction → Findings → Recommendations → Conclusion
+
+6. **Visual Enhancement**:
+   - **Table of Contents**: Auto-generate for documents > 500 words
+   - **Progress Indicators**: Visual progress bars for multi-step procedures
+   - **Quick Reference**: Summary boxes for key information
+   - **Professional Headers**: Styled section dividers
+   - **Color Coding**: Consistent color scheme for different elements
+
+7. **Language Support**:
+   - **English**: LTR layout, professional business tone
+   - **Arabic**: RTL layout, appropriate typography
+   - **Bilingual**: Both languages where applicable
+
+TECHNICAL SPECIFICATIONS:
+Content Type: ${contentType}
+Language: ${targetLanguage}
+Style: ${style}
+Document Length: ${content.length} characters
+
+CALLOUT BOX SYSTEM:
+- IMPORTANT: <div class="alert-important">🔴 <strong>IMPORTANT:</strong> ...</div>
+- WARNING: <div class="alert-warning">⚠️ <strong>WARNING:</strong> ...</div>
+- NOTE: <div class="alert-note">💡 <strong>NOTE:</strong> ...</div>
+- TIP: <div class="alert-tip">✅ <strong>TIP:</strong> ...</div>
+- REMEMBER: <div class="alert-remember">📝 <strong>REMEMBER:</strong> ...</div>
+
+TABLE STYLING:
+- Use <table class="styled-table responsive-table"> for all tables
+- Add <thead> with <tr><th> for headers
+- Use <tbody> with <tr><td> for data
+- Include hover effects and responsive design
+- Add caption for table title if needed
+
+LIST FORMATTING:
+- Use <ol class="procedure-list"> for numbered procedures
+- Use <ul class="bullet-list"> for bulleted items
+- Add proper indentation and spacing
+- Include checklists for interactive elements
+
+HEADING ARCHITECTURE:
+- <h1 class="main-title"> for document title
+- <h2 class="section-title"> for major sections
+- <h3 class="subsection-title"> for subsections
+- <h4 class="minor-title"> for detailed points
+
+ADVANCED FORMATTING:
+- Use <blockquote class="hotel-quote"> for important statements
+- Use <hr class="section-divider"> for section breaks
+- Use <nav class="table-of-contents"> for document navigation
+- Use <strong class="emphasis-bold"> and <em class="emphasis-italic"> for emphasis
+
+${isArabic ? 'RTL SUPPORT: Use dir="rtl" attribute on main container. Adjust text alignment for Arabic.' : ''}
+
+TRANSFORMATION INSTRUCTIONS:
+1. Analyze content structure and patterns
+2. Apply appropriate template based on content type
+3. Create semantic HTML structure
+4. Add professional hotel styling
+5. Include interactive elements where beneficial
+6. Ensure mobile responsiveness
+7. Optimize for readability and scannability
+
+Return ONLY the complete, formatted HTML. No markdown, no explanations, no code blocks.
+
+CONTENT TO TRANSFORM:
+${content}`
+
+    // Try each model in the list until one works
+    for (const model of FALLBACK_MODELS) {
+      try {
+        const generatedText = await callHuggingFace(model, prompt)
+        
+        if (generatedText && generatedText.trim().length > 0) {
+          // Clean up any potential code blocks or formatting artifacts
+          let cleanHtml = generatedText
+            .replace(/```html\n?|\n?```/g, '')
+            .replace(/```\n?|\n?```/g, '')
+            .trim()
+
+          // Add RTL wrapper for Arabic content
+          if (isArabic && !cleanHtml.includes('dir="rtl"')) {
+            cleanHtml = `<div dir="rtl">${cleanHtml}</div>`
+          }
+
+          return cleanHtml
+        }
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : 'Unknown AI error'
+        console.warn(`⚠️ AI beautification model ${model} failed:`, errorMessage)
+      }
+    }
+
+    // If ALL models fail, provide basic formatting fallback
+    return fallbackFormatting(content, isArabic)
+  },
+
   async suggestImportMapping(rawRows: string[][], targetHeaders: string[]): Promise<{ mapping: Record<string, string>, headerRowIndex: number }> {
     // We take a snapshot of the first 60 rows to find the header and data structure
     const snapshot = rawRows.slice(0, 60).map((row, idx) => `[Row ${idx}] ${row.join(' | ')}`).join('\n')
@@ -363,4 +514,101 @@ export const aiService = {
 
     return { mapping: {}, headerRowIndex: 0 }
   }
+}
+
+// Fallback formatting function for when AI models fail
+const fallbackFormatting = (content: string, isArabic: boolean = false): string => {
+  const lines = content.split('\n').filter(line => line.trim())
+  let formatted = ''
+  
+  // Add RTL wrapper for Arabic
+  if (isArabic) {
+    formatted += '<div dir="rtl">'
+  }
+
+  let isFirstLine = true
+  let inTable = false
+  let listLevel = 0
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+    if (!trimmed) continue
+
+    // Detect table patterns (simple tabular data)
+    if (trimmed.includes('|') && trimmed.split('|').length > 2) {
+      if (!inTable) {
+        formatted += '<table class="styled-table"><thead><tr><th>' + 
+          trimmed.split('|').map(cell => cell.trim()).join('</th><th>') + 
+          '</th></tr></thead><tbody>'
+        inTable = true
+      } else {
+        formatted += '<tr><td>' + 
+          trimmed.split('|').map(cell => cell.trim()).join('</td><td>') + 
+          '</td></tr>'
+      }
+      continue
+    }
+    
+    // End table
+    if (inTable && (!trimmed.includes('|') || trimmed.split('|').length <= 2)) {
+      formatted += '</tbody></table>'
+      inTable = false
+    }
+
+    // First line as title
+    if (isFirstLine) {
+      formatted += `<h1>${trimmed}</h1>\n`
+      isFirstLine = false
+    }
+    // Lines that look like headings
+    else if (/^[A-Z][A-Za-z\s]+:$/.test(trimmed) || /^(Purpose|Scope|Responsibilities|Procedure|Steps|Overview|Summary|Introduction|Conclusion|Requirements|Guidelines|Policy|SOP)/i.test(trimmed)) {
+      formatted += `<h2>${trimmed}</h2>\n`
+    }
+    // Subheadings (indented)
+    else if (/^\s{2,}[A-Z][A-Za-z\s]+:$/.test(trimmed)) {
+      formatted += `<h3>${trimmed.replace(/^\s{2,}/, '')}</h3>\n`
+    }
+    // Lines that look like numbered lists
+    else if (/^\d+\./.test(trimmed)) {
+      const listItem = trimmed.replace(/^\d+\.\s*/, '')
+      formatted += `<ol><li>${listItem}</li></ol>\n`
+    }
+    // Lines that look like bulleted lists
+    else if (/^[-*•]\s*/.test(trimmed)) {
+      const listItem = trimmed.replace(/^[-*•]\s*/, '')
+      formatted += `<ul><li>${listItem}</li></ul>\n`
+    }
+    // Lines that look like quotes or important notes
+    else if (/^["']|NOTE:|IMPORTANT:|WARNING:|TIP:|REMEMBER:/i.test(trimmed)) {
+      const isQuote = /^["']/.test(trimmed)
+      const isImportant = /IMPORTANT:/i.test(trimmed)
+      const isWarning = /WARNING:/i.test(trimmed)
+      const isNote = /NOTE:/i.test(trimmed)
+      const isTip = /TIP:/i.test(trimmed)
+      
+      let alertClass = 'alert-note'
+      if (isImportant) alertClass = 'alert-important'
+      else if (isWarning) alertClass = 'alert-warning'
+      else if (isNote) alertClass = 'alert-note'
+      else if (isTip) alertClass = 'alert-tip'
+      
+      const content = isQuote ? trimmed : trimmed.replace(/^(NOTE:|IMPORTANT:|WARNING:|TIP:|REMEMBER:)\s*/i, '')
+      formatted += `<div class="${alertClass}">${content}</div>\n`
+    }
+    // Horizontal rules (dashes or underscores)
+    else if (/^[-=]{3,}$/.test(trimmed)) {
+      formatted += '<hr>\n'
+    }
+    // Regular paragraphs
+    else {
+      formatted += `<p>${trimmed}</p>\n`
+    }
+  }
+
+  if (isArabic) {
+    formatted += '</div>'
+  }
+
+  return formatted
 }

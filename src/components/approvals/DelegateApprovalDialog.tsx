@@ -89,9 +89,9 @@ export function DelegateApprovalDialog({
     const [expiryDays, setExpiryDays] = useState('7')
     const [scopeMode, setScopeMode] = useState<'item' | 'type' | 'scope'>(approvalId ? 'item' : 'scope')
     const [startMode, setStartMode] = useState<'now' | 'scheduled'>('now')
-    const [startAt, setStartAt] = useState(toLocalInputValue(new Date()))
+    const [startAt, setStartAt] = useState(() => toLocalInputValue(new Date()))
     const [endMode, setEndMode] = useState<'preset' | 'custom'>('preset')
-    const [customEndAt, setCustomEndAt] = useState(toLocalInputValue(addDays(new Date(), 7)))
+    const [customEndAt, setCustomEndAt] = useState(() => toLocalInputValue(addDays(new Date(), 7)))
     const [maxApprovals, setMaxApprovals] = useState('')
     const [allowRedelegate, setAllowRedelegate] = useState(false)
     const [fallbackDelegateIds, setFallbackDelegateIds] = useState<string[]>([])
@@ -175,7 +175,7 @@ export function DelegateApprovalDialog({
             if (resolvedEnd <= resolvedStart) {
                 throw new Error('End time must be after the start time.')
             }
-            
+
             // Determine scope: if approvalId is provided, this is approval-specific delegation
             // Otherwise, fall back to property-based scope
             const scopeType = currentProperty?.id && currentProperty.id !== 'all' ? 'property' : 'all'

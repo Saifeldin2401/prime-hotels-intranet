@@ -108,7 +108,18 @@ export function TrainingAssignmentsPanel({
   const [search, setSearch] = useState('')
   const [statusFilter] = useState<string>('all')
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(autoOpen)
+  const [prevAutoOpen, setPrevAutoOpen] = useState(autoOpen)
+  if (autoOpen !== prevAutoOpen) {
+    if (autoOpen) setShowAssignmentDialog(true)
+    setPrevAutoOpen(autoOpen)
+  }
+
   const [activeTab, setActiveTab] = useState<'overview' | 'assignments'>(initialTab)
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab)
+  if (initialTab !== prevInitialTab) {
+    if (initialTab) setActiveTab(initialTab)
+    setPrevInitialTab(initialTab)
+  }
 
   // Progress Data
   const { data: progressData, isLoading: isLoadingProgress } = useLearningProgress()
@@ -121,6 +132,11 @@ export function TrainingAssignmentsPanel({
 
   // Form state
   const [formModuleId, setFormModuleId] = useState(defaultModuleId || '')
+  const [prevDefaultModuleId, setPrevDefaultModuleId] = useState(defaultModuleId)
+  if (defaultModuleId !== prevDefaultModuleId) {
+    if (defaultModuleId) setFormModuleId(defaultModuleId)
+    setPrevDefaultModuleId(defaultModuleId)
+  }
   const [formTargetType, setFormTargetType] = useState<'all' | 'users' | 'departments' | 'properties'>('all')
   const [formTargetIds, setFormTargetIds] = useState<string[]>([])
   const [formDeadline, setFormDeadline] = useState('')
@@ -134,17 +150,6 @@ export function TrainingAssignmentsPanel({
   const [reminderDaysBefore, setReminderDaysBefore] = useState<number[]>([])
   const [propertyFilter, setPropertyFilter] = useState<string>('all')
 
-  useEffect(() => {
-    if (initialTab) setActiveTab(initialTab)
-  }, [initialTab])
-
-  useEffect(() => {
-    if (defaultModuleId) setFormModuleId(defaultModuleId)
-  }, [defaultModuleId])
-
-  useEffect(() => {
-    if (autoOpen) setShowAssignmentDialog(true)
-  }, [autoOpen])
 
 
   // Fetch assignments
@@ -670,12 +675,12 @@ export function TrainingAssignmentsPanel({
       )}
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overview' | 'assignments')} className="space-y-6">
-        <TabsList className="bg-white p-1 border rounded-lg">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-hotel-navy data-[state=active]:text-white">
+        <TabsList className="w-full sm:w-auto bg-white p-1 border rounded-lg">
+          <TabsTrigger value="overview" className="flex-1 sm:flex-none data-[state=active]:bg-hotel-navy data-[state=active]:text-white">
             <BarChart3 className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
             {t('overview')}
           </TabsTrigger>
-          <TabsTrigger value="assignments" className="data-[state=active]:bg-hotel-navy data-[state=active]:text-white">
+          <TabsTrigger value="assignments" className="flex-1 sm:flex-none data-[state=active]:bg-hotel-navy data-[state=active]:text-white">
             <Edit className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
             {t('manageAssignments')}
           </TabsTrigger>
@@ -686,7 +691,7 @@ export function TrainingAssignmentsPanel({
           {/* Overview Filters Toolbar */}
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-gray-50 p-4 rounded-lg border">
             <div className="flex flex-1 items-center gap-4 w-full md:w-auto flex-wrap">
-              <div className="relative flex-1 md:w-64 min-w-[200px]">
+              <div className="relative flex-1 w-full md:w-64 min-w-0">
                 <Search className={cn("absolute top-2.5 h-4 w-4 text-gray-500", isRTL ? "right-3" : "left-3")} />
                 <Input
                   placeholder={t('searchEmployeeOrModule')}
@@ -703,10 +708,10 @@ export function TrainingAssignmentsPanel({
                 placeholder={t('filterByDept')}
                 generalLabel={t('allDepartments')}
                 generalValue="all"
-                className="w-[180px] bg-white"
+                className="w-full sm:w-[180px] bg-white"
               />
               <Select value={overviewFilterProp} onValueChange={setOverviewFilterProp}>
-                <SelectTrigger className="w-[180px] bg-white">
+                <SelectTrigger className="w-full sm:w-[180px] bg-white">
                   <SelectValue placeholder={t('filterByProp')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -717,7 +722,7 @@ export function TrainingAssignmentsPanel({
                 </SelectContent>
               </Select>
               <Select value={overviewFilterStatus} onValueChange={setOverviewFilterStatus}>
-                <SelectTrigger className="w-[150px] bg-white">
+                <SelectTrigger className="w-full sm:w-[150px] bg-white">
                   <SelectValue placeholder={t('filterByStatus')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -729,7 +734,7 @@ export function TrainingAssignmentsPanel({
               </Select>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full md:w-auto justify-end">
               {(overviewSearch || overviewFilterDept !== 'all' || overviewFilterProp !== 'all' || overviewFilterStatus !== 'all') && (
                 <Button
                   variant="ghost"
@@ -978,10 +983,10 @@ export function TrainingAssignmentsPanel({
         {/* ASSIGNMENTS TAB */}
         < TabsContent value="assignments" className="space-y-6" >
           <div className={cn(
-            "flex items-center bg-white p-4 rounded-lg border shadow-sm",
+            "flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-4 rounded-lg border shadow-sm",
             hideCreateButton ? "justify-start" : "justify-between"
           )}>
-            <div className="relative flex-1 max-w-sm">
+            <div className="relative flex-1 max-w-none sm:max-w-sm">
               <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
               <Input
                 placeholder={t('searchAssignments')}
@@ -991,7 +996,7 @@ export function TrainingAssignmentsPanel({
               />
             </div>
             {!hideCreateButton && (
-              <Button onClick={() => setShowAssignmentDialog(true)} className={cn("bg-hotel-navy", isRTL ? "flex-row-reverse" : "")}>
+              <Button onClick={() => setShowAssignmentDialog(true)} className={cn("bg-hotel-navy w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
                 <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
                 {t('createAssignment')}
               </Button>
@@ -1000,7 +1005,7 @@ export function TrainingAssignmentsPanel({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoadingAssignments ? (
-              <div className="col-span-3 flex justify-center py-12">
+              <div className="col-span-full flex justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-hotel-gold" />
               </div>
             ) : filteredAssignments.length > 0 ? (
@@ -1055,7 +1060,7 @@ export function TrainingAssignmentsPanel({
                 </Card>
               ))
             ) : (
-              <div className="col-span-3 text-center py-12 bg-white rounded-lg border border-dashed">
+              <div className="col-span-full text-center py-12 bg-white rounded-lg border border-dashed">
                 <div className="mx-auto h-12 w-12 text-gray-300">
                   <Edit className="h-12 w-12" />
                 </div>

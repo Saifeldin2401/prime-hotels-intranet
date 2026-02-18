@@ -480,6 +480,15 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                                     : "border-gray-100 hover:border-gray-200"
                                             )}
                                             onClick={() => handleDocToggle(doc.id)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault()
+                                                    handleDocToggle(doc.id)
+                                                }
+                                            }}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-pressed={selectedDocIds.includes(doc.id)}
                                         >
                                             <Checkbox
                                                 checked={selectedDocIds.includes(doc.id)}

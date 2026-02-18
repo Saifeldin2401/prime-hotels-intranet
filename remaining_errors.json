@@ -1,0 +1,167 @@
+[
+  {
+    "filePath": "src/components/hr/PromoteEmployeeDialog.tsx",
+    "plugin": "jsx-a11y",
+    "rule": "role-has-required-aria-props",
+    "severity": "error",
+    "message": "`combobox` role is missing required aria props `aria-controls`.",
+    "help": "Add missing aria props `aria-controls` to the element with `combobox` role.",
+    "line": 305,
+    "column": 53,
+    "category": "Accessibility"
+  },
+  {
+    "filePath": "src/pages/training/TrainingAnalytics.tsx",
+    "plugin": "react-doctor",
+    "rule": "no-nested-component-definition",
+    "severity": "error",
+    "message": "Component \"StatCard\" defined inside \"TrainingAnalytics\" — creates new instance every render, destroying state",
+    "help": "Move to a separate file or to module scope above the parent component",
+    "line": 259,
+    "column": 11,
+    "category": "Correctness"
+  },
+  {
+    "filePath": "src/pages/training/MyCertificates.tsx",
+    "plugin": "react-doctor",
+    "rule": "no-nested-component-definition",
+    "severity": "error",
+    "message": "Component \"CertificateCard\" defined inside \"MyCertificates\" — creates new instance every render, destroying state",
+    "help": "Move to a separate file or to module scope above the parent component",
+    "line": 88,
+    "column": 11,
+    "category": "Correctness"
+  },
+  {
+    "filePath": "src/pages/announcements/AnnouncementAnalytics.tsx",
+    "plugin": "react-doctor",
+    "rule": "no-nested-component-definition",
+    "severity": "error",
+    "message": "Component \"UserList\" defined inside \"AnnouncementAnalytics\" — creates new instance every render, destroying state",
+    "help": "Move to a separate file or to module scope above the parent component",
+    "line": 198,
+    "column": 11,
+    "category": "Correctness"
+  },
+  {
+    "filePath": "src/pages/hr/EmployeeOfMonthManagement.tsx",
+    "plugin": "jsx-a11y",
+    "rule": "role-has-required-aria-props",
+    "severity": "error",
+    "message": "`combobox` role is missing required aria props `aria-controls`.",
+    "help": "Add missing aria props `aria-controls` to the element with `combobox` role.",
+    "line": 285,
+    "column": 45,
+    "category": "Accessibility"
+  },
+  {
+    "filePath": "src/pages/onboarding/TemplateEditor.tsx",
+    "plugin": "jsx-a11y",
+    "rule": "role-has-required-aria-props",
+    "severity": "error",
+    "message": "`combobox` role is missing required aria props `aria-controls`.",
+    "help": "Add missing aria props `aria-controls` to the element with `combobox` role.",
+    "line": 234,
+    "column": 45,
+    "category": "Accessibility"
+  },
+  {
+    "filePath": "src/pages/maintenance/MaintenanceDashboard.tsx",
+    "plugin": "react-doctor",
+    "rule": "no-nested-component-definition",
+    "severity": "error",
+    "message": "Component \"TicketCard\" defined inside \"MaintenanceDashboard\" — creates new instance every render, destroying state",
+    "help": "Move to a separate file or to module scope above the parent component",
+    "line": 102,
+    "column": 11,
+    "category": "Correctness"
+  },
+  {
+    "filePath": "src/pages/maintenance/MaintenanceDashboard.tsx",
+    "plugin": "react-doctor",
+    "rule": "no-nested-component-definition",
+    "severity": "error",
+    "message": "Component \"HomeIcon\" defined inside \"MaintenanceDashboard\" — creates new instance every render, destroying state",
+    "help": "Move to a separate file or to module scope above the parent component",
+    "line": 188,
+    "column": 9,
+    "category": "Correctness"
+  },
+  {
+    "filePath": "src/pages/learning/AssignmentManager.tsx",
+    "plugin": "jsx-a11y",
+    "rule": "role-has-required-aria-props",
+    "severity": "error",
+    "message": "`combobox` role is missing required aria props `aria-controls`.",
+    "help": "Add missing aria props `aria-controls` to the element with `combobox` role.",
+    "line": 318,
+    "column": 45,
+    "category": "Accessibility"
+  },
+  {
+    "filePath": "src/pages/learning/AssignmentManager.tsx",
+    "plugin": "jsx-a11y",
+    "rule": "role-has-required-aria-props",
+    "severity": "error",
+    "message": "`combobox` role is missing required aria props `aria-controls`.",
+    "help": "Add missing aria props `aria-controls` to the element with `combobox` role.",
+    "line": 435,
+    "column": 49,
+    "category": "Accessibility"
+  },
+  {
+    "filePath": "src/components/admin/UserForm.tsx",
+    "plugin": "jsx-a11y",
+    "rule": "role-has-required-aria-props",
+    "severity": "error",
+    "message": "`combobox` role is missing required aria props `aria-controls`.",
+    "help": "Add missing aria props `aria-controls` to the element with `combobox` role.",
+    "line": 737,
+    "column": 21,
+    "category": "Accessibility"
+  },
+  {
+    "filePath": "src/components/admin/UserForm.tsx",
+    "plugin": "jsx-a11y",
+    "rule": "role-has-required-aria-props",
+    "severity": "error",
+    "message": "`combobox` role is missing required aria props `aria-controls`.",
+    "help": "Add missing aria props `aria-controls` to the element with `combobox` role.",
+    "line": 909,
+    "column": 21,
+    "category": "Accessibility"
+  },
+  {
+    "filePath": "src/components/documents/DocumentVersionComparison.tsx",
+    "plugin": "react-doctor",
+    "rule": "no-nested-component-definition",
+    "severity": "error",
+    "message": "Component \"VersionCard\" defined inside \"DocumentVersionComparison\" — creates new instance every render, destroying state",
+    "help": "Move to a separate file or to module scope above the parent component",
+    "line": 122,
+    "column": 9,
+    "category": "Correctness"
+  },
+  {
+    "filePath": "src/components/documents/DocumentVersionComparison.tsx",
+    "plugin": "react-doctor",
+    "rule": "no-nested-component-definition",
+    "severity": "error",
+    "message": "Component \"ChangeIndicator\" defined inside \"DocumentVersionComparison\" — creates new instance every render, destroying state",
+    "help": "Move to a separate file or to module scope above the parent component",
+    "line": 168,
+    "column": 9,
+    "category": "Correctness"
+  },
+  {
+    "filePath": "src/components/common/CommandPalette.tsx",
+    "plugin": "react-doctor",
+    "rule": "no-derived-state-effect",
+    "severity": "error",
+    "message": "State reset in useEffect — use a key prop to reset component state when props change",
+    "help": "For derived state, compute inline: `const x = fn(dep)`. For state resets on prop change, use a key prop: `<Component key={prop} />`",
+    "line": 144,
+    "column": 5,
+    "category": "State & Effects"
+  }
+]

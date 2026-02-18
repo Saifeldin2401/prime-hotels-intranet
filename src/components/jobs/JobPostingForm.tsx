@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -40,6 +40,7 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
     const { toast } = useToast()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [openJobTitle, setOpenJobTitle] = useState(false)
+    const jobTitleListId = useId()
 
     // Fetch Job Titles from DB
     const { data: jobTitlesList } = useQuery({
@@ -187,6 +188,7 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
                                 <Button
                                     variant="outline"
                                     role="combobox"
+                                    aria-controls={jobTitleListId}
                                     aria-expanded={openJobTitle}
                                     className={cn(
                                         "w-full justify-between",
@@ -202,7 +204,7 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
                             <PopoverContent className="w-[400px] p-0" align="start">
                                 <Command>
                                     <CommandInput placeholder="Search job title..." />
-                                    <CommandList>
+                                    <CommandList id={jobTitleListId}>
                                         <CommandEmpty>No job title found.</CommandEmpty>
                                         <CommandGroup>
                                             {jobTitlesList?.map((item) => (

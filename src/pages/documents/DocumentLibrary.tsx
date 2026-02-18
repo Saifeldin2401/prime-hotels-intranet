@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useDocuments, useDocumentStats, useFavorites, useToggleFavorite, useSubmitForApproval } from '@/hooks/useDocuments'
+import { useDocuments, useDocumentStats, useFavorites, useToggleFavorite, useSubmitForApproval, useUpdateDocument, useDeleteDocument } from '@/hooks/useDocuments'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
@@ -14,6 +14,9 @@ import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EnhancedBadge } from '@/components/ui/enhanced-badge'
 import { Progress } from '@/components/ui/progress'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
 import {
   Plus,
   Search,
@@ -26,7 +29,9 @@ import {
   Star,
   FileCheck,
   Heart,
-  Eye
+  Eye,
+  Pencil,
+  Trash2
 } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -49,8 +54,17 @@ export default function DocumentLibrary() {
   const [selectedDocument, setSelectedDocument] = useState<{ id: string; title: string; file_url: string } | null>(null)
 
   const submitForApproval = useSubmitForApproval()
+  const updateDocument = useUpdateDocument()
+  const deleteDocument = useDeleteDocument()
   const { data: favorites = new Set() } = useFavorites()
+  const favoritesSet = favorites instanceof Set ? favorites : Array.isArray(favorites) ? new Set(favorites) : new Set()
   const toggleFavorite = useToggleFavorite()
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null)
+  const [editForm, setEditForm] = useState({ title: '', description: '' })
+
+  const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null)
 
   // Real document data from Supabase
   const { data: documents = [], isLoading } = useDocuments({
@@ -72,6 +86,38 @@ export default function DocumentLibrary() {
       file_url: doc.file_url
     })
     setViewerOpen(true)
+  }
+
+  const handleOpenEdit = (doc: Document, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingDocument(doc)
+    setEditForm({
+      title: doc.title || '',
+      description: doc.description || ''
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingDocument) return
+    await updateDocument.mutateAsync({
+      id: editingDocument.id,
+      title: editForm.title.trim(),
+      description: editForm.description
+    })
+    setEditDialogOpen(false)
+    setEditingDocument(null)
+  }
+
+  const handleRequestDelete = (docId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDeleteDocumentId(docId)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteDocumentId) return
+    await deleteDocument.mutateAsync(deleteDocumentId)
+    setDeleteDocumentId(null)
   }
 
   const { data: stats } = useDocumentStats()
@@ -159,7 +205,7 @@ export default function DocumentLibrary() {
         ) : (
           <div className="space-y-2 sm:space-y-3">
             {docs.map((doc, index) => {
-              const isFavorite = favorites.has(doc.id)
+              const isFavorite = favoritesSet.has(doc.id)
               return (
                 <div
                   key={doc.id}
@@ -217,6 +263,28 @@ export default function DocumentLibrary() {
                       >
                         Submit for Approval
                       </Button>
+                    )}
+                    {user?.id === doc.created_by && (doc.status === 'DRAFT' || doc.status === 'REJECTED') && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleOpenEdit(doc, e)}
+                          className="text-gray-500 hover:text-hotel-navy h-8 w-8 p-0"
+                          title={t('edit_document', { defaultValue: 'Edit' })}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleRequestDelete(doc.id, e)}
+                          className="text-gray-500 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
+                          title={t('delete_document', { defaultValue: 'Delete' })}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
                     )}
                     {doc.requires_acknowledgment && (
                       acknowledgedDocumentIds.has(doc.id) ? (
@@ -416,7 +484,7 @@ export default function DocumentLibrary() {
         <TabsContent value="favorites" className="space-y-4 animate-fade-in">
           <EnhancedCard className="border-0 shadow-lg" padding="none">
             <div className="p-6">
-              {renderDocumentList(documents.filter(d => favorites.has(d.id)))}
+              {renderDocumentList(documents.filter(d => favoritesSet.has(d.id)))}
             </div>
           </EnhancedCard>
         </TabsContent>
@@ -432,6 +500,61 @@ export default function DocumentLibrary() {
         open={viewerOpen}
         onOpenChange={setViewerOpen}
         document={selectedDocument || { id: '', title: '', file_url: '' }}
+      />
+
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open)
+          if (!open) {
+            setEditingDocument(null)
+            setEditForm({ title: '', description: '' })
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('edit_document', { defaultValue: 'Edit Document' })}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="doc-title">{t('document.title', { defaultValue: 'Title' })}</Label>
+              <Input
+                id="doc-title"
+                value={editForm.title}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="doc-description">{t('document.description', { defaultValue: 'Description' })}</Label>
+              <Input
+                id="doc-description"
+                value={editForm.description}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+              {t('cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveEdit}
+              disabled={!editForm.title.trim() || updateDocument.isPending}
+            >
+              {t('save', { defaultValue: 'Save' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <DeleteConfirmationDialog
+        open={!!deleteDocumentId}
+        onOpenChange={(open) => !open && setDeleteDocumentId(null)}
+        itemName={t('document.label', { defaultValue: 'document' })}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteDocument.isPending}
       />
     </div>
   )

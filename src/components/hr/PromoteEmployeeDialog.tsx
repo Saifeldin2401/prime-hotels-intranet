@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useId } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -108,6 +108,7 @@ export function PromoteEmployeeDialog({
     });
 
     const [openJobTitle, setOpenJobTitle] = useState(false);
+    const jobTitleListId = useId();
 
     // Fetch Job Titles from DB
     const { data: jobTitlesList } = useQuery({
@@ -304,6 +305,7 @@ export function PromoteEmployeeDialog({
                                                     variant="outline"
                                                     role="combobox"
                                                     aria-expanded={openJobTitle}
+                                                    aria-controls={jobTitleListId}
                                                     className={cn(
                                                         "w-full justify-between",
                                                         !field.value && "text-muted-foreground"
@@ -319,7 +321,7 @@ export function PromoteEmployeeDialog({
                                         <PopoverContent className="w-[400px] p-0" align="start">
                                             <Command>
                                                 <CommandInput placeholder="Search job title..." />
-                                                <CommandList>
+                                                <CommandList id={jobTitleListId}>
                                                     <CommandEmpty>No job title found.</CommandEmpty>
                                                     <CommandGroup>
                                                         {jobTitlesList?.map((item) => (

@@ -86,7 +86,7 @@ export function Sidebar() {
 
         {isMultiPropertyUser && (
           <Select
-            value={currentProperty?.id}
+            value={currentProperty?.id ?? ''}
             onValueChange={switchProperty}
           >
             <SelectTrigger className="w-full h-8 text-xs">

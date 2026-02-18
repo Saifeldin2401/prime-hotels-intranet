@@ -54,7 +54,9 @@ export function useKnowledgeArticle(id: string | undefined) {
     return useQuery({
         queryKey: ['knowledge-article', id, user?.id],
         queryFn: () => KnowledgeService.getArticleById(id!, user?.id),
-        enabled: !!id
+        enabled: !!id,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true
     })
 }
 
@@ -267,7 +269,9 @@ export function useContentTypeCounts() {
     return useQuery({
         queryKey: ['knowledge-type-counts'],
         queryFn: () => KnowledgeService.getContentTypeCounts(),
-        staleTime: 1000 * 60 * 5 // Cache for 5 minutes
+        staleTime: 1000 * 30, // Keep reasonably fresh for sidebar badges
+        refetchOnWindowFocus: true,
+        refetchInterval: 1000 * 15
     })
 }
 
@@ -283,47 +287,86 @@ export function useDepartmentContentCounts() {
         queryFn: async () => {
             if (!user?.id) return {}
 
-            const { supabase } = await import('@/lib/supabase')
-
             // Get counts by department and type for ALL visible documents (RLS applied)
-            const { data: documents } = await supabase
+            const { data: documents, error: docsError } = await supabase
                 .from('documents')
-                .select('department_id, content_type, departments(id, name)')
+                .select('department_id, content_type, visibility, departments(id, name)')
                 .not('department_id', 'is', null)
-                .eq('status', 'PUBLISHED') // Uppercase match enum
                 .eq('is_deleted', false)
 
-            if (!documents) return {}
+            if (docsError || !documents || documents.length === 0) return {}
 
-            // Group by department
-            const byDepartment = documents.reduce((acc: any, doc: any) => {
+            const departmentIds = Array.from(new Set(
+                documents
+                    .map((doc: any) => doc.department_id)
+                    .filter((id: string | null): id is string => !!id)
+            ))
+
+            const departmentNameById: Record<string, string> = {}
+            if (departmentIds.length > 0) {
+                const { data: departmentRows } = await supabase
+                    .from('departments')
+                    .select('id, name')
+                    .in('id', departmentIds)
+
+                for (const row of departmentRows || []) {
+                    if (row?.id && row?.name) {
+                        departmentNameById[row.id] = row.name
+                    }
+                }
+            }
+
+            // Group by normalized department name to merge same-named departments across properties.
+            const byName = documents.reduce((acc: any, doc: any) => {
                 const deptId = doc.department_id
-                // Handle cases where departments might be null due to joins/deletes
-                if (!deptId || !doc.departments) return acc
+                const joinedDept = Array.isArray(doc.departments) ? doc.departments[0] : doc.departments
+                if (!deptId) return acc
 
-                const deptName = doc.departments.name
+                const deptName = joinedDept?.name || departmentNameById[deptId] || `Department ${deptId.slice(0, 8)}`
 
-                if (!acc[deptId]) {
-                    acc[deptId] = {
-                        id: deptId,
+                const key = deptName.trim().toLowerCase()
+                if (!acc[key]) {
+                    acc[key] = {
+                        id: joinedDept?.id || deptId,
                         name: deptName,
                         counts: {},
-                        total: 0
+                        total: 0,
+                        departmentIds: new Set<string>()
                     }
                 }
 
+                acc[key].departmentIds.add(deptId)
+
                 const contentType = doc.content_type || 'document'
-                acc[deptId].counts[contentType] =
-                    (acc[deptId].counts[contentType] || 0) + 1
-                acc[deptId].total++
+                acc[key].counts[contentType] =
+                    (acc[key].counts[contentType] || 0) + 1
+                acc[key].total++
 
                 return acc
             }, {})
 
-            return byDepartment
+            // Convert to object keyed by stable id for sidebar URL params.
+            // Prefer IDs that resolve through departments table to keep matching search filters stable.
+            return Object.values(byName)
+                .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                .reduce((acc: any, dept: any) => {
+                    const allIds = Array.from(dept.departmentIds || []) as string[]
+                    const knownIds = allIds.filter(id => !!departmentNameById[id])
+                    const stableId = (knownIds.length > 0 ? knownIds : allIds).sort()[0] || dept.id
+
+                    acc[stableId] = {
+                        id: stableId,
+                        name: dept.name,
+                        counts: dept.counts,
+                        total: dept.total
+                    }
+                    return acc
+                }, {})
         },
         enabled: !!user?.id,
-        staleTime: 1000 * 60 * 5 // Cache for 5 minutes
+        staleTime: 1000 * 30, // Keep reasonably fresh for sidebar badges
+        refetchOnWindowFocus: true,
+        refetchInterval: 1000 * 15
     })
 }
 

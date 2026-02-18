@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -49,6 +49,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const { t } = useTranslation('users')
   const { t: tCommon } = useTranslation('common')
   const { toast } = useToast()
+  const managerListId = useId()
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
@@ -188,6 +189,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
     },
   })
   const [openJobTitle, setOpenJobTitle] = useState(false)
+  const jobTitleListId = useId()
 
   // Fetch potential managers based on selected departments/properties
   const { data: potentialManagers } = useQuery({
@@ -736,6 +738,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     variant="outline"
                     role="combobox"
                     aria-expanded={openJobTitle}
+                    aria-controls={jobTitleListId}
                     className="w-full justify-between font-normal text-left"
                   >
                     {jobTitle || t('form.select_job_title')}
@@ -745,7 +748,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                 <PopoverContent className="w-[400px] p-0" align="start">
                   <Command>
                     <CommandInput placeholder={t('form.search_job_title')} />
-                    <CommandList>
+                    <CommandList id={jobTitleListId}>
                       <CommandEmpty>{t('form.no_job_title')}</CommandEmpty>
                       <CommandGroup>
                         {jobTitlesList?.map((item) => (
@@ -908,6 +911,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     variant="outline"
                     role="combobox"
                     aria-expanded={openReportingTo}
+                    aria-controls={managerListId}
                     className="w-full justify-between font-normal text-left"
                   >
                     {reportingTo
@@ -919,7 +923,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                 <PopoverContent className="w-[400px] p-0" align="start">
                   <Command>
                     <CommandInput placeholder={t('form.search_managers')} />
-                    <CommandList>
+                    <CommandList id={managerListId}>
                       <CommandEmpty>
                         {selectedDepartments.length === 0 && selectedProperties.length === 0
                           ? t('form.manager_dept_helper')

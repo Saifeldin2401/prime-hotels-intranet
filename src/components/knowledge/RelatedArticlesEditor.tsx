@@ -192,6 +192,15 @@ export function RelatedArticlesEditor({
                                                         e.stopPropagation()
                                                         addRelation.mutate(article.id)
                                                     }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault()
+                                                            e.stopPropagation()
+                                                            addRelation.mutate(article.id)
+                                                        }
+                                                    }}
+                                                    role="button"
+                                                    tabIndex={0}
                                                 >
                                                     <FileText className="h-4 w-4 mr-2 text-gray-400" />
                                                     <div className="flex-1">

@@ -51,99 +51,6 @@ export default function MyCertificates() {
         await downloadCertificate.mutateAsync(certificateId)
     }
 
-    const getTypeIcon = (type: string) => {
-        const baseClasses = "w-5 h-5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12"
-        switch (type) {
-            case 'training': return <BookOpen className={`${baseClasses} text-blue-600`} />
-            case 'sop_quiz': return <Shield className={`${baseClasses} text-green-600`} />
-            case 'compliance': return <CheckCircle className={`${baseClasses} text-purple-600`} />
-            case 'achievement': return <Award className={`${baseClasses} text-yellow-600`} />
-            default: return <Award className={`${baseClasses} text-gray-600`} />
-        }
-    }
-
-    const getTypeLabel = (type: string) => {
-        switch (type) {
-            case 'training': return t('training')
-            case 'sop_quiz': return t('sopQuiz')
-            case 'compliance': return t('compliance')
-            case 'achievement': return t('achievement')
-            default: return t('certificate')
-        }
-    }
-
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'active':
-                return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t('active')}</Badge>
-            case 'expired':
-                return <Badge className="bg-yellow-100 text-yellow-800"><AlertCircle className="w-3 h-3 mr-1" />{t('expired')}</Badge>
-            case 'revoked':
-                return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />{t('revoked')}</Badge>
-            default:
-                return <Badge variant="secondary">{status}</Badge>
-        }
-    }
-
-    const CertificateCard = ({ certificate }: { certificate: Certificate }) => (
-        <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-            <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                        {getTypeIcon(certificate.certificateType)}
-                        <Badge variant="outline">{getTypeLabel(certificate.certificateType)}</Badge>
-                    </div>
-                    {getStatusBadge(certificate.status)}
-                </div>
-                <CardTitle className="text-lg mt-2 line-clamp-2">{certificate.title}</CardTitle>
-                <CardDescription>
-                    <span className="flex items-center gap-1 text-sm">
-                        <Clock className="w-3 h-3" />
-                        {t('completedOn', { date: format(new Date(certificate.completionDate), 'MMM d, yyyy') })}
-                    </span>
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                {certificate.score !== undefined && (
-                    <div className="mb-3 text-sm">
-                        <span className="text-gray-600">{t('score')}: </span>
-                        <span className="font-semibold text-blue-600">{certificate.score}%</span>
-                        {certificate.passingScore && (
-                            <span className="text-gray-400 ml-1">/ {certificate.passingScore}% {t('required')}</span>
-                        )}
-                    </div>
-                )}
-
-                <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                    <div className="text-xs text-gray-500 mb-1">{t('certificateNumber')}</div>
-                    <div className="font-mono text-sm font-medium">{certificate.certificateNumber}</div>
-                    <div className="text-xs text-gray-500 mt-2 mb-1">{t('verificationCode')}</div>
-                    <div className="font-mono text-xs text-gray-600">{certificate.verificationCode}</div>
-                </div>
-
-                <div className="flex gap-2">
-                    <Button
-                        variant="default"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => handleDownload(certificate.id)}
-                        disabled={downloadCertificate.isPending || certificate.status !== 'active'}
-                    >
-                        {downloadCertificate.isPending ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                            <Download className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:translate-y-1" />
-                        )}
-                        {t('downloadPdf')}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => window.open(`/certificates/verify/${certificate.verificationCode}`, '_blank')}>
-                        <Eye className="w-4 h-4" />
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
-    )
-
     if (isLoading) {
         return (
             <div className="space-y-6">
@@ -237,7 +144,13 @@ export default function MyCertificates() {
                                     <h2 className="text-lg font-semibold mb-4">{t('activeCertificates')}</h2>
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                         {activeCertificates.map(cert => (
-                                            <CertificateCard key={cert.id} certificate={cert} />
+                                            <CertificateCard
+                                                key={cert.id}
+                                                certificate={cert}
+                                                onDownload={handleDownload}
+                                                isDownloading={downloadCertificate.isPending}
+                                                t={t}
+                                            />
                                         ))}
                                     </div>
                                 </div>
@@ -249,7 +162,13 @@ export default function MyCertificates() {
                                     <h2 className="text-lg font-semibold mb-4 text-gray-500">{t('expiredRevoked')}</h2>
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 opacity-75">
                                         {expiredCertificates.map(cert => (
-                                            <CertificateCard key={cert.id} certificate={cert} />
+                                            <CertificateCard
+                                                key={cert.id}
+                                                certificate={cert}
+                                                onDownload={handleDownload}
+                                                isDownloading={downloadCertificate.isPending}
+                                                t={t}
+                                            />
                                         ))}
                                     </div>
                                 </div>
@@ -261,3 +180,103 @@ export default function MyCertificates() {
         </div>
     )
 }
+
+const getTypeIcon = (type: string) => {
+    const baseClasses = "w-5 h-5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12"
+    switch (type) {
+        case 'training': return <BookOpen className={`${baseClasses} text-blue-600`} />
+        case 'sop_quiz': return <Shield className={`${baseClasses} text-green-600`} />
+        case 'compliance': return <CheckCircle className={`${baseClasses} text-purple-600`} />
+        case 'achievement': return <Award className={`${baseClasses} text-yellow-600`} />
+        default: return <Award className={`${baseClasses} text-gray-600`} />
+    }
+}
+
+const getTypeLabel = (type: string, t: any) => {
+    switch (type) {
+        case 'training': return t('training')
+        case 'sop_quiz': return t('sopQuiz')
+        case 'compliance': return t('compliance')
+        case 'achievement': return t('achievement')
+        default: return t('certificate')
+    }
+}
+
+const getStatusBadge = (status: string, t: any) => {
+    switch (status) {
+        case 'active':
+            return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t('active')}</Badge>
+        case 'expired':
+            return <Badge className="bg-yellow-100 text-yellow-800"><AlertCircle className="w-3 h-3 mr-1" />{t('expired')}</Badge>
+        case 'revoked':
+            return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />{t('revoked')}</Badge>
+        default:
+            return <Badge variant="secondary">{status}</Badge>
+    }
+}
+
+interface CertificateCardProps {
+    certificate: Certificate
+    onDownload: (id: string) => void
+    isDownloading: boolean
+    t: any
+}
+
+const CertificateCard = ({ certificate, onDownload, isDownloading, t }: CertificateCardProps) => (
+    <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+        <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                    {getTypeIcon(certificate.certificateType)}
+                    <Badge variant="outline">{getTypeLabel(certificate.certificateType, t)}</Badge>
+                </div>
+                {getStatusBadge(certificate.status, t)}
+            </div>
+            <CardTitle className="text-lg mt-2 line-clamp-2">{certificate.title}</CardTitle>
+            <CardDescription>
+                <span className="flex items-center gap-1 text-sm">
+                    <Clock className="w-3 h-3" />
+                    {t('completedOn', { date: format(new Date(certificate.completionDate), 'MMM d, yyyy') })}
+                </span>
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            {certificate.score !== undefined && (
+                <div className="mb-3 text-sm">
+                    <span className="text-gray-600">{t('score')}: </span>
+                    <span className="font-semibold text-blue-600">{certificate.score}%</span>
+                    {certificate.passingScore && (
+                        <span className="text-gray-400 ml-1">/ {certificate.passingScore}% {t('required')}</span>
+                    )}
+                </div>
+            )}
+
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <div className="text-xs text-gray-500 mb-1">{t('certificateNumber')}</div>
+                <div className="font-mono text-sm font-medium">{certificate.certificateNumber}</div>
+                <div className="text-xs text-gray-500 mt-2 mb-1">{t('verificationCode')}</div>
+                <div className="font-mono text-xs text-gray-600">{certificate.verificationCode}</div>
+            </div>
+
+            <div className="flex gap-2">
+                <Button
+                    variant="default"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => onDownload(certificate.id)}
+                    disabled={isDownloading || certificate.status !== 'active'}
+                >
+                    {isDownloading ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                        <Download className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:translate-y-1" />
+                    )}
+                    {t('downloadPdf')}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => window.open(`/certificates/verify/${certificate.verificationCode}`, '_blank')}>
+                    <Eye className="w-4 h-4" />
+                </Button>
+            </div>
+        </CardContent>
+    </Card>
+)

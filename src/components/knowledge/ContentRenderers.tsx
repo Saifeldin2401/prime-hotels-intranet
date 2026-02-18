@@ -51,32 +51,80 @@ export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
         if (!url) return ''
 
         if (isYouTube) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
-            const match = url.match(regExp)
-            const videoId = (match && match[2].length === 11) ? match[2] : null
-            if (videoId) return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`
+            try {
+                const parsed = new URL(url)
+
+                // Common formats:
+                // - https://www.youtube.com/watch?v=VIDEOID
+                // - https://youtu.be/VIDEOID
+                // - https://www.youtube.com/shorts/VIDEOID
+                // - https://www.youtube.com/embed/VIDEOID
+                // - https://www.youtube.com/live/VIDEOID
+                let videoId: string | null = null
+
+                if (parsed.hostname === 'youtu.be') {
+                    videoId = parsed.pathname.replace('/', '').trim() || null
+                } else if (parsed.pathname.startsWith('/watch')) {
+                    videoId = parsed.searchParams.get('v')
+                } else if (parsed.pathname.startsWith('/shorts/')) {
+                    videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || null
+                } else if (parsed.pathname.startsWith('/embed/')) {
+                    videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || null
+                } else if (parsed.pathname.startsWith('/live/')) {
+                    videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || null
+                }
+
+                // Fallback: regex extraction for odd formats
+                if (!videoId) {
+                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/|live\/)([^#\&\?]*).*/
+                    const match = url.match(regExp)
+                    videoId = match?.[2] || null
+                }
+
+                if (!videoId || videoId.length < 8) return ''
+
+                const params = new URLSearchParams({
+                    rel: '0',
+                    modestbranding: '1',
+                    playsinline: '1',
+                })
+
+                return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`
+            } catch {
+                return ''
+            }
         }
 
         if (isVimeo) {
-            const regExp = /vimeo\.com\/(\d+)/
-            const match = url.match(regExp)
-            if (match && match[1]) return `https://player.vimeo.com/video/${match[1]}`
+            try {
+                const parsed = new URL(url)
+                // Formats:
+                // - https://vimeo.com/123456
+                // - https://player.vimeo.com/video/123456
+                const match = parsed.pathname.match(/(\/video\/)?(\d+)/)
+                const id = match?.[2]
+                if (id) return `https://player.vimeo.com/video/${id}`
+            } catch {
+                // ignore
+            }
         }
 
         return url
     }
 
     if (isYouTube || isVimeo) {
+        const embedUrl = getEmbedUrl(videoUrl)
         return (
             <div className="space-y-4">
                 <div className="aspect-video rounded-lg overflow-hidden bg-black">
                     <iframe
-                        src={getEmbedUrl(videoUrl)}
-                        title={title || 'Video'}
+                        src={embedUrl}
+                        title={title ? `Knowledge video: ${title}` : "Knowledge video player"}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                         referrerPolicy="strict-origin-when-cross-origin"
+                        loading="lazy"
                     />
                 </div>
                 <div className="flex justify-center">
@@ -164,12 +212,24 @@ export function ChecklistRenderer({ items, onCheckChange, readOnly = false }: Ch
                         <div
                             key={item.id}
                             className={cn(
-                                "flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer",
+                                "flex items-start gap-3 p-4 rounded-lg border transition-all",
                                 isChecked
                                     ? "bg-green-50 border-green-200"
-                                    : "bg-white border-gray-200 hover:border-gray-300"
+                                    : "bg-white border-gray-200 hover:border-gray-300",
+                                readOnly ? "cursor-default" : "cursor-pointer"
                             )}
                             onClick={() => !readOnly && handleCheck(item.id, !isChecked)}
+                            onKeyDown={(e) => {
+                                if (readOnly) return
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    handleCheck(item.id, !isChecked)
+                                }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-disabled={readOnly}
+                            aria-pressed={isChecked}
                         >
                             <Checkbox
                                 checked={isChecked}
@@ -352,9 +412,16 @@ interface VisualImage {
 
 interface ImageGalleryRendererProps {
     images: VisualImage[]
+    cacheVersion?: string
 }
 
-export function ImageGalleryRenderer({ images }: ImageGalleryRendererProps) {
+const appendCacheVersion = (url: string, cacheVersion?: string) => {
+    if (!cacheVersion) return url
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}v=${encodeURIComponent(cacheVersion)}`
+}
+
+export function ImageGalleryRenderer({ images, cacheVersion }: ImageGalleryRendererProps) {
     const [selectedImage, setSelectedImage] = useState<VisualImage | null>(null)
 
     if (!images || images.length === 0) {
@@ -376,10 +443,19 @@ export function ImageGalleryRenderer({ images }: ImageGalleryRendererProps) {
                         key={image.id}
                         className="group relative border rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
                         onClick={() => setSelectedImage(image)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                setSelectedImage(image)
+                            }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open image: ${image.caption || 'preview'}`}
                     >
                         <div className="aspect-video bg-gray-100">
                             <img
-                                src={image.url}
+                                src={appendCacheVersion(image.url, cacheVersion)}
                                 alt={image.caption}
                                 loading="lazy"
                                 className="w-full h-full object-contain"
@@ -402,10 +478,19 @@ export function ImageGalleryRenderer({ images }: ImageGalleryRendererProps) {
                 <div
                     className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
                     onClick={() => setSelectedImage(null)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setSelectedImage(null)
+                        }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Close image preview"
                 >
                     <div className="relative max-w-5xl max-h-[90vh] w-full">
                         <img
-                            src={selectedImage.url}
+                            src={appendCacheVersion(selectedImage.url, cacheVersion)}
                             alt={selectedImage.caption}
                             className="w-full h-full object-contain"
                         />

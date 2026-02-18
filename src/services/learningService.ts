@@ -172,6 +172,27 @@ export const learningService = {
         return data as LearningAssignment
     },
 
+    async updateAssignment(id: string, updates: Partial<CreateAssignmentDTO>) {
+        const { data, error } = await supabase
+            .from('learning_assignments')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data as LearningAssignment
+    },
+
+    async deleteAssignment(id: string) {
+        const { error } = await supabase
+            .from('learning_assignments')
+            .update({ is_deleted: true })
+            .eq('id', id)
+
+        if (error) throw error
+    },
+
     async getAssignments(targetId?: string, targetType?: string) {
         let query = supabase
             .from('learning_assignments')

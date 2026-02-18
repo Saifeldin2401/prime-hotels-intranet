@@ -3,7 +3,7 @@
  * 
  * A reusable rich text editor component with:
  * - Full formatting toolbar (bold, italic, lists, headings, links, tables)
- * - Image upload support (Base64 embedded)
+ * - Image upload support (Supabase Storage - public URL)
  * - RTL support for Arabic
  * - Controlled input with onChange callback
  */
@@ -11,6 +11,7 @@
 import { CKEditor } from '@ckeditor/ckeditor5-react'
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
 interface RichTextEditorProps {
     value: string
@@ -22,41 +23,66 @@ interface RichTextEditorProps {
     direction?: 'ltr' | 'rtl'
 }
 
-// Base64 Upload Adapter Factory
-function Base64UploadAdapterPlugin(editor: any) {
+// Supabase Storage Upload Adapter Factory
+function SupabaseUploadAdapterPlugin(editor: any) {
     editor.plugins.get('FileRepository').createUploadAdapter = (loader: any) => {
-        return new Base64UploadAdapter(loader)
+        return new SupabaseUploadAdapter(loader)
     }
 }
 
-// Base64 Upload Adapter class
-class Base64UploadAdapter {
+// Supabase Storage Upload Adapter
+// Uploads images to the 'documents' bucket under knowledge-images/{userId}/
+// and returns a permanent public URL — much more efficient than Base64.
+class SupabaseUploadAdapter {
     loader: any
+    abortController: AbortController
 
     constructor(loader: any) {
         this.loader = loader
+        this.abortController = new AbortController()
     }
 
-    upload() {
-        return this.loader.file.then((file: File) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader()
+    async upload(): Promise<{ default: string }> {
+        const file: File = await this.loader.file
 
-                reader.onload = () => {
-                    resolve({ default: reader.result as string })
-                }
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+        if (!allowedTypes.includes(file.type)) {
+            throw new Error(`Unsupported image type: ${file.type}. Please use JPEG, PNG, GIF, WebP, or SVG.`)
+        }
 
-                reader.onerror = (error) => {
-                    reject(error)
-                }
+        // Validate file size (max 5MB)
+        const maxSize = 5 * 1024 * 1024
+        if (file.size > maxSize) {
+            throw new Error(`Image too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 5MB.`)
+        }
 
-                reader.readAsDataURL(file)
+        // Get current user ID for the storage path (required by RLS)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('You must be logged in to upload images.')
+
+        // Build a unique path: {userId}/knowledge-images/{timestamp}-{sanitized-name}
+        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+        const path = `${user.id}/knowledge-images/${Date.now()}-${safeName}`
+
+        const { error } = await supabase.storage
+            .from('documents')
+            .upload(path, file, {
+                contentType: file.type,
+                upsert: false,
             })
-        })
+
+        if (error) throw new Error(`Upload failed: ${error.message}`)
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('documents')
+            .getPublicUrl(path)
+
+        return { default: publicUrl }
     }
 
     abort() {
-        // No abort logic needed for synchronous Base64 conversion
+        this.abortController.abort()
     }
 }
 
@@ -243,6 +269,85 @@ export function RichTextEditor({
                     color: #9a3412;
                 }
 
+                /* AI-Generated Alert Boxes */
+                .alert-important {
+                    background: linear-gradient(135deg, #fef3c7, #fde68a);
+                    border-left: 4px solid #f59e0b;
+                    padding: 1rem 1.5rem;
+                    border-radius: 0.5rem;
+                    margin: 1rem 0;
+                    color: #92400e;
+                    font-weight: 500;
+                    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);
+                }
+
+                .alert-warning {
+                    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+                    border-left: 4px solid #ef4444;
+                    padding: 1rem 1.5rem;
+                    border-radius: 0.5rem;
+                    margin: 1rem 0;
+                    color: #991b1b;
+                    font-weight: 500;
+                    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+                }
+
+                .alert-note {
+                    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+                    border-left: 4px solid #3b82f6;
+                    padding: 1rem 1.5rem;
+                    border-radius: 0.5rem;
+                    margin: 1rem 0;
+                    color: #1e40af;
+                    font-weight: 500;
+                    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+                }
+
+                .alert-tip {
+                    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+                    border-left: 4px solid #22c55e;
+                    padding: 1rem 1.5rem;
+                    border-radius: 0.5rem;
+                    margin: 1rem 0;
+                    color: #166534;
+                    font-weight: 500;
+                    box-shadow: 0 2px 4px rgba(34, 197, 94, 0.1);
+                }
+
+                /* Styled Tables */
+                .styled-table {
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    margin: 1.5rem 0;
+                    width: 100%;
+                    border-radius: 0.5rem;
+                    overflow: hidden;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    border: 1px solid #e5e7eb;
+                }
+
+                .styled-table th {
+                    background: linear-gradient(135deg, #1e40af, #3730a3);
+                    color: white;
+                    padding: 1rem;
+                    font-weight: 600;
+                    text-align: left;
+                }
+
+                .styled-table td {
+                    padding: 0.75rem 1rem;
+                    border-bottom: 1px solid #e5e7eb;
+                    background: white;
+                }
+
+                .styled-table tr:nth-child(even) td {
+                    background-color: #f8fafc;
+                }
+
+                .styled-table tr:hover td {
+                    background-color: #f1f5f9;
+                }
+
                 .ck.ck-content p {
                     margin-bottom: 1rem;
                 }
@@ -254,13 +359,218 @@ export function RichTextEditor({
                 .ck.ck-content li {
                     margin-bottom: 0.5rem;
                 }
-                .ck.ck-content blockquote {
+                /* Enhanced Styled Elements */
+                .main-title {
+                    color: #111827;
+                    font-size: 2.5rem;
+                    font-weight: 800;
+                    border-bottom: 3px solid #e5e7eb;
+                    padding-bottom: 0.5rem;
+                    margin-top: 2rem;
+                    margin-bottom: 1.5rem;
+                }
+
+                .section-title {
+                    color: #1f2937;
+                    font-size: 1.75rem;
+                    font-weight: 700;
+                    margin-top: 2rem;
+                    margin-bottom: 1rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .subsection-title {
+                    color: #374151;
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    margin-top: 1.5rem;
+                    margin-bottom: 0.75rem;
+                }
+
+                .minor-title {
+                    color: #4b5563;
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-top: 1.25rem;
+                    margin-bottom: 0.5rem;
+                }
+
+                .procedure-list {
+                    counter-reset: procedure-counter;
+                    list-style: none;
+                    padding-left: 0;
+                }
+
+                .procedure-list li {
+                    counter-increment: procedure-counter;
+                    margin-bottom: 1rem;
+                    position: relative;
+                    padding-left: 2.5rem;
+                }
+
+                .procedure-list li::before {
+                    content: counter(procedure-counter);
+                    position: absolute;
+                    left: 0;
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+
+                .bullet-list {
+                    list-style: none;
+                    padding-left: 0;
+                }
+
+                .bullet-list li {
+                    margin-bottom: 0.75rem;
+                    position: relative;
+                    padding-left: 1.5rem;
+                }
+
+                .bullet-list li::before {
+                    content: "•";
+                    position: absolute;
+                    left: 0;
+                    color: #1f2937;
+                    font-weight: 600;
+                }
+
+                .hotel-quote {
                     border-left: 4px solid #d1d5db;
-                    padding: 0.5rem 1rem;
-                    background: #f9fafb;
+                    padding: 1rem 1.5rem;
+                    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
                     font-style: italic;
                     margin: 1.5rem 0;
                     border-radius: 0 0.5rem 0.5rem 0;
+                    color: #475569;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    position: relative;
+                }
+
+                .hotel-quote::before {
+                    content: """;
+                    position: absolute;
+                    left: -8px;
+                    top: 0;
+                    width: 20px;
+                    height: 20px;
+                    background: #d1d5db;
+                    border-radius: 50%;
+                }
+
+                .section-divider {
+                    border: none;
+                    height: 2px;
+                    background: linear-gradient(90deg, transparent, #d1d5db, transparent);
+                    margin: 2rem 0;
+                    border-radius: 1px;
+                }
+
+                .table-of-contents {
+                    background: #f8fafc;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 0.5rem;
+                    padding: 1rem;
+                    margin: 1.5rem 0;
+                }
+
+                .table-of-contents h3 {
+                    margin: 0 0 1rem 0;
+                    font-size: 1.1rem;
+                    color: #374151;
+                }
+
+                .table-of-contents ul {
+                    list-style: none;
+                    padding: 0;
+                }
+
+                .table-of-contents li {
+                    margin-bottom: 0.5rem;
+                }
+
+                .table-of-contents a {
+                    color: #1f2937;
+                    text-decoration: none;
+                    font-weight: 500;
+                }
+
+                .table-of-contents a:hover {
+                    text-decoration: underline;
+                }
+
+                .emphasis-bold {
+                    color: #1f2937;
+                    font-weight: 700;
+                }
+
+                .emphasis-italic {
+                    color: #6b7280;
+                    font-style: italic;
+                }
+
+                .responsive-table {
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    margin: 1.5rem 0;
+                    width: 100%;
+                    border-radius: 0.5rem;
+                    overflow: hidden;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    border: 1px solid #e5e7eb;
+                }
+
+                .responsive-table th {
+                    background: linear-gradient(135deg, #1e40af, #3730a3);
+                    color: white;
+                    padding: 1rem;
+                    font-weight: 600;
+                    text-align: left;
+                }
+
+                .responsive-table td {
+                    padding: 0.75rem 1rem;
+                    border-bottom: 1px solid #e5e7eb;
+                    background: white;
+                }
+
+                .responsive-table tr:nth-child(even) td {
+                    background-color: #f8fafc;
+                }
+
+                .responsive-table tr:hover td {
+                    background-color: #f1f5f9;
+                }
+
+                .alert-remember {
+                    background: linear-gradient(135deg, #fef3c7, #fde68a);
+                    border-left: 4px solid #f59e0b;
+                    padding: 1rem 1.5rem;
+                    border-radius: 0.5rem;
+                    margin: 1rem 0;
+                    color: #92400e;
+                    font-weight: 500;
+                    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);
+                }
+
+                .ck.ck-content hr {
+                    border: none;
+                    height: 2px;
+                    background: linear-gradient(90deg, transparent, #d1d5db, transparent);
+                    margin: 2rem 0;
+                    border-radius: 1px;
+                }
+
+                .ck.ck-content strong {
+                    color: #1f2937;
+                    font-weight: 600;
+                }
+
+                .ck.ck-content em {
+                    color: #6b7280;
+                    font-style: italic;
                 }
                 .ck.ck-content a {
                     color: #2563eb;
@@ -306,7 +616,7 @@ export function RichTextEditor({
                     licenseKey: 'GPL',
                     placeholder,
                     language: direction === 'rtl' ? 'ar' : 'en',
-                    extraPlugins: [Base64UploadAdapterPlugin],
+                    extraPlugins: [SupabaseUploadAdapterPlugin],
                     toolbar: {
                         items: [
                             'heading',

@@ -1,11 +1,10 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
     LayoutGrid,
     Search,
     Bookmark,
-    Clock,
     BookOpen,
     ClipboardList,
     FileText,
@@ -14,16 +13,16 @@ import {
     Video,
     Image,
     Link2,
-    ChevronRight,
     Star,
     Library,
     Building2,
     Briefcase
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useDepartmentContentCounts, useContentTypeCounts } from '@/hooks/useKnowledge'
 import { type KnowledgeContentType } from '@/types/knowledge'
@@ -63,9 +62,14 @@ function NavItem({ icon: Icon, label, href, active, badge, className }: NavItemP
     )
 }
 
-export function KnowledgeSidebar() {
+interface KnowledgeSidebarProps {
+    className?: string
+}
+
+export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
     const { t } = useTranslation('knowledge')
     const { user, departments, primaryRole } = useAuth()
+    const queryClient = useQueryClient()
     const [searchParams] = useSearchParams()
 
     // Filters from URL
@@ -76,6 +80,24 @@ export function KnowledgeSidebar() {
 
     const { data: deptCounts } = useDepartmentContentCounts()
     const { data: typeCounts } = useContentTypeCounts()
+
+    useEffect(() => {
+        const invalidateKnowledgeCounts = () => {
+            queryClient.invalidateQueries({ queryKey: ['knowledge-department-counts-global'] })
+            queryClient.invalidateQueries({ queryKey: ['knowledge-type-counts'] })
+            queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
+        }
+
+        const channel = supabase
+            .channel('knowledge-sidebar-counts')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, invalidateKnowledgeCounts)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'document_department_access' }, invalidateKnowledgeCounts)
+            .subscribe()
+
+        return () => {
+            void supabase.removeChannel(channel)
+        }
+    }, [queryClient])
 
     const CONTENT_TYPES: { type: KnowledgeContentType; icon: any }[] = [
         { type: 'sop', icon: ClipboardList },
@@ -89,7 +111,7 @@ export function KnowledgeSidebar() {
     ]
 
     return (
-        <div className="w-64 flex flex-col h-full bg-white border-r border-gray-100">
+        <div className={cn("w-64 max-w-full flex flex-col h-full min-h-0 bg-white border-r border-gray-100", className)}>
             {/* Sidebar Header */}
             <div className="p-4 border-b border-gray-50">
                 <div className="flex items-center gap-2 mb-4">

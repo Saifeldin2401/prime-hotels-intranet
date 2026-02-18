@@ -5,11 +5,12 @@
  * Uses 'documents' table.
  */
 
-import { useState, useCallback, useEffect, lazy, Suspense } from 'react'
+import { useState, useCallback, useEffect, lazy, Suspense, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import {
     Save,
     Send,
@@ -20,7 +21,11 @@ import {
     RefreshCw,
     Link as LinkIcon,
     Languages,
-    Clock
+    Clock,
+    List,
+    ShieldCheck,
+    Building2,
+    Palette
 } from 'lucide-react'
 import { marked } from 'marked'
 import { Input } from '@/components/ui/input'
@@ -43,9 +48,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { MultiDepartmentSelector } from '@/components/shared/MultiDepartmentSelector'
 import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { supabase } from '@/lib/supabase'
 import { triggerService } from '@/services/triggerService'
+import * as KnowledgeService from '@/services/knowledgeService'
 import { createBulkNotifications } from '@/lib/notificationService'
 import { aiService } from '@/lib/gemini'
 import {
@@ -82,11 +89,18 @@ interface ArticleFormData {
     department_id: string | null
     category_id: string | null
     target_property_id: string | null
+    specific_department_ids: string[] // For specific departments visibility
     // Content Type Specific
     checklist_items: ChecklistItem[]
     faq_items: FAQItem[]
     video_url: string
     images: any[]
+}
+
+const isUuid = (value?: string | null): value is string => {
+    if (!value) return false
+    // Accept any canonical UUID-like identifier stored in DB (including legacy non-RFC variant IDs).
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }
 
 export default function KnowledgeEditor() {
@@ -112,6 +126,7 @@ export default function KnowledgeEditor() {
         department_id: null,
         category_id: null,
         target_property_id: null,
+        specific_department_ids: [],
         checklist_items: [],
         faq_items: [],
         video_url: '',
@@ -132,6 +147,12 @@ export default function KnowledgeEditor() {
     const { departments } = useDepartments(currentProperty?.id)
     const { data: categories } = useCategories(formData.department_id || undefined)
     const { data: properties } = useProperties()
+
+    // Extract unique department names for group selection
+    const uniqueDepartmentNames = useMemo(() => {
+        if (!departments) return []
+        return Array.from(new Set(departments.map(d => d.name))).sort()
+    }, [departments])
 
     // Helper function to notify reviewers when a document is submitted for review
     const notifyReviewersOfSubmission = async (documentId: string, documentTitle: string) => {
@@ -203,32 +224,56 @@ export default function KnowledgeEditor() {
     const VISIBILITY_OPTIONS: { value: KnowledgeVisibility; label: string; description: string }[] = [
         {
             value: 'all_properties' as KnowledgeVisibility,
-            label: t('editor.visibility.all_properties'),
-            description: t('editor.visibility.all_properties_desc')
+            label: t('editor.visibility.simple_all_hotels', 'Everyone in all hotels'),
+            description: t('editor.visibility.simple_all_hotels_desc', 'All active staff across all hotels can view this.')
         },
         {
             value: 'property',
-            label: t('editor.visibility.property'),
-            description: t('editor.visibility.property_desc')
+            label: t('editor.visibility.simple_one_hotel', 'Everyone in one hotel'),
+            description: t('editor.visibility.simple_one_hotel_desc', 'All staff in one selected hotel can view this.')
         },
         {
             value: 'department',
-            label: t('editor.visibility.department'),
-            description: t('editor.visibility.department_desc')
+            label: t('editor.visibility.simple_team_one_hotel', 'One team in one hotel'),
+            description: t('editor.visibility.simple_team_one_hotel_desc', 'Only one team in one selected hotel can view this.')
+        },
+        {
+            value: 'group_department',
+            label: t('editor.visibility.simple_team_all_hotels', 'Same team in all hotels'),
+            description: t('editor.visibility.simple_team_all_hotels_desc', 'One team can view this across every hotel.')
+        },
+        {
+            value: 'specific_departments',
+            label: t('editor.visibility.simple_custom', 'Custom teams'),
+            description: t('editor.visibility.simple_custom_desc', 'Pick specific teams from different hotels.')
         },
         {
             value: 'role',
-            label: t('editor.visibility.role'),
-            description: t('editor.visibility.role_desc')
+            label: t('editor.visibility.simple_role_advanced', 'By role (Advanced)'),
+            description: t('editor.visibility.simple_role_advanced_desc', 'Use role-based visibility rules.')
         },
     ]
 
     const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
+    const previewRef = useRef<HTMLDivElement>(null)
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const [aiLanguage, setAiLanguage] = useState('English')
     const [isForbidden, setIsForbidden] = useState(false)
+
+    const previewHtml = useMemo(() => {
+        const raw = formData.content || ''
+        if (!raw.trim()) return `<p class="text-gray-400">${t('editor.empty_preview')}</p>`
+        const isHtml = raw.trim().startsWith('<')
+        const html = isHtml ? raw : (marked.parse(raw, { async: false }) as string)
+        return transformMermaidCodeBlocks(html)
+    }, [formData.content, t])
+
+    useEffect(() => {
+        if (activeTab !== 'preview') return
+        void renderMermaidDiagrams(previewRef.current)
+    }, [activeTab, previewHtml])
 
     // Permission check
     useEffect(() => {
@@ -241,7 +286,7 @@ export default function KnowledgeEditor() {
 
     // Load Data Effect
     useEffect(() => {
-        if (isEditing && id) {
+        if (id && id !== 'new') {
             supabase
                 .from('documents')
                 .select('*')
@@ -263,6 +308,8 @@ export default function KnowledgeEditor() {
                             department_id: data.department_id || null,
                             category_id: data.category_id || null,
                             target_property_id: data.property_id || null,
+                            specific_department_ids: data.department_access_ids || [],
+                            // Content Type Specific
                             checklist_items: data.checklist_items || [],
                             faq_items: data.faq_items || [],
                             video_url: data.video_url || '',
@@ -283,7 +330,7 @@ export default function KnowledgeEditor() {
             // Smart validation: Auto-adjust visibility based on department selection
             if (field === 'department_id') {
                 // If department is set to None (null), reset visibility if it requires department
-                if (value === null && updated.visibility === 'department') {
+                if (value === null && (updated.visibility === 'department' || updated.visibility === 'group_department')) {
                     updated.visibility = 'all_properties' as KnowledgeVisibility
                 }
             }
@@ -301,9 +348,63 @@ export default function KnowledgeEditor() {
 
     // Computed validation warnings
     const validationWarnings = {
-        departmentRequired: formData.visibility === 'department' && !formData.department_id,
-        propertyIrrelevant: formData.visibility === 'all_properties' && formData.target_property_id,
+        departmentRequired: (formData.visibility === 'department' || formData.visibility === 'group_department') && !formData.department_id,
+        propertyIrrelevant: (formData.visibility === 'all_properties' || formData.visibility === 'group_department') && formData.target_property_id,
     }
+
+    const selectedDepartmentName = useMemo(() => {
+        if (!formData.department_id) return null
+        return departments?.find(d => d.id === formData.department_id)?.name || null
+    }, [departments, formData.department_id])
+
+    const selectedPropertyName = useMemo(() => {
+        if (formData.target_property_id) {
+            return properties?.find(p => p.id === formData.target_property_id)?.name || t('editor.selected_property', 'selected property')
+        }
+        return currentProperty?.name || t('editor.current_property', 'current property')
+    }, [currentProperty?.name, formData.target_property_id, properties, t])
+
+    const visibilitySummary = useMemo(() => {
+        switch (formData.visibility) {
+            case 'all_properties':
+                return t('editor.visibility.summary_all_hotels', {
+                    defaultValue: 'Visible to all staff in all hotels.'
+                })
+            case 'property':
+                return t('editor.visibility.summary_property', {
+                    defaultValue: 'Visible to all staff in {{property}}.',
+                    property: selectedPropertyName
+                })
+            case 'department':
+                return t('editor.visibility.summary_department', {
+                    defaultValue: 'Visible to {{department}} team in {{property}}.',
+                    department: selectedDepartmentName || t('editor.selected_team', 'selected team'),
+                    property: selectedPropertyName
+                })
+            case 'group_department':
+                return t('editor.visibility.summary_group_department', {
+                    defaultValue: 'Visible to {{department}} team in all hotels.',
+                    department: selectedDepartmentName || t('editor.selected_team', 'selected team')
+                })
+            case 'specific_departments':
+                return t('editor.visibility.summary_specific_departments', {
+                    defaultValue: 'Visible to {{count}} selected team(s).',
+                    count: formData.specific_department_ids.length
+                })
+            case 'role':
+                return t('editor.visibility.summary_role', {
+                    defaultValue: 'Visible based on role rules.'
+                })
+            default:
+                return ''
+        }
+    }, [
+        formData.specific_department_ids.length,
+        formData.visibility,
+        selectedDepartmentName,
+        selectedPropertyName,
+        t
+    ])
 
     // AI
     const generateWithAI = async (action: 'outline' | 'expand' | 'improve' | 'summarize') => {
@@ -398,6 +499,36 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
         }
     }
 
+    // AI Beautify Function
+    const beautifyArticle = async () => {
+        if (!formData.content || formData.content.trim().length < 10) {
+            toast.error('Please add some content before beautifying.')
+            return
+        }
+
+        setIsGenerating(true)
+        try {
+            const result = await aiService.beautifyArticle(
+                formData.content,
+                formData.content_type,
+                aiLanguage,
+                'professional'
+            )
+            
+            if (result) {
+                updateField('content', result)
+                toast.success('Content beautified with AI! Your article now has professional formatting.')
+            } else {
+                toast.error('AI beautification failed. Please try again.')
+            }
+        } catch (error) {
+            console.error('AI beautification error:', error)
+            toast.error('AI beautification failed. Please try again.')
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
     const saveArticle = async (status: 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED') => {
         if (!formData.title.trim()) {
             toast.error(t('editor.alerts.title_required'))
@@ -409,8 +540,14 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             return
         }
 
-        if (formData.visibility === 'department' && !formData.department_id) {
+        if ((formData.visibility === 'department' || formData.visibility === 'group_department') && !formData.department_id) {
             toast.error(t('editor.alerts.dept_required'))
+            return
+        }
+
+        const rawPropertyId = formData.target_property_id || currentProperty?.id || null
+        if (formData.visibility === 'property' && !isUuid(rawPropertyId)) {
+            toast.error(t('editor.alerts.property_required', { defaultValue: 'Please select a specific property.' }))
             return
         }
 
@@ -457,6 +594,15 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
         }
 
         try {
+            const normalizedPropertyId = formData.visibility === 'all_properties' ||
+                formData.visibility === 'group_department' ||
+                formData.visibility === 'specific_departments'
+                ? null
+                : (isUuid(rawPropertyId) ? rawPropertyId : null)
+            let savedArticleId: string | null = null
+            let savedArticleData: any = null
+            let redirectToArticleId: string | null = null
+
             const articleData = {
                 title: formData.title,
                 description: finalDescription || null,
@@ -469,23 +615,39 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 visibility: formData.visibility,
                 requires_acknowledgment: formData.requires_acknowledgment,
                 status: status,
-                property_id: formData.target_property_id || currentProperty?.id,
-                department_id: formData.department_id,
-                category_id: formData.category_id,
+                property_id: normalizedPropertyId,
+                department_id: isUuid(formData.department_id) ? formData.department_id : null,
+                category_id: isUuid(formData.category_id) ? formData.category_id : null,
                 created_by: user?.id,
                 updated_at: new Date().toISOString(),
-                checklist_items: formData.checklist_items,
-                faq_items: formData.faq_items,
-                video_url: formData.video_url,
-                images: formData.images
+                checklist_items: formData.checklist_items || [],
+                faq_items: formData.faq_items || [],
+                video_url: formData.video_url || null,
+                images: formData.images || []
             }
 
             if (isEditing && id) {
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from('documents')
                     .update(articleData)
                     .eq('id', id)
+                    .select()
+                    .single()
                 if (error) throw error
+                savedArticleId = id
+                savedArticleData = data
+
+                // Save specific departments access if needed
+                if (formData.visibility === 'specific_departments') {
+                    await supabase.from('document_department_access').delete().eq('document_id', id)
+                    if (formData.specific_department_ids.length > 0) {
+                        const accessData = formData.specific_department_ids.map(deptId => ({
+                            document_id: id,
+                            department_id: deptId
+                        }))
+                        await supabase.from('document_department_access').insert(accessData)
+                    }
+                }
 
                 if (status === 'PENDING_REVIEW') {
                     await notifyReviewersOfSubmission(id, formData.title)
@@ -505,6 +667,17 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     .select()
                     .single()
                 if (error) throw error
+                savedArticleId = data.id
+                savedArticleData = data
+
+                // Save specific departments access if needed
+                if (formData.visibility === 'specific_departments' && formData.specific_department_ids.length > 0) {
+                    const accessData = formData.specific_department_ids.map(deptId => ({
+                        document_id: data.id,
+                        department_id: deptId
+                    }))
+                    await supabase.from('document_department_access').insert(accessData)
+                }
 
                 if (status === 'PENDING_REVIEW') {
                     await notifyReviewersOfSubmission(data.id, formData.title)
@@ -516,14 +689,104 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 const typeLabel = t(`content_types.${formData.content_type}`, { defaultValue: formData.content_type.toUpperCase() })
                 toast.success(status === 'PENDING_REVIEW'
                     ? t('editor.alerts.submitted_for_review')
-                    : t('editor.alerts.save_success', { type: typeLabel }))
-                navigate(`/knowledge/${data.id}`)
+                    : (isEditing ? t('editor.alerts.update_success', { type: typeLabel }) : t('editor.alerts.save_success', { type: typeLabel })))
+                redirectToArticleId = data.id
             }
-            queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-            console.error('Save error:', error)
-            toast.error(`${t('editor.alerts.save_error')} ${errorMessage}`)
+
+            let syncedArticleData: any = savedArticleData
+            if (savedArticleId) {
+                const hydratedArticle = await KnowledgeService.getArticleById(savedArticleId, user?.id)
+                if (hydratedArticle) {
+                    syncedArticleData = hydratedArticle
+                }
+            }
+
+            const mergeArticleIntoCollection = (existing: any) => {
+                if (!savedArticleId || !syncedArticleData || !existing) return existing
+
+                if (Array.isArray(existing)) {
+                    return existing.map((item: any) =>
+                        item?.id === savedArticleId ? { ...item, ...syncedArticleData } : item
+                    )
+                }
+
+                if (Array.isArray(existing.articles)) {
+                    return {
+                        ...existing,
+                        articles: existing.articles.map((item: any) =>
+                            item?.id === savedArticleId ? { ...item, ...syncedArticleData } : item
+                        )
+                    }
+                }
+
+                return existing
+            }
+
+            if (savedArticleId && syncedArticleData) {
+                queryClient.setQueryData(
+                    ['knowledge-article', savedArticleId, user?.id],
+                    syncedArticleData
+                )
+                queryClient.setQueriesData(
+                    { queryKey: ['knowledge-article', savedArticleId], exact: false },
+                    (existing: any) => existing ? { ...existing, ...syncedArticleData } : syncedArticleData
+                )
+                queryClient.setQueriesData(
+                    { queryKey: ['knowledge-articles'], exact: false },
+                    mergeArticleIntoCollection
+                )
+                queryClient.setQueriesData(
+                    { queryKey: ['knowledge-featured'], exact: false },
+                    mergeArticleIntoCollection
+                )
+                queryClient.setQueriesData(
+                    { queryKey: ['knowledge-recent'], exact: false },
+                    mergeArticleIntoCollection
+                )
+            }
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] }),
+                queryClient.invalidateQueries({ queryKey: ['knowledge-department-counts-global'] }),
+                queryClient.invalidateQueries({ queryKey: ['knowledge-type-counts'] }),
+                queryClient.invalidateQueries({ queryKey: ['knowledge-featured'] }),
+                queryClient.invalidateQueries({ queryKey: ['knowledge-recent'] }),
+                savedArticleId
+                    ? queryClient.invalidateQueries({ queryKey: ['knowledge-article', savedArticleId] })
+                    : Promise.resolve(),
+                savedArticleId
+                    ? queryClient.invalidateQueries({ queryKey: ['knowledge-related', savedArticleId] })
+                    : Promise.resolve(),
+            ])
+
+            await Promise.all([
+                queryClient.refetchQueries({
+                    queryKey: ['knowledge-articles'],
+                    type: 'all'
+                }),
+                queryClient.refetchQueries({
+                    queryKey: ['knowledge-featured'],
+                    type: 'all'
+                }),
+                queryClient.refetchQueries({
+                    queryKey: ['knowledge-recent'],
+                    type: 'all'
+                }),
+                savedArticleId
+                    ? queryClient.refetchQueries({
+                        queryKey: ['knowledge-article', savedArticleId],
+                        type: 'all'
+                    })
+                    : Promise.resolve(),
+            ])
+
+            if (redirectToArticleId) {
+                navigate(`/knowledge/${redirectToArticleId}`)
+            }
+        } catch (error: any) {
+            console.error('Error in saveArticle:', error)
+            const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error))
+            toast.error(t('editor.alerts.save_error', { error: errorMessage }))
         } finally {
             setIsSaving(false)
         }
@@ -739,6 +1002,15 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 >
                                     <Sparkles className="h-4 w-4" /> Auto-Summarize
                                 </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => beautifyArticle()}
+                                    disabled={isGenerating || !formData.content}
+                                    className="border-purple-500 hover:border-purple-600 text-purple-600"
+                                >
+                                    <Palette className="h-4 w-4" /> AI Beautify
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -795,8 +1067,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     )}
                                 </div>
                             ) : (
-                                <div className="prose max-w-none min-h-[400px] p-4 border rounded bg-white">
-                                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(formData.content || `<p class="text-gray-400">${t('editor.empty_preview')}</p>`) }} />
+                                <div ref={previewRef} className="prose max-w-none min-h-[400px] p-4 border rounded bg-white">
+                                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }} />
 
                                     {/* Preview content type specific blocks */}
                                     <div className="mt-8 space-y-6">
@@ -836,11 +1108,19 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 </div>
 
                 <div className="space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle className="text-base">{t('editor.categorization_title')}</CardTitle></CardHeader>
+                    {/* 1. Categorization */}
+                    <Card className="border-hotel-navy/10 shadow-sm">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                                <List className="h-4 w-4 text-hotel-gold" />
+                                {t('editor.topic_and_categorization', 'Topic & Categorization')}
+                            </CardTitle>
+                        </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <Label>{t('editor.department_label')}</Label>
+                                <Label className="text-sm font-semibold mb-1.5 block">
+                                    {t('editor.main_team_topic', 'Main Team (Topic)')}
+                                </Label>
                                 <GroupedDepartmentSelector
                                     departments={departments}
                                     properties={properties}
@@ -850,20 +1130,20 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         // Reset category when department changes
                                         updateField('category_id', null)
                                     }}
-                                    placeholder={t('editor.department_label')}
+                                    placeholder={t('editor.select_department', 'Select main team...')}
                                     generalLabel={t('editor.general_department')}
-                                    className="mt-1"
+                                    className="w-full"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {t('editor.department_hint')}
+                                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                                    {t('editor.department_hint_simple', 'Choose the team that owns this document topic.')}
                                 </p>
                             </div>
 
                             {formData.department_id && (
-                                <div>
-                                    <Label>{t('editor.category_label')}</Label>
+                                <div className="pt-2 border-t border-dashed border-hotel-navy/10">
+                                    <Label className="text-sm font-semibold mb-1.5 block">{t('editor.category_optional', 'Category (Optional)')}</Label>
                                     <Select value={formData.category_id || 'none'} onValueChange={v => updateField('category_id', v === 'none' ? null : v)}>
-                                        <SelectTrigger className="mt-1"><SelectValue placeholder={t('editor.category_label')} /></SelectTrigger>
+                                        <SelectTrigger className="w-full"><SelectValue placeholder={t('editor.category_optional', 'Category (Optional)')} /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="none">{t('editor.general_category')}</SelectItem>
                                             {categories?.map(cat => (
@@ -876,61 +1156,145 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader><CardTitle className="text-base">{t('editor.access_title')}</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
+                    {/* 2. Access & Visibility */}
+                    <Card className="border-hotel-navy/10 shadow-sm">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                                <ShieldCheck className="h-4 w-4 text-hotel-gold" />
+                                {t('editor.who_can_view', 'Who Can View This')}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-5">
                             <div>
-                                <Label>{t('editor.visibility_label')}</Label>
+                                <Label className="text-sm font-semibold mb-1.5 block">{t('editor.viewer_group', 'Viewer Group')}</Label>
                                 <Select value={formData.visibility} onValueChange={v => updateField('visibility', v as KnowledgeVisibility)}>
-                                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         {VISIBILITY_OPTIONS.map(o => (
                                             <SelectItem key={o.value} value={o.value}>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium">{o.label}</span>
-                                                    <span className="text-xs text-gray-500">{o.description}</span>
+                                                <div className="flex flex-col py-1">
+                                                    <span className="font-semibold text-sm">{o.label}</span>
+                                                    <span className="text-[10px] text-muted-foreground leading-tight">{o.description}</span>
                                                 </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {VISIBILITY_OPTIONS.find(o => o.value === formData.visibility)?.description}
 
-                                    {/* Visibility Context Helpers */}
-                                    {formData.visibility === 'department' && (
-                                        <span className="block mt-1 text-blue-600" dangerouslySetInnerHTML={{
-                                            __html: sanitizeHtml(t('editor.visibility.dept_context', {
-                                                dept: formData.department_id ? departments?.find(d => d.id === formData.department_id)?.name : 'Selected Department'
-                                            }))
-                                        }} />
+                                {formData.visibility === 'specific_departments' && (
+                                    <div className="mt-3">
+                                        <Label className="text-sm font-semibold mb-1.5 block">
+                                            {t('editor.visibility.specific_departments_label', 'Select Teams')}
+                                        </Label>
+                                        <MultiDepartmentSelector
+                                            departments={departments}
+                                            properties={properties}
+                                            value={formData.specific_department_ids}
+                                            onValueChange={v => updateField('specific_department_ids', v)}
+                                            placeholder={t('editor.visibility.select_depts', 'Select teams...')}
+                                        />
+                                    </div>
+                                )}
+
+                                {formData.visibility === 'department' && (
+                                    <div className="mt-3">
+                                        <Label className="text-sm font-semibold mb-1.5 block">
+                                            {t('editor.select_team', 'Select Team')}
+                                        </Label>
+                                        <GroupedDepartmentSelector
+                                            departments={departments}
+                                            properties={properties}
+                                            value={formData.department_id || 'none'}
+                                            onValueChange={v => updateField('department_id', v === 'none' ? null : v)}
+                                            placeholder={t('editor.select_team', 'Select team')}
+                                            generalLabel={t('editor.general_department')}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Selected Visibility Context */}
+                                <div className="mt-2 p-2 rounded bg-hotel-navy/5 border border-hotel-navy/10">
+                                    <p className="text-[11px] text-hotel-navy/90 leading-relaxed">
+                                        {visibilitySummary}
+                                    </p>
+
+                                    {/* Additional Settings for Group Department Visibility */}
+                                    {formData.visibility === 'group_department' && (
+                                        <div className="mt-3">
+                                            <Label className="text-sm font-semibold mb-1.5 block">
+                                                {t('editor.visibility.select_dept_group', 'Select Team')}
+                                            </Label>
+                                            <Select
+                                                value={
+                                                    // Find if current department_id matches one of the known names
+                                                    (formData.department_id
+                                                        ? departments?.find(d => d.id === formData.department_id)?.name
+                                                        : undefined) || ''
+                                                }
+                                                onValueChange={(deptName) => {
+                                                    // When name is selected, find a valid department ID from the list (prefer current property or Head Office)
+                                                    // We'll prioritize Head Office if exists, else first match
+                                                    const match = departments?.find(d => d.name === deptName && (
+                                                        d.property_id === currentProperty?.id ||
+                                                        properties?.find(p => p.id === d.property_id)?.name.toLowerCase().includes('head office')
+                                                    )) || departments?.find(d => d.name === deptName)
+
+                                                    if (match) {
+                                                        updateField('department_id', match.id)
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder={t('editor.visibility.choose_dept_group', 'Choose team...')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {uniqueDepartmentNames.map(name => (
+                                                        <SelectItem key={name} value={name}>
+                                                            {name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <p className="text-[10px] text-muted-foreground mt-1.5">
+                                                {t('editor.visibility.group_dept_hint', 'This team will see this document in all hotels.')}
+                                            </p>
+                                        </div>
                                     )}
 
-                                    {/* Validation warnings */}
                                     {validationWarnings.departmentRequired && (
-                                        <span className="block mt-1 text-orange-600">
-                                            {t('editor.visibility.dept_warning')}
-                                        </span>
+                                        <div className="mt-1 flex items-start gap-1.5">
+                                            <div className="mt-0.5 h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />
+                                            <span className="text-[10px] font-bold text-orange-600">
+                                                {t('editor.visibility.dept_warning')}
+                                            </span>
+                                        </div>
                                     )}
-                                </p>
+                                </div>
                             </div>
 
-                            {/* Target Property Selector - Temporarily visible to all for testing */}
-                            {user && (
+                            {/* Hotel selector - only needed for one-hotel scopes */}
+                            {user && (formData.visibility === 'property' || formData.visibility === 'department') && (
                                 <div>
-                                    <Label>{t('editor.target_property')}</Label>
+                                    <Label className="text-sm font-semibold mb-1.5 block">{t('editor.which_hotel', 'Which Hotel?')}</Label>
                                     <Select
                                         value={formData.target_property_id || 'current'}
                                         onValueChange={v => updateField('target_property_id', v === 'current' ? null : v)}
                                     >
-                                        <SelectTrigger className="mt-1">
-                                            <SelectValue placeholder={t('editor.target_property')} />
+                                        <SelectTrigger className="w-full">
+                                            <Building2 className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <SelectValue placeholder={t('editor.which_hotel', 'Which Hotel?')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="current">
-                                                {t('editor.current_property')} ({currentProperty?.name || 'None'})
+                                                <span className="font-medium text-blue-600 underline decoration-blue-200 underline-offset-4 decoration-2">
+                                                    {t('editor.current_hotel', 'Current Hotel')}
+                                                </span>
+                                                <span className="ml-1 opacity-50">
+                                                    ({currentProperty?.name || 'Head Office'})
+                                                </span>
                                             </SelectItem>
-                                            {properties?.map(prop => (
+                                            {properties?.filter(p => p.id !== currentProperty?.id && p.id !== 'all').map(prop => (
                                                 <SelectItem key={prop.id} value={prop.id}>
                                                     {prop.name}
                                                 </SelectItem>
@@ -940,9 +1304,15 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 </div>
                             )}
 
-                            <div className="flex items-center justify-between">
-                                <div><Label>{t('editor.requires_ack')}</Label></div>
-                                <Switch checked={formData.requires_acknowledgment} onCheckedChange={v => updateField('requires_acknowledgment', v)} />
+                            <div className="pt-2 border-t border-hotel-navy/5 flex items-center justify-between">
+                                <Label className="text-sm font-medium cursor-pointer" htmlFor="ack-switch">
+                                    {t('editor.require_read_confirmation', 'Require Read Confirmation')}
+                                </Label>
+                                <Switch
+                                    id="ack-switch"
+                                    checked={formData.requires_acknowledgment}
+                                    onCheckedChange={v => updateField('requires_acknowledgment', v)}
+                                />
                             </div>
                         </CardContent>
                     </Card>

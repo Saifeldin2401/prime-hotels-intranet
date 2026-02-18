@@ -63,6 +63,115 @@ const categoryIcons: Record<string, any> = {
   other: Wrench
 }
 
+const HomeIcon = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+)
+
+const TicketCard = ({
+  ticket,
+  showActions = false,
+  t,
+  isRTL,
+  canManageTickets,
+  onStatusUpdate,
+  onComplete,
+  onView,
+  isUpdatePending,
+  isCompletePending
+}: {
+  ticket: MaintenanceTicket
+  showActions?: boolean
+  t: any
+  isRTL: boolean
+  canManageTickets: boolean
+  onStatusUpdate: (id: string, status: string) => void
+  onComplete: (id: string) => void
+  onView: (id: string) => void
+  isUpdatePending: boolean
+  isCompletePending: boolean
+}) => {
+  const isOverdue = ticket.due_at ? new Date(ticket.due_at) < new Date() : false
+  const Icon = categoryIcons[ticket.category] || Wrench
+
+  return (
+    <div className={cn("bg-card border border-border rounded-lg p-4 group hover:shadow-md hover:-translate-y-1 transition-all duration-200", isRTL ? "border-r-4 border-r-primary/50" : "border-l-4 border-l-primary/50")}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3 gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+            <Icon className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h4 className="font-bold text-foreground">{ticket.title}</h4>
+            <p className="text-xs text-gray-600 font-mono">#{ticket.id.slice(0, 8)}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <Badge className={cn("text-[10px] uppercase tracking-wider font-semibold border", priorityColors[ticket.priority])}>
+            {t(ticket.priority)}
+          </Badge>
+          <Badge className={cn("text-[10px]", statusColors[ticket.status] || statusColors.closed)}>
+            {t(ticket.status)}
+          </Badge>
+          {ticket.due_at && (
+            <Badge className={cn("text-[10px]", isOverdue ? "bg-red-100 text-red-800 border border-red-200" : "bg-gray-100 text-gray-700 border border-gray-200")}>
+              {t('due', { defaultValue: 'Due' })} {format(new Date(ticket.due_at), 'MMM dd')}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-600 mb-4 line-clamp-2">{ticket.description}</p>
+
+      <div className="flex items-center justify-between text-xs text-gray-600 mt-auto pt-4 border-t border-border/50">
+        <div className="flex items-center space-x-3 gap-3">
+          {ticket.property && (
+            <span className="flex items-center gap-1 font-medium text-foreground"><HomeIcon className="w-3 h-3" /> {ticket.property.name}</span>
+          )}
+          {ticket.room_number && (
+            <span className="bg-accent/50 px-1.5 py-0.5 rounded">{t('room')} {ticket.room_number}</span>
+          )}
+        </div>
+        <div className="flex items-center space-x-1 gap-1">
+          <Calendar className="w-3 h-3" />
+          <span>{format(new Date(ticket.created_at), 'MMM dd')}</span>
+        </div>
+      </div>
+
+      {showActions && canManageTickets && (
+        <div className="mt-4 pt-3 border-t border-border/50 flex items-center gap-2">
+          {ticket.status === 'open' && (
+            <Button
+              size="sm"
+              className="flex-1 bg-primary/90 hover:bg-primary h-8 text-xs"
+              onClick={(e) => { e.stopPropagation(); onStatusUpdate(ticket.id, 'in_progress'); }}
+              disabled={isUpdatePending}
+            >
+              {t('accept')}
+            </Button>
+          )}
+          {ticket.status === 'in_progress' && (
+            <Button
+              size="sm"
+              className="flex-1 bg-green-600 hover:bg-green-700 h-8 text-xs"
+              onClick={(e) => { e.stopPropagation(); onComplete(ticket.id); }}
+              disabled={isCompletePending}
+            >
+              {t('complete')}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className={cn("h-8 text-xs bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-all active:scale-95 hover:shadow-md", ticket.status !== 'open' && ticket.status !== 'in_progress' ? "w-full" : "w-auto")}
+            onClick={() => onView(ticket.id)}
+          >
+            {t('view')}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function MaintenanceDashboard() {
   const { roles, primaryRole } = useAuth()
   const { t, i18n } = useTranslation('maintenance')
@@ -99,95 +208,12 @@ export default function MaintenanceDashboard() {
     completeMutation.mutate({ ticketId })
   }
 
-    const TicketCard = ({ ticket, showActions = false }: { ticket: MaintenanceTicket, showActions?: boolean }) => {
-    const isOverdue = ticket.due_at ? new Date(ticket.due_at) < new Date() : false
-    const Icon = categoryIcons[ticket.category] || Wrench
-
-    return (
-      <div className={cn("bg-card border border-border rounded-lg p-4 group hover:shadow-md hover:-translate-y-1 transition-all duration-200", isRTL ? "border-r-4 border-r-primary/50" : "border-l-4 border-l-primary/50")}>
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center space-x-3 gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-              <Icon className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h4 className="font-bold text-foreground">{ticket.title}</h4>
-              <p className="text-xs text-gray-600 font-mono">#{ticket.id.slice(0, 8)}</p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <Badge className={cn("text-[10px] uppercase tracking-wider font-semibold border", priorityColors[ticket.priority])}>
-              {t(ticket.priority)}
-            </Badge>
-            <Badge className={cn("text-[10px]", statusColors[ticket.status] || statusColors.closed)}>
-              {t(ticket.status)}
-            </Badge>
-            {ticket.due_at && (
-              <Badge className={cn("text-[10px]", isOverdue ? "bg-red-100 text-red-800 border border-red-200" : "bg-gray-100 text-gray-700 border border-gray-200")}>
-                {t('due', { defaultValue: 'Due' })} {format(new Date(ticket.due_at), 'MMM dd')}
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{ticket.description}</p>
-
-        <div className="flex items-center justify-between text-xs text-gray-600 mt-auto pt-4 border-t border-border/50">
-          <div className="flex items-center space-x-3 gap-3">
-            {ticket.property && (
-              <span className="flex items-center gap-1 font-medium text-foreground"><HomeIcon className="w-3 h-3" /> {ticket.property.name}</span>
-            )}
-            {ticket.room_number && (
-              <span className="bg-accent/50 px-1.5 py-0.5 rounded">{t('room')} {ticket.room_number}</span>
-            )}
-          </div>
-          <div className="flex items-center space-x-1 gap-1">
-            <Calendar className="w-3 h-3" />
-            <span>{format(new Date(ticket.created_at), 'MMM dd')}</span>
-          </div>
-        </div>
-
-        {showActions && canManageTickets && (
-          <div className="mt-4 pt-3 border-t border-border/50 flex items-center gap-2">
-            {ticket.status === 'open' && (
-              <Button
-                size="sm"
-                className="flex-1 bg-primary/90 hover:bg-primary h-8 text-xs"
-                onClick={(e) => { e.stopPropagation(); handleStatusUpdate(ticket.id, 'in_progress'); }}
-                disabled={updateMutation.isPending}
-              >
-                {t('accept')}
-              </Button>
-            )}
-            {ticket.status === 'in_progress' && (
-              <Button
-                size="sm"
-                className="flex-1 bg-green-600 hover:bg-green-700 h-8 text-xs"
-                onClick={(e) => { e.stopPropagation(); handleComplete(ticket.id); }}
-                disabled={completeMutation.isPending}
-              >
-                {t('complete')}
-              </Button>
-            )}
-            <Button
-              size="sm"
-              className={cn("h-8 text-xs bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-all active:scale-95 hover:shadow-md", ticket.status !== 'open' && ticket.status !== 'in_progress' ? "w-full" : "w-auto")}
-              onClick={() => navigate(`/maintenance/tickets/${ticket.id}`)}
-            >
-              {t('view')}
-            </Button>
-          </div>
-        )}
-      </div>
-    )
+  const handleView = (ticketId: string) => {
+    navigate(`/maintenance/tickets/${ticketId}`)
   }
 
   // No longer returning early with full page skeleton, using LoadingTransition instead
   const isLoading = (myLoading || assignedLoading) && !myError && !assignedError;
-
-  const HomeIcon = ({ className }: { className?: string }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-  )
 
   return (
     <div className="space-y-8 pb-10">
@@ -336,7 +362,18 @@ export default function MaintenanceDashboard() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredTickets(myTickets || []).map(ticket => (
-                  <TicketCard key={ticket.id} ticket={ticket} />
+                  <TicketCard
+                    key={ticket.id}
+                    ticket={ticket}
+                    t={t}
+                    isRTL={isRTL}
+                    canManageTickets={canManageTickets}
+                    onStatusUpdate={handleStatusUpdate}
+                    onComplete={handleComplete}
+                    onView={handleView}
+                    isUpdatePending={updateMutation.isPending}
+                    isCompletePending={completeMutation.isPending}
+                  />
                 ))}
               </div>
             )}
@@ -364,7 +401,19 @@ export default function MaintenanceDashboard() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredTickets(assignedTickets || []).map(ticket => (
-                    <TicketCard key={ticket.id} ticket={ticket} showActions />
+                    <TicketCard
+                      key={ticket.id}
+                      ticket={ticket}
+                      showActions
+                      t={t}
+                      isRTL={isRTL}
+                      canManageTickets={canManageTickets}
+                      onStatusUpdate={handleStatusUpdate}
+                      onComplete={handleComplete}
+                      onView={handleView}
+                      isUpdatePending={updateMutation.isPending}
+                      isCompletePending={completeMutation.isPending}
+                    />
                   ))}
                 </div>
               )}
@@ -372,6 +421,6 @@ export default function MaintenanceDashboard() {
           )}
         </Tabs>
       </div>
-    </div >
+    </div>
   )
 }

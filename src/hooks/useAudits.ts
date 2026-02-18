@@ -65,6 +65,108 @@ export function useAuditTemplates() {
   })
 }
 
+export function useUpdateAuditItem() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { id: string; template_id: string; updates: Partial<AuditItem> }) => {
+      const { data, error } = await supabase
+        .from('audit_items')
+        .update(payload.updates)
+        .eq('id', payload.id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data as AuditItem
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['audit-items', variables.template_id] })
+    }
+  })
+}
+
+export function useDeleteAuditItem() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { id: string; template_id: string }) => {
+      const { error } = await supabase
+        .from('audit_items')
+        .delete()
+        .eq('id', payload.id)
+
+      if (error) throw error
+      return payload
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['audit-items', variables.template_id] })
+    }
+  })
+}
+
+export function useDeleteAuditRun() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { id: string; template_id?: string | null }) => {
+      const { error } = await supabase
+        .from('audit_runs')
+        .delete()
+        .eq('id', payload.id)
+
+      if (error) throw error
+      return payload
+    },
+    onSuccess: (_data, variables) => {
+      if (variables.template_id) {
+        queryClient.invalidateQueries({ queryKey: ['audit-runs', variables.template_id] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['audit-runs'] })
+      }
+    }
+  })
+}
+
+export function useUpdateAuditTemplate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { id: string; updates: Partial<AuditTemplate> }) => {
+      const { data, error } = await supabase
+        .from('audit_templates')
+        .update(payload.updates)
+        .eq('id', payload.id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data as AuditTemplate
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit-templates'] })
+    }
+  })
+}
+
+export function useDeleteAuditTemplate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (templateId: string) => {
+      const { error } = await supabase
+        .from('audit_templates')
+        .delete()
+        .eq('id', templateId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit-templates'] })
+    }
+  })
+}
+
 export function useAuditItems(templateId?: string) {
   return useQuery({
     queryKey: ['audit-items', templateId],

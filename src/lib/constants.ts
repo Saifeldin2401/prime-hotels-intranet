@@ -49,12 +49,16 @@ export type DocumentVisibility =
   | 'all_properties'
   | 'property'
   | 'department'
+  | 'group_department'
+  | 'specific_departments'
   | 'role'
 
 export const DOCUMENT_VISIBILITY_OPTIONS: { value: DocumentVisibility; label: string }[] = [
   { value: 'all_properties', label: 'All Properties' },
   { value: 'property', label: 'Specific Property' },
-  { value: 'department', label: 'Specific Department' },
+  { value: 'department', label: 'Specific Department (This Property)' },
+  { value: 'group_department', label: 'Specific Department (All Properties)' },
+  { value: 'specific_departments', label: 'Specific Departments (Custom)' },
   { value: 'role', label: 'Specific Role' },
 ]
 

@@ -84,6 +84,7 @@ export async function getArticles(
             .select(`
           id, title, description,
           status, content_type,
+          visibility,
           property_id, department_id,
           requires_acknowledgment,
           created_at, updated_at,
@@ -155,7 +156,11 @@ export async function getArticleById(id: string, userId?: string): Promise<Knowl
     try {
         const { data, error } = await supabase
             .from('documents')
-            .select('*, sop:sop_documents(linked_training_id, linked_quiz_id)')
+            .select(`
+                *,
+                sop:sop_documents(linked_training_id, linked_quiz_id),
+                document_department_access(department_id)
+            `)
             .eq('id', id)
             .eq('is_deleted', false)
             .single()
@@ -552,13 +557,11 @@ export async function getCategories(departmentId?: string) {
 
 export async function getContentTypeCounts(): Promise<Record<string, number>> {
     try {
-        // This is a rough count. For better performance on large datasets, use an RPC function.
-        // But for < 1000 docs, this fetch is acceptable.
+        // Count all visible, non-deleted documents (status can vary by role and RLS).
         const { data, error } = await supabase
             .from('documents')
             .select('content_type')
             .eq('is_deleted', false)
-            .eq('status', 'PUBLISHED')
 
         if (error || !data) return {}
 
@@ -657,11 +660,15 @@ function formatArticle(data: any): KnowledgeArticle {
     return {
         ...data,
         content_type: (data.content_type?.toLowerCase() as any) || 'document',
+        visibility_scope: (data.visibility_scope || data.visibility || 'all_properties') as any,
         linked_training_id: data.linked_training_id || sopData?.linked_training_id,
         linked_quiz_id: data.linked_quiz_id || sopData?.linked_quiz_id,
         department: department || (data.department_id ? { id: data.department_id, name: 'Department' } : undefined),
         category: category || (data.category_id ? { id: data.category_id, name: 'Category' } : undefined),
         author: undefined,
-        tags: []
+        tags: [],
+        department_access_ids: Array.isArray(data.document_department_access)
+            ? data.document_department_access.map((d: any) => d.department_id)
+            : []
     }
 }

@@ -110,19 +110,32 @@ export function DocumentBulkOperations({
 
     setIsProcessing(true)
     try {
-      const { error } = await supabase
+      const ids = Array.from(selectedDocuments)
+      const { data, error } = await supabase
         .from('documents')
-        .delete()
-        .in('id', Array.from(selectedDocuments))
-        .eq('created_by', user?.id)
+        .update({
+          is_deleted: true,
+          updated_at: new Date().toISOString()
+        })
+        .in('id', ids)
+        .select('id')
 
       if (error) throw error
+      const deletedCount = data?.length || 0
+      if (deletedCount === 0) {
+        throw new Error('No documents were deleted. You may not have permission.')
+      }
 
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['document-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-department-counts-global'] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-type-counts'] })
       setSelectedDocuments(new Set())
-      toast.success(`Deleted ${selectedDocuments.size} documents`)
+      toast.success(`Deleted ${deletedCount} document${deletedCount !== 1 ? 's' : ''}`)
     } catch (error) {
-      toast.error('Failed to delete documents')
+      const message = error instanceof Error ? error.message : 'Failed to delete documents'
+      toast.error(message)
     } finally {
       setIsProcessing(false)
     }

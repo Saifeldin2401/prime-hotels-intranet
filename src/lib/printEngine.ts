@@ -42,8 +42,17 @@ export interface KPISection {
 
 export interface ContentSection {
     title?: string
-    content: string // Supports text wrapping and basic layout
+    content?: string // Supports text wrapping and basic layout
+    blocks?: ContentBlock[]
 }
+
+export type ContentBlock =
+    | { type: 'text'; text: string }
+    | { type: 'image'; dataUrl: string; caption?: string }
+    | { type: 'checklist'; items: { text: string; is_required?: boolean }[] }
+    | { type: 'faq'; items: { question: string; answer: string }[] }
+
+type RichTextRun = { text: string; bold?: boolean; italic?: boolean }
 
 export interface ReportData {
     kpis?: KPISection[]
@@ -392,31 +401,288 @@ function drawContentSection(
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...BRAND_COLORS.darkText)
 
-    // Handle multi-line content with page breaking
-    const paragraphs = section.content.split('\n')
+    const blocks: ContentBlock[] = []
+    if (section.content && section.content.trim()) {
+        blocks.push({ type: 'text', text: section.content })
+    }
+    if (section.blocks && section.blocks.length > 0) {
+        blocks.push(...section.blocks)
+    }
 
-    for (const para of paragraphs) {
-        if (!para.trim()) {
-            yPos += 3
+    for (const block of blocks) {
+        if (block.type === 'text') {
+            yPos = renderMarkupText(doc, block.text, yPos, contentWidth, pageHeight)
+            yPos += 2
             continue
         }
 
-        const lines = doc.splitTextToSize(para, contentWidth)
+        if (block.type === 'image') {
+            const maxImageWidth = contentWidth
+            const maxImageHeight = 80
 
-        for (const line of lines) {
-            // Check for page break
-            if (yPos > pageHeight - MARGINS.bottom) {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const props = (doc as any).getImageProperties
+                    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (doc as any).getImageProperties(block.dataUrl)
+                    : null
+
+                const imgW = props?.width || 100
+                const imgH = props?.height || 100
+                const ratio = imgW > 0 ? imgH / imgW : 1
+
+                let renderW = maxImageWidth
+                let renderH = renderW * ratio
+
+                if (renderH > maxImageHeight) {
+                    renderH = maxImageHeight
+                    renderW = renderH / ratio
+                }
+
+                if (yPos > pageHeight - MARGINS.bottom - renderH - 12) {
+                    doc.addPage()
+                    yPos = MARGINS.top
+                }
+
+                const format = block.dataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
+                doc.addImage(block.dataUrl, format, MARGINS.left, yPos, renderW, renderH)
+                yPos += renderH + 4
+
+                if (block.caption) {
+                    doc.setFontSize(FONTS.small)
+                    doc.setTextColor(...BRAND_COLORS.mediumGray)
+                    const capLines = doc.splitTextToSize(block.caption, contentWidth)
+                    doc.text(capLines, MARGINS.left, yPos)
+                    yPos += capLines.length * 4 + 3
+                    doc.setFontSize(FONTS.body)
+                    doc.setTextColor(...BRAND_COLORS.darkText)
+                }
+            } catch (e) {
+                console.warn('Could not add image to PDF:', e)
+                const fallback = block.caption ? `Image: ${block.caption}` : 'Image (not available)'
+                const lines = doc.splitTextToSize(fallback, contentWidth)
+                doc.text(lines, MARGINS.left, yPos)
+                yPos += lines.length * 5 + 3
+            }
+
+            continue
+        }
+
+        if (block.type === 'checklist') {
+            if (yPos > pageHeight - 25) {
                 doc.addPage()
                 yPos = MARGINS.top
             }
 
-            doc.text(line, MARGINS.left, yPos)
+            doc.setFontSize(FONTS.sectionHeader)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...BRAND_COLORS.navy)
+            doc.text('Checklist', MARGINS.left, yPos)
+            yPos += 7
+
+            doc.setFontSize(FONTS.body)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(...BRAND_COLORS.darkText)
+
+            for (const item of block.items || []) {
+                const label = `\u25A1 ${item.text}${item.is_required ? ' (Required)' : ''}`
+                const lines = doc.splitTextToSize(label, contentWidth)
+                if (yPos > pageHeight - MARGINS.bottom - lines.length * 5) {
+                    doc.addPage()
+                    yPos = MARGINS.top
+                }
+                doc.text(lines, MARGINS.left, yPos)
+                yPos += lines.length * 5
+            }
+
             yPos += 5
+            continue
         }
-        yPos += 2 // Paragraph spacing
+
+        if (block.type === 'faq') {
+            if (yPos > pageHeight - 25) {
+                doc.addPage()
+                yPos = MARGINS.top
+            }
+
+            doc.setFontSize(FONTS.sectionHeader)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...BRAND_COLORS.navy)
+            doc.text('FAQ', MARGINS.left, yPos)
+            yPos += 7
+
+            for (const item of block.items || []) {
+                doc.setFontSize(FONTS.body)
+                doc.setFont('helvetica', 'bold')
+                doc.setTextColor(...BRAND_COLORS.darkText)
+                yPos = renderMarkupText(doc, `Q: ${item.question}`, yPos, contentWidth, pageHeight)
+                yPos += 1
+                doc.setFont('helvetica', 'normal')
+                yPos = renderMarkupText(doc, `A: ${item.answer}`, yPos, contentWidth, pageHeight)
+                yPos += 4
+            }
+
+            yPos += 3
+            continue
+        }
     }
 
     return yPos + 5
+}
+
+function decodeBasicEntities(input: string): string {
+    return input
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+}
+
+function normalizeToMarkup(input: string): string {
+    if (!input) return ''
+
+    let s = String(input)
+
+    // Normalize HTML to simple markup + line breaks
+    const looksHtml = /<\s*\w+[^>]*>/.test(s)
+    if (looksHtml) {
+        s = s.replace(/<\s*br\s*\/?>/gi, '\n')
+        s = s.replace(/<\s*\/\s*p\s*>/gi, '\n\n')
+        s = s.replace(/<\s*p\b[^>]*>/gi, '')
+
+        // Lists
+        s = s.replace(/<\s*\/\s*ul\s*>/gi, '\n')
+        s = s.replace(/<\s*ul\b[^>]*>/gi, '\n')
+        s = s.replace(/<\s*\/\s*ol\s*>/gi, '\n')
+        s = s.replace(/<\s*ol\b[^>]*>/gi, '\n')
+        s = s.replace(/<\s*li\b[^>]*>/gi, '- ')
+        s = s.replace(/<\s*\/\s*li\s*>/gi, '\n')
+
+        // Inline emphasis -> markdown-like markers
+        s = s.replace(/<\s*(strong|b)\b[^>]*>/gi, '**')
+        s = s.replace(/<\s*\/\s*(strong|b)\s*>/gi, '**')
+        s = s.replace(/<\s*(em|i)\b[^>]*>/gi, '*')
+        s = s.replace(/<\s*\/\s*(em|i)\s*>/gi, '*')
+
+        // Remove remaining tags
+        s = s.replace(/<[^>]*>/g, '')
+        s = decodeBasicEntities(s)
+    }
+
+    // Light markdown cleanup (keep bold/italic markers)
+    s = s.replace(/^#+\s+/gm, '')
+    return s
+}
+
+function parseRunsFromMarkup(line: string): RichTextRun[] {
+    const runs: RichTextRun[] = []
+    let bold = false
+    let italic = false
+    let i = 0
+    let buf = ''
+
+    const flush = () => {
+        if (!buf) return
+        runs.push({ text: buf, bold, italic })
+        buf = ''
+    }
+
+    while (i < line.length) {
+        if (line.startsWith('**', i)) {
+            flush()
+            bold = !bold
+            i += 2
+            continue
+        }
+        if (line[i] === '*') {
+            flush()
+            italic = !italic
+            i += 1
+            continue
+        }
+        buf += line[i]
+        i += 1
+    }
+    flush()
+    return runs
+}
+
+function getFontStyleForRun(run: RichTextRun): 'normal' | 'bold' | 'italic' | 'bolditalic' {
+    if (run.bold && run.italic) return 'bolditalic'
+    if (run.bold) return 'bold'
+    if (run.italic) return 'italic'
+    return 'normal'
+}
+
+function renderMarkupText(
+    doc: jsPDF,
+    input: string,
+    yPos: number,
+    contentWidth: number,
+    pageHeight: number
+): number {
+    const markup = normalizeToMarkup(input)
+    const rawLines = markup.split('\n')
+    const lineHeight = 5
+    const bulletIndent = 4
+
+    for (const raw of rawLines) {
+        const line = raw.replace(/\r/g, '')
+        if (!line.trim()) {
+            yPos += 3
+            continue
+        }
+
+        const isBullet = /^\s*[-*]\s+/.test(line)
+        const textLine = isBullet ? line.replace(/^\s*[-*]\s+/, '') : line
+        const xBase = isBullet ? MARGINS.left + bulletIndent : MARGINS.left
+        const availableWidth = isBullet ? contentWidth - bulletIndent : contentWidth
+
+        const runs = parseRunsFromMarkup(textLine)
+
+        if (isBullet) {
+            if (yPos > pageHeight - MARGINS.bottom) {
+                doc.addPage()
+                yPos = MARGINS.top
+            }
+            doc.setFont('helvetica', 'normal')
+            doc.text('•', MARGINS.left, yPos)
+        }
+
+        // Word-wrapped rich text line
+        let x = xBase
+        for (const run of runs) {
+            const style = getFontStyleForRun(run)
+            doc.setFont('helvetica', style)
+
+            const parts = run.text.split(/(\s+)/)
+            for (const part of parts) {
+                if (part === '') continue
+                const w = doc.getTextWidth(part)
+                const currentLineWidth = x - xBase
+
+                if (currentLineWidth + w > availableWidth && part.trim() !== '') {
+                    yPos += lineHeight
+                    if (yPos > pageHeight - MARGINS.bottom) {
+                        doc.addPage()
+                        yPos = MARGINS.top
+                    }
+                    x = xBase
+                }
+
+                doc.text(part, x, yPos)
+                x += w
+            }
+        }
+
+        yPos += lineHeight
+        // Reset font
+        doc.setFont('helvetica', 'normal')
+    }
+
+    return yPos
 }
 
 function drawNotes(

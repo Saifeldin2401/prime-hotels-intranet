@@ -64,7 +64,7 @@ export function QuestionRenderer({
     const [hasSubmitted, setHasSubmitted] = useState(false)
     const [showHintPanel, setShowHintPanel] = useState(false)
     const [timeRemaining, setTimeRemaining] = useState(timeLimit || 0)
-    const [startTime] = useState(Date.now())
+    const [startTime] = useState(() => Date.now())
 
     // Randomize options if needed
     const [shuffledOptions, setShuffledOptions] = useState<QuestionOption[]>([])

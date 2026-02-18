@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  GitCompare, 
-  FileText, 
-  Calendar, 
-  User, 
+import {
+  GitCompare,
+  FileText,
+  Calendar,
+  User,
   ArrowLeftRight,
   MessageSquare,
   Plus,
@@ -37,6 +37,73 @@ interface DocumentVersion {
 interface DocumentVersionComparisonProps {
   documentId: string
   className?: string
+}
+
+const VersionCard = ({ version, isSelected, onSelect }: {
+  version: DocumentVersion
+  isSelected: boolean
+  onSelect: () => void
+}) => (
+  <Card className={cn(
+    "cursor-pointer transition-all",
+    isSelected && "ring-2 ring-blue-500 bg-blue-50"
+  )} onClick={onSelect}>
+    <CardHeader className="pb-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge variant={version.is_current ? "default" : "secondary"}>
+            v{version.version_number}
+          </Badge>
+          {version.is_current && (
+            <Badge variant="outline" className="text-green-600 border-green-600">
+              Current
+            </Badge>
+          )}
+        </div>
+        <Badge variant="outline">{version.status}</Badge>
+      </div>
+      <CardTitle className="text-base">{version.title}</CardTitle>
+    </CardHeader>
+    <CardContent className="pt-0">
+      <div className="space-y-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          {version.user_name}
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4" />
+          {formatDistanceToNow(new Date(version.created_at), { addSuffix: true })}
+        </div>
+        {version.changes_summary && (
+          <div className="flex items-start gap-2">
+            <MessageSquare className="h-4 w-4 mt-0.5" />
+            <span className="line-clamp-2">{version.changes_summary}</span>
+          </div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+)
+
+const ChangeIndicator = ({ type }: { type: 'added' | 'removed' | 'modified' | 'unchanged' }) => {
+  const icons = {
+    added: <Plus className="h-4 w-4 text-green-600" />,
+    removed: <Minus className="h-4 w-4 text-red-600" />,
+    modified: <ArrowLeftRight className="h-4 w-4 text-yellow-600" />,
+    unchanged: <div className="h-4 w-4" />
+  }
+  const colors = {
+    added: 'bg-green-50 border-green-200',
+    removed: 'bg-red-50 border-red-200',
+    modified: 'bg-yellow-50 border-yellow-200',
+    unchanged: 'bg-transparent'
+  }
+
+  return (
+    <div className={cn("flex items-center gap-2 p-2 rounded border", colors[type])}>
+      {icons[type]}
+    </div>
+  )
 }
 
 export function DocumentVersionComparison({ documentId, className }: DocumentVersionComparisonProps) {
@@ -85,14 +152,14 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
     // Simple text comparison (in real app, you'd use a proper diff library)
     const content1 = v1.content.split('\n')
     const content2 = v2.content.split('\n')
-    
+
     const changes = []
     const maxLines = Math.max(content1.length, content2.length)
-    
+
     for (let i = 0; i < maxLines; i++) {
       const line1 = content1[i] || ''
       const line2 = content2[i] || ''
-      
+
       if (line1 === line2) {
         changes.push({ type: 'unchanged' as const, line1, line2 })
       } else if (line1 && !line2) {
@@ -118,73 +185,6 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
   }
 
   const comparison = compareVersions()
-
-  const VersionCard = ({ version, isSelected, onSelect }: {
-    version: DocumentVersion
-    isSelected: boolean
-    onSelect: () => void
-  }) => (
-    <Card className={cn(
-      "cursor-pointer transition-all",
-      isSelected && "ring-2 ring-blue-500 bg-blue-50"
-    )} onClick={onSelect}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge variant={version.is_current ? "default" : "secondary"}>
-              v{version.version_number}
-            </Badge>
-            {version.is_current && (
-              <Badge variant="outline" className="text-green-600 border-green-600">
-                Current
-              </Badge>
-            )}
-          </div>
-          <Badge variant="outline">{version.status}</Badge>
-        </div>
-        <CardTitle className="text-base">{version.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            {version.user_name}
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            {formatDistanceToNow(new Date(version.created_at), { addSuffix: true })}
-          </div>
-          {version.changes_summary && (
-            <div className="flex items-start gap-2">
-              <MessageSquare className="h-4 w-4 mt-0.5" />
-              <span className="line-clamp-2">{version.changes_summary}</span>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-
-  const ChangeIndicator = ({ type }: { type: 'added' | 'removed' | 'modified' | 'unchanged' }) => {
-    const icons = {
-      added: <Plus className="h-4 w-4 text-green-600" />,
-      removed: <Minus className="h-4 w-4 text-red-600" />,
-      modified: <ArrowLeftRight className="h-4 w-4 text-yellow-600" />,
-      unchanged: <div className="h-4 w-4" />
-    }
-    const colors = {
-      added: 'bg-green-50 border-green-200',
-      removed: 'bg-red-50 border-red-200',
-      modified: 'bg-yellow-50 border-yellow-200',
-      unchanged: 'bg-transparent'
-    }
-    
-    return (
-      <div className={cn("flex items-center gap-2 p-2 rounded border", colors[type])}>
-        {icons[type]}
-      </div>
-    )
-  }
 
   if (isLoading) {
     return (
@@ -321,7 +321,7 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
                       ))}
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 p-2 bg-muted rounded">
                       <FileText className="h-4 w-4" />
@@ -362,8 +362,8 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
                       </div>
                     </div>
                   ))}
-              </div>
-            </TabsContent>
+                </div>
+              </TabsContent>
 
               <TabsContent value="changes-only" className="space-y-0">
                 <div className="space-y-2 max-h-96 overflow-y-auto">

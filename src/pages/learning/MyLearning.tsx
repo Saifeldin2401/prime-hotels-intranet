@@ -98,7 +98,7 @@ export default function MyLearning() {
             </div>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <Card>
                     <CardContent className="p-6">
                         <div className="text-2xl font-bold text-blue-600">{stats.totalAssigned}</div>
@@ -154,9 +154,9 @@ export default function MyLearning() {
                             {activeItems.map(item => (
                                 <Card key={item.id} className="hover:shadow-md transition-shadow">
                                     <CardContent className="p-6">
-                                        <div className="flex justify-between items-start">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
                                             <div className="space-y-1 flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
+                                                <div className="flex flex-wrap items-center gap-2 mb-2">
                                                     <Badge variant={item.progress?.status === 'in_progress' ? 'default' : 'secondary'}>
                                                         {t((item.progress?.status || 'notStarted'))}
                                                     </Badge>
@@ -190,7 +190,7 @@ export default function MyLearning() {
                                                 <p className="text-sm text-muted-foreground line-clamp-1">
                                                     {item.content_metadata?.description || t('noDescription')}
                                                 </p>
-                                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                                <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
                                                     {item.content_metadata?.duration && <span>{item.content_metadata.duration} {t('min')}</span>}
                                                     {item.content_metadata?.question_count && <span>{item.content_metadata.question_count} {t('questions')}</span>}
                                                 </div>
@@ -198,7 +198,7 @@ export default function MyLearning() {
 
                                             <Button
                                                 onClick={() => handleStart(item)}
-                                                className={`ml-4 ${isRTL ? 'flex-row-reverse' : ''}`}
+                                                className={cn("w-full sm:w-auto sm:ml-4", isRTL ? 'flex-row-reverse' : '')}
                                             >
                                                 {item.progress?.status === 'in_progress' ? (
                                                     <>{t('continue')}</>
@@ -224,7 +224,7 @@ export default function MyLearning() {
                     </h2>
 
                     <div className="border rounded-lg bg-white overflow-hidden">
-                        <div className="overflow-x-auto">
+                        <div className="hidden md:block overflow-x-auto">
                             <table className={`w-full text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                 <thead className="bg-slate-50 border-b">
                                     <tr>
@@ -264,6 +264,43 @@ export default function MyLearning() {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+                        <div className="divide-y md:hidden">
+                            {completedItems.length === 0 ? (
+                                <div className="px-4 py-8 text-center text-muted-foreground">
+                                    {t('noCompletedHistory')}
+                                </div>
+                            ) : (
+                                completedItems.map(item => (
+                                    <div key={item.id} className="space-y-3 p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <p className="min-w-0 font-medium text-sm text-slate-900 flex items-center gap-2">
+                                                {item.content_type === 'quiz'
+                                                    ? <FileQuestion className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                                    : <BookOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                                                <span className="truncate">{item.content_title}</span>
+                                            </p>
+                                            <Badge variant="secondary" className="font-mono shrink-0">
+                                                {item.progress?.score_percentage != null ? `${item.progress.score_percentage}%` : 'N/A'}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            {item.progress?.completed_at
+                                                ? format(new Date(item.progress.completed_at), 'MMM d, yyyy', { locale: dateLocale })
+                                                : '-'}
+                                        </p>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className={cn("w-full", isRTL ? "flex-row-reverse" : "")}
+                                            onClick={() => navigate('/training/certificates')}
+                                        >
+                                            <Award className={cn("h-4 w-4 text-purple-600", isRTL ? "ml-2" : "mr-2")} />
+                                            {t('certificate')}
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>

@@ -90,7 +90,8 @@ import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { sanitizeHtml } from '@/lib/sanitize'
-import { supabase } from '@/lib/supabase'
+import { supabase, env } from '@/lib/supabase'
+import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 
@@ -106,6 +107,7 @@ export default function KnowledgeViewer() {
     const { t } = useTranslation('knowledge')
     const { user, profile } = useAuth()
     const contentRef = useRef<HTMLDivElement>(null)
+    const mermaidRef = useRef<HTMLDivElement>(null)
 
     const [tocItems, setTocItems] = useState<TOCItem[]>([])
     const [activeSection, setActiveSection] = useState<string>('')
@@ -138,7 +140,7 @@ export default function KnowledgeViewer() {
     const translateAI = useTranslationAI()
 
     // Ensure useKnowledgeArticle handles the 'documents' table correctly via knowledgeService
-    const { data: article, isLoading, error } = useKnowledgeArticle(id)
+    const { data: article, isLoading, error, refetch: refetchArticle } = useKnowledgeArticle(id)
 
     // Stubbed/Empty hooks if backend not ready
     const { data: comments } = useComments(id)
@@ -155,21 +157,79 @@ export default function KnowledgeViewer() {
 
     const isBookmarked = bookmarks?.some(b => b.document_id === id)
 
+    useEffect(() => {
+        if (!id) return
+
+        const channel = supabase
+            .channel(`knowledge-article-live-${id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'documents',
+                    filter: `id=eq.${id}`
+                },
+                () => {
+                    void refetchArticle()
+                }
+            )
+            .subscribe()
+
+        return () => {
+            void supabase.removeChannel(channel)
+        }
+    }, [id, refetchArticle])
+
     // Convert markdown content to HTML
     const htmlContent = useMemo(() => {
         if (!article?.content) return ''
         const isHtml = article.content.trim().startsWith('<')
-        if (isHtml) return article.content
-        return marked.parse(article.content, { async: false }) as string
+        const baseHtml = isHtml
+            ? article.content
+            : (marked.parse(article.content, { async: false }) as string)
+        return transformMermaidCodeBlocks(baseHtml)
     }, [article?.content])
 
     // Memoize Arabic content HTML if it exists in DB
     const htmlContentAr = useMemo(() => {
         if (!article?.content_ar) return ''
         const isHtml = article.content_ar.trim().startsWith('<')
-        if (isHtml) return article.content_ar
-        return marked.parse(article.content_ar, { async: false }) as string
+        const baseHtml = isHtml
+            ? article.content_ar
+            : (marked.parse(article.content_ar, { async: false }) as string)
+        return transformMermaidCodeBlocks(baseHtml)
     }, [article?.content_ar])
+
+    const htmlContentSanitized = useMemo(() => {
+        return { __html: sanitizeHtml(htmlContent) }
+    }, [htmlContent])
+
+    const htmlContentArSanitized = useMemo(() => {
+        return { __html: sanitizeHtml(htmlContentAr) }
+    }, [htmlContentAr])
+
+    const translatedHtmlSanitized = useMemo(() => {
+        const translatedHtml = translatedData?.content
+            ? transformMermaidCodeBlocks(marked.parse(translatedData.content, { async: false }) as string)
+            : htmlContentAr
+        return { __html: sanitizeHtml(translatedHtml) }
+    }, [translatedData?.content, htmlContentAr])
+
+    useEffect(() => {
+        if (!article?.id) return
+
+        const container = mermaidRef.current
+        if (!container) return
+
+        const timer = window.setTimeout(() => {
+            void renderMermaidDiagrams(container)
+        }, 50)
+
+        return () => {
+            clearTimeout(timer)
+        }
+    }, [article?.id, htmlContent, htmlContentAr, translatedData?.content, showBilingual])
 
     // Check if user can edit
     const { primaryRole } = useAuth()
@@ -226,12 +286,242 @@ export default function KnowledgeViewer() {
 
         const logo = await loadLogoAsDataUrl()
 
-        // Strip HTML/Markdown for clean text output in PDF
-        const cleanContent = (article.content || '')
-            .replace(/<[^>]*>/g, '') // Remove HTML tags
-            .replace(/#+\s/g, '')     // Remove Markdown headers
-            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove Markdown links
-            .replace(/[*_~`]/g, '')    // Remove formatting characters
+        const blocks: any[] = []
+
+        const blobToPngDataUrl = async (blob: Blob): Promise<string> => {
+            // Prefer canvas conversion to ensure jsPDF-compatible format (PNG/JPEG)
+            try {
+                const url = URL.createObjectURL(blob)
+                try {
+                    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+                        const el = new Image()
+                        el.onload = () => resolve(el)
+                        el.onerror = () => reject(new Error('Failed to load image for conversion'))
+                        el.src = url
+                    })
+
+                    const canvas = document.createElement('canvas')
+                    canvas.width = img.naturalWidth || img.width
+                    canvas.height = img.naturalHeight || img.height
+                    const ctx = canvas.getContext('2d')
+                    if (!ctx) throw new Error('Canvas not available')
+                    ctx.drawImage(img, 0, 0)
+                    return canvas.toDataURL('image/png')
+                } finally {
+                    URL.revokeObjectURL(url)
+                }
+            } catch {
+                // Fallback: return original bytes as data url (may be unsupported by jsPDF)
+                return await new Promise((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onloadend = () => resolve(String(reader.result || ''))
+                    reader.onerror = () => reject(new Error('Failed to read image blob'))
+                    reader.readAsDataURL(blob)
+                })
+            }
+        }
+
+        const urlToPngDataUrlViaImage = async (url: string): Promise<string> => {
+            const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+                const el = new Image()
+                // Important: allows canvas export when remote host provides CORS headers
+                el.crossOrigin = 'anonymous'
+                el.referrerPolicy = 'no-referrer'
+                el.onload = () => resolve(el)
+                el.onerror = () => reject(new Error('Failed to load remote image'))
+                el.src = url
+            })
+
+            const canvas = document.createElement('canvas')
+            canvas.width = img.naturalWidth || img.width
+            canvas.height = img.naturalHeight || img.height
+            const ctx = canvas.getContext('2d')
+            if (!ctx) throw new Error('Canvas not available')
+            ctx.drawImage(img, 0, 0)
+            return canvas.toDataURL('image/png')
+        }
+
+        const tryParseSupabaseStorage = (url: string): { bucket: string; path: string } | null => {
+            try {
+                const u = new URL(url)
+                // /storage/v1/object/public/<bucket>/<path...>
+                // /storage/v1/object/<bucket>/<path...>
+                // /storage/v1/object/sign/<bucket>/<path...>
+                const m = u.pathname.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/(.+)$/)
+                if (!m) return null
+                return { bucket: m[1], path: decodeURIComponent(m[2]) }
+            } catch {
+                return null
+            }
+        }
+
+        const toDataUrl = async (url: string): Promise<string> => {
+            if (!url) return url
+            if (url.startsWith('data:image/')) return url
+
+            // First try image element approach (works when fetch is blocked by CSP but images are allowed)
+            try {
+                return await urlToPngDataUrlViaImage(url)
+            } catch {
+                // Fall back to fetch/download-based methods below
+            }
+
+            try {
+                const res = await fetch(url)
+                if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`)
+                const blob = await res.blob()
+                return await blobToPngDataUrl(blob)
+            } catch (e) {
+                // Try authenticated Supabase Storage download (private buckets / missing CORS headers)
+                const parsed = tryParseSupabaseStorage(url)
+                if (parsed) {
+                    const { data, error } = await supabase.storage.from(parsed.bucket).download(parsed.path)
+                    if (!error && data) {
+                        return await blobToPngDataUrl(data)
+                    }
+                }
+
+                // Final fallback: server-side proxy (avoids browser CORS/canvas taint)
+                const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+                if (sessionError || !sessionData?.session?.access_token) throw sessionError || e
+
+                const res = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/image-proxy`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${sessionData.session.access_token}`
+                    },
+                    body: JSON.stringify({ url })
+                })
+
+                if (!res.ok) throw e
+                const blob = await res.blob()
+                return await blobToPngDataUrl(blob)
+            }
+        }
+
+        const parseContentToBlocks = (raw: string): { type: 'text'; text: string } | { type: 'mixed'; blocks: any[] } => {
+            if (!raw || !raw.trim()) return { type: 'text', text: '' }
+
+            const imgMatches: { index: number; length: number; url: string; caption?: string }[] = []
+
+            // HTML <img src="..." alt="...">
+            const htmlImgRegex = /<img\b[^>]*?src=["']([^"']+)["'][^>]*?>/gi
+            let m: RegExpExecArray | null
+            while ((m = htmlImgRegex.exec(raw)) !== null) {
+                const full = m[0]
+                const url = m[1]
+                const altMatch = /alt=["']([^"']+)["']/i.exec(full)
+                imgMatches.push({
+                    index: m.index,
+                    length: full.length,
+                    url,
+                    caption: altMatch?.[1]
+                })
+            }
+
+            // Markdown images: ![alt](url)
+            const mdImgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
+            while ((m = mdImgRegex.exec(raw)) !== null) {
+                const full = m[0]
+                const caption = m[1] || undefined
+                // Support optional title: ![alt](url "title")
+                const url = (m[2] || '').trim().split(/\s+/)[0]
+                imgMatches.push({ index: m.index, length: full.length, url, caption })
+            }
+
+            if (imgMatches.length === 0) return { type: 'text', text: raw }
+
+            imgMatches.sort((a, b) => a.index - b.index)
+
+            const out: any[] = []
+            let cursor = 0
+            for (const im of imgMatches) {
+                if (im.index > cursor) {
+                    const chunk = raw.slice(cursor, im.index)
+                    if (chunk.trim()) out.push({ type: 'text', text: chunk })
+                }
+                if (im.url) {
+                    out.push({ type: 'image', dataUrl: im.url, caption: im.caption })
+                }
+                cursor = im.index + im.length
+            }
+            if (cursor < raw.length) {
+                const tail = raw.slice(cursor)
+                if (tail.trim()) out.push({ type: 'text', text: tail })
+            }
+
+            return { type: 'mixed', blocks: out }
+        }
+
+        let embedFailures = 0
+        const failureUrls: string[] = []
+
+        const tryEmbedImage = async (url: string, caption?: string) => {
+            if (!url) return
+            try {
+                const dataUrl = await toDataUrl(url)
+                if (dataUrl && dataUrl.startsWith('data:image/')) {
+                    blocks.push({ type: 'image', dataUrl, caption })
+                } else {
+                    embedFailures += 1
+                    failureUrls.push(url)
+                    blocks.push({ type: 'text', text: caption ? `Image: ${caption}\n${url}` : `Image\n${url}` })
+                }
+            } catch {
+                embedFailures += 1
+                failureUrls.push(url)
+                blocks.push({ type: 'text', text: caption ? `Image: ${caption}\n${url}` : `Image\n${url}` })
+            }
+        }
+
+        const contentParse = parseContentToBlocks(article.content || '')
+        if (contentParse.type === 'text') {
+            if (contentParse.text.trim()) blocks.push({ type: 'text', text: contentParse.text })
+        } else {
+            for (const b of contentParse.blocks) {
+                if (b?.type === 'image' && b?.dataUrl) {
+                    await tryEmbedImage(String(b.dataUrl), b.caption)
+                } else if (b?.type === 'text' && b?.text) {
+                    blocks.push(b)
+                }
+            }
+        }
+
+        if (Array.isArray((article as any).images) && (article as any).images.length > 0) {
+            const images = [...((article as any).images as any[])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            for (const img of images) {
+                if (!img?.url) continue
+                await tryEmbedImage(String(img.url), img.caption || undefined)
+            }
+        }
+
+        if (Array.isArray((article as any).checklist_items) && (article as any).checklist_items.length > 0) {
+            const items = [...((article as any).checklist_items as any[])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            blocks.push({
+                type: 'checklist',
+                items: items.map((i) => ({
+                    text: i.text || i.task || '',
+                    is_required: !!(i.is_required ?? i.required)
+                }))
+            })
+        }
+
+        if (Array.isArray((article as any).faq_items) && (article as any).faq_items.length > 0) {
+            const items = [...((article as any).faq_items as any[])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            blocks.push({
+                type: 'faq',
+                items: items.map((i) => ({
+                    question: i.question || '',
+                    answer: i.answer || ''
+                }))
+            })
+        }
+
+        if (embedFailures > 0) {
+            toast.error(`Some images could not be embedded in the PDF (${embedFailures}). Check image access/CORS.`)
+            console.warn('PDF image embed failures:', failureUrls)
+        }
 
         await downloadReport(
             {
@@ -253,7 +543,8 @@ export default function KnowledgeViewer() {
                 content: [
                     {
                         title: article.description || undefined,
-                        content: cleanContent
+                        content: '',
+                        blocks: blocks.length > 0 ? blocks : undefined
                     }
                 ],
                 notes: [
@@ -295,7 +586,7 @@ export default function KnowledgeViewer() {
             const scrolled = (winScroll / height) * 100
             setReadingProgress(scrolled)
         }
-        window.addEventListener('scroll', handleScroll)
+        window.addEventListener('scroll', handleScroll, { passive: true })
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
 
@@ -672,7 +963,7 @@ export default function KnowledgeViewer() {
                 "bg-white/80 border-b sticky top-0 z-40 kb-focus-transition kb-action-blur print:hidden",
                 isFocusMode && "-translate-y-full opacity-0"
             )}>
-                <div className="max-w-[1400px] mx-auto px-4 py-3">
+                <div className="max-w-[1400px] mx-auto px-3 py-2.5 sm:px-4 sm:py-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Button
@@ -695,17 +986,17 @@ export default function KnowledgeViewer() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
                             {canEdit && (
-                                <div className="flex items-center gap-1 sm:gap-2 mr-2">
+                                <div className="flex items-center gap-1 sm:gap-2 mr-1 sm:mr-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => navigate(`/knowledge/${id}/edit`)}
-                                        className="h-9 px-3 border-slate-200 hover:border-indigo-300 hover:text-indigo-600 rounded-lg group transition-all"
+                                        className="h-9 px-2 sm:px-3 border-slate-200 hover:border-indigo-300 hover:text-indigo-600 rounded-lg group transition-all"
                                     >
-                                        <Pencil className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
-                                        <span>{t('viewer.edit')}</span>
+                                        <Pencil className="h-3.5 w-3.5 sm:mr-2 group-hover:scale-110 transition-transform" />
+                                        <span className="hidden sm:inline">{t('viewer.edit')}</span>
                                     </Button>
 
                                     <AlertDialog>
@@ -713,9 +1004,9 @@ export default function KnowledgeViewer() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 rounded-lg group"
+                                                className="h-9 px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 rounded-lg group"
                                             >
-                                                <Trash2 className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
+                                                <Trash2 className="h-3.5 w-3.5 sm:mr-2 group-hover:scale-110 transition-transform" />
                                                 <span className="hidden sm:inline">{t('viewer.delete')}</span>
                                             </Button>
                                         </AlertDialogTrigger>
@@ -826,7 +1117,7 @@ export default function KnowledgeViewer() {
 
             {/* Premium Article Hero Section */}
             <header className={cn(
-                "kb-article-header py-12 md:py-16 border-b border-slate-200/60 kb-focus-transition",
+                "kb-article-header py-8 md:py-16 border-b border-slate-200/60 kb-focus-transition",
                 isFocusMode && "opacity-0 -translate-y-8 pointer-events-none"
             )}>
                 <div className="absolute inset-0 kb-hero-pattern" />
@@ -884,7 +1175,7 @@ export default function KnowledgeViewer() {
                         </div>
 
                         {/* Lower Metadata Row */}
-                        <div className="flex flex-wrap items-center gap-y-4 gap-x-8 mt-4 pt-8 border-t border-slate-200/40">
+                        <div className="flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-y-4 sm:gap-x-8 mt-4 pt-6 sm:pt-8 border-t border-slate-200/40">
                             {article.author && (
                                 <div className="flex items-center gap-3 group">
                                     <Avatar className="h-10 w-10 border-2 border-white shadow-sm transition-transform group-hover:scale-105">
@@ -899,7 +1190,7 @@ export default function KnowledgeViewer() {
                                 </div>
                             )}
 
-                            <div className="flex items-center gap-6">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.updated')}</span>
                                     <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
@@ -908,7 +1199,7 @@ export default function KnowledgeViewer() {
                                     </div>
                                 </div>
 
-                                <Separator orientation="vertical" className="h-8 bg-slate-200/60" />
+                                <Separator orientation="vertical" className="hidden sm:block h-8 bg-slate-200/60" />
 
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.reading_time', 'Est. Time')}</span>
@@ -918,7 +1209,7 @@ export default function KnowledgeViewer() {
                                     </div>
                                 </div>
 
-                                <Separator orientation="vertical" className="h-8 bg-slate-200/60" />
+                                <Separator orientation="vertical" className="hidden sm:block h-8 bg-slate-200/60" />
 
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.views', 'Views')}</span>
@@ -934,7 +1225,7 @@ export default function KnowledgeViewer() {
             </header>
 
             <div className={cn(
-                "container max-w-[1400px] mx-auto py-10 px-4 print:py-0 print:px-0 transition-all duration-500",
+                "container max-w-[1400px] mx-auto py-6 px-3 sm:py-10 sm:px-4 print:py-0 print:px-0 transition-all duration-500",
                 isFocusMode ? "max-w-4xl py-24 z-[45] relative kb-focus-content" : "relative z-10"
             )}>
                 {/* Print Header - only visible when printing */}
@@ -970,7 +1261,7 @@ export default function KnowledgeViewer() {
                                             <ChevronDown className="h-4 w-4 text-slate-400" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent className="w-[calc(100vw-2rem)] max-h-64 overflow-y-auto">
+                                    <DropdownMenuContent className="w-[calc(100vw-1.5rem)] max-h-64 overflow-y-auto">
                                         {tocItems.map(item => (
                                             <DropdownMenuItem key={item.id} onClick={() => scrollToSection(item.id)}>
                                                 <div className={cn(
@@ -1018,8 +1309,8 @@ export default function KnowledgeViewer() {
 
                         {/* File Attachment Quick Preview */}
                         {article.file_url && (!translationTarget || translationTarget === 'en' || (!article.content_ar && !translatedData)) && (
-                            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
                                     <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
                                         <FileText className="h-5 w-5" />
                                     </div>
@@ -1028,12 +1319,12 @@ export default function KnowledgeViewer() {
                                         <p className="text-xs text-slate-500">{article.file_url.split('/').pop()}</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button variant="ghost" size="sm" className="h-9 px-4 rounded-lg hover:bg-white" onClick={() => window.open(article.file_url, '_blank')}>
+                                <div className="flex w-full sm:w-auto gap-2">
+                                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg hover:bg-white" onClick={() => window.open(article.file_url, '_blank')}>
                                         <Eye className="h-4 w-4 mr-2" />
                                         {t('viewer.view')}
                                     </Button>
-                                    <Button variant="outline" size="sm" className="h-9 px-4 rounded-lg bg-white" onClick={() => window.open(article.file_url, '_blank')}>
+                                    <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg bg-white" onClick={() => window.open(article.file_url, '_blank')}>
                                         <Download className="h-4 w-4 mr-2" />
                                         {t('viewer.download')}
                                     </Button>
@@ -1061,7 +1352,7 @@ export default function KnowledgeViewer() {
                             )}>
                                 {translatedData || article.content_ar ? (
                                     showBilingual ? (
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 text-slate-800">
+                                        <div ref={mermaidRef} className="grid grid-cols-1 lg:grid-cols-2 gap-16 text-slate-800">
                                             <div
                                                 className={cn(
                                                     "prose max-w-none transition-all duration-300",
@@ -1070,7 +1361,7 @@ export default function KnowledgeViewer() {
                                                     fontSize === 'lg' && "text-kb-lg",
                                                     fontSize === 'xl' && "text-kb-xl",
                                                 )}
-                                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
+                                                dangerouslySetInnerHTML={htmlContentSanitized}
                                             />
                                             <div
                                                 dir={shouldUseRtl ? 'rtl' : 'ltr'}
@@ -1084,36 +1375,40 @@ export default function KnowledgeViewer() {
                                                     fontSize === 'lg' && "text-kb-lg",
                                                     fontSize === 'xl' && "text-kb-xl",
                                                 )}
-                                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedData?.content ? (marked.parse(translatedData.content, { async: false }) as string) : htmlContentAr) }}
+                                                dangerouslySetInnerHTML={translatedHtmlSanitized}
                                             />
                                         </div>
                                     ) : (
-                                        <article
-                                            dir={shouldUseRtl ? 'rtl' : 'ltr'}
+                                        <div ref={mermaidRef}>
+                                            <article
+                                                dir={shouldUseRtl ? 'rtl' : 'ltr'}
+                                                className={cn(
+                                                    "prose md:prose-lg max-w-none transition-all duration-300",
+                                                    shouldUseRtl ? "text-right font-arabic" : "text-left",
+                                                    fontSize === 'sm' && "text-kb-sm",
+                                                    fontSize === 'base' && "text-kb-base",
+                                                    fontSize === 'lg' && "text-kb-lg",
+                                                    fontSize === 'xl' && "text-kb-xl",
+                                                )}
+                                                dangerouslySetInnerHTML={translatedHtmlSanitized}
+                                            />
+                                        </div>
+                                    )
+                                ) : article.content ? (
+                                    <div ref={mermaidRef}>
+                                        <div
+                                            ref={contentRef}
                                             className={cn(
-                                                "prose md:prose-lg max-w-none transition-all duration-300",
-                                                shouldUseRtl ? "text-right font-arabic" : "text-left",
+                                                "prose md:prose-lg max-w-none text-slate-800 kb-prose transition-all duration-300",
+                                                fontFamily === 'serif' && "kb-prose-serif",
                                                 fontSize === 'sm' && "text-kb-sm",
                                                 fontSize === 'base' && "text-kb-base",
                                                 fontSize === 'lg' && "text-kb-lg",
                                                 fontSize === 'xl' && "text-kb-xl",
                                             )}
-                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedData?.content ? (marked.parse(translatedData.content, { async: false }) as string) : htmlContentAr) }}
+                                            dangerouslySetInnerHTML={htmlContentSanitized}
                                         />
-                                    )
-                                ) : article.content ? (
-                                    <div
-                                        ref={contentRef}
-                                        className={cn(
-                                            "prose md:prose-lg max-w-none text-slate-800 kb-prose transition-all duration-300",
-                                            fontFamily === 'serif' && "kb-prose-serif",
-                                            fontSize === 'sm' && "text-kb-sm",
-                                            fontSize === 'base' && "text-kb-base",
-                                            fontSize === 'lg' && "text-kb-lg",
-                                            fontSize === 'xl' && "text-kb-xl",
-                                        )}
-                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
-                                    />
+                                    </div>
                                 ) : (
                                     !article.file_url && (
                                         <div className="flex flex-col items-center justify-center py-12 text-slate-400">
@@ -1129,13 +1424,13 @@ export default function KnowledgeViewer() {
                                         <VideoPlayer videoUrl={article.video_url} title={article.title} />
                                     )}
 
-                                    {article.content_type === 'checklist' && article.checklist_items && article.checklist_items.length > 0 && (
+                                    {article.checklist_items && article.checklist_items.length > 0 && (
                                         <div className="pt-8 border-t border-slate-100">
                                             <ChecklistRenderer items={article.checklist_items} />
                                         </div>
                                     )}
 
-                                    {article.content_type === 'faq' && article.faq_items && article.faq_items.length > 0 && (
+                                    {article.faq_items && article.faq_items.length > 0 && (
                                         <div className="pt-8 border-t border-slate-100">
                                             <FAQAccordion items={article.faq_items} />
                                         </div>
@@ -1143,7 +1438,10 @@ export default function KnowledgeViewer() {
 
                                     {article.content_type === 'visual' && article.images && article.images.length > 0 && (
                                         <div className="pt-8 border-t border-slate-100">
-                                            <ImageGalleryRenderer images={article.images} />
+                                            <ImageGalleryRenderer
+                                                images={article.images}
+                                                cacheVersion={article.updated_at || undefined}
+                                            />
                                         </div>
                                     )}
                                 </div>
@@ -1338,7 +1636,7 @@ export default function KnowledgeViewer() {
 
                     {/* Premium Sidebar */}
                     {!isFocusMode && (
-                        <aside className="lg:col-span-3 space-y-8 sticky top-24 h-fit print:hidden">
+                        <aside className="lg:col-span-3 space-y-8 sticky top-20 h-fit print:hidden">
                             {/* Table of Contents - Primary Sidebar Widget */}
                             {tocItems.length > 0 && (
                                 <div className="space-y-4">
@@ -1442,7 +1740,7 @@ export default function KnowledgeViewer() {
 
             {/* Premium Floating Readability Toolbar */}
             <div className={cn(
-                "kb-floating-toolbar fixed bottom-28 md:bottom-8 left-1/2 -translate-x-1/2 h-14 flex items-center px-1 py-1 rounded-2xl print:hidden z-50 transition-all duration-500 ease-out",
+                "kb-floating-toolbar fixed bottom-[max(4.5rem,calc(env(safe-area-inset-bottom)+1rem))] md:bottom-8 left-1/2 -translate-x-1/2 h-14 max-w-[calc(100vw-1rem)] flex items-center px-1 py-1 rounded-2xl print:hidden z-50 transition-all duration-500 ease-out",
                 isFocusMode ? "ring-2 ring-indigo-500 ring-offset-4 ring-offset-slate-50" : "bg-white/80"
             )}>
                 <div className="flex items-center">

@@ -153,7 +153,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.operations',
         icon: CheckSquare,
         order: 4,
-        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        visibleTo: 'all',
         collapsible: true
     },
     {
@@ -161,7 +161,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.hr_management',
         icon: Users,
         order: 5,
-        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        visibleTo: 'all',
         collapsible: true
     },
     {

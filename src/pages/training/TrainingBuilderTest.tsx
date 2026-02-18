@@ -16,7 +16,7 @@ export default function TrainingBuilderTest() {
         </CardHeader>
         <CardContent>
           <p>{t('test.count')}: {count}</p>
-          <Button onClick={() => setCount(count + 1)}>{t('test.increment')}</Button>
+          <Button onClick={() => setCount(c => c + 1)}>{t('test.increment')}</Button>
         </CardContent>
       </Card>
     </div>

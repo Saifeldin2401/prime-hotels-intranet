@@ -154,7 +154,7 @@ export function AssignmentDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg bg-white dark:bg-slate-950 border-hotel-gold/20 shadow-2xl">
+            <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-950 border-hotel-gold/20 shadow-2xl">
                 <DialogHeader className={`border-b border-gray-100 pb-4 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <DialogTitle className="text-2xl font-serif text-hotel-navy">
                         {t('assignModule')}
@@ -254,18 +254,18 @@ export function AssignmentDialog({
                         />
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 mt-2">
+                    <div className="flex flex-col-reverse gap-3 pt-6 border-t border-gray-100 mt-2 sm:flex-row sm:justify-end">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => onOpenChange(false)}
-                            className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                            className="w-full border-gray-200 text-gray-700 hover:bg-gray-50 sm:w-auto"
                         >
                             {t('cancel', 'Cancel')}
                         </Button>
                         <Button
                             type="submit"
-                            className="bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-md min-w-[120px]"
+                            className="w-full bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-md sm:w-auto"
                             disabled={isAssigning || isSubmitting || (targetType !== 'all' && selectedIds.length === 0)}
                         >
                             {isAssigning ? t('common:saving', 'Assigning...') : t('assign', 'Assign')}

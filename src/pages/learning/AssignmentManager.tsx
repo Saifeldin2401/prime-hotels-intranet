@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect } from 'react'
-import { Plus, Users, BookOpen, Check, ChevronsUpDown } from 'lucide-react'
+import { useMemo, useState, useEffect, useId } from 'react'
+import { Plus, Users, BookOpen, Check, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +45,7 @@ import { useProfiles } from '@/hooks/useUsers'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useLearningQuizzes, useTrainingModules, useAssignmentProgress } from '@/hooks/useTraining'
 import { Eye } from 'lucide-react'
+import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
 
 function AssignmentProgressDialog({
     assignmentId,
@@ -140,6 +141,11 @@ export default function AssignmentManager() {
     const [showModal, setShowModal] = useState(false)
     const [creating, setCreating] = useState(false)
     const [viewProgressId, setViewProgressId] = useState<string | null>(null)
+    const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null)
+
+    // Delete state
+    const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -154,6 +160,10 @@ export default function AssignmentManager() {
     // Selector States
     const [userOpen, setUserOpen] = useState(false)
     const [contentOpen, setContentOpen] = useState(false)
+
+    // IDs for accessibility
+    const contentListId = useId()
+    const userListId = useId()
 
     useEffect(() => {
         loadAssignments()
@@ -174,6 +184,70 @@ export default function AssignmentManager() {
             console.error(error)
         } finally {
             // noop
+        }
+    }
+
+    const handleUpdate = async () => {
+        if (!editingAssignmentId) return
+
+        if (!formData.content_id || !formData.target_id || !formData.due_date) {
+            toast({
+                title: 'Validation Error',
+                description: 'Please fill in all required fields.',
+                variant: 'destructive'
+            })
+            return
+        }
+
+        try {
+            setCreating(true)
+            await learningService.updateAssignment(editingAssignmentId, formData as any)
+            toast({ title: 'Success', description: 'Assignment updated successfully' })
+            setShowModal(false)
+            setEditingAssignmentId(null)
+            setFormData({
+                content_type: 'quiz',
+                content_id: '',
+                target_type: 'role',
+                target_id: '',
+                due_date: '',
+                priority: 'medium'
+            })
+            loadAssignments()
+        } catch (error) {
+            console.error(error)
+            toast({ title: 'Error', description: 'Failed to update assignment', variant: 'destructive' })
+        } finally {
+            setCreating(false)
+        }
+    }
+
+    const startEdit = (assignment: LearningAssignment) => {
+        setEditingAssignmentId(assignment.id)
+        setFormData({
+            content_type: assignment.content_type as any,
+            content_id: assignment.content_id,
+            target_type: assignment.target_type as any,
+            target_id: assignment.target_id,
+            due_date: assignment.due_date ? format(new Date(assignment.due_date), 'yyyy-MM-dd') : '',
+            priority: (assignment.priority as any) || 'medium'
+        })
+        setShowModal(true)
+    }
+
+    const handleDelete = async () => {
+        if (!deleteAssignmentId) return
+        try {
+            setDeleting(true)
+            await learningService.deleteAssignment(deleteAssignmentId)
+            toast({ title: 'Deleted', description: 'Assignment deleted successfully' })
+            setDeleteAssignmentId(null)
+            loadAssignments()
+        } catch (error) {
+            console.error(error)
+            toast({ title: 'Error', description: 'Failed to delete assignment', variant: 'destructive' })
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -276,10 +350,18 @@ export default function AssignmentManager() {
                 </Card>
             </div>
 
-            <Dialog open={showModal} onOpenChange={setShowModal}>
+            <Dialog
+                open={showModal}
+                onOpenChange={(open) => {
+                    setShowModal(open)
+                    if (!open) {
+                        setEditingAssignmentId(null)
+                    }
+                }}
+            >
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Create New Assignment</DialogTitle>
+                        <DialogTitle>{editingAssignmentId ? 'Edit Assignment' : 'Create New Assignment'}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-6 py-4">
                         {validationErrors.length > 0 && (
@@ -310,6 +392,18 @@ export default function AssignmentManager() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
+                                <Select
+                                    value={formData.content_type}
+                                    onValueChange={v => setFormData({ ...formData, content_type: v, content_id: '' })}
+                                >
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="quiz">Quiz</SelectItem>
+                                        <SelectItem value="module">Training Module</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
                                 <Label>Select Content</Label>
                                 <Popover open={contentOpen} onOpenChange={setContentOpen}>
                                     <PopoverTrigger asChild>
@@ -317,6 +411,7 @@ export default function AssignmentManager() {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={contentOpen}
+                                            aria-controls={contentListId}
                                             className="w-full justify-between"
                                         >
                                             {formData.content_id
@@ -329,7 +424,7 @@ export default function AssignmentManager() {
                                         <Command>
                                             <CommandInput placeholder={`Search ${formData.content_type}...`} />
                                             <CommandEmpty>No content found.</CommandEmpty>
-                                            <CommandGroup className="max-h-[200px] overflow-auto">
+                                            <CommandGroup className="max-h-[200px] overflow-auto" id={contentListId}>
                                                 {formData.content_type === 'quiz' ? (
                                                     quizzes?.map((quiz) => (
                                                         <CommandItem
@@ -434,6 +529,7 @@ export default function AssignmentManager() {
                                                 variant="outline"
                                                 role="combobox"
                                                 aria-expanded={userOpen}
+                                                aria-controls={userListId}
                                                 className="w-full justify-between"
                                             >
                                                 {formData.target_id
@@ -446,7 +542,7 @@ export default function AssignmentManager() {
                                             <Command>
                                                 <CommandInput placeholder={t('searchUser')} />
                                                 <CommandEmpty>{t('noUserFound')}</CommandEmpty>
-                                                <CommandGroup className="max-h-[200px] overflow-auto">
+                                                <CommandGroup className="max-h-[200px] overflow-auto" id={userListId}>
                                                     {users?.map((user) => (
                                                         <CommandItem
                                                             key={user.id}
@@ -592,8 +688,15 @@ export default function AssignmentManager() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowModal(false)}>{t('cancel')}</Button>
-                        <Button onClick={handleCreate} disabled={creating || validationErrors.length > 0}>
-                            {creating ? t('creating') : t('createAssignment')}
+                        <Button
+                            onClick={editingAssignmentId ? handleUpdate : handleCreate}
+                            disabled={creating || validationErrors.length > 0}
+                        >
+                            {creating
+                                ? t('creating')
+                                : editingAssignmentId
+                                    ? 'Save Changes'
+                                    : t('createAssignment')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -651,10 +754,26 @@ export default function AssignmentManager() {
                                         <Button
                                             variant="ghost"
                                             size="sm"
+                                            onClick={() => startEdit(a)}
+                                            title="Edit"
+                                        >
+                                            <Pencil className="h-4 w-4 text-slate-500" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={() => setViewProgressId(a.id)}
                                             title={t('viewProgress')}
                                         >
                                             <Eye className="h-4 w-4 text-slate-500" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setDeleteAssignmentId(a.id)}
+                                            title="Delete"
+                                        >
+                                            <Trash2 className="h-4 w-4 text-red-600" />
                                         </Button>
                                     </td>
                                 </tr>
@@ -675,6 +794,14 @@ export default function AssignmentManager() {
                 assignmentId={viewProgressId}
                 open={!!viewProgressId}
                 onOpenChange={(val) => !val && setViewProgressId(null)}
+            />
+
+            <DeleteConfirmationDialog
+                open={!!deleteAssignmentId}
+                onOpenChange={(open) => !open && setDeleteAssignmentId(null)}
+                itemName="assignment"
+                onConfirm={handleDelete}
+                isLoading={deleting}
             />
         </div>
     )

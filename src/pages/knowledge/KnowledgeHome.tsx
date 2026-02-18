@@ -176,18 +176,18 @@ export default function KnowledgeHome() {
                     >
                         <div className="relative group">
                             <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-indigo-500/30 via-violet-500/30 to-purple-500/30 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-500 blur-sm" />
-                            <div className="relative flex items-center bg-white/[0.07] backdrop-blur-xl border border-white/[0.1] rounded-2xl px-5 py-1 focus-within:bg-white/[0.1] transition-colors">
+                            <div className="relative flex items-center gap-2 bg-white/[0.07] backdrop-blur-xl border border-white/[0.1] rounded-2xl px-4 sm:px-5 py-1 focus-within:bg-white/[0.1] transition-colors">
                                 <Search className="w-5 h-5 text-white/30 shrink-0" />
                                 <Input
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder={t('search_placeholder')}
-                                    className="border-0 shadow-none focus-visible:ring-0 text-base md:text-lg py-5 md:py-6 text-white placeholder:text-white/30 bg-transparent flex-1"
+                                    className="border-0 shadow-none focus-visible:ring-0 text-base md:text-lg py-4 md:py-6 text-white placeholder:text-white/30 bg-transparent flex-1"
                                 />
                                 <Button
                                     type="submit"
                                     size="sm"
-                                    className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl px-5 py-5 text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20"
+                                    className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl px-3 sm:px-5 py-3 sm:py-5 text-xs sm:text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 shrink-0"
                                 >
                                     {t('search_button')}
                                 </Button>
@@ -200,7 +200,7 @@ export default function KnowledgeHome() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.5 }}
-                        className="flex items-center justify-center gap-6 md:gap-10 mt-10 text-white/30 text-xs"
+                        className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 md:gap-10 mt-10 text-white/30 text-xs text-center"
                     >
                         {featured && (
                             <span className="flex items-center gap-1.5">

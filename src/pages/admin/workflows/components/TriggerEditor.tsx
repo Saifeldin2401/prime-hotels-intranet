@@ -59,8 +59,8 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
     const [eventType, setEventType] = useState(trigger?.event_type || 'NEW_HIRE')
     const [customEventType, setCustomEventType] = useState('')
     const [actionType, setActionType] = useState(trigger?.action_type || 'send_notification')
-    const [actionConfig, setActionConfig] = useState(JSON.stringify(trigger?.action_config || {}, null, 2))
-    const [conditions, setConditions] = useState(JSON.stringify(trigger?.conditions || [], null, 2))
+    const [actionConfig, setActionConfig] = useState(() => JSON.stringify(trigger?.action_config || {}, null, 2))
+    const [conditions, setConditions] = useState(() => JSON.stringify(trigger?.conditions || [], null, 2))
 
     const eventOptions = [
         'NEW_HIRE',

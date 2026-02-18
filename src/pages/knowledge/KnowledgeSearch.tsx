@@ -1,5 +1,5 @@
 /**
- * KnowledgeSearch — Knowledge Library Search Page (Full Redesign)
+ * KnowledgeSearch - Knowledge Library Search Page (Full Redesign)
  * Premium search + filter experience to match the redesigned KnowledgeHome.
  */
 
@@ -51,7 +51,7 @@ import { useDepartments } from '@/hooks/useDepartments'
 import { useProperties } from '@/hooks/useProperties'
 import type { KnowledgeContentType } from '@/types/knowledge'
 
-/* ─── Type Configuration ───────────────────────────────────── */
+/* Type Configuration */
 const TYPE_CONFIG: Record<KnowledgeContentType, {
     icon: React.ElementType
     label: string
@@ -72,7 +72,7 @@ const TYPE_CONFIG: Record<KnowledgeContentType, {
     document: { icon: FileText, label: 'Document', gradient: 'from-gray-500 to-gray-600', accent: 'text-gray-600', bg: 'bg-gray-100', text: 'text-gray-700', ring: 'ring-gray-200' },
 }
 
-/* ─── Helpers ──────────────────────────────────────────────── */
+/* Helpers */
 function readTime(content?: string): number {
     if (!content) return 2
     return Math.max(1, Math.round(content.split(/\s+/).length / 200))
@@ -96,9 +96,9 @@ const fadeUp = {
     })
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   COMPONENT
-   ═══════════════════════════════════════════════════════════════ */
+/* Component */
+
+
 export default function KnowledgeSearch() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const isRTL = i18n.dir() === 'rtl'
@@ -119,7 +119,7 @@ export default function KnowledgeSearch() {
         { value: 'relevance', label: t('search_page.sort.relevance', 'Relevance') },
         { value: 'updated', label: t('search_page.sort.updated', 'Recently Updated') },
         { value: 'views', label: t('search_page.sort.views', 'Most Viewed') },
-        { value: 'title', label: t('search_page.sort.az', 'A → Z') },
+        { value: 'title', label: t('search_page.sort.az', 'A to Z') },
     ]
 
     /* Data */
@@ -144,7 +144,19 @@ export default function KnowledgeSearch() {
             filtered = filtered.filter(a => a.category_id === selectedCategory)
         }
         if (selectedDepartment !== 'all') {
-            filtered = filtered.filter(a => a.department_id === selectedDepartment)
+            const selectedDeptObj = departments?.find(d => d.id === selectedDepartment)
+            const selectedDeptName = selectedDeptObj?.name
+                || articles?.find(a => a.department_id === selectedDepartment)?.department?.name
+                || null
+            filtered = filtered.filter(a => {
+                if (a.department_id === selectedDepartment) return true
+
+                // Cross-property support: match by department name as well
+                if (selectedDeptName && a.department?.name) {
+                    return a.department.name.trim().toLowerCase() === selectedDeptName.trim().toLowerCase()
+                }
+                return false
+            })
         }
 
         switch (sortBy) {
@@ -159,7 +171,7 @@ export default function KnowledgeSearch() {
                 break
         }
         return filtered
-    }, [articles, selectedTypes, selectedCategory, selectedDepartment, sortBy])
+    }, [articles, selectedTypes, selectedCategory, selectedDepartment, sortBy, departments])
 
     /* Trending (when no search) */
     const trendingArticles = useMemo(() => {
@@ -184,11 +196,11 @@ export default function KnowledgeSearch() {
     const hasActiveFilters = selectedTypes.length > 0 || selectedCategory !== 'all' || selectedDepartment !== 'all'
     const activeFilterCount = selectedTypes.length + (selectedCategory !== 'all' ? 1 : 0) + (selectedDepartment !== 'all' ? 1 : 0)
 
-    /* ─── Render ─────────────────────────────────────────────── */
+    /* Render */
     return (
         <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-slate-50 to-white pb-16">
 
-            {/* ═══ HEADER ══════════════════════════════════════════ */}
+            {/* Header */}
             <div className="relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950" />
                 <div className="absolute top-1/2 start-1/3 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/8 rounded-full blur-[100px]" />
@@ -251,7 +263,7 @@ export default function KnowledgeSearch() {
 
             <div className="container mx-auto px-4 md:px-6 -mt-6 relative z-10">
 
-                {/* ═══ TRENDING (when no search) ═══════════════════ */}
+                {/* Trending (when no search) */}
                 {!searchQuery && trendingArticles.length > 0 && (
                     <motion.section
                         initial={{ opacity: 0, y: 16 }}
@@ -298,11 +310,11 @@ export default function KnowledgeSearch() {
                     </motion.section>
                 )}
 
-                {/* ═══ TOOLBAR ═════════════════════════════════════ */}
+                {/* Toolbar */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-6">
-                    <div className="flex items-center justify-between px-5 py-3.5 gap-4">
+                    <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                         {/* Left: Result count + filter toggle */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                             <span className="text-sm font-medium text-gray-800">
                                 {isLoading ? (
                                     <Loader2 className="w-4 h-4 animate-spin text-gray-400 inline" />
@@ -338,9 +350,9 @@ export default function KnowledgeSearch() {
                         </div>
 
                         {/* Right: Sort + view toggle */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
                             <Select value={sortBy} onValueChange={setSortBy}>
-                                <SelectTrigger className="w-[150px] h-8 text-xs border-gray-200 bg-gray-50">
+                                <SelectTrigger className="h-8 w-full sm:w-[150px] text-xs border-gray-200 bg-gray-50">
                                     <ArrowUpDown className="w-3 h-3 me-1.5 text-gray-400" />
                                     <SelectValue />
                                 </SelectTrigger>
@@ -374,7 +386,7 @@ export default function KnowledgeSearch() {
                         </div>
                     </div>
 
-                    {/* ── Expandable Filter Panel ──────────────────── */}
+                    {/* Expandable Filter Panel */}
                     <AnimatePresence>
                         {showFilters && (
                             <motion.div
@@ -493,7 +505,7 @@ export default function KnowledgeSearch() {
                     )}
                 </div>
 
-                {/* ═══ RESULTS ═════════════════════════════════════ */}
+                {/* Results */}
                 {isLoading ? (
                     <div className={cn(
                         viewMode === 'grid'
@@ -589,7 +601,7 @@ export default function KnowledgeSearch() {
                                 <Link
                                     key={article.id}
                                     to={`/knowledge/${article.id}`}
-                                    className="group flex items-center gap-4 px-5 py-4 hover:bg-gray-50/80 transition-colors"
+                                    className="group flex items-start gap-4 px-5 py-4 transition-colors hover:bg-gray-50/80 sm:items-center"
                                 >
                                     <div className={cn(
                                         'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105',
@@ -598,7 +610,7 @@ export default function KnowledgeSearch() {
                                         <Icon className={cn('w-4 h-4', cfg.accent)} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-0.5">
+                                        <div className="mb-0.5 flex flex-wrap items-center gap-2">
                                             <h3 className="text-sm font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors truncate">
                                                 {article.title}
                                             </h3>
@@ -606,22 +618,17 @@ export default function KnowledgeSearch() {
                                                 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium text-gray-400">
                                             <span className={cn('font-bold uppercase tracking-wider', cfg.accent)}>{typeLabel}</span>
-                                            <span>·</span>
-                                            <span>{article.category?.name || article.department?.name || t('general_category')}</span>
-                                            <span>·</span>
+                                            <span className="max-w-full truncate">{article.category?.name || article.department?.name || t('general_category')}</span>
                                             <span className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
                                                 {readTime(article.content)} {t('article.min_read', 'min')}
                                             </span>
                                             {article.view_count > 0 && (
-                                                <>
-                                                    <span>·</span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Eye className="w-3 h-3" /> {article.view_count}
-                                                    </span>
-                                                </>
+                                                <span className="flex items-center gap-1">
+                                                    <Eye className="w-3 h-3" /> {article.view_count}
+                                                </span>
                                             )}
                                         </div>
                                     </div>

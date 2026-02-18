@@ -141,9 +141,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     }, [selectedIndex])
 
     // Reset selected index on results change
-    useEffect(() => {
+    const [prevResults, setPrevResults] = useState(results)
+    if (results !== prevResults) {
+        setPrevResults(results)
         setSelectedIndex(0)
-    }, [results])
+    }
 
     if (!open) return null
 

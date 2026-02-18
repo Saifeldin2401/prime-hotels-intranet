@@ -475,11 +475,11 @@ export default function TrainingHub() {
     if (viewMode === 'list') {
       if (!canManageModules) return null
       return (
-        <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+        <div className={cn("flex w-full flex-wrap items-center gap-2 sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
           <Button
             variant="outline"
             onClick={() => setViewMode('insights')}
-            className={isRTL ? "flex-row-reverse" : ""}
+            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <BarChart3 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('track')}
@@ -487,7 +487,7 @@ export default function TrainingHub() {
           <Button
             variant="outline"
             onClick={handleCreateWithWizard}
-            className={isRTL ? "flex-row-reverse" : ""}
+            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <Wand2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('createWithWizard')}
@@ -495,12 +495,12 @@ export default function TrainingHub() {
           <Button
             variant="outline"
             onClick={handleCreateFromTemplate}
-            className={isRTL ? "flex-row-reverse" : ""}
+            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <Layers className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('createFromTemplate')}
           </Button>
-          <Button onClick={handleCreate} className={isRTL ? "flex-row-reverse" : ""}>
+          <Button onClick={handleCreate} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
             <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('createModule')}
           </Button>
@@ -511,18 +511,18 @@ export default function TrainingHub() {
     if (viewMode === 'assignments') {
       if (!canAssignTraining) return null
       return (
-        <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+        <div className={cn("flex w-full flex-wrap items-center gap-2 sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
           <Button
             variant="outline"
             onClick={() => navigate('/training/assignments/rules')}
-            className={isRTL ? "flex-row-reverse" : ""}
+            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <Settings className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('autoAssignRules')}
           </Button>
           <Button
             onClick={() => setViewMode('assignments', { openAssign: true, assignModuleId })}
-            className={isRTL ? "flex-row-reverse" : ""}
+            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('createAssignment')}
@@ -534,11 +534,11 @@ export default function TrainingHub() {
     if (viewMode === 'builder') {
       if (!canManageModules) return null
       return (
-        <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+        <div className={cn("flex w-full flex-wrap items-center gap-2 sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
           <Button
             variant="outline"
             onClick={() => setViewMode('list')}
-            className={isRTL ? "flex-row-reverse" : ""}
+            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <BookOpen className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('library')}
@@ -546,7 +546,7 @@ export default function TrainingHub() {
           {moduleId && moduleId !== 'new' && (
             <Button
               onClick={() => handleAssign(moduleId)}
-              className={isRTL ? "flex-row-reverse" : ""}
+              className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
             >
               <Users className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
               {t('assign')}
@@ -559,11 +559,11 @@ export default function TrainingHub() {
     if (viewMode === 'insights') {
       if (!canAssignTraining && !canManageModules) return null
       return (
-        <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+        <div className={cn("flex w-full flex-wrap items-center gap-2 sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
           <Button
             variant="outline"
             onClick={() => setViewMode('assignments')}
-            className={isRTL ? "flex-row-reverse" : ""}
+            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <Users className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('manageAssignments')}
@@ -593,7 +593,7 @@ export default function TrainingHub() {
   )
 
   return (
-    <div className={`container mx-auto px-4 py-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+    <div className={`container mx-auto overflow-x-hidden px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-6 ${isRTL ? 'text-right' : 'text-left'}`}>
       <PageHeader
         title={t('lmsAdmin')}
         description={t('lmsAdminDesc')}
@@ -601,7 +601,7 @@ export default function TrainingHub() {
       />
 
       <div className="mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
           {workflowSteps.map((step) => {
             const Icon = step.icon
             const isActive = viewMode === step.key
@@ -611,7 +611,8 @@ export default function TrainingHub() {
                 type="button"
                 onClick={() => setViewMode(step.key, step.key === 'builder' ? { moduleId: moduleId || 'new' } : undefined)}
                 className={cn(
-                  "flex items-start gap-3 rounded-xl border p-4 text-left transition-all",
+                  "flex min-h-[4.5rem] items-start gap-3 rounded-xl border p-4 text-left transition-all",
+                  isRTL && "text-right",
                   isActive ? "border-hotel-gold bg-hotel-gold/10 shadow-sm" : "border-gray-200 hover:border-hotel-gold/50 hover:bg-white"
                 )}
               >
@@ -640,9 +641,9 @@ export default function TrainingHub() {
           ) : (
             <>
               {/* Filters Bar */}
-              <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="flex flex-wrap gap-4 w-full md:w-auto">
-                  <div className="relative">
+              <div className="p-3 sm:p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center justify-between">
+                <div className="flex flex-wrap gap-3 sm:gap-4 w-full md:w-auto">
+                  <div className="relative w-full sm:w-auto">
                     <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-hotel-muted", isRTL ? "right-3" : "left-3")} />
                     <Input
                       type="text"
@@ -653,7 +654,7 @@ export default function TrainingHub() {
                     />
                   </div>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className={cn("w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
+                    <SelectTrigger className={cn("w-full sm:w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
                       <SelectValue placeholder={t('category')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -664,7 +665,7 @@ export default function TrainingHub() {
                     </SelectContent>
                   </Select>
                   <Select value={statusFilter} onValueChange={(value: ModuleStatus | 'all') => setStatusFilter(value)}>
-                    <SelectTrigger className={cn("w-[140px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
+                    <SelectTrigger className={cn("w-full sm:w-[140px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
                       <SelectValue placeholder={t('status')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -676,10 +677,10 @@ export default function TrainingHub() {
                   </Select>
                 </div>
 
-                <div className={cn("flex items-center gap-2 w-full md:w-auto", isRTL ? "flex-row-reverse" : "")}>
+                <div className={cn("flex items-center gap-2 w-full md:w-auto justify-between md:justify-end", isRTL ? "flex-row-reverse" : "")}>
                   <span className={cn("text-sm text-muted-foreground hidden md:inline-block", isRTL ? "ml-2" : "mr-2")}>{t('sortBy')}</span>
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className={cn("w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
+                    <SelectTrigger className={cn("w-full sm:w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
                       <SelectValue placeholder={t('sortBy')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -692,7 +693,7 @@ export default function TrainingHub() {
               </div>
 
               {/* Modules Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {isLoading ? (
                   <div className="col-span-full flex justify-center py-20">
                     <Loader2 className="h-10 w-10 animate-spin text-hotel-gold" />
@@ -712,7 +713,7 @@ export default function TrainingHub() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-2 mt-3">
+                        <div className="flex flex-wrap gap-2 mt-3">
                           <Badge variant="secondary" className={cn("rounded-sm font-normal", getStatusColor(module.status || 'draft'))}>
                             {t(module.status)}
                           </Badge>
@@ -763,12 +764,12 @@ export default function TrainingHub() {
                         <FileText className="h-16 w-16 text-gray-300 mb-4" />
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">{t('noModules')}</h3>
                         <p className="text-gray-500 mb-6 text-center max-w-md">{t('noModulesDesc')}</p>
-                        <div className={cn("flex gap-2", isRTL ? "flex-row-reverse" : "")}>
-                          <Button variant="outline" onClick={handleCreateWithWizard} className={isRTL ? "flex-row-reverse" : ""}>
+                        <div className={cn("flex w-full flex-wrap gap-2 justify-center", isRTL ? "flex-row-reverse" : "")}>
+                          <Button variant="outline" onClick={handleCreateWithWizard} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
                             <Wand2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                             {t('createWithWizard')}
                           </Button>
-                          <Button onClick={handleCreate} className={isRTL ? "flex-row-reverse" : ""}>
+                          <Button onClick={handleCreate} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
                             <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                             {t('createModule')}
                           </Button>
@@ -793,12 +794,12 @@ export default function TrainingHub() {
                 <Sparkles className="h-16 w-16 text-gray-300 mb-4" />
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">{t('builderReady')}</h3>
                 <p className="text-gray-500 mb-6 text-center max-w-md">{t('builderReadyDesc')}</p>
-                <div className={cn("flex gap-2", isRTL ? "flex-row-reverse" : "")}>
-                  <Button variant="outline" onClick={() => setViewMode('list')} className={isRTL ? "flex-row-reverse" : ""}>
+                <div className={cn("flex w-full flex-wrap gap-2 justify-center", isRTL ? "flex-row-reverse" : "")}>
+                  <Button variant="outline" onClick={() => setViewMode('list')} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
                     <BookOpen className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                     {t('library')}
                   </Button>
-                  <Button onClick={handleCreateWithWizard} className={isRTL ? "flex-row-reverse" : ""}>
+                  <Button onClick={handleCreateWithWizard} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
                     <Wand2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                     {t('createWithWizard')}
                   </Button>

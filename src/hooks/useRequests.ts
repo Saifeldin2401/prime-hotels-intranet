@@ -367,11 +367,11 @@ export function useRequestsInbox(filters?: {
       } else if (isPropertyLevel || isDepartmentHead) {
         // Property/Department level sees requests assigned to them OR where they are supervisor
         // Include delegators in the ID search
-        const formattedIdList = idList.map(id => `'${id}'`).join(',')
+        const formattedIdList = idList.join(',')
         query = query.or(`requester_id.in.(${formattedIdList}),current_assignee_id.in.(${formattedIdList}),supervisor_id.in.(${formattedIdList})`)
       } else {
         // Regular staff: only see requests where they (or their delegators) are requester or assignee
-        const formattedIdList = idList.map(id => `'${id}'`).join(',')
+        const formattedIdList = idList.join(',')
         query = query.or(`requester_id.in.(${formattedIdList}),current_assignee_id.in.(${formattedIdList})`)
       }
 

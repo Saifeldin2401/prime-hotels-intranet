@@ -72,6 +72,8 @@ export const securityConfig = {
       'img-src': ["'self'", "data:", "https:"],
       'font-src': ["'self'"],
       'connect-src': ["'self'", "https://api.supabase.co", "https://o4508792767840256.ingest.de.sentry.io", "https://*.sentry.io"],
+      // Allow YouTube and Vimeo video embeds in knowledge base articles
+      'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com"],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"]
@@ -167,8 +169,8 @@ export const securityHeaders = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=()',
   'Strict-Transport-Security': securityConfig.isDevelopment ? '' : 'max-age=31536000; includeSubDomains',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
-  'Cross-Origin-Resource-Policy': 'same-origin'
+  // Cross-Origin-Embedder-Policy intentionally omitted: 'require-corp' would block YouTube/Vimeo iframes
+  'Cross-Origin-Resource-Policy': 'cross-origin'
 }
 
 // Export security utilities
