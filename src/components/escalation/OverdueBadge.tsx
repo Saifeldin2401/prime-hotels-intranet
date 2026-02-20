@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge'
 import { AlertTriangle, Clock } from 'lucide-react'
 import { useOverdueItemsCount } from '@/hooks/useEscalation'
 import { cn } from '@/lib/utils'
+import { useTranslation } from "react-i18next";
 
 interface OverdueBadgeProps {
     type?: 'tasks' | 'maintenance' | 'leave' | 'total'

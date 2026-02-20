@@ -26,6 +26,7 @@ export function ApprovalDetailsSheet({
     onReject,
     isProcessing
 }: ApprovalDetailsSheetProps) {
+    const { t: t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['approvals', 'common'])
     const navigate = useNavigate()
     const safeFormat = (value: string | null | undefined, pattern: string, fallback: string) => {
@@ -43,26 +44,25 @@ export function ApprovalDetailsSheet({
                     <div className="space-y-6">
                         <div className="p-4 bg-muted/30 rounded-lg border">
                             <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                <Inbox className="w-4 h-4" /> Request Details
-                            </h4>
+                                <Inbox className="w-4 h-4" /> {t_ext('request_details', 'Request Details')}</h4>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <span className="text-muted-foreground">Request ID:</span>
+                                    <span className="text-muted-foreground">{t_ext('request_id', 'Request ID:')}</span>
                                     <p className="font-medium">#{approval.raw?.request_no}</p>
                                 </div>
                                 <div className="capitalize">
-                                    <span className="text-muted-foreground">Status:</span>
+                                    <span className="text-muted-foreground">{t_ext('status', 'Status:')}</span>
                                     <p className="font-medium text-blue-600">{approval.status?.replace(/_/g, ' ')}</p>
                                 </div>
                                 <div className="col-span-2">
-                                    <span className="text-muted-foreground">Description:</span>
+                                    <span className="text-muted-foreground">{t_ext('description', 'Description:')}</span>
                                     <p className="mt-1">{approval.description || 'No additional description.'}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm">
-                            <p className="text-blue-800 font-medium mb-1">Assigned To:</p>
+                            <p className="text-blue-800 font-medium mb-1">{t_ext('assigned_to', 'Assigned To:')}</p>
                             <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-blue-600" />
                                 <span>{approval.raw?.current_assignee?.full_name || 'Unassigned'}</span>
@@ -74,7 +74,7 @@ export function ApprovalDetailsSheet({
                                 navigate(`/hr/request/${approval.id}`)
                                 onOpenChange(false)
                             }}>
-                                View Full Request <ArrowRight className="ml-2 w-4 h-4" />
+                                {t_ext('view_full_request', 'View Full Request')}<ArrowRight className="ml-2 w-4 h-4" />
                             </Button>
                         </div>
                     </div>
@@ -84,26 +84,25 @@ export function ApprovalDetailsSheet({
                     <div className="space-y-6">
                         <div className="p-4 bg-muted/30 rounded-lg border">
                             <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                <FileText className="w-4 h-4" /> Expense Claim
-                            </h4>
+                                <FileText className="w-4 h-4" /> {t_ext('expense_claim', 'Expense Claim')}</h4>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <span className="text-muted-foreground">Request #</span>
+                                    <span className="text-muted-foreground">{t_ext('request', 'Request #')}</span>
                                     <p className="font-medium">{approval.raw?.request_no || approval.id.slice(0, 8)}</p>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Status</span>
+                                    <span className="text-muted-foreground">{t_ext('status_1', 'Status')}</span>
                                     <p className="font-medium capitalize">{approval.status?.replace(/_/g, ' ')}</p>
                                 </div>
                                 <div className="col-span-2">
-                                    <span className="text-muted-foreground">Details</span>
+                                    <span className="text-muted-foreground">{t_ext('details', 'Details')}</span>
                                     <p className="mt-1">{approval.description || 'No additional details.'}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm">
-                            <p className="text-blue-800 font-medium mb-1">Requester:</p>
+                            <p className="text-blue-800 font-medium mb-1">{t_ext('requester', 'Requester:')}</p>
                             <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-blue-600" />
                                 <span>{approval.requester || 'Unknown'}</span>
@@ -115,7 +114,7 @@ export function ApprovalDetailsSheet({
                                 navigate(`/hr/request/${approval.id}`)
                                 onOpenChange(false)
                             }}>
-                                View Workflow <ArrowRight className="ml-2 w-4 h-4" />
+                                {t_ext('view_workflow', 'View Workflow')}<ArrowRight className="ml-2 w-4 h-4" />
                             </Button>
                         </div>
                     </div>
@@ -125,19 +124,18 @@ export function ApprovalDetailsSheet({
                     <div className="space-y-6">
                         <div className="p-4 bg-muted/30 rounded-lg border">
                             <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                <FileText className="w-4 h-4" /> Document Details
-                            </h4>
+                                <FileText className="w-4 h-4" /> {t_ext('document_details', 'Document Details')}</h4>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <span className="text-muted-foreground">Title:</span>
+                                    <span className="text-muted-foreground">{t_ext('title', 'Title:')}</span>
                                     <p className="font-medium">{approval.title}</p>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Version:</span>
+                                    <span className="text-muted-foreground">{t_ext('version', 'Version:')}</span>
                                     <p className="font-medium">v{approval.raw.document?.current_version || 1}</p>
                                 </div>
                                 <div className="col-span-2">
-                                    <span className="text-muted-foreground">Description:</span>
+                                    <span className="text-muted-foreground">{t_ext('description', 'Description:')}</span>
                                     <p className="mt-1">{approval.description || t('common:no_description_provided')}</p>
                                 </div>
                             </div>
@@ -156,8 +154,7 @@ export function ApprovalDetailsSheet({
                                         openUrlInNewTab(secureUrl)
                                     }}
                                 >
-                                    <FileText className="mr-2 h-4 w-4" /> View Document
-                                </Button>
+                                    <FileText className="mr-2 h-4 w-4" /> {t_ext('view_document', 'View Document')}</Button>
                             </div>
                         )}
                     </div>
@@ -167,13 +164,13 @@ export function ApprovalDetailsSheet({
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-4 bg-blue-50/50 rounded-lg border border-blue-100">
-                                <span className="text-xs text-blue-600 font-semibold uppercase">Start Date</span>
+                                <span className="text-xs text-blue-600 font-semibold uppercase">{t_ext('start_date', 'Start Date')}</span>
                                 <p className="text-lg font-bold text-blue-900">
                                     {safeFormat(approval.raw.start_date, 'MMM d, yyyy', t('unknown_date', 'Unknown date'))}
                                 </p>
                             </div>
                             <div className="p-4 bg-blue-50/50 rounded-lg border border-blue-100">
-                                <span className="text-xs text-blue-600 font-semibold uppercase">End Date</span>
+                                <span className="text-xs text-blue-600 font-semibold uppercase">{t_ext('end_date', 'End Date')}</span>
                                 <p className="text-lg font-bold text-blue-900">
                                     {safeFormat(approval.raw.end_date, 'MMM d, yyyy', t('unknown_date', 'Unknown date'))}
                                 </p>
@@ -181,7 +178,7 @@ export function ApprovalDetailsSheet({
                         </div>
 
                         <div className="p-4 bg-muted/30 rounded-lg border">
-                            <h4 className="font-semibold mb-2">Reason</h4>
+                            <h4 className="font-semibold mb-2">{t_ext('reason', 'Reason')}</h4>
                             <p className="text-sm text-gray-700">{approval.description}</p>
                         </div>
 
@@ -202,8 +199,7 @@ export function ApprovalDetailsSheet({
                     <div className="space-y-6">
                         <div className="flex items-center gap-2 mb-4">
                             <Badge variant={approval.priority === 'critical' ? 'destructive' : 'secondary'}>
-                                {approval.priority?.toUpperCase()} Priority
-                            </Badge>
+                                {approval.priority?.toUpperCase()} {t_ext('priority', 'Priority')}</Badge>
                             <Badge variant="outline">
                                 {approval.status}
                             </Badge>
@@ -211,8 +207,7 @@ export function ApprovalDetailsSheet({
 
                         <div className="p-4 bg-muted/30 rounded-lg border">
                             <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                <MapPin className="w-4 h-4" /> Location
-                            </h4>
+                                <MapPin className="w-4 h-4" /> {t_ext('location', 'Location')}</h4>
                             <p className="text-sm">
                                 {approval.entityMatches?.property}
                                 {approval.entityMatches?.room && ` - Room ${approval.entityMatches.room}`}
@@ -220,7 +215,7 @@ export function ApprovalDetailsSheet({
                         </div>
 
                         <div>
-                            <h4 className="font-semibold mb-2">Issue Description</h4>
+                            <h4 className="font-semibold mb-2">{t_ext('issue_description', 'Issue Description')}</h4>
                             <p className="text-sm text-gray-700 p-3 bg-gray-50 rounded-md border">
                                 {approval.description}
                             </p>
@@ -228,7 +223,7 @@ export function ApprovalDetailsSheet({
                     </div>
                 )
             default:
-                return <p className="text-muted-foreground">Details not available for this type.</p>
+                return <p className="text-muted-foreground">{t_ext('details_not_available_for_this_type', 'Details not available for this type.')}</p>
         }
     }
 
@@ -247,7 +242,7 @@ export function ApprovalDetailsSheet({
                     </div>
                     <SheetTitle className="text-xl">{approval.title}</SheetTitle>
                     <SheetDescription>
-                        Submitted by <span className="font-medium text-foreground">{approval.requester || 'Unknown'}</span>
+                        {t_ext('submitted_by', 'Submitted by')}<span className="font-medium text-foreground">{approval.requester || 'Unknown'}</span>
                     </SheetDescription>
                 </SheetHeader>
 
@@ -265,22 +260,19 @@ export function ApprovalDetailsSheet({
                                 disabled={isProcessing}
                             >
                                 <XCircle className="w-4 h-4 mr-2" />
-                                Reject
-                            </Button>
+                                {t_ext('reject', 'Reject')}</Button>
                             <Button
                                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
                                 onClick={() => onApprove(approval.id)}
                                 disabled={isProcessing}
                             >
                                 <CheckCircle className="w-4 h-4 mr-2" />
-                                Approve
-                            </Button>
+                                {t_ext('approve', 'Approve')}</Button>
                         </>
                     )}
                     {!approval.actions.canApprove && (
                         <Button variant="secondary" className="w-full" onClick={() => onOpenChange(false)}>
-                            Close
-                        </Button>
+                            {t_ext('close', 'Close')}</Button>
                     )}
                 </SheetFooter>
             </SheetContent>

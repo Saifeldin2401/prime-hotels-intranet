@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { ModuleFormDialog, type ModuleFormValues } from './components/ModuleFormDialog'
 import { AssignmentDialog } from './components/AssignmentDialog'
 import { useNavigate } from 'react-router-dom'
@@ -23,9 +24,11 @@ import {
   Eye,
   Loader2,
   FileText,
-  Trash2
+  Trash2,
+  UserX
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { showErrorToast, showSuccessToast } from '@/lib/toastHelpers'
 
 import { useTranslation } from 'react-i18next'
 
@@ -71,13 +74,17 @@ export default function TrainingModules() {
   // Delete states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [moduleToDelete, setModuleToDelete] = useState<TrainingModule | null>(null)
+  const [unassignConfirmOpen, setUnassignConfirmOpen] = useState(false)
+  const [moduleToUnassign, setModuleToUnassign] = useState<TrainingModule | null>(null)
 
   // Assignment states (only need ID now, rest handled by dialog)
   const [assigningModuleId, setAssigningModuleId] = useState<string | null>(null)
 
   // Data fetching
+  const modulesQueryKey = ['training-modules', statusFilter, categoryFilter, search, sortBy, sortOrder]
+
   const { data: modules, isLoading } = useQuery({
-    queryKey: ['training-modules', statusFilter, categoryFilter, search, sortBy, sortOrder],
+    queryKey: modulesQueryKey,
     queryFn: async () => {
       let query = supabase
         .from('training_modules')
@@ -271,6 +278,14 @@ export default function TrainingModules() {
 
   const deleteModuleMutation = useMutation({
     mutationFn: async (id: string) => {
+      const { error: assignmentError } = await supabase
+        .from('learning_assignments')
+        .delete()
+        .eq('content_type', 'module')
+        .eq('content_id', id)
+
+      if (assignmentError) throw assignmentError
+
       const { error } = await supabase
         .from('training_modules')
         .delete()
@@ -278,8 +293,74 @@ export default function TrainingModules() {
 
       if (error) throw error
     },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: modulesQueryKey })
+      const previousModules = queryClient.getQueryData<TrainingModule[]>(modulesQueryKey)
+      if (previousModules) {
+        queryClient.setQueryData(
+          modulesQueryKey,
+          previousModules.filter(module => module.id !== id)
+        )
+      }
+
+      const assignmentsKey = ['learning-assignments']
+      const previousAssignments = queryClient.getQueryData<any[]>(assignmentsKey)
+      if (previousAssignments) {
+        queryClient.setQueryData(
+          assignmentsKey,
+          previousAssignments.filter(assignment => assignment.content_id !== id)
+        )
+      }
+
+      return { previousModules, previousAssignments, assignmentsKey }
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previousModules) {
+        queryClient.setQueryData(modulesQueryKey, context.previousModules)
+      }
+      if (context?.previousAssignments) {
+        queryClient.setQueryData(context.assignmentsKey, context.previousAssignments)
+      }
+      showErrorToast(t('deleteFailed', 'Delete failed'), t('deleteFailedDesc', 'Please try again.'))
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+      queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
+      showSuccessToast(t('moduleDeleted', 'Training module deleted'), t('unassignedAutomatically', 'Assignments were removed automatically.'))
+    }
+  })
+
+  const unassignModuleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('learning_assignments')
+        .delete()
+        .eq('content_type', 'module')
+        .eq('content_id', id)
+
+      if (error) throw error
+    },
+    onMutate: async (id: string) => {
+      const assignmentsKey = ['learning-assignments']
+      await queryClient.cancelQueries({ queryKey: assignmentsKey })
+      const previousAssignments = queryClient.getQueryData<any[]>(assignmentsKey)
+      if (previousAssignments) {
+        queryClient.setQueryData(
+          assignmentsKey,
+          previousAssignments.filter(assignment => assignment.content_id !== id)
+        )
+      }
+      return { previousAssignments, assignmentsKey }
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previousAssignments) {
+        queryClient.setQueryData(context.assignmentsKey, context.previousAssignments)
+      }
+      showErrorToast(t('unassignFailed', 'Unassign failed'), t('unassignFailedDesc', 'Please try again.'))
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
+      showSuccessToast(t('unassigned', 'Unassigned'), t('unassignedDesc', 'All assignments for this module were removed.'))
     }
   })
 
@@ -336,70 +417,84 @@ export default function TrainingModules() {
 
       if (error) throw error
 
-      // Send bulk notifications
-      const module = modules?.find(m => m.id === assigningModuleId)
-      const notificationData = {
-        title: t('notifications.newAssignmentTitle'),
-        message: t('notifications.newAssignmentMessage', { title: module?.title || t('trainingModule') }),
-        moduleId: assigningModuleId,
-        deadline
-      }
+      const notifyUsers = async () => {
+        try {
+          // Send bulk notifications
+          const module = modules?.find(m => m.id === assigningModuleId)
+          const notificationData = {
+            title: t('notifications.newAssignmentTitle'),
+            message: t('notifications.newAssignmentMessage', { title: module?.title || t('trainingModule') }),
+            moduleId: assigningModuleId,
+            deadline
+          }
 
-      let userIdsToNotify: string[] = []
+          let userIdsToNotify: string[] = []
 
-      if (targetType === 'all') {
-        const { data: allUsers } = await supabase.from('profiles').select('id').eq('is_active', true)
-        userIdsToNotify = allUsers?.map(u => u.id) || []
-      } else if (targetType === 'users') {
-        userIdsToNotify = targetIds
-      } else if (targetType === 'departments') {
-        const { data: deptUsers } = await supabase.from('user_departments').select('user_id').in('department_id', targetIds)
-        userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
-      } else if (targetType === 'properties') {
-        const { data: propUsers } = await supabase.from('user_properties').select('user_id').in('property_id', targetIds)
-        userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
-      }
+          if (targetType === 'all') {
+            const { data: allUsers } = await supabase.from('profiles').select('id').eq('is_active', true)
+            userIdsToNotify = allUsers?.map(u => u.id) || []
+          } else if (targetType === 'users') {
+            userIdsToNotify = targetIds
+          } else if (targetType === 'departments') {
+            const { data: deptUsers } = await supabase
+              .from('user_departments')
+              .select('user_id')
+              .in('department_id', targetIds)
+            userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
+          } else if (targetType === 'properties') {
+            const { data: propUsers } = await supabase
+              .from('user_properties')
+              .select('user_id')
+              .in('property_id', targetIds)
+            userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
+          }
 
-      // Use bulk notification for large groups
-      if (userIdsToNotify.length >= 10) {
-        const { data: session } = await supabase.auth.getSession()
-        if (session?.session?.access_token) {
-          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.session.access_token}`
-            },
-            body: JSON.stringify({
-              action: 'create_batch',
+          // Use bulk notification for large groups
+          if (userIdsToNotify.length >= 10) {
+            const { data: session } = await supabase.auth.getSession()
+            if (session?.session?.access_token) {
+              await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.session.access_token}`
+                },
+                body: JSON.stringify({
+                  action: 'create_batch',
+                  userIds: userIdsToNotify,
+                  notificationType: 'training_assigned',
+                  businessDomain: 'operations',
+                  templateKey: 'operations_incident_alert',
+                  channels: ['in_app', 'email'],
+                  sendEmail: true,
+                  notificationData: {
+                    ...notificationData,
+                    link: `/learning/training/${assigningModuleId}`
+                  }
+                })
+              })
+            }
+          } else if (userIdsToNotify.length > 0) {
+            // Direct insert for small groups
+            // We set skipDbInsert: false to ensure the notification is created with the correct link
+            // This overrides any potential missing trigger
+            await createBulkNotifications({
               userIds: userIdsToNotify,
-              notificationType: 'training_assigned',
-              businessDomain: 'operations',
-              templateKey: 'operations_incident_alert',
-              channels: ['in_app', 'email'],
-              sendEmail: true,
-              notificationData: {
-                ...notificationData,
-                link: `/learning/training/${assigningModuleId}`
-              }
+              type: 'training_assigned',
+              title: notificationData.title,
+              message: notificationData.message,
+              metadata: notificationData,
+              entityId: assigningModuleId,
+              link: `/learning/training/${assigningModuleId}`,
+              skipDbInsert: false
             })
-          })
+          }
+        } catch (err) {
+          console.error('Notification dispatch failed:', err)
         }
-      } else if (userIdsToNotify.length > 0) {
-        // Direct insert for small groups
-        // We set skipDbInsert: false to ensure the notification is created with the correct link
-        // This overrides any potential missing trigger
-        await createBulkNotifications({
-          userIds: userIdsToNotify,
-          type: 'training_assigned',
-          title: notificationData.title,
-          message: notificationData.message,
-          metadata: notificationData,
-          entityId: assigningModuleId,
-          link: `/learning/training/${assigningModuleId}`,
-          skipDbInsert: false
-        })
       }
+
+      void notifyUsers()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
@@ -443,10 +538,22 @@ export default function TrainingModules() {
     setDeleteConfirmOpen(true)
   }
 
+  const handleUnassign = (module: TrainingModule) => {
+    setModuleToUnassign(module)
+    setUnassignConfirmOpen(true)
+  }
+
   const confirmDelete = async () => {
     if (moduleToDelete) {
       await deleteModuleMutation.mutateAsync(moduleToDelete.id)
       setModuleToDelete(null)
+    }
+  }
+
+  const confirmUnassign = async () => {
+    if (moduleToUnassign) {
+      await unassignModuleMutation.mutateAsync(moduleToUnassign.id)
+      setModuleToUnassign(null)
     }
   }
 
@@ -645,6 +752,16 @@ export default function TrainingModules() {
                   </Button>
                   <Button
                     variant="ghost"
+                    className={cn("w-full text-amber-700 hover:text-amber-800 hover:bg-amber-50 border border-transparent hover:border-amber-200 group", isRTL ? "flex-row-reverse" : "")}
+                    size="sm"
+                    onClick={() => handleUnassign(module)}
+                    disabled={unassignModuleMutation.isPending}
+                  >
+                    <UserX className={cn("h-4 w-4 transition-transform duration-300 group-hover:rotate-6", isRTL ? "ml-2" : "mr-2")} />
+                    {t('unassign', 'Unassign')}
+                  </Button>
+                  <Button
+                    variant="ghost"
                     className={cn("w-full text-red-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 group", isRTL ? "flex-row-reverse" : "")}
                     size="sm"
                     onClick={() => handleDelete(module)}
@@ -716,7 +833,27 @@ export default function TrainingModules() {
         onConfirm={confirmDelete}
         itemName={moduleToDelete?.title || ''}
         itemType={t('trainingModule')}
+        title={t('deleteModuleConfirmTitle', 'Delete training module?')}
+        description={t(
+          'deleteModuleConfirmDesc',
+          'This will permanently delete the module and unassign it from everyone who has it assigned.'
+        )}
         isLoading={deleteModuleMutation.isPending}
+      />
+
+      <ConfirmationDialog
+        open={unassignConfirmOpen}
+        onOpenChange={setUnassignConfirmOpen}
+        onConfirm={confirmUnassign}
+        title={t('unassignConfirmTitle', 'Unassign training module?')}
+        description={t(
+          'unassignConfirmDesc',
+          'This removes all assignments for this module without deleting the module itself.'
+        )}
+        confirmText={t('unassign', 'Unassign')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="warning"
+        isLoading={unassignModuleMutation.isPending}
       />
     </div>
   )

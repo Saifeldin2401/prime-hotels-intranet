@@ -3,6 +3,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Users, Lock } from 'lucide-react'
+import { useTranslation } from "react-i18next";
 
 interface DepartmentSelectorProps {
   value?: string
@@ -39,7 +40,7 @@ export function DepartmentSelector({
     return (
       <div className="flex items-center gap-2 p-2 border rounded-md bg-muted">
         <Lock className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">No property access</span>
+        <span className="text-sm text-muted-foreground">{t_ext('no_property_access', 'No property access')}</span>
       </div>
     )
   }
@@ -100,18 +101,19 @@ export function DepartmentAccessBadge({
   showDetails = false,
   showProperty = false
 }: DepartmentAccessBadgeProps) {
+    const { t: t_ext } = useTranslation('extracted');
   const { departments, properties } = useAuth()
   const { canAccessDepartment } = usePermissions()
 
   if (!departmentId) {
-    return <Badge variant="outline">All Departments</Badge>
+    return <Badge variant="outline">{t_ext('all_departments', 'All Departments')}</Badge>
   }
 
   const department = departments.find(d => d.id === departmentId)
   const hasAccess = canAccessDepartment(departmentId)
 
   if (!department) {
-    return <Badge variant="destructive">Unknown Department</Badge>
+    return <Badge variant="destructive">{t_ext('unknown_department', 'Unknown Department')}</Badge>
   }
 
   const property = properties.find(p => p.id === department.property_id)

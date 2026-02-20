@@ -303,7 +303,7 @@ export default function PayslipsAdmin() {
 
           <div className="space-y-2">
             <Label>{t('hr_admin.filters.year', 'Year')}</Label>
-            <Input value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} placeholder="YYYY" />
+            <Input value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} placeholder={t_ext('yyyy', 'YYYY')} />
           </div>
         </CardContent>
       </Card>

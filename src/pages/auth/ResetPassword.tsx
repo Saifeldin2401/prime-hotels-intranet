@@ -150,16 +150,14 @@ export default function ResetPassword() {
                         <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
                             <AlertCircle className="h-6 w-6 text-red-600" />
                         </div>
-                        <CardTitle>{t('reset_password.invalid_title', { defaultValue: 'Invalid or Expired Link' })}</CardTitle>
+                        <CardTitle>{t('reset_password.invalid_title')}</CardTitle>
                         <CardDescription>
-                            {t('reset_password.invalid_message', {
-                                defaultValue: 'This password reset link is invalid or has expired. Please request a new one.'
-                            })}
+                            {t('reset_password.invalid_message')}
                         </CardDescription>
                     </CardHeader>
                     <CardFooter>
                         <Button className="w-full" onClick={() => navigate('/forgot-password')}>
-                            {t('reset_password.request_new', { defaultValue: 'Request New Link' })}
+                            {t('reset_password.request_new')}
                         </Button>
                     </CardFooter>
                 </Card>
@@ -176,11 +174,9 @@ export default function ResetPassword() {
                         <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
                             <CheckCircle className="h-6 w-6 text-green-600" />
                         </div>
-                        <CardTitle>{t('reset_password.success_title', { defaultValue: 'Password Updated' })}</CardTitle>
+                        <CardTitle>{t('reset_password.success_title')}</CardTitle>
                         <CardDescription>
-                            {t('reset_password.success_message', {
-                                defaultValue: 'Your password has been successfully updated. You will be redirected to login.'
-                            })}
+                            {t('reset_password.success_message')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
@@ -200,11 +196,9 @@ export default function ResetPassword() {
                     <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                         <Lock className="h-6 w-6 text-primary" />
                     </div>
-                    <CardTitle>{t('reset_password.title', { defaultValue: 'Set New Password' })}</CardTitle>
+                    <CardTitle>{t('reset_password.title')}</CardTitle>
                     <CardDescription>
-                        {t('reset_password.description', {
-                            defaultValue: 'Please enter your new password below.'
-                        })}
+                        {t('reset_password.description')}
                     </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
@@ -218,7 +212,7 @@ export default function ResetPassword() {
 
                         {/* New Password */}
                         <div className="space-y-2">
-                            <Label htmlFor="password">{t('reset_password.new_password', { defaultValue: 'New Password' })}</Label>
+                            <Label htmlFor="password">{t('reset_password.new_password')}</Label>
                             <div className="relative">
                                 <Input
                                     id="password"
@@ -262,7 +256,7 @@ export default function ResetPassword() {
 
                         {/* Confirm Password */}
                         <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">{t('reset_password.confirm_password', { defaultValue: 'Confirm Password' })}</Label>
+                            <Label htmlFor="confirmPassword">{t('reset_password.confirm_password')}</Label>
                             <Input
                                 id="confirmPassword"
                                 type={showPassword ? 'text' : 'password'}
@@ -289,10 +283,10 @@ export default function ResetPassword() {
                             {loading ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    {t('reset_password.updating', { defaultValue: 'Updating...' })}
+                                    {t('reset_password.updating')}
                                 </>
                             ) : (
-                                t('reset_password.update_password', { defaultValue: 'Update Password' })
+                                t('reset_password.update_password')
                             )}
                         </Button>
                     </CardFooter>

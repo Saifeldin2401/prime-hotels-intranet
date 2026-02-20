@@ -42,15 +42,16 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { openUrlInNewTab, resolveExpenseReceiptUrl } from '@/lib/secureFileAccess'
 
-function statusBadge(status: RequestStatus) {
+function StatusBadge({ status }: { status: RequestStatus }) {
+  const { t } = useTranslation('extracted');
   const map: Record<RequestStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    draft: { label: 'Draft', variant: 'secondary' },
-    pending_supervisor_approval: { label: 'Pending Supervisor Approval', variant: 'outline' },
-    pending_hr_review: { label: 'Pending HR Review', variant: 'outline' },
-    approved: { label: 'Approved', variant: 'default' },
-    rejected: { label: 'Rejected', variant: 'destructive' },
-    returned_for_correction: { label: 'Returned for Correction', variant: 'outline' },
-    closed: { label: 'Closed', variant: 'secondary' },
+    draft: { label: t('status_draft', 'Draft'), variant: 'secondary' },
+    pending_supervisor_approval: { label: t('status_pending_supervisor_approval', 'Pending Supervisor Approval'), variant: 'outline' },
+    pending_hr_review: { label: t('status_pending_hr_review', 'Pending HR Review'), variant: 'outline' },
+    approved: { label: t('status_approved', 'Approved'), variant: 'default' },
+    rejected: { label: t('status_rejected', 'Rejected'), variant: 'destructive' },
+    returned_for_correction: { label: t('status_returned_for_correction', 'Returned for Correction'), variant: 'outline' },
+    closed: { label: t('status_closed', 'Closed'), variant: 'secondary' },
   }
 
   const cfg = map[status]
@@ -394,7 +395,7 @@ export default function RequestDetail() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {statusBadge(request.status)}
+        <StatusBadge status={request.status} />
         {request.current_assignee && (
           <Badge variant="outline" className="text-[10px] xs:text-xs">
             Assigned to: {request.current_assignee.full_name || request.current_assignee.email}

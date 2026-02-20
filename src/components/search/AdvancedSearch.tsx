@@ -14,6 +14,7 @@ import {
   Tag
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslation } from "react-i18next";
 
 interface SearchSuggestion {
   id: string
@@ -51,6 +52,7 @@ export function AdvancedSearch({
   showFilters = true,
   recentSearches = []
 }: AdvancedSearchProps) {
+    const { t: t_ext } = useTranslation('extracted');
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [selectedFilters, setSelectedFilters] = useState<Record<string, any>>({})
@@ -224,8 +226,7 @@ export function AdvancedSearch({
               size="sm"
               className="h-6 px-2 bg-primary hover:bg-hotel-navy"
             >
-              Search
-            </Button>
+              {t_ext('search', 'Search')}</Button>
           </div>
         </div>
       </div>
@@ -239,7 +240,7 @@ export function AdvancedSearch({
               <div className="p-3 border-b">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Recent Searches</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t_ext('recent_searches', 'Recent Searches')}</span>
                 </div>
                 <div className="space-y-1">
                   {recentSearches.slice(0, 3).map((search, index) => (
@@ -300,7 +301,7 @@ export function AdvancedSearch({
         <Card className="absolute top-full left-0 right-0 mt-2 z-40 border border-border shadow-lg animate-fade-in bg-white dark:bg-slate-950">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-sm">Filters</h3>
+              <h3 className="font-semibold text-sm">{t_ext('filters', 'Filters')}</h3>
               {activeFilterCount > 0 && (
                 <Button
                   variant="ghost"
@@ -308,8 +309,7 @@ export function AdvancedSearch({
                   onClick={clearAllFilters}
                   className="text-xs"
                 >
-                  Clear All
-                </Button>
+                  {t_ext('clear_all', 'Clear All')}</Button>
               )}
             </div>
 
@@ -323,7 +323,7 @@ export function AdvancedSearch({
                       onChange={(e) => handleFilterChange(filter.id, e.target.value)}
                       className="w-full p-2 border rounded-md bg-background"
                     >
-                      <option value="">All</option>
+                      <option value="">{t_ext('all', 'All')}</option>
                       {filter.options?.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}

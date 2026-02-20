@@ -313,7 +313,7 @@ export function useDocumentVersions(documentId: string) {
         .from('document_versions')
         .select(`
             *,
-            creator:profiles!created_by(id, full_name, avatar_url)
+            creator:profiles!document_versions_created_by_fkey(id, full_name, avatar_url)
         `)
         .eq('document_id', documentId)
         .order('version_number', { ascending: false })

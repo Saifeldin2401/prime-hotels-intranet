@@ -52,12 +52,7 @@ export interface UseNavigationReturn {
 }
 
 // All possible dashboard paths for active state detection
-const DASHBOARD_PATHS = [
-    '/dashboard', '/staff-dashboard',
-    '/dashboard/property-manager', '/dashboard/property-hr',
-    '/dashboard/department-head', '/dashboard/regional-hr',
-    '/dashboard/corporate-admin'
-]
+const DASHBOARD_PATHS = ['/dashboard']
 
 export function useNavigation(): UseNavigationReturn {
     const { primaryRole } = useAuth()
@@ -81,7 +76,7 @@ export function useNavigation(): UseNavigationReturn {
     const isPathActive = (path: string): boolean => {
         if (path === '/') return location.pathname === '/'
 
-        // Special handling for dashboard - any dashboard variant activates it
+        // Special handling for dashboard paths
         if (DASHBOARD_PATHS.includes(path)) {
             return DASHBOARD_PATHS.some(dp =>
                 location.pathname === dp || location.pathname.startsWith(dp + '/')

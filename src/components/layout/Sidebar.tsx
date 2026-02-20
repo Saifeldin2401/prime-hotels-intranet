@@ -90,7 +90,7 @@ export function Sidebar() {
             onValueChange={switchProperty}
           >
             <SelectTrigger className="w-full h-8 text-xs">
-              <SelectValue placeholder="Select Property" />
+              <SelectValue placeholder={t_ext('select_property', 'Select Property')} />
             </SelectTrigger>
             <SelectContent>
               {availableProperties.map(prop => (

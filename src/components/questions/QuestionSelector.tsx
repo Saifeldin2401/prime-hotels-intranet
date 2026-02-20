@@ -22,6 +22,7 @@ import { Search, Filter, Loader2 } from 'lucide-react'
 import { useQuestions } from '@/hooks/useQuestions'
 import type { QuestionType, QuestionDifficulty } from '@/types/questions'
 import { Badge } from '@/components/ui/badge'
+import { useTranslation } from "react-i18next";
 
 interface QuestionSelectorProps {
     open: boolean

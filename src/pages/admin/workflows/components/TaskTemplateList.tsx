@@ -45,6 +45,7 @@ import { useDepartments } from '@/hooks/useDepartments'
 import { useProfiles } from '@/hooks/useUsers'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useTranslation } from "react-i18next";
 
 type RecurrenceType = TaskTemplate['recurrence_type']
 type AssignmentScope = 'user' | 'department' | 'property' | 'unassigned'
@@ -69,6 +70,7 @@ const isAssignmentScope = (value: string): value is AssignmentScope =>
     value === 'user' || value === 'department' || value === 'property' || value === 'unassigned'
 
 export function TaskTemplateList() {
+    const { t: t_ext } = useTranslation('extracted');
     const { data: templates, isLoading, error } = useTaskTemplates()
     const toggleMutation = useToggleTaskTemplate()
     const deleteMutation = useDeleteTaskTemplate()
@@ -257,7 +259,7 @@ export function TaskTemplateList() {
     if (error) {
         return (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                Failed to load recurring templates: {error instanceof Error ? error.message : 'Unknown error'}
+                {t_ext('failed_to_load_recurring_templates', 'Failed to load recurring templates:')}{error instanceof Error ? error.message : 'Unknown error'}
             </div>
         )
     }
@@ -267,24 +269,23 @@ export function TaskTemplateList() {
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-medium">Recurring Task Templates</h3>
+                    <h3 className="text-lg font-medium">{t_ext('recurring_task_templates', 'Recurring Task Templates')}</h3>
                 </div>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    New Template
-                </Button>
+                    {t_ext('new_template', 'New Template')}</Button>
             </div>
 
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Template Title</TableHead>
-                            <TableHead>Frequency</TableHead>
-                            <TableHead>Assignment</TableHead>
-                            <TableHead>Next Run</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{t_ext('template_title', 'Template Title')}</TableHead>
+                            <TableHead>{t_ext('frequency', 'Frequency')}</TableHead>
+                            <TableHead>{t_ext('assignment', 'Assignment')}</TableHead>
+                            <TableHead>{t_ext('next_run', 'Next Run')}</TableHead>
+                            <TableHead>{t_ext('status_1', 'Status')}</TableHead>
+                            <TableHead className="text-right">{t_ext('actions', 'Actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -328,8 +329,7 @@ export function TaskTemplateList() {
                                             size="sm"
                                             onClick={() => handleEdit(template)}
                                         >
-                                            Edit
-                                        </Button>
+                                            {t_ext('edit', 'Edit')}</Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -345,8 +345,7 @@ export function TaskTemplateList() {
                         {!templates?.length && (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                                    No recurring task templates found.
-                                </TableCell>
+                                    {t_ext('no_recurring_task_templates_found', 'No recurring task templates found.')}</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
@@ -356,16 +355,14 @@ export function TaskTemplateList() {
             <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Template?</AlertDialogTitle>
+                        <AlertDialogTitle>{t_ext('delete_template', 'Delete Template?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will stop the automated generation of tasks from this template. Existing tasks will not be affected.
-                        </AlertDialogDescription>
+                            {t_ext('this_will_stop_the_automated_generation_', 'This will stop the automated generation of tasks from this template. Existing tasks will not be affected.')}</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t_ext('cancel', 'Cancel')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
-                        </AlertDialogAction>
+                            {t_ext('delete', 'Delete')}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -383,24 +380,24 @@ export function TaskTemplateList() {
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="grid gap-2">
-                            <Label>Title</Label>
+                            <Label>{t_ext('title_1', 'Title')}</Label>
                             <Input
                                 value={formState.title}
                                 onChange={(e) => setFormState((prev) => ({ ...prev, title: e.target.value }))}
-                                placeholder="Daily Lobby Safety Check"
+                                placeholder={t_ext('daily_lobby_safety_check', 'Daily Lobby Safety Check')}
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Description</Label>
+                            <Label>{t_ext('description_1', 'Description')}</Label>
                             <Textarea
                                 value={formState.description}
                                 onChange={(e) => setFormState((prev) => ({ ...prev, description: e.target.value }))}
-                                placeholder="Inspect fire exits, emergency lights, and lobby safety signage."
+                                placeholder={t_ext('inspect_fire_exits_emergency_lights_and_', 'Inspect fire exits, emergency lights, and lobby safety signage.')}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label>Priority</Label>
+                                <Label>{t_ext('priority', 'Priority')}</Label>
                                 <Select
                                     value={formState.priority}
                                     onValueChange={(val) => setFormState((prev) => ({ ...prev, priority: val }))}
@@ -409,15 +406,15 @@ export function TaskTemplateList() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="low">Low</SelectItem>
-                                        <SelectItem value="medium">Medium</SelectItem>
-                                        <SelectItem value="high">High</SelectItem>
-                                        <SelectItem value="urgent">Urgent</SelectItem>
+                                        <SelectItem value="low">{t_ext('low', 'Low')}</SelectItem>
+                                        <SelectItem value="medium">{t_ext('medium', 'Medium')}</SelectItem>
+                                        <SelectItem value="high">{t_ext('high', 'High')}</SelectItem>
+                                        <SelectItem value="urgent">{t_ext('urgent', 'Urgent')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="grid gap-2">
-                                <Label>Recurrence</Label>
+                                <Label>{t_ext('recurrence', 'Recurrence')}</Label>
                                 <Select
                                     value={formState.recurrence_type}
                                     onValueChange={(val) => {
@@ -430,15 +427,15 @@ export function TaskTemplateList() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="daily">Daily</SelectItem>
-                                        <SelectItem value="weekly">Weekly</SelectItem>
-                                        <SelectItem value="monthly">Monthly</SelectItem>
+                                        <SelectItem value="daily">{t_ext('daily', 'Daily')}</SelectItem>
+                                        <SelectItem value="weekly">{t_ext('weekly', 'Weekly')}</SelectItem>
+                                        <SelectItem value="monthly">{t_ext('monthly', 'Monthly')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
                         <div className="grid gap-2">
-                            <Label>Recurrence Config (JSON)</Label>
+                            <Label>{t_ext('recurrence_config_json', 'Recurrence Config (JSON)')}</Label>
                             <Textarea
                                 className="font-mono text-xs h-24"
                                 value={formState.recurrence_config}
@@ -446,7 +443,7 @@ export function TaskTemplateList() {
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Assignment Scope</Label>
+                            <Label>{t_ext('assignment_scope', 'Assignment Scope')}</Label>
                             <Select
                                 value={formState.assignment_scope}
                                 onValueChange={(val) => {
@@ -465,23 +462,23 @@ export function TaskTemplateList() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="user">Specific User</SelectItem>
-                                    <SelectItem value="department">Department</SelectItem>
-                                    <SelectItem value="property">Property</SelectItem>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    <SelectItem value="user">{t_ext('specific_user', 'Specific User')}</SelectItem>
+                                    <SelectItem value="department">{t_ext('department', 'Department')}</SelectItem>
+                                    <SelectItem value="property">{t_ext('property', 'Property')}</SelectItem>
+                                    <SelectItem value="unassigned">{t_ext('unassigned', 'Unassigned')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         {formState.assignment_scope === 'user' && (
                             <div className="grid gap-2">
-                                <Label>Assignee</Label>
+                                <Label>{t_ext('assignee', 'Assignee')}</Label>
                                 <Select
                                     value={formState.assigned_to_id}
                                     onValueChange={(val) => setFormState((prev) => ({ ...prev, assigned_to_id: val }))}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select user" />
+                                        <SelectValue placeholder={t_ext('select_user', 'Select user')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {profiles?.map((profile: any) => (
@@ -494,13 +491,13 @@ export function TaskTemplateList() {
 
                         {formState.assignment_scope === 'department' && (
                             <div className="grid gap-2">
-                                <Label>Department</Label>
+                                <Label>{t_ext('department', 'Department')}</Label>
                                 <Select
                                     value={formState.department_id}
                                     onValueChange={(val) => setFormState((prev) => ({ ...prev, department_id: val }))}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select department" />
+                                        <SelectValue placeholder={t_ext('select_department', 'Select department')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {departments?.map((dept: any) => (
@@ -513,13 +510,13 @@ export function TaskTemplateList() {
 
                         {formState.assignment_scope === 'property' && (
                             <div className="grid gap-2">
-                                <Label>Property</Label>
+                                <Label>{t_ext('property', 'Property')}</Label>
                                 <Select
                                     value={formState.property_id}
                                     onValueChange={(val) => setFormState((prev) => ({ ...prev, property_id: val }))}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select property" />
+                                        <SelectValue placeholder={t_ext('select_property_1', 'Select property')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {properties?.map((prop: any) => (
@@ -531,7 +528,7 @@ export function TaskTemplateList() {
                         )}
 
                         <div className="grid gap-2">
-                            <Label>Status</Label>
+                            <Label>{t_ext('status_1', 'Status')}</Label>
                             <Select
                                 value={formState.is_active ? 'active' : 'inactive'}
                                 onValueChange={(val) => setFormState((prev) => ({ ...prev, is_active: val === 'active' }))}
@@ -540,8 +537,8 @@ export function TaskTemplateList() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="active">Active</SelectItem>
-                                    <SelectItem value="inactive">Inactive</SelectItem>
+                                    <SelectItem value="active">{t_ext('active', 'Active')}</SelectItem>
+                                    <SelectItem value="inactive">{t_ext('inactive', 'Inactive')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -552,8 +549,7 @@ export function TaskTemplateList() {
                                 setEditingTemplate(null)
                                 resetForm()
                             }}>
-                                Cancel
-                            </Button>
+                                {t_ext('cancel', 'Cancel')}</Button>
                             <Button onClick={handleSaveTemplate} disabled={createMutation.isPending || updateMutation.isPending}>
                                 {editingTemplate ? 'Save Changes' : 'Create Template'}
                             </Button>

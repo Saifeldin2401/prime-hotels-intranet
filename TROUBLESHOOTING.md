@@ -66,7 +66,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ### Issue: "Failed to sign in"
 
 **Check:**
-1. User exists in Supabase Dashboard → Authentication → Users
+1. User exists in Supabase Dashboard -> Authentication -> Users
 2. You ran the SQL script to assign the role
 3. Email/password are correct (case-sensitive)
 
@@ -121,5 +121,6 @@ WHERE p.email = 'admin@prime.com';
 3. Check that `package.json` is present
 4. Try: `npm install` then `npm run dev`
 5. Check that port 5173 is not blocked by firewall
+
 
 

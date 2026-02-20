@@ -19,6 +19,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 
 export default function NotificationBatches() {
+    const { t: t_ext } = useTranslation('extracted');
     const { t, i18n } = useTranslation(['admin', 'common'])
     const { data: batches, isLoading } = useNotificationBatches()
     const { processBatch, isProcessing } = useBulkNotifications()
@@ -117,7 +118,7 @@ export default function NotificationBatches() {
                                                 </div>
                                                 <Progress value={((batch.processed_count + batch.failed_count) / batch.total_count) * 100} className="h-2" />
                                                 {batch.failed_count > 0 && (
-                                                    <p className="text-xs text-red-500">{batch.failed_count} failed</p>
+                                                    <p className="text-xs text-red-500">{batch.failed_count} {t_ext('failed', 'failed')}</p>
                                                 )}
                                             </div>
                                         </TableCell>

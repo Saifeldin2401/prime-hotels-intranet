@@ -1,31 +1,170 @@
 {
-    "brand_name": "PHG Connect",
-    "brand_full": "Prime Hotels Group",
-    "brand_tagline": "Your Official Digital Gateway",
-    "welcome_title": "Welcome to",
-    "prime_connect": "PHG Connect",
-    "subtitle": "The official digital intranet of Prime Hotels Group (PHG). Your centralized hub for career growth, operational excellence, and team collaboration.",
-    "login_button": "Access Portal",
-    "footer": "© {{year}} Prime Hotels Group (PHG). All Rights Reserved. | Internal Use Only",
-    "who_we_are": {
-        "title": "About PHG Connect",
-        "mission": "PHG Connect is the official intranet platform of Prime Hotels Group, designed to empower every team member with the tools, resources, and information needed to deliver exceptional hospitality. From onboarding to career advancement, everything you need is here."
+  "brand_name": "PHG Connect",
+  "brand_full": "Prime Hotels Group",
+  "brand_tagline": "Your Official Digital Gateway",
+  "welcome_title": "Welcome to",
+  "prime_connect": "PHG Connect",
+  "subtitle": "The official digital intranet of Prime Hotels Group (PHG). Your centralized hub for career growth, operational excellence, and team collaboration.",
+  "login_button": "Access Portal",
+  "explore_button": "Explore Features",
+  "official_intranet": "Official Intranet",
+  "hero": {
+    "badge": "Prime Hotels Group • Official Intranet"
+  },
+  "nav": {
+    "home": "Home",
+    "features": "Features",
+    "verify": "Verify",
+    "features_learning": "Learning & Development",
+    "features_learning_desc": "Access training modules and certifications",
+    "features_hr": "HR Services",
+    "features_hr_desc": "Manage leave, payslips, and performance",
+    "features_knowledge": "Knowledge Base",
+    "features_knowledge_desc": "Company policies and SOPs",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "who_we_are": {
+    "title": "About PHG Connect",
+    "subtitle": "Who We Are",
+    "mission": "PHG Connect is the official intranet platform of Prime Hotels Group, designed to empower every team member with the tools, resources, and information needed to deliver exceptional hospitality.",
+    "description": "From onboarding to career advancement, everything you need is here. Our platform connects all team members across our properties, creating a unified digital workplace that fosters collaboration, learning, and growth.",
+    "features": {
+      "1": "Centralized Information Hub",
+      "2": "Seamless HR Services",
+      "3": "Professional Development",
+      "4": "Team Collaboration Tools"
     },
-    "growing_together": {
-        "title": "Your Digital Workplace",
-        "subtitle": "One Platform, Endless Possibilities",
-        "tagline": "Everything you need to excel in your role, all in one place.",
-        "learning": {
-            "title": "Learning & Development",
-            "desc": "Access training modules, certifications, and skill-building resources tailored to your role and career aspirations."
-        },
-        "leadership": {
-            "title": "HR & Self-Service",
-            "desc": "Manage leave requests, view payslips, track performance reviews, and access all HR services seamlessly."
-        },
-        "community": {
-            "title": "Knowledge Base",
-            "desc": "Explore company policies, SOPs, best practices, and department-specific resources in our centralized knowledge hub."
-        }
+    "excellence_title": "Excellence in Hospitality",
+    "excellence_desc": "Serving with passion across the Kingdom"
+  },
+  "features": {
+    "title": "Everything You Need to Excel",
+    "subtitle": "Powerful Features",
+    "description": "Discover a comprehensive suite of tools designed to support your professional journey and enhance your daily work experience.",
+    "learning": {
+      "title": "Learning & Development",
+      "desc": "Access training modules, certifications, and skill-building resources tailored to your role and career aspirations."
+    },
+    "hr": {
+      "title": "HR & Self-Service",
+      "desc": "Manage leave requests, view payslips, track performance reviews, and access all HR services seamlessly."
+    },
+    "community": {
+      "title": "Knowledge Base",
+      "desc": "Explore company policies, SOPs, best practices, and department-specific resources in our centralized knowledge hub."
+    },
+    "security": {
+      "title": "Enterprise Security",
+      "desc": "Your data is protected with bank-level encryption and advanced security protocols. Access controlled and monitored 24/7."
+    },
+    "performance": {
+      "title": "Performance Tracking",
+      "desc": "Monitor your goals, track achievements, and receive feedback to continuously improve your professional performance."
+    },
+    "accessibility": {
+      "title": "Anywhere Access",
+      "desc": "Access your workplace from any device, anywhere in the world. Desktop, tablet, or mobile - we've got you covered."
     }
+  },
+  "how_it_works": {
+    "title": "Your Journey Starts Here",
+    "subtitle": "How It Works",
+    "step1": {
+      "title": "Access Resources",
+      "desc": "Log in to access your personalized dashboard with all the tools and resources you need."
+    },
+    "step2": {
+      "title": "Manage Tasks",
+      "desc": "Handle your HR requests, training assignments, and daily tasks all in one place."
+    },
+    "step3": {
+      "title": "Connect & Collaborate",
+      "desc": "Engage with your team, share knowledge, and collaborate on projects seamlessly."
+    },
+    "step4": {
+      "title": "Grow & Succeed",
+      "desc": "Track your progress, earn certifications, and advance your career with PHG."
+    }
+  },
+  "cta": {
+    "badge": "Ready to Get Started?",
+    "title": "Your Digital Workplace Awaits",
+    "description": "Experience the future of hospitality workplace management. Sign in now and discover all the tools designed to help you succeed.",
+    "button_primary": "Access Your Portal",
+    "trust": {
+      "secure": "Bank-level Security",
+      "support": "24/7 Support",
+      "access": "Mobile & Desktop Access"
+    }
+  },
+  "growing_together": {
+    "title": "Your Digital Workplace",
+    "subtitle": "One Platform, Endless Possibilities",
+    "tagline": "Everything you need to excel in your role, all in one place.",
+    "learning": {
+      "title": "Learning & Development",
+      "desc": "Access training modules, certifications, and skill-building resources tailored to your role and career aspirations."
+    },
+    "leadership": {
+      "title": "HR & Self-Service",
+      "desc": "Manage leave requests, view payslips, track performance reviews, and access all HR services seamlessly."
+    },
+    "community": {
+      "title": "Knowledge Base",
+      "desc": "Explore company policies, SOPs, best practices, and department-specific resources in our centralized knowledge hub."
+    }
+  },
+  "footer": {
+    "description": "PHG Connect is the official digital workplace platform for Prime Hotels Group team members across the Kingdom of Saudi Arabia.",
+    "copyright": "© {{year}} Prime Hotels Group (PHG). All Rights Reserved. | Internal Use Only",
+    "links": {
+      "title": "Quick Links",
+      "home": "Home",
+      "features": "Features",
+      "about": "About",
+      "contact": "Contact"
+    },
+    "resources": {
+      "title": "Resources",
+      "help": "Help Center",
+      "training": "Training Guide",
+      "guidelines": "User Guidelines",
+      "support": "IT Support"
+    },
+    "contact": {
+      "title": "Support",
+      "email_label": "Email Support",
+      "phone_label": "Phone Support",
+      "location": "Kingdom of Saudi Arabia"
+    },
+    "legal": {
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Use"
+    }
+  },
+  "verification": {
+    "title": "Certificate Verification",
+    "subtitle": "Official validation service for Prime Hotels Group certifications.",
+    "input_label": "Verification Code",
+    "input_placeholder": "Enter the code from the certificate (e.g., PH-XXXX-XXXX)",
+    "verify_button": "Verify Authenticity",
+    "verifying": "Verifying...",
+    "search_again": "Verify Another Certificate",
+    "invalid_code": "Invalid Verification Code",
+    "invalid_desc": "The code you entered could not be found or has expired. Please check the code and try again.",
+    "valid_title": "Certificate Verified",
+    "valid_desc": "This certificate is authentic and was issued by Prime Hotels Group Excellence Center.",
+    "details": {
+      "title": "Certificate Details",
+      "recipient": "Issued To",
+      "course": "Program/Course",
+      "issue_date": "Date of Issue",
+      "certificate_number": "Certificate ID",
+      "status": "Current Status",
+      "valid": "Authentic & Active",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    }
+  }
 }

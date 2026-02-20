@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw, Home, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { securityUtils } from '@/lib/security-config'
+import { useTranslation } from "react-i18next";
 
 interface Props {
     children: ReactNode

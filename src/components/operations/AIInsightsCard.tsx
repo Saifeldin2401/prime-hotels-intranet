@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Sparkles, TrendingUp, TrendingDown, Lightbulb, ArrowRight, BrainCircuit, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { useTranslation } from "react-i18next";
 
 interface AIInsight {
     type: 'success' | 'warning' | 'tip'
@@ -29,18 +30,7 @@ export function AIInsightsCard({ data, className }: AIInsightsCardProps) {
     const [insights, setInsights] = useState<AIInsight[]>([])
     const [summary, setSummary] = useState('')
 
-    useEffect(() => {
-        if (data.occupancyRate > 0) {
-            generateInsights()
-            setIsAnalyzing(false)
-        } else {
-            setIsAnalyzing(false)
-            setInsights([])
-            setSummary('')
-        }
-    }, [data])
-
-    const generateInsights = () => {
+    const generateInsights = useCallback(() => {
         const newInsights: AIInsight[] = []
 
         // No hardcoded findings - only data-driven summary for now
@@ -50,7 +40,18 @@ export function AIInsightsCard({ data, className }: AIInsightsCardProps) {
         if (data.occupancyRate > 0) {
             setSummary(`Performance summary: The current occupancy rate of ${data.occupancyRate.toFixed(1)}% and an average daily rate of SAR ${data.adr.toFixed(2)} have been analyzed from recent PMS data.`)
         }
-    }
+    }, [data.occupancyRate, data.adr])
+
+    useEffect(() => {
+        if (data.occupancyRate > 0) {
+            generateInsights()
+            setIsAnalyzing(false)
+        } else {
+            setIsAnalyzing(false)
+            setInsights([])
+            setSummary('')
+        }
+    }, [data, generateInsights])
 
     return (
         <Card className={cn("overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5", className)}>

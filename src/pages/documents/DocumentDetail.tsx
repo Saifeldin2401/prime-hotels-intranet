@@ -179,9 +179,13 @@ export default function DocumentDetail() {
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={async () => {
+                                                            const hasDownloadableVersion = typeof version.file_url === 'string'
+                                                                && /^https?:\/\//i.test(version.file_url)
+                                                            if (!hasDownloadableVersion) return
                                                             const secureVersionUrl = await resolveDocumentVersionUrl(version.id, version.file_url)
                                                             openUrlInNewTab(secureVersionUrl)
                                                         }}
+                                                        disabled={!(typeof version.file_url === 'string' && /^https?:\/\//i.test(version.file_url))}
                                                     >
                                                         <Download className="w-4 h-4" />
                                                     </Button>

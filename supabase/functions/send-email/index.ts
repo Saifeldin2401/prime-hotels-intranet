@@ -8,6 +8,10 @@ const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com").replace(/\/+$/, "");
 const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "PHG Connect";
 const ENV_DEFAULT_FROM_EMAIL = Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
+const RESEND_MAX_RETRIES = 3;
+const RESEND_RETRY_BASE_MS = 750;
+const RESEND_MIN_INTERVAL_MS = 550;
+let resendLastRequestAt = 0;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,16 +68,30 @@ serve(async (req) => {
       return jsonResponse({ error: "Missing Authorization header" }, 401);
     }
 
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const {
-      data: { user },
-      error: userError,
-    } = await userClient.auth.getUser();
+    const body = (await req.json()) as SendEmailBody;
+    const recipients = Array.isArray(body.to) ? body.to : [body.to];
+    const cleanedRecipients = recipients.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
 
-    if (userError || !user) {
-      return jsonResponse({ error: "Unauthorized", details: userError?.message }, 401);
+    if (cleanedRecipients.length === 0) {
+      return jsonResponse({ error: "Missing required field: to" }, 400);
+    }
+
+    const isServiceRoleCall = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+
+    let user: { id: string; email?: string | null } | null = null;
+    if (!isServiceRoleCall) {
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const {
+        data: { user: authUser },
+        error: userError,
+      } = await userClient.auth.getUser();
+
+      if (userError || !authUser) {
+        return jsonResponse({ error: "Unauthorized", details: userError?.message }, 401);
+      }
+      user = authUser;
     }
 
     const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -84,30 +102,37 @@ serve(async (req) => {
       return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500);
     }
 
-    const adminRoles = ["corporate_admin", "regional_admin", "regional_hr", "property_manager", "property_hr"];
-    const { data: roleRows, error: roleError } = await serviceClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .in("role", adminRoles);
+    if (!isServiceRoleCall && user) {
+      const adminRoles = ["corporate_admin", "regional_admin", "regional_hr", "property_manager", "property_hr"];
+      const { data: roleRows, error: roleError } = await serviceClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .in("role", adminRoles);
 
-    if (roleError) {
-      return jsonResponse({ error: "Failed to validate permissions" }, 500);
-    }
-    if (!roleRows || roleRows.length === 0) {
-      return jsonResponse({ error: "Forbidden" }, 403);
-    }
+      if (roleError) {
+        return jsonResponse({ error: "Failed to validate permissions" }, 500);
+      }
 
-    const body = (await req.json()) as SendEmailBody;
-    const recipients = Array.isArray(body.to) ? body.to : [body.to];
-    const cleanedRecipients = recipients.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
+      const isAdmin = Boolean(roleRows && roleRows.length > 0);
+      const normalizedUserEmail = (user.email || "").trim().toLowerCase();
+      const isSelfCertificateEmail =
+        body.templateKey === "certificate_earned" &&
+        normalizedUserEmail.length > 0 &&
+        cleanedRecipients.every((recipient) => recipient.toLowerCase() === normalizedUserEmail) &&
+        (!body.userId || body.userId === user.id);
 
-    if (cleanedRecipients.length === 0) {
-      return jsonResponse({ error: "Missing required field: to" }, 400);
+      if (!isAdmin && !isSelfCertificateEmail) {
+        return jsonResponse({ error: "Forbidden" }, 403);
+      }
     }
 
     const template = await resolveTemplate(serviceClient, body.templateKey);
-    const context = buildContext(body, user.email ?? "team@phg-connect.com", runtimeConfig.appBaseUrl);
+    const context = buildContext(
+      body,
+      user?.email ?? cleanedRecipients[0] ?? "team@phg-connect.com",
+      runtimeConfig.appBaseUrl,
+    );
 
     const subject = body.subject || renderTemplate(template?.subject_template || "PHG Connect Notification - {{title}}", context);
     const html = body.html || renderTemplate(template?.html_template || defaultHtmlTemplate(), context);
@@ -115,30 +140,26 @@ serve(async (req) => {
     const fromName = body.fromName || template?.from_name || runtimeConfig.fromName;
     const fromEmail = body.fromEmail || template?.from_email || runtimeConfig.fromEmail;
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${runtimeConfig.resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: `${fromName} <${fromEmail}>`,
-        to: cleanedRecipients,
-        subject,
-        html,
-        text,
-        tags: [
-          { name: "domain", value: normalizeDomain(body.businessDomain) },
-          { name: "type", value: (body.notificationType || "system").toLowerCase() },
-          { name: "source", value: "send-email-function" },
-        ],
-      }),
+    const resendResult = await sendWithResendWithRetry({
+      apiKey: runtimeConfig.resendApiKey,
+      fromName,
+      fromEmail,
+      to: cleanedRecipients,
+      subject,
+      html,
+      text,
+      tags: [
+        { name: "domain", value: normalizeDomain(body.businessDomain) },
+        { name: "type", value: (body.notificationType || "system").toLowerCase() },
+        { name: "source", value: "send-email-function" },
+      ],
     });
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      return jsonResponse({ error: "Failed to send email via Resend", details: data }, 500);
+    if (!resendResult.ok) {
+      return jsonResponse({ error: "Failed to send email via Resend", details: resendResult.payload }, 500);
     }
+
+    const data = resendResult.payload;
 
     try {
       await trackDelivery(serviceClient, {
@@ -281,10 +302,84 @@ async function loadRuntimeConfig(serviceClient: ReturnType<typeof createClient>)
   };
 }
 
+async function sendWithResendWithRetry(params: {
+  apiKey: string;
+  fromName: string;
+  fromEmail: string;
+  to: string[];
+  subject: string;
+  html: string;
+  text: string;
+  tags: Array<{ name: string; value: string }>;
+}): Promise<{ ok: boolean; payload: Record<string, unknown> }> {
+  let lastPayload: Record<string, unknown> = {};
+
+  for (let attempt = 1; attempt <= RESEND_MAX_RETRIES; attempt++) {
+    try {
+      const now = Date.now();
+      const waitMs = resendLastRequestAt + RESEND_MIN_INTERVAL_MS - now;
+      if (waitMs > 0) await sleep(waitMs);
+
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${params.apiKey}`,
+        },
+        body: JSON.stringify({
+          from: `${params.fromName} <${params.fromEmail}>`,
+          to: params.to,
+          subject: params.subject,
+          html: params.html,
+          text: params.text,
+          tags: params.tags,
+        }),
+      });
+
+      resendLastRequestAt = Date.now();
+      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      if (response.ok) {
+        return { ok: true, payload };
+      }
+
+      lastPayload = payload;
+      const shouldRetry = response.status === 429 || response.status >= 500;
+      if (!shouldRetry || attempt === RESEND_MAX_RETRIES) {
+        return { ok: false, payload };
+      }
+
+      const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+      await sleep(retryAfterMs ?? RESEND_RETRY_BASE_MS * attempt);
+    } catch (error) {
+      lastPayload = { message: error instanceof Error ? error.message : "Resend request failed" };
+      if (attempt === RESEND_MAX_RETRIES) {
+        return { ok: false, payload: lastPayload };
+      }
+      await sleep(RESEND_RETRY_BASE_MS * attempt);
+    }
+  }
+
+  return { ok: false, payload: lastPayload };
+}
+
 function readSecretString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function parseRetryAfterMs(value: string | null): number | null {
+  if (!value) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.ceil(seconds * 1000);
+  }
+  return null;
+}
+
+function sleep(ms: number): Promise<void> {
+  const clamped = Number.isFinite(ms) && ms > 0 ? ms : 0;
+  return new Promise((resolve) => setTimeout(resolve, clamped));
 }
 
 function jsonResponse(payload: Record<string, unknown>, status = 200): Response {

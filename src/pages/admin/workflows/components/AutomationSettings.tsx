@@ -10,8 +10,10 @@ import type { AutomationConfig } from '@/hooks/useAutomationConfig'
 import { Loader2, Save, Sparkles, GraduationCap, CalendarDays } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/lib/supabase'
+import { useTranslation } from "react-i18next";
 
 export function AutomationSettings() {
+    const { t: t_ext } = useTranslation('extracted');
     const { data: configs, isLoading, error } = useAutomationConfigs()
     const updateMutation = useUpdateAutomationConfig()
     const { toast } = useToast()
@@ -60,7 +62,7 @@ export function AutomationSettings() {
     if (error) {
         return (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                Failed to load automation settings: {error instanceof Error ? error.message : 'Unknown error'}
+                {t_ext('failed_to_load_automation_settings', 'Failed to load automation settings:')}{error instanceof Error ? error.message : 'Unknown error'}
             </div>
         )
     }
@@ -74,19 +76,18 @@ export function AutomationSettings() {
                 </div>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">Smart Leave Approval</CardTitle>
+                        <CardTitle className="text-lg">{t_ext('smart_leave_approval', 'Smart Leave Approval')}</CardTitle>
                         <Switch
                             checked={configs?.find(c => c.id === 'smart_leave')?.is_enabled}
                             onCheckedChange={(val) => handleToggle('smart_leave', val)}
                         />
                     </div>
                     <CardDescription>
-                        Auto-approve low-impact leave requests without manager intervention.
-                    </CardDescription>
+                        {t_ext('auto_approve_low_impact_leave_requests_w', 'Auto-approve low-impact leave requests without manager intervention.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label>Max Duration (Days)</Label>
+                        <Label>{t_ext('max_duration_days', 'Max Duration (Days)')}</Label>
                         <Input
                             type="number"
                             defaultValue={configs?.find(c => c.id === 'smart_leave')?.config.max_days}
@@ -97,10 +98,10 @@ export function AutomationSettings() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Allowed Leave Types (comma separated)</Label>
+                        <Label>{t_ext('allowed_leave_types_comma_separated', 'Allowed Leave Types (comma separated)')}</Label>
                         <Input
                             type="text"
-                            placeholder="sick, annual"
+                            placeholder={t_ext('sick_annual', 'sick, annual')}
                             defaultValue={(configs?.find(c => c.id === 'smart_leave')?.config.allowed_types || []).join(', ')}
                             onChange={(e) => setLocalConfigs({
                                 ...localConfigs,
@@ -119,8 +120,7 @@ export function AutomationSettings() {
                             disabled={updateMutation.isPending}
                         >
                             <Save className="h-4 w-4 mr-2" />
-                            Save Rules
-                        </Button>
+                            {t_ext('save_rules', 'Save Rules')}</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -132,19 +132,18 @@ export function AutomationSettings() {
                 </div>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">AI Training Allocator</CardTitle>
+                        <CardTitle className="text-lg">{t_ext('ai_training_allocator', 'AI Training Allocator')}</CardTitle>
                         <Switch
                             checked={configs?.find(c => c.id === 'auto_training')?.is_enabled}
                             onCheckedChange={(val) => handleToggle('auto_training', val)}
                         />
                     </div>
                     <CardDescription>
-                        Automatically assign training modules based on role and department changes.
-                    </CardDescription>
+                        {t_ext('automatically_assign_training_modules_ba', 'Automatically assign training modules based on role and department changes.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label>Standard Deadline (Days)</Label>
+                        <Label>{t_ext('standard_deadline_days', 'Standard Deadline (Days)')}</Label>
                         <Input
                             type="number"
                             defaultValue={configs?.find(c => c.id === 'auto_training')?.config.default_due_days}
@@ -162,8 +161,7 @@ export function AutomationSettings() {
                             disabled={updateMutation.isPending}
                         >
                             <Save className="h-4 w-4 mr-2" />
-                            Save Rules
-                        </Button>
+                            {t_ext('save_rules', 'Save Rules')}</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -175,19 +173,18 @@ export function AutomationSettings() {
                 </div>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">Recurring Checklists</CardTitle>
+                        <CardTitle className="text-lg">{t_ext('recurring_checklists', 'Recurring Checklists')}</CardTitle>
                         <Switch
                             checked={configs?.find(c => c.id === 'recurring_tasks')?.is_enabled}
                             onCheckedChange={(val) => handleToggle('recurring_tasks', val)}
                         />
                     </div>
                     <CardDescription>
-                        Generate daily, weekly, and monthly tasks from templates autonomously.
-                    </CardDescription>
+                        {t_ext('generate_daily_weekly_and_monthly_tasks_', 'Generate daily, weekly, and monthly tasks from templates autonomously.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label>Generation Time (Cron Target)</Label>
+                        <Label>{t_ext('generation_time_cron_target', 'Generation Time (Cron Target)')}</Label>
                         <Input
                             type="text"
                             placeholder="00:00"
@@ -206,8 +203,7 @@ export function AutomationSettings() {
                             disabled={updateMutation.isPending}
                         >
                             <Save className="h-4 w-4 mr-2" />
-                            Save Schedule
-                        </Button>
+                            {t_ext('save_schedule', 'Save Schedule')}</Button>
                     </div>
                 </CardContent>
             </Card>

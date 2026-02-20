@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 
 export function NotificationSettings() {
+    const { t: t_ext } = useTranslation('extracted');
     const { preferences, isLoading, updatePreferences } = useNotificationPreferences()
     const { t } = useTranslation('settings')
 
@@ -87,9 +88,8 @@ export function NotificationSettings() {
             <Card className="bg-white dark:bg-hotel-navy border-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-slate-50/50 dark:bg-white/5 border-b border-border/50">
                     <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2 text-base">
-                        Granular Preferences
-                    </CardTitle>
-                    <CardDescription>Choose exactly how you want to be notified for each category</CardDescription>
+                        {t_ext('granular_preferences', 'Granular Preferences')}</CardTitle>
+                    <CardDescription>{t_ext('choose_exactly_how_you_want_to_be_notifi', 'Choose exactly how you want to be notified for each category')}</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y divide-border/50">
@@ -106,7 +106,7 @@ export function NotificationSettings() {
                             </div>
                             <div className="flex items-center gap-8">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Email</span>
+                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">{t_ext('email', 'Email')}</span>
                                     <Switch
                                         checked={preferences.approval_email}
                                         onCheckedChange={() => handleToggle('approval_email')}
@@ -114,7 +114,7 @@ export function NotificationSettings() {
                                     />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Push</span>
+                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">{t_ext('push', 'Push')}</span>
                                     <Switch
                                         checked={preferences.approval_push}
                                         onCheckedChange={() => handleToggle('approval_push')}
@@ -137,7 +137,7 @@ export function NotificationSettings() {
                             </div>
                             <div className="flex items-center gap-8">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Email</span>
+                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">{t_ext('email', 'Email')}</span>
                                     <Switch
                                         checked={preferences.training_email}
                                         onCheckedChange={() => handleToggle('training_email')}
@@ -145,7 +145,7 @@ export function NotificationSettings() {
                                     />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Push</span>
+                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">{t_ext('push', 'Push')}</span>
                                     <Switch
                                         checked={preferences.training_push}
                                         onCheckedChange={() => handleToggle('training_push')}
@@ -168,7 +168,7 @@ export function NotificationSettings() {
                             </div>
                             <div className="flex items-center gap-8">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Email</span>
+                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">{t_ext('email', 'Email')}</span>
                                     <Switch
                                         checked={preferences.announcement_email}
                                         onCheckedChange={() => handleToggle('announcement_email')}
@@ -176,7 +176,7 @@ export function NotificationSettings() {
                                     />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Push</span>
+                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">{t_ext('push', 'Push')}</span>
                                     <Switch
                                         checked={preferences.announcement_push}
                                         onCheckedChange={() => handleToggle('announcement_push')}
@@ -199,7 +199,7 @@ export function NotificationSettings() {
                             </div>
                             <div className="flex items-center gap-8">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Email</span>
+                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">{t_ext('email', 'Email')}</span>
                                     <Switch
                                         checked={preferences.maintenance_email}
                                         onCheckedChange={() => handleToggle('maintenance_email')}
@@ -207,7 +207,7 @@ export function NotificationSettings() {
                                     />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Push</span>
+                                    <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">{t_ext('push', 'Push')}</span>
                                     <Switch
                                         checked={preferences.maintenance_push}
                                         onCheckedChange={() => handleToggle('maintenance_push')}
@@ -266,8 +266,7 @@ export function NotificationSettings() {
                     <CardHeader className="bg-slate-50/50 dark:bg-white/5 border-b border-border/50 py-4 px-6 text-base">
                         <CardTitle className="text-base flex items-center gap-2">
                             <Bell className="h-4 w-4 text-hotel-gold" />
-                            Sound & Summary
-                        </CardTitle>
+                            {t_ext('sound_summary', 'Sound & Summary')}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-6 pt-4 space-y-6">
                         <div className="flex items-center justify-between">

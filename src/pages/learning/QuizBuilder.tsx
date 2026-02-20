@@ -24,6 +24,7 @@ import type { LearningQuiz } from '@/types/learning'
 import { useTranslation } from 'react-i18next'
 
 export default function QuizBuilder() {
+    const { t: t_ext } = useTranslation('extracted');
     const { id } = useParams()
     const navigate = useNavigate()
     const { toast } = useToast()
@@ -354,13 +355,12 @@ export default function QuizBuilder() {
                                                         {q.question?.question_type}
                                                     </span>
                                                     <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">
-                                                        {q.points_override || q.question?.points} pts
-                                                    </span>
+                                                        {q.points_override || q.question?.points} {t_ext('pts', 'pts')}</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button variant="ghost" size="icon" title="Move Up"><ArrowUp className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" title="Move Down"><ArrowDown className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" title={t_ext('move_up', 'Move Up')}><ArrowUp className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" title={t_ext('move_down', 'Move Down')}><ArrowDown className="h-4 w-4" /></Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"

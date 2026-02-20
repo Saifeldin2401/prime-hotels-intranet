@@ -21,7 +21,8 @@ export function useDashboardStats() {
                 pendingRequestsResult,
                 pendingDocumentsResult,
                 pendingLegacyApprovalsResult,
-                unreadNotificationsResult
+                unreadNotificationsResult,
+                pendingTasksResult
             ] = await Promise.all([
                 // 1. Documents Count
                 supabase
@@ -32,9 +33,11 @@ export function useDashboardStats() {
 
                 // 2. Training Progress
                 supabase
-                    .from('training_progress')
+                    .from('learning_progress')
                     .select('status')
-                    .eq('user_id', userId),
+                    .eq('user_id', userId)
+                    .eq('content_type', 'module')
+                    .or('is_deleted.is.null,is_deleted.eq.false'),
 
                 // 3. Announcements (Recent 10)
                 supabase
@@ -76,7 +79,15 @@ export function useDashboardStats() {
                     .from('notifications')
                     .select('id', { count: 'exact', head: true })
                     .eq('user_id', userId)
-                    .is('read_at', null)
+                    .is('read_at', null),
+
+                // 9. Pending Tasks
+                supabase
+                    .from('tasks')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('assigned_to_id', userId)
+                    .neq('status', 'completed')
+                    .neq('status', 'cancelled')
             ])
 
             // Process Results
@@ -103,6 +114,7 @@ export function useDashboardStats() {
                 unreadAnnouncements,
                 pendingApprovals,
                 unreadNotifications,
+                pendingTasks: pendingTasksResult?.count || 0
             }
         },
         enabled: !!user?.id,
@@ -183,9 +195,11 @@ export function usePropertyManagerStats() {
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('training_progress')
+                        .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
                         .in('user_id', userIds)
                 })(),
 
@@ -193,10 +207,11 @@ export function usePropertyManagerStats() {
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_assignments')
+                        .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
-                        .eq('target_type', 'user')
-                        .in('target_id', userIds)
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
+                        .in('user_id', userIds)
                 })()
             ])
 
@@ -298,19 +313,23 @@ export function useDepartmentHeadStats() {
                 (async () => {
                     if (deptUserIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('training_progress')
+                        .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
                         .in('user_id', deptUserIds)
                 })(),
 
                 // 4. Total Assignments
                 (async () => {
+                    if (deptUserIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_assignments')
-                        .select('id, status', { count: 'exact', head: true })
-                        .or(`target_id.in.(${deptIds.join(',')}),target_id.eq.${profile?.id}`)
-                        .eq('target_type', 'department')
+                        .from('learning_progress')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
+                        .in('user_id', deptUserIds)
                 })(),
 
                 // 5. Total Tasks
@@ -464,9 +483,11 @@ export function useHRStats(propertyId?: string) {
                 (async () => {
                     if (propUserIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('training_progress')
+                        .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
                         .in('user_id', propUserIds)
                 })(),
 
@@ -474,9 +495,11 @@ export function useHRStats(propertyId?: string) {
                 (async () => {
                     if (propUserIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_assignments')
+                        .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
-                        .in('assigned_to_user_id', propUserIds)
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
+                        .in('user_id', propUserIds)
                 })()
             ])
 
@@ -557,17 +580,34 @@ export function useAreaManagerStats(propertyId?: string) {
                     return q
                 })(),
 
-                // 2. Open Issues (Tasks)
+                // 2. Open Issues (Tasks + Tickets)
                 (async () => {
-                    const q = supabase.from('tasks').select('id', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'cancelled')
-                    if (!isAll) q.eq('property_id', propertyId)
-                    return q
+                    const [tasks, tickets] = await Promise.all([
+                        (async () => {
+                            const q = supabase.from('tasks').select('id', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'cancelled')
+                            if (!isAll) q.eq('property_id', propertyId)
+                            return q
+                        })(),
+                        (async () => {
+                            const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'closed')
+                            if (!isAll) q.eq('property_id', propertyId)
+                            return q
+                        })()
+                    ]);
+                    return {
+                        count: (tasks.count || 0) + (tickets.count || 0)
+                    };
                 })(),
 
                 // 3. Completed Training
                 (async () => {
                     if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase.from('training_progress').select('id', { count: 'exact', head: true }).eq('status', 'completed')
+                    const q = supabase
+                        .from('learning_progress')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('status', 'completed')
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
                     if (!isAll && userIds.length > 0) q.in('user_id', userIds)
                     return q
                 })(),
@@ -575,8 +615,12 @@ export function useAreaManagerStats(propertyId?: string) {
                 // 4. Total Training Assignments
                 (async () => {
                     if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase.from('learning_assignments').select('id', { count: 'exact', head: true })
-                    if (!isAll && userIds.length > 0) q.in('assigned_to_user_id', userIds)
+                    const q = supabase
+                        .from('learning_progress')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
+                    if (!isAll && userIds.length > 0) q.in('user_id', userIds)
                     return q
                 })(),
 
@@ -684,7 +728,12 @@ export function useCorporateStats(propertyId?: string) {
                 // 3. Completed Training
                 (async () => {
                     if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase.from('training_progress').select('id', { count: 'exact', head: true }).eq('status', 'completed')
+                    const q = supabase
+                        .from('learning_progress')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('status', 'completed')
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
                     if (!isAll && userIds.length > 0) q.in('user_id', userIds)
                     return q
                 })(),
@@ -692,9 +741,12 @@ export function useCorporateStats(propertyId?: string) {
                 // 4. Total Training Assignments
                 (async () => {
                     if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase.from('learning_assignments').select('id', { count: 'exact', head: true })
-                    // Logic check: if filtering by property, we filter assignments by property users
-                    if (!isAll && userIds.length > 0) q.in('assigned_to_user_id', userIds)
+                    const q = supabase
+                        .from('learning_progress')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('content_type', 'module')
+                        .or('is_deleted.is.null,is_deleted.eq.false')
+                    if (!isAll && userIds.length > 0) q.in('user_id', userIds)
                     return q
                 })(),
 

@@ -1,234 +1,417 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { PublicNavbar } from '@/components/layout/PublicNavbar'
-import { useAuth } from '@/hooks/useAuth'
-import { Button } from '@/components/ui/button'
-import { useTranslation } from 'react-i18next'
-import { GraduationCap, TrendingUp, Users } from 'lucide-react'
-import aboutTeamImg from '@/assets/about-team.png'
-import { motion } from 'framer-motion'
+import { useEffect, type ElementType } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PublicNavbar } from '@/components/layout/PublicNavbar';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import {
+  GraduationCap,
+  TrendingUp,
+  Users,
+  Shield,
+  Zap,
+  Globe,
+  Award,
+  BookOpen,
+  MessageSquare,
+  Calendar,
+  ChevronRight,
+  CheckCircle2,
+  ArrowRight,
+  Mail,
+  Phone,
+  MapPin,
+  HelpCircle,
+  FileText,
+  Headphones,
+  ShieldCheck
+} from 'lucide-react';
+import aboutTeamImg from '@/assets/about-team.png';
 
 export default function PublicHome() {
-    const { user: authUser } = useAuth()
-    const navigate = useNavigate()
-    const { t, i18n } = useTranslation('public')
-    const isRTL = i18n.dir() === 'rtl'
+  const { user: authUser } = useAuth();
+  const navigate = useNavigate();
+  const { t, i18n } = useTranslation('public');
+  const isRTL = i18n.dir() === 'rtl';
 
-    // Animation Variants
-    const fadeInUp: any = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
-    }
-
-    const staggerContainer: any = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.2
-            }
-        }
-    }
-
-    // Redirect authenticated users to their dashboard
-    useEffect(() => {
-        if (authUser) {
-            navigate('/home', { replace: true })
-        }
-    }, [authUser, navigate])
-
-    // Don't render if user is authenticated
+  useEffect(() => {
     if (authUser) {
-        return null
+      navigate('/home', { replace: true });
     }
+  }, [authUser, navigate]);
 
-    return (
-        <div className="min-h-screen bg-gray-50 flex flex-col font-sans overflow-x-hidden">
-            {/* Public Navigation */}
-            <PublicNavbar />
+  if (authUser) {
+    return null;
+  }
 
-            {/* Hero Section */}
-            <section
-                className="relative h-[90vh] bg-cover bg-center flex items-center overflow-hidden"
-                style={{ backgroundImage: 'url(/hero-banner.png)' }}
-            >
-                <div className="absolute inset-0 bg-gradient-to-r from-hotel-navy/95 via-hotel-navy/70 to-transparent" />
+  const features = [
+    {
+      icon: GraduationCap,
+      title: t('features.learning.title'),
+      description: t('features.learning.desc'),
+    },
+    {
+      icon: TrendingUp,
+      title: t('features.hr.title'),
+      description: t('features.hr.desc'),
+    },
+    {
+      icon: Users,
+      title: t('features.community.title'),
+      description: t('features.community.desc'),
+    },
+    {
+      icon: Shield,
+      title: t('features.security.title'),
+      description: t('features.security.desc'),
+    },
+    {
+      icon: Zap,
+      title: t('features.performance.title'),
+      description: t('features.performance.desc'),
+    },
+    {
+      icon: Globe,
+      title: t('features.accessibility.title'),
+      description: t('features.accessibility.desc'),
+    },
+    {
+      icon: ShieldCheck,
+      title: t('verification.title'),
+      description: t('verification.subtitle'),
+      action: () => navigate('/verify')
+    }
+  ];
 
-                {/* Decorative overlay pattern */}
-                <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
+  const howItWorks = [
+    {
+      step: '01',
+      icon: BookOpen,
+      title: t('how_it_works.step1.title'),
+      description: t('how_it_works.step1.desc')
+    },
+    {
+      step: '02',
+      icon: Calendar,
+      title: t('how_it_works.step2.title'),
+      description: t('how_it_works.step2.desc')
+    },
+    {
+      step: '03',
+      icon: MessageSquare,
+      title: t('how_it_works.step3.title'),
+      description: t('how_it_works.step3.desc')
+    },
+    {
+      step: '04',
+      icon: Award,
+      title: t('how_it_works.step4.title'),
+      description: t('how_it_works.step4.desc')
+    }
+  ];
 
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pt-16" dir="ltr">
-                    <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        variants={staggerContainer}
-                        className="max-w-3xl text-left"
-                    >
-                        {/* Brand Badge */}
-                        <motion.div variants={fadeInUp} className="inline-block px-4 py-1.5 mb-6 border border-hotel-gold/40 rounded-full bg-hotel-navy/60 backdrop-blur-sm">
-                            <span className="text-hotel-gold text-sm font-semibold tracking-wider uppercase">
-                                Prime Hotels Group • Official Intranet
-                            </span>
-                        </motion.div>
+  const footerLinks = [
+    { label: t('footer.links.home'), href: '/' },
+    { label: t('footer.links.features'), href: '#features' },
+    { label: t('footer.links.about'), href: '#about' },
+  ];
 
-                        {/* Main Title */}
-                        <motion.h1 variants={fadeInUp} className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-4 text-white leading-tight font-serif tracking-tight drop-shadow-sm">
-                            {t('welcome_title')}
-                        </motion.h1>
+  const footerResources = [
+    { icon: HelpCircle, label: t('footer.resources.help') },
+    { icon: FileText, label: t('footer.resources.training') },
+    { icon: FileText, label: t('footer.resources.guidelines') },
+    { icon: Headphones, label: t('footer.resources.support') }
+  ];
 
-                        {/* PHG Connect Logo Text */}
-                        <motion.div variants={fadeInUp} className="mb-8">
-                            <span className="text-5xl sm:text-6xl lg:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-hotel-gold via-yellow-200 to-hotel-gold font-serif">
-                                {t('prime_connect')}
-                            </span>
-                            <div className="mt-2 text-white/70 text-lg tracking-wide">
-                                {t('brand_tagline', 'Your Official Digital Gateway')}
-                            </div>
-                        </motion.div>
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Public Navigation */}
+      <PublicNavbar />
 
-                        <motion.p variants={fadeInUp} className="text-xl sm:text-2xl text-gray-200 mb-10 font-light leading-relaxed max-w-2xl drop-shadow-sm">
-                            {t('subtitle')}
-                        </motion.p>
+      {/* Hero Section - Simplified */}
+      <section
+        className="relative min-h-[90vh] bg-cover bg-center flex items-center"
+        style={{ backgroundImage: 'url(/hero-banner.png)' }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-hotel-navy/95 via-hotel-navy/80 to-hotel-navy/40" />
 
-                        <motion.div variants={fadeInUp} className="flex gap-4">
-                            <Button
-                                size="lg"
-                                className="bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-bold text-lg px-8 py-7 h-auto shadow-2xl transition-all duration-300 transform hover:-translate-y-1 rounded-full border-2 border-transparent hover:border-white"
-                                onClick={() => navigate('/login')}
-                            >
-                                {t('login_button')}
-                            </Button>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pt-20">
+          <div className={`max-w-3xl ${isRTL ? 'text-right' : 'text-left'}`}>
+            <span className="inline-block px-4 py-1.5 mb-6 border border-hotel-gold/40 rounded-full bg-hotel-navy/60 text-hotel-gold text-sm font-semibold tracking-wider uppercase">
+              {t('hero.badge')}
+            </span>
 
-                        </motion.div>
-                    </motion.div>
-                </div>
-            </section>
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-4 text-white leading-tight font-serif">
+              {t('welcome_title')}
+            </h1>
 
-            {/* Who We Are Section - Modern Split Layout */}
-            <section className="py-24 bg-white relative overflow-hidden">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid lg:grid-cols-2 gap-16 items-center">
-                        <motion.div
-                            initial={{ opacity: 0, x: isRTL ? 40 : -40 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            viewport={{ once: true, margin: "-100px" }}
-                            transition={{ duration: 0.8 }}
-                            className={`relative ${isRTL ? 'lg:order-last' : ''}`}
-                        >
-                            <div className="absolute -top-10 -left-10 w-40 h-40 bg-hotel-gold/10 rounded-full blur-3xl rounded-bl-none"></div>
-                            <h2 className="text-4xl font-bold text-hotel-navy mb-8 font-serif leading-tight">
-                                {t('who_we_are.title')}
-                            </h2>
-                            <div className="w-20 h-1.5 bg-hotel-gold mb-8 rounded-full" />
-                            <p className="text-xl text-gray-600 leading-loose">
-                                {t('who_we_are.mission')}
-                            </p>
-                        </motion.div>
+            <div className="mb-6">
+              <span className="text-4xl sm:text-5xl lg:text-7xl font-bold text-hotel-gold font-serif">
+                {t('prime_connect')}
+              </span>
+              <div className="mt-2 text-white/70 text-lg">
+                {t('brand_tagline')}
+              </div>
+            </div>
 
-                        {/* Visual Image */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
-                            viewport={{ once: true, margin: "-100px" }}
-                            transition={{ duration: 0.8 }}
-                            className="relative h-[400px] rounded-2xl overflow-hidden shadow-2xl group"
-                        >
-                            <img
-                                src={aboutTeamImg}
-                                alt={t('who_we_are.title')}
-                                loading="lazy"
-                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-hotel-navy/10 mix-blend-multiply group-hover:bg-hotel-navy/0 transition-colors duration-500"></div>
-                        </motion.div>
-                    </div>
-                </div>
-            </section>
+            <p className="text-lg sm:text-xl text-gray-200 mb-8 font-light leading-relaxed max-w-2xl">
+              {t('subtitle')}
+            </p>
 
-            {/* Growing Together Section - Premium Cards */}
-            <section className="py-24 bg-slate-50 border-t border-slate-100 relative">
-                {/* Background decorative elements */}
-                <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-gray-100 to-transparent opacity-50"></div>
+            <div className="flex flex-wrap gap-4">
+              <Button
+                size="lg"
+                className="bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-bold px-8 rounded-full transition-all"
+                onClick={() => navigate('/login')}
+              >
+                {t('login_button')}
+                <ArrowRight className={`w-4 h-4 ${isRTL ? 'mr-2 rotate-180' : 'ml-2'}`} />
+              </Button>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.6 }}
-                        className="text-center mb-20 max-w-3xl mx-auto"
-                    >
-                        <span className="text-hotel-gold font-bold tracking-[0.2em] uppercase text-sm mb-3 block">
-                            {t('growing_together.subtitle')}
-                        </span>
-                        <h2 className="text-4xl font-bold text-hotel-navy font-serif mb-4">{t('growing_together.title')}</h2>
-                        <p className="text-gray-500 mt-4">{t('growing_together.tagline')}</p>
-                    </motion.div>
-
-                    <motion.div
-                        variants={staggerContainer}
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true }}
-                        className="grid md:grid-cols-3 gap-8"
-                    >
-                        {/* Feature 1 */}
-                        <motion.div variants={fadeInUp} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-transparent hover:border-hotel-gold/20 group relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <GraduationCap size={80} className="text-hotel-navy" />
-                            </div>
-                            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
-                                <GraduationCap className="w-8 h-8 text-hotel-navy" />
-                            </div>
-                            <h3 className="text-2xl font-bold text-hotel-navy mb-4 group-hover:text-hotel-gold transition-colors duration-300">
-                                {t('growing_together.learning.title')}
-                            </h3>
-                            <p className="text-gray-600 leading-relaxed">
-                                {t('growing_together.learning.desc')}
-                            </p>
-                        </motion.div>
-
-                        {/* Feature 2 */}
-                        <motion.div variants={fadeInUp} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-transparent hover:border-hotel-gold/20 group relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <TrendingUp size={80} className="text-hotel-navy" />
-                            </div>
-                            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
-                                <TrendingUp className="w-8 h-8 text-hotel-gold" />
-                            </div>
-                            <h3 className="text-2xl font-bold text-hotel-navy mb-4 group-hover:text-hotel-gold transition-colors duration-300">
-                                {t('growing_together.leadership.title')}
-                            </h3>
-                            <p className="text-gray-600 leading-relaxed">
-                                {t('growing_together.leadership.desc')}
-                            </p>
-                        </motion.div>
-
-                        {/* Feature 3 */}
-                        <motion.div variants={fadeInUp} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-transparent hover:border-hotel-gold/20 group relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <Users size={80} className="text-hotel-navy" />
-                            </div>
-                            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
-                                <Users className="w-8 h-8 text-hotel-navy" />
-                            </div>
-                            <h3 className="text-2xl font-bold text-hotel-navy mb-4 group-hover:text-hotel-gold transition-colors duration-300">
-                                {t('growing_together.community.title')}
-                            </h3>
-                            <p className="text-gray-600 leading-relaxed">
-                                {t('growing_together.community.desc')}
-                            </p>
-                        </motion.div>
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* Simple Footer */}
-            <footer className="bg-hotel-navy py-12 text-center border-t border-white/10">
-                <div className="max-w-7xl mx-auto px-4">
-                    <p className="text-white/40 text-sm">{t('footer', { year: new Date().getFullYear() })}</p>
-                </div>
-            </footer>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 border-white/30 text-white hover:bg-white/10 rounded-full"
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                {t('explore_button')}
+              </Button>
+            </div>
+          </div>
         </div>
-    )
+      </section>
+
+      {/* Who We Are Section */}
+      <section id="about" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className={isRTL ? 'lg:order-2' : ''}>
+              <span className="text-hotel-gold font-bold tracking-wider uppercase text-sm mb-3 block">
+                {t('who_we_are.subtitle')}
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-hotel-navy mb-6 font-serif">
+                {t('who_we_are.title')}
+              </h2>
+              <div className="w-20 h-1 bg-hotel-gold mb-6 rounded-full" />
+              <p className="text-lg text-gray-600 leading-relaxed mb-4">
+                {t('who_we_are.mission')}
+              </p>
+              <p className="text-gray-500 leading-relaxed mb-6">
+                {t('who_we_are.description')}
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                {[1, 2, 3, 4].map((num) => (
+                  <div key={num} className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-hotel-gold flex-shrink-0" />
+                    <span className="text-gray-700">{t(`who_we_are.features.${num}`)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={`relative ${isRTL ? 'lg:order-1' : ''}`}>
+              <div className="relative rounded-2xl overflow-hidden shadow-xl">
+                <img
+                  src={aboutTeamImg}
+                  alt={t('who_we_are.title')}
+                  loading="lazy"
+                  className="w-full h-[400px] object-cover"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
+                  <div className="flex items-center gap-3">
+                    <Award className="w-8 h-8 text-hotel-gold" />
+                    <div>
+                      <div className="font-bold text-white">{t('who_we_are.excellence_title')}</div>
+                      <div className="text-sm text-white/80">{t('who_we_are.excellence_desc')}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid Section */}
+      <section id="features" className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 max-w-2xl mx-auto">
+            <span className="text-hotel-gold font-bold tracking-wider uppercase text-sm mb-3 block">
+              {t('features.subtitle')}
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-hotel-navy mb-4 font-serif">
+              {t('features.title')}
+            </h2>
+            <p className="text-gray-500">
+              {t('features.description')}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature) => {
+              const Wrapper: ElementType = feature.action ? 'button' : 'div'
+              return (
+                <Wrapper
+                  key={feature.title}
+                  onClick={feature.action}
+                  {...(feature.action ? { type: 'button' } : {})}
+                  className={`text-start bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-100 ${feature.action ? 'cursor-pointer hover:border-hotel-gold' : ''}`}
+                >
+                  <div className="w-12 h-12 bg-hotel-gold/10 rounded-xl flex items-center justify-center mb-4">
+                    <feature.icon className="w-6 h-6 text-hotel-gold" />
+                  </div>
+                  <h3 className="text-lg font-bold text-hotel-navy mb-2 flex items-center justify-between">
+                    {feature.title}
+                    {feature.action && <ArrowRight className={`w-4 h-4 text-hotel-gold ${isRTL ? 'rotate-180' : ''}`} />}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {feature.description}
+                  </p>
+                </Wrapper>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 max-w-2xl mx-auto">
+            <span className="text-hotel-gold font-bold tracking-wider uppercase text-sm mb-3 block">
+              {t('how_it_works.subtitle')}
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-hotel-navy mb-4 font-serif">
+              {t('how_it_works.title')}
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {howItWorks.map((step, index) => (
+              <div key={index} className="text-center">
+                <div className="relative inline-flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-hotel-gold/10 rounded-full flex items-center justify-center">
+                    <step.icon className="w-7 h-7 text-hotel-gold" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-hotel-navy rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    {step.step}
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-hotel-navy mb-2">{step.title}</h3>
+                <p className="text-gray-600 text-sm">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-hotel-navy">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 font-serif">
+            {t('cta.title')}
+          </h2>
+          <p className="text-lg text-white/70 mb-8">
+            {t('cta.description')}
+          </p>
+          <Button
+            size="lg"
+            className="bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-bold px-10 rounded-full"
+            onClick={() => navigate('/login')}
+          >
+            {t('cta.button_primary')}
+            <ArrowRight className={`w-4 h-4 ${isRTL ? 'mr-2 rotate-180' : 'ml-2'}`} />
+          </Button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-hotel-navy border-t border-white/10 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Brand */}
+            <div>
+              <img src="/prime-logo-light.png" alt="Prime Hotels" className="h-10 w-auto mb-4" />
+              <p className="text-white/60 text-sm leading-relaxed">
+                {t('footer.description')}
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="font-bold mb-4">{t('footer.links.title')}</h4>
+              <ul className="space-y-2">
+                {footerLinks.map((link) => (
+                  <li key={link.href}>
+                    <button
+                      onClick={() => {
+                        if (link.href.startsWith('#')) {
+                          document.querySelector(link.href)?.scrollIntoView({ behavior: 'smooth' });
+                        } else {
+                          navigate(link.href);
+                        }
+                      }}
+                      className="text-white/60 hover:text-hotel-gold transition-colors text-sm"
+                    >
+                      {link.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Resources */}
+            <div>
+              <h4 className="font-bold mb-4">{t('footer.resources.title')}</h4>
+              <ul className="space-y-2">
+                {footerResources.map((resource, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-white/60 text-sm">
+                    <resource.icon className="w-4 h-4 text-hotel-gold" />
+                    <span>{resource.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h4 className="font-bold mb-4">{t('footer.contact.title')}</h4>
+              <ul className="space-y-3 text-white/60 text-sm">
+                <li className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-hotel-gold flex-shrink-0 mt-0.5" />
+                  <span>{t('footer.contact.location')}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-hotel-gold flex-shrink-0" />
+                  <span>{t('footer.contact.email_label')}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-hotel-gold flex-shrink-0" />
+                  <span>{t('footer.contact.phone_label')}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="border-t border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p className="text-white/40 text-xs">
+              {t('footer.copyright', { year: new Date().getFullYear() })}
+            </p>
+            <div className="flex gap-4 text-xs">
+              <button className="text-white/40 hover:text-white transition-colors">
+                {t('footer.legal.privacy')}
+              </button>
+              <button className="text-white/40 hover:text-white transition-colors">
+                {t('footer.legal.terms')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
 }

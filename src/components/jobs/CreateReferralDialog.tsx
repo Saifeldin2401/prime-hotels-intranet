@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Loader2, AlertCircle, CheckCircle, Upload, FileText, X, Link2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { logAuditEvent } from '@/lib/auditLog'
+import { useTranslation } from "react-i18next";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'doc', 'docx'])
@@ -359,10 +360,19 @@ export function CreateReferralDialog({
                                         : "border-muted-foreground/25 hover:bg-muted/50",
                                     (success || uploading) && "opacity-50 cursor-not-allowed"
                                 )}
+                                role="button"
+                                tabIndex={0}
+                                aria-disabled={success || uploading}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={handleDrop}
                                 onClick={() => !success && !uploading && fileInputRef.current?.click()}
+                                onKeyDown={(e) => {
+                                    if ((e.key === 'Enter' || e.key === ' ') && !success && !uploading) {
+                                        e.preventDefault()
+                                        fileInputRef.current?.click()
+                                    }
+                                }}
                             >
                                 <input
                                     type="file"

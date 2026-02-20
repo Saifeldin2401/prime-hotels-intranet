@@ -171,9 +171,11 @@ export async function createNotification(params: CreateNotificationParams): Prom
     type,
     title,
     message,
-    entity_type: entityType || null,
-    entity_id: entityId || null,
-    metadata: metadata || null,
+    metadata: {
+      ...(metadata || {}),
+      entity_type: entityType || null,
+      entity_id: entityId || null,
+    },
     link: link || null,
   })
 
@@ -222,9 +224,11 @@ export async function createBulkNotifications(params: BulkNotificationParams): P
       type,
       title,
       message,
-      entity_type: entityType || null,
-      entity_id: entityId || null,
-      metadata: metadata || null,
+      metadata: {
+        ...(metadata || {}),
+        entity_type: entityType || null,
+        entity_id: entityId || null,
+      },
       link: link || null,
     }))
 

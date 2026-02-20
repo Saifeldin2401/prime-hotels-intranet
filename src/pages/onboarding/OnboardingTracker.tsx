@@ -19,18 +19,18 @@ import { AIOnboardingPathGenerator } from '@/components/onboarding/AIOnboardingP
 
 
 function TaskDetailList({ processId }: { processId: string }) {
+    const { t: t_ext } = useTranslation('extracted');
     const { data: tasks, isLoading } = useOnboardingTasks(processId)
     const { t } = useTranslation('onboarding')
 
     if (isLoading) return <div className="flex justify-center p-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
 
-    if (!tasks || tasks.length === 0) return <div className="p-4 text-sm text-muted-foreground italic">No tasks found for this process.</div>
+    if (!tasks || tasks.length === 0) return <div className="p-4 text-sm text-muted-foreground italic">{t_ext('no_tasks_found_for_this_process', 'No tasks found for this process.')}</div>
 
     return (
         <div className="bg-muted/30 rounded-lg p-4 space-y-3">
             <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                Journey Progress Details
-            </h4>
+                {t_ext('journey_progress_details', 'Journey Progress Details')}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {tasks.map((task) => (
                     <div
@@ -57,8 +57,7 @@ function TaskDetailList({ processId }: { processId: string }) {
                                 {task.link_type === 'training' && (
                                     <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-purple-100 text-purple-700 border-purple-200">
                                         <GraduationCap className="h-2.5 w-2.5 mr-1" />
-                                        Training
-                                    </Badge>
+                                        {t_ext('training_1', 'Training')}</Badge>
                                 )}
                             </div>
                             {task.description && (
@@ -71,7 +70,7 @@ function TaskDetailList({ processId }: { processId: string }) {
                             <Link
                                 to={`/learning/training/${task.link_id}`}
                                 className="text-muted-foreground hover:text-primary transition-colors"
-                                title="View Training Module"
+                                title={t_ext('view_training_module', 'View Training Module')}
                             >
                                 <ExternalLink className="h-3.5 w-3.5" />
                             </Link>
@@ -145,12 +144,10 @@ export default function OnboardingTracker() {
                 <TabsList>
                     <TabsTrigger value="tracker" className="gap-2">
                         <Users className="h-4 w-4" />
-                        Active Onboardings
-                    </TabsTrigger>
+                        {t_ext('active_onboardings', 'Active Onboardings')}</TabsTrigger>
                     <TabsTrigger value="generator" className="gap-2">
                         <Sparkles className="h-4 w-4" />
-                        AI Path Generator
-                    </TabsTrigger>
+                        {t_ext('ai_path_generator', 'AI Path Generator')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="tracker">

@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTranslation } from "react-i18next";
 
 export function UserDataDebug() {
   const { user, profile, roles, properties, departments, primaryRole, loading } = useAuth()

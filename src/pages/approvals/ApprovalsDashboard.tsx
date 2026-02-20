@@ -27,6 +27,7 @@ import {
 import { useToast } from '@/components/ui/use-toast'
 
 export default function ApprovalsDashboard() {
+    const { t: t_ext } = useTranslation('extracted');
     const { t, i18n } = useTranslation('approvals')
     const { toast } = useToast()
     const isRTL = i18n.dir() === 'rtl'
@@ -153,15 +154,15 @@ export default function ApprovalsDashboard() {
                         <SelectTrigger className="w-full sm:w-[150px] h-10 bg-white">
                             <div className="flex items-center gap-2">
                                 <Filter className="w-4 h-4 text-gray-500" />
-                                <SelectValue placeholder="Priority" />
+                                <SelectValue placeholder={t_ext('priority', 'Priority')} />
                             </div>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Priorities</SelectItem>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="critical">Critical</SelectItem>
+                            <SelectItem value="all">{t_ext('all_priorities', 'All Priorities')}</SelectItem>
+                            <SelectItem value="low">{t_ext('low', 'Low')}</SelectItem>
+                            <SelectItem value="medium">{t_ext('medium', 'Medium')}</SelectItem>
+                            <SelectItem value="high">{t_ext('high', 'High')}</SelectItem>
+                            <SelectItem value="critical">{t_ext('critical', 'Critical')}</SelectItem>
                         </SelectContent>
                     </Select>
                     <div className="hidden sm:flex border rounded-md bg-white">

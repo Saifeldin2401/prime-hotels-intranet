@@ -27,8 +27,9 @@ export default function ForgotPassword() {
             }
 
             // Send password reset email via Supabase
+            const appUrl = import.meta.env.VITE_APP_URL || window.location.origin
             const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-                redirectTo: `${window.location.origin}/reset-password`
+                redirectTo: `${appUrl.replace(/\/$/, '')}/reset-password`
             })
 
             if (resetError) {
@@ -53,11 +54,9 @@ export default function ForgotPassword() {
                         <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
                             <CheckCircle className="h-6 w-6 text-green-600" />
                         </div>
-                        <CardTitle>{t('forgot_password.success_title', { defaultValue: 'Check Your Email' })}</CardTitle>
+                        <CardTitle>{t('forgot_password.success_title')}</CardTitle>
                         <CardDescription>
-                            {t('forgot_password.success_message', {
-                                defaultValue: 'We\'ve sent a password reset link to your email address. Please check your inbox and follow the instructions.'
-                            })}
+                            {t('forgot_password.success_message')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center space-y-4">
@@ -66,7 +65,7 @@ export default function ForgotPassword() {
                             <p className="text-sm text-gray-600">{email}</p>
                         </div>
                         <p className="text-sm text-gray-500">
-                            {t('forgot_password.check_spam', { defaultValue: 'Didn\'t receive the email? Check your spam folder.' })}
+                            {t('forgot_password.check_spam')}
                         </p>
                     </CardContent>
                     <CardFooter className="flex flex-col gap-3">
@@ -78,12 +77,12 @@ export default function ForgotPassword() {
                                 setEmail('')
                             }}
                         >
-                            {t('forgot_password.try_different', { defaultValue: 'Try a different email' })}
+                            {t('forgot_password.try_different')}
                         </Button>
                         <Link to="/login" className="w-full">
                             <Button variant="ghost" className="w-full">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
-                                {t('forgot_password.back_to_login', { defaultValue: 'Back to Login' })}
+                                {t('forgot_password.back_to_login')}
                             </Button>
                         </Link>
                     </CardFooter>
@@ -96,11 +95,9 @@ export default function ForgotPassword() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <CardTitle>{t('forgot_password.title', { defaultValue: 'Forgot Password' })}</CardTitle>
+                    <CardTitle>{t('forgot_password.title')}</CardTitle>
                     <CardDescription>
-                        {t('forgot_password.description', {
-                            defaultValue: 'Enter your email address and we\'ll send you a link to reset your password.'
-                        })}
+                        {t('forgot_password.description')}
                     </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
@@ -113,15 +110,14 @@ export default function ForgotPassword() {
                         )}
 
                         <div className="space-y-2">
-                            <Label htmlFor="email">{t('forgot_password.email_label', { defaultValue: 'Email Address' })}</Label>
+                            <Label htmlFor="email">{t('forgot_password.email_label')}</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="name@company.com"
+                                placeholder="name@example.com"
                                 disabled={loading}
-                                autoFocus
                             />
                         </div>
                     </CardContent>
@@ -130,16 +126,16 @@ export default function ForgotPassword() {
                             {loading ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    {t('forgot_password.sending', { defaultValue: 'Sending...' })}
+                                    {t('forgot_password.sending')}
                                 </>
                             ) : (
-                                t('forgot_password.send_link', { defaultValue: 'Send Reset Link' })
+                                t('forgot_password.send_link')
                             )}
                         </Button>
                         <Link to="/login" className="w-full">
                             <Button variant="ghost" className="w-full">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
-                                {t('forgot_password.back_to_login', { defaultValue: 'Back to Login' })}
+                                {t('forgot_password.back_to_login')}
                             </Button>
                         </Link>
                     </CardFooter>

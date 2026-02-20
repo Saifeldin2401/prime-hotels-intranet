@@ -13,6 +13,7 @@ import {
     Clock, MessageSquare, CalendarPlus, ExternalLink, Loader2, History
 } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
+import { useTranslation } from "react-i18next";
 
 interface Referral {
     id: string

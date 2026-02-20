@@ -1,9 +1,10 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { QuizComponent } from './components/QuizComponent'
+import { QuizComponentEnhanced } from './components/QuizComponentEnhanced'
 import { useTranslation } from 'react-i18next'
 
 export default function QuizPlayer() {
+    const { t: t_ext } = useTranslation('extracted');
     const { id } = useParams()
     const [searchParams] = useSearchParams()
     const assignmentId = searchParams.get('assignment')
@@ -19,10 +20,10 @@ export default function QuizPlayer() {
                 onClick={() => navigate('/learning/my')}
                 className="mb-6"
             >
-                &larr; {t('quizzes.player.back_to_learning')}
+                {t_ext('larr', '&larr;')}{t('quizzes.player.back_to_learning')}
             </Button>
 
-            <QuizComponent
+            <QuizComponentEnhanced
                 quizId={id}
                 assignmentId={assignmentId}
                 onExit={() => navigate('/learning/my')}

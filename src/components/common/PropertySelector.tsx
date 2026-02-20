@@ -3,6 +3,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Building, Lock, LayoutDashboard } from 'lucide-react'
+import { useTranslation } from "react-i18next";
 
 interface PropertySelectorProps {
   value?: string
@@ -30,7 +31,7 @@ export function PropertySelector({
     return (
       <div className="flex items-center gap-2 p-2 border rounded-md bg-muted">
         <Lock className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">No properties assigned</span>
+        <span className="text-sm text-muted-foreground">{t_ext('no_properties_assigned', 'No properties assigned')}</span>
       </div>
     )
   }
@@ -53,7 +54,7 @@ export function PropertySelector({
       <SelectContent>
         {accessibleProperties.some(p => p.id === 'all') && (
           <SelectGroup>
-            <SelectLabel>Views</SelectLabel>
+            <SelectLabel>{t_ext('views', 'Views')}</SelectLabel>
             {accessibleProperties.filter(p => p.id === 'all').map(property => (
               <SelectItem key={property.id} value={property.id}>
                 <div className="flex items-center gap-2">
@@ -71,7 +72,7 @@ export function PropertySelector({
 
         {accessibleProperties.some(p => p.id !== 'all') && (
           <SelectGroup>
-            <SelectLabel>Properties</SelectLabel>
+            <SelectLabel>{t_ext('properties', 'Properties')}</SelectLabel>
             {accessibleProperties.filter(p => p.id !== 'all').map((property) => {
               const hasAccess = canAccessProperty(property.id)
               return (
@@ -101,18 +102,19 @@ interface PropertyAccessBadgeProps {
 }
 
 export function PropertyAccessBadge({ propertyId, showDetails = false }: PropertyAccessBadgeProps) {
+    const { t: t_ext } = useTranslation('extracted');
   const { properties } = useAuth()
   const { canAccessProperty } = usePermissions()
 
   if (!propertyId || propertyId === 'all') {
-    return <Badge variant="outline">Consolidated View (All)</Badge>
+    return <Badge variant="outline">{t_ext('consolidated_view_all', 'Consolidated View (All)')}</Badge>
   }
 
   const property = properties.find(p => p.id === propertyId)
   const hasAccess = canAccessProperty(propertyId)
 
   if (!property) {
-    return <Badge variant="destructive">Unknown Property</Badge>
+    return <Badge variant="destructive">{t_ext('unknown_property', 'Unknown Property')}</Badge>
   }
 
   if (!hasAccess) {

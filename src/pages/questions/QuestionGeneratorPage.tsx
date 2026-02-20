@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
+import { useTranslation } from "react-i18next";
 
 export default function QuestionGeneratorPage() {
     const navigate = useNavigate()

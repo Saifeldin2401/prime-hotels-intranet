@@ -52,6 +52,7 @@ import { useArticles, useFeedbackStats, useRecentFeedback, useFeedbackTrends } f
 import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
 
 export default function KnowledgeAnalytics() {
+    const { t: t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['knowledge', 'common'])
     const [timeRange, setTimeRange] = useState('90') // days
 
@@ -166,7 +167,7 @@ export default function KnowledgeAnalytics() {
                 <div className="flex items-center gap-2">
                     <Select value={timeRange} onValueChange={setTimeRange}>
                         <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Time Range" />
+                            <SelectValue placeholder={t_ext('time_range', 'Time Range')} />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="30">{t('analytics.last_30_days')}</SelectItem>
@@ -190,7 +191,7 @@ export default function KnowledgeAnalytics() {
                                 <p className="text-sm font-medium text-blue-600">{t('analytics.total_views')}</p>
                                 <div className="mt-2 flex items-baseline gap-2">
                                     <span className="text-3xl font-bold text-gray-900">{analytics.totalViews.toLocaleString()}</span>
-                                    <span className="text-sm text-gray-500">views</span>
+                                    <span className="text-sm text-gray-500">{t_ext('views_1', 'views')}</span>
                                 </div>
                             </div>
                             <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -199,8 +200,7 @@ export default function KnowledgeAnalytics() {
                         </div>
                         <div className="mt-4 flex items-center text-xs text-blue-600 font-medium">
                             <Users className="h-3 w-3 mr-1" />
-                            {analytics.avgViews} avg per article
-                        </div>
+                            {analytics.avgViews} {t_ext('avg_per_article', 'avg per article')}</div>
                     </CardContent>
                 </Card>
 
@@ -211,7 +211,7 @@ export default function KnowledgeAnalytics() {
                                 <p className="text-sm font-medium text-green-600">{t('analytics.published_content')}</p>
                                 <div className="mt-2 flex items-baseline gap-2">
                                     <span className="text-3xl font-bold text-gray-900">{analytics.publishedArticles.toLocaleString()}</span>
-                                    <span className="text-sm text-gray-500">articles</span>
+                                    <span className="text-sm text-gray-500">{t_ext('articles', 'articles')}</span>
                                 </div>
                             </div>
                             <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
@@ -232,7 +232,7 @@ export default function KnowledgeAnalytics() {
                                 <p className="text-sm font-medium text-purple-600">{t('analytics.content_freshness')}</p>
                                 <div className="mt-2 flex items-baseline gap-2">
                                     <span className="text-3xl font-bold text-gray-900">{analytics.updatedInPeriod.toLocaleString()}</span>
-                                    <span className="text-sm text-gray-500">updates</span>
+                                    <span className="text-sm text-gray-500">{t_ext('updates', 'updates')}</span>
                                 </div>
                             </div>
                             <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -252,7 +252,7 @@ export default function KnowledgeAnalytics() {
                                 <p className="text-sm font-medium text-orange-600">{t('analytics.needs_attention')}</p>
                                 <div className="mt-2 flex items-baseline gap-2">
                                     <span className="text-3xl font-bold text-gray-900">{analytics.staleContent}</span>
-                                    <span className="text-sm text-gray-500">stale</span>
+                                    <span className="text-sm text-gray-500">{t_ext('stale', 'stale')}</span>
                                 </div>
                             </div>
                             <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
@@ -290,7 +290,7 @@ export default function KnowledgeAnalytics() {
                                                 <span className="w-5 text-gray-400 text-xs">{idx + 1}.</span>
                                                 {dept.name}
                                             </div>
-                                            <div className="text-gray-900 font-semibold">{dept.views.toLocaleString()} <span className="text-gray-400 font-normal text-xs ml-1">views</span></div>
+                                            <div className="text-gray-900 font-semibold">{dept.views.toLocaleString()} <span className="text-gray-400 font-normal text-xs ml-1">{t_ext('views_1', 'views')}</span></div>
                                         </div>
                                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                                             <div
@@ -299,8 +299,7 @@ export default function KnowledgeAnalytics() {
                                             />
                                         </div>
                                         <div className="flex justify-end text-xs text-gray-500">
-                                            {dept.count} articles
-                                        </div>
+                                            {dept.count} {t_ext('articles', 'articles')}</div>
                                     </div>
                                 )
                             })}
@@ -441,6 +440,7 @@ export default function KnowledgeAnalytics() {
 }
 
 function FeedbackSentiment() {
+    const { t: t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['knowledge', 'common'])
     const { data: stats, isLoading } = useFeedbackStats()
 
@@ -501,6 +501,7 @@ function FeedbackSentiment() {
 }
 
 function RecentFeedbackList() {
+    const { t: t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['knowledge', 'common'])
     const { data: feedback, isLoading } = useRecentFeedback(6)
 
@@ -546,6 +547,7 @@ function RecentFeedbackList() {
 }
 
 function FeedbackTrendsChart() {
+    const { t: t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['knowledge', 'common'])
     const { data: trends, isLoading } = useFeedbackTrends(30) // 30 days default
 

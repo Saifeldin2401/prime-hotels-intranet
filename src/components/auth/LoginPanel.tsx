@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/ui/use-toast'
+import { useTranslation } from "react-i18next";
 
 interface LoginPanelProps {
     className?: string

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -41,6 +41,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAITrainingContent } from '@/hooks/training/useAITrainingContent'
 import { useAuth } from '@/hooks/useAuth'
+import * as QuestionService from '@/services/questionService'
 
 interface SmartModuleWizardProps {
     open: boolean
@@ -56,6 +57,7 @@ interface ModuleOutline {
     category: string
     difficulty: 'beginner' | 'intermediate' | 'advanced'
     estimatedDuration: string
+    suggestedQuizQuestions?: number
     sections: {
         title: string
         type: string
@@ -77,6 +79,44 @@ const CATEGORIES = [
     { key: 'customer_service', label: 'Customer Service' },
     { key: 'general', label: 'General' }
 ]
+
+const stripHtml = (html: string) => {
+    return html
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
+const buildQuizSourceContent = async (documentIds: string[], outline: ModuleOutline) => {
+    let documentText = ''
+    if (documentIds.length > 0) {
+        const { data } = await supabase
+            .from('documents')
+            .select('title, content, description')
+            .in('id', documentIds)
+
+        documentText = (data || [])
+            .map(d => `# ${d.title}\n${stripHtml(d.content || d.description || '')}`)
+            .join('\n\n')
+    }
+
+    const sectionText = outline.sections
+        .map(section => {
+            const parts = [
+                section.title,
+                section.description || '',
+                section.suggestedContent ? stripHtml(section.suggestedContent) : ''
+            ].filter(Boolean)
+            return parts.join('\n')
+        })
+        .join('\n\n')
+
+    return [documentText, sectionText].filter(Boolean).join('\n\n').slice(0, 8000)
+}
 
 export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: SmartModuleWizardProps) {
     const { t, i18n } = useTranslation('training')
@@ -204,77 +244,131 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                 if (!quizError && quiz) {
                     createdQuizId = quiz.id
 
-                    // Generate quiz questions based on the topic
-                    const defaultQuestions = [
+                    type WizardGeneratedQuestion = {
+                        question_text: string
+                        question_type: 'mcq' | 'true_false'
+                        options: { text: string; is_correct: boolean }[]
+                        explanation?: string
+                        hint?: string
+                        linked_section?: string
+                        correct_answer?: string
+                    }
+
+                    const fallbackQuestions: WizardGeneratedQuestion[] = [
                         {
-                            text: `What is the primary purpose of ${topic}?`,
-                            type: 'mcq' as const,
+                            question_text: `What is the primary purpose of ${topic}?`,
+                            question_type: 'mcq' as const,
                             options: [
-                                { text: 'To improve guest satisfaction', correct: true },
-                                { text: 'To reduce costs', correct: false },
-                                { text: 'To simplify operations', correct: false },
-                                { text: 'To meet legal requirements', correct: false }
+                                { text: 'To improve guest satisfaction', is_correct: true },
+                                { text: 'To reduce costs', is_correct: false },
+                                { text: 'To simplify operations', is_correct: false },
+                                { text: 'To meet legal requirements', is_correct: false }
                             ],
                             explanation: `The primary purpose of ${topic} is to ensure excellent guest experiences and maintain high service standards.`
                         },
                         {
-                            text: `Which of the following is a best practice for ${topic}?`,
-                            type: 'mcq' as const,
+                            question_text: `Which of the following is a best practice for ${topic}?`,
+                            question_type: 'mcq' as const,
                             options: [
-                                { text: 'Following established procedures consistently', correct: true },
-                                { text: 'Taking shortcuts when busy', correct: false },
-                                { text: 'Skipping steps for repeat guests', correct: false },
-                                { text: 'Delegating all tasks to others', correct: false }
+                                { text: 'Following established procedures consistently', is_correct: true },
+                                { text: 'Taking shortcuts when busy', is_correct: false },
+                                { text: 'Skipping steps for repeat guests', is_correct: false },
+                                { text: 'Delegating all tasks to others', is_correct: false }
                             ],
                             explanation: `Consistency in following established procedures for ${topic} ensures quality and guest satisfaction.`
                         },
                         {
-                            text: `It is important to follow the standard operating procedures for ${topic}.`,
-                            type: 'true_false' as const,
+                            question_text: `It is important to follow the standard operating procedures for ${topic}.`,
+                            question_type: 'true_false' as const,
                             options: [
-                                { text: 'True', correct: true },
-                                { text: 'False', correct: false }
+                                { text: 'True', is_correct: true },
+                                { text: 'False', is_correct: false }
                             ],
                             explanation: `Standard operating procedures for ${topic} ensure consistency, quality, and compliance across all operations.`
                         },
                         {
-                            text: `When should you ask your supervisor for guidance regarding ${topic}?`,
-                            type: 'mcq' as const,
+                            question_text: `When should you ask your supervisor for guidance regarding ${topic}?`,
+                            question_type: 'mcq' as const,
                             options: [
-                                { text: 'When you are unsure about the correct procedure', correct: true },
-                                { text: 'Only when something goes wrong', correct: false },
-                                { text: 'Never - you should figure it out yourself', correct: false },
-                                { text: 'Only during training periods', correct: false }
+                                { text: 'When you are unsure about the correct procedure', is_correct: true },
+                                { text: 'Only when something goes wrong', is_correct: false },
+                                { text: 'Never - you should figure it out yourself', is_correct: false },
+                                { text: 'Only during training periods', is_correct: false }
                             ],
                             explanation: `Always seek guidance when uncertain about ${topic} to ensure correct procedures are followed.`
                         },
                         {
-                            text: `Guest confidentiality should be maintained at all times when handling ${topic}.`,
-                            type: 'true_false' as const,
+                            question_text: `Guest confidentiality should be maintained at all times when handling ${topic}.`,
+                            question_type: 'true_false' as const,
                             options: [
-                                { text: 'True', correct: true },
-                                { text: 'False', correct: false }
+                                { text: 'True', is_correct: true },
+                                { text: 'False', is_correct: false }
                             ],
                             explanation: `Maintaining guest confidentiality is a fundamental principle of hospitality, especially regarding ${topic}.`
                         }
                     ]
 
+                    let generatedQuestions: WizardGeneratedQuestion[] = []
+
+                    try {
+                        const sourceContent = await buildQuizSourceContent(selectedDocIds, outline)
+                        if (sourceContent && sourceContent.trim().length >= 50) {
+                            const language = aiLanguage.toLowerCase().includes('arab') ? 'ar' : 'en'
+                            const aiQuestions = await QuestionService.generateQuestionsWithAI({
+                                sop_content: sourceContent,
+                                sop_id: selectedDocIds[0],
+                                sop_title: outline.title,
+                                source_title: outline.title,
+                                count: outline.suggestedQuizQuestions || 5,
+                                types: ['mcq', 'true_false'],
+                                difficulty: 'medium',
+                                include_hints: true,
+                                include_explanations: true,
+                                language,
+                                grounded_only: true,
+                                include_citations: true
+                            })
+
+                            generatedQuestions = aiQuestions.map(q => ({
+                                question_text: q.question_text,
+                                question_type: q.question_type as 'mcq' | 'true_false',
+                                options: q.options?.map(opt => ({ text: opt.text, is_correct: opt.is_correct })) || [],
+                                explanation: q.explanation,
+                                hint: q.hint,
+                                linked_section: q.source_snippet || q.linked_section,
+                                correct_answer: q.correct_answer
+                            }))
+                        }
+                    } catch (error) {
+                        console.error('AI quiz generation failed, falling back to defaults', error)
+                    }
+
+                    const questionsToInsert = generatedQuestions.length > 0 ? generatedQuestions : fallbackQuestions
+
                     // Insert questions into knowledge_questions
-                    for (let i = 0; i < defaultQuestions.length; i++) {
-                        const q = defaultQuestions[i]
+                    for (let i = 0; i < questionsToInsert.length; i++) {
+                        const q = questionsToInsert[i]
+                        const correctOption = q.options.find(o => o.is_correct)
+                        const correctAnswer = q.question_type === 'true_false'
+                            ? (correctOption?.text || q.correct_answer || 'True')
+                            : (correctOption?.text || q.correct_answer || '')
+
                         const { data: question, error: questionError } = await supabase
                             .from('knowledge_questions')
                             .insert({
-                                question_text: q.text,
-                                question_type: q.type,
+                                question_text: q.question_text,
+                                question_type: q.question_type,
                                 difficulty_level: 'easy',
-                                correct_answer: q.options.find(o => o.correct)?.text || '',
+                                correct_answer: correctAnswer,
                                 explanation: q.explanation,
+                                hint: q.hint,
+                                linked_sop_id: selectedDocIds[0],
+                                linked_sop_section: q.linked_section,
                                 training_module_id: module.id,
                                 points: 2,
                                 estimated_time_seconds: 60,
                                 ai_generated: true,
-                                status: 'published',
+                                status: 'draft',
                                 created_by: profile?.id
                             })
                             .select()
@@ -284,13 +378,15 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                             const options = q.options.map((opt, optIndex) => ({
                                 question_id: question.id,
                                 option_text: opt.text,
-                                is_correct: opt.correct,
+                                is_correct: opt.is_correct,
                                 display_order: optIndex + 1
                             }))
 
-                            await supabase
-                                .from('knowledge_question_options')
-                                .insert(options)
+                            if (options.length > 0) {
+                                await supabase
+                                    .from('knowledge_question_options')
+                                    .insert(options)
+                            }
 
                             // Link question to quiz
                             await supabase
@@ -660,6 +756,9 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                         <Sparkles className="h-5 w-5 text-hotel-gold" />
                         {t('wizard.title')}
                     </DialogTitle>
+                    <DialogDescription className={isRTL ? 'text-right' : ''}>
+                        {t('wizard.topicSubtitle')}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <Progress value={getStepProgress()} className="h-2" />

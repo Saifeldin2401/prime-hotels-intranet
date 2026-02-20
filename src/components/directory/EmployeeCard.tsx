@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Mail, Phone, MapPin, Building, Briefcase, Users } from 'lucide-react'
 import { LazyLoadImage } from 'react-lazy-load-image-component'
 import 'react-lazy-load-image-component/src/effects/blur.css'
+import { useTranslation } from "react-i18next";
 
 interface EmployeeCardProps {
     profile: any

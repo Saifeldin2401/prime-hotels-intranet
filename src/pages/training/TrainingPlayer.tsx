@@ -41,7 +41,7 @@ import {
     MousePointer2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { QuizComponent } from '@/pages/learning/components/QuizComponent'
+import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
@@ -134,7 +134,7 @@ export default function TrainingPlayer() {
     const assignmentId = searchParams.get('assignment')
     const navigate = useNavigate()
     const { toast } = useToast()
-    const { user, profile } = useAuth()
+    const { user, profile, properties, departments } = useAuth()
 
     const [activeBlockIndex, setActiveBlockIndex] = useState(0)
     const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -275,8 +275,14 @@ export default function TrainingPlayer() {
 
             // Fetch referenced content titles (SOPs, Quizzes) to show in sidebar
             const sopIds = blocks
-                .filter(b => b.type === 'sop_reference' && b.content_data?.sop_id)
-                .map(b => b.content_data!.sop_id as string)
+                .filter(b => b.type === 'sop_reference')
+                .map(b => {
+                    const contentData = b.content_data as Record<string, unknown> | null
+                    const inlineId = contentData?.sop_id as string | undefined
+                    const legacyDocId = contentData?.document_id as string | undefined
+                    return inlineId || (b as TrainingContentBlock).source_document_id || legacyDocId
+                })
+                .filter(Boolean) as string[]
 
             const quizIds = blocks
                 .filter(b => b.type === 'quiz' && b.content_data?.quiz_id)
@@ -290,6 +296,15 @@ export default function TrainingPlayer() {
                     .select('id, title')
                     .in('id', sopIds)
                 sops?.forEach(sop => { referencedTitles[sop.id] = sop.title })
+
+                const missingSopIds = sopIds.filter(id => !referencedTitles[id])
+                if (missingSopIds.length > 0) {
+                    const { data: legacySops } = await supabase
+                        .from('sop_documents')
+                        .select('id, title')
+                        .in('id', missingSopIds)
+                    legacySops?.forEach(sop => { referencedTitles[sop.id] = sop.title })
+                }
             }
 
             if (quizIds.length > 0) {
@@ -473,6 +488,27 @@ export default function TrainingPlayer() {
                 }
             })
 
+            let linkedTrainingProgressId: string | undefined
+            let linkedTrainingQuizScore: number | undefined
+            try {
+                const { data: syncedTrainingProgress } = await supabase
+                    .from('training_progress')
+                    .select('id, quiz_score')
+                    .eq('user_id', user.id)
+                    .eq('training_id', moduleData.module.id)
+                    .eq('is_deleted', false)
+                    .order('updated_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
+
+                linkedTrainingProgressId = syncedTrainingProgress?.id
+                if (typeof syncedTrainingProgress?.quiz_score === 'number') {
+                    linkedTrainingQuizScore = syncedTrainingProgress.quiz_score
+                }
+            } catch (_syncError) {
+                // Certificate generation can continue without this linkage.
+            }
+
             try {
                 await skillsService.awardModuleSkills(user.id, moduleData.module.id)
             } catch (_skillError) {
@@ -482,10 +518,13 @@ export default function TrainingPlayer() {
 
             // Grant certificate when quiz score meets or exceeds passing score
             const passingScore = moduleData.module.passing_score_percentage || 80
-            const isPassed = quizScore !== null && quizScore >= passingScore
+            const effectiveScore = quizScore ?? linkedTrainingQuizScore
+            const isPassed = typeof effectiveScore === 'number' && effectiveScore >= passingScore
 
             if (isPassed && user && moduleData.module && moduleData.module.certificate_enabled) {
                 try {
+                    const primaryProperty = properties?.[0]
+                    const primaryDepartment = departments?.[0]
                     const certificateData: CertificateData = {
                         userId: user.id,
                         recipientName: profile?.full_name || user.email || 'Training Participant',
@@ -494,8 +533,14 @@ export default function TrainingPlayer() {
                         title: moduleData.module.title,
                         description: t('certificateEarned', { moduleName: moduleData.module.title }),
                         completionDate: new Date(),
-                        score: quizScore,
-                        trainingModuleId: moduleData.module.id
+                        score: effectiveScore,
+                        passingScore,
+                        trainingModuleId: moduleData.module.id,
+                        trainingProgressId: linkedTrainingProgressId,
+                        propertyId: primaryProperty?.id,
+                        propertyName: primaryProperty?.name,
+                        departmentId: primaryDepartment?.id,
+                        departmentName: primaryDepartment?.name
                     }
                     await createCertificate(certificateData)
                 } catch (certError) {
@@ -511,8 +556,8 @@ export default function TrainingPlayer() {
             }
 
             setIsFinished(true)
-        } catch (_error) {
-            const errorDetails = getUserFriendlyError(error)
+        } catch (caughtError) {
+            const errorDetails = getUserFriendlyError(caughtError)
             toast({
                 title: t('error'),
                 description: errorDetails.message,
@@ -883,7 +928,7 @@ export default function TrainingPlayer() {
                                             src={block.content_url}
                                             className="w-full h-full"
                                             allowFullScreen
-                                            title="Training video content"
+                                            title={t('training_video_content', { defaultValue: 'Training video content' })}
                                         />
                                     )
                                 })()
@@ -1008,7 +1053,7 @@ export default function TrainingPlayer() {
                                         className="w-full h-full"
                                         allow="clipboard-read; clipboard-write; fullscreen"
                                         sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                                        title="Interactive training content"
+                                        title={t('interactive_training_content', { defaultValue: 'Interactive training content' })}
                                     />
                                 </div>
                             ) : (
@@ -1099,7 +1144,7 @@ export default function TrainingPlayer() {
                                 <p className="text-sm text-muted-foreground">{t('validateYourLearning')}</p>
                             </div>
                         </div>
-                        <QuizComponent
+                        <QuizComponentEnhanced
                             quizId={block.content_data?.quiz_id as string}
                             certificateEnabled={moduleData.module.certificate_enabled}
                             translationTarget={translationTarget}
@@ -1133,15 +1178,25 @@ export default function TrainingPlayer() {
                     />
                 )}
 
-                {block.type === 'sop_reference' && block.content_data?.sop_id && (
-                    <EmbeddedArticleViewer
-                        sopId={block.content_data.sop_id as string}
-                        showBilingual={showBilingual}
-                        translationDir={translationDir}
-                        translationTarget={translationTarget}
-                        className="mb-6"
-                    />
-                )}
+                {block.type === 'sop_reference' && (() => {
+                    const contentData = block.content_data as Record<string, unknown> | null
+                    const resolvedSopId =
+                        (contentData?.sop_id as string | undefined) ||
+                        (block as TrainingContentBlock).source_document_id ||
+                        (contentData?.document_id as string | undefined)
+
+                    if (!resolvedSopId) return null
+
+                    return (
+                        <EmbeddedArticleViewer
+                            sopId={resolvedSopId}
+                            showBilingual={showBilingual}
+                            translationDir={translationDir}
+                            translationTarget={translationTarget}
+                            className="mb-6"
+                        />
+                    )
+                })()}
 
             </m.div>
         )
@@ -1311,13 +1366,23 @@ export default function TrainingPlayer() {
                                                 idx === activeBlockIndex ? "text-white" : ""
                                             )}>
                                                 {block.title ||
-                                                    (block.type === 'sop_reference' && block.content_data?.sop_id ? moduleData.referencedTitles?.[block.content_data.sop_id as string] : '') ||
+                                                    (block.type === 'sop_reference'
+                                                        ? moduleData.referencedTitles?.[
+                                                            ((block.content_data as Record<string, unknown> | null)?.sop_id as string)
+                                                            || (block as TrainingContentBlock).source_document_id
+                                                            || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
+                                                          ] : '') ||
                                                     (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : '') ||
                                                     t('blockTitle', { number: idx + 1 })}
                                             </p>
                                             <p className="text-[10px] text-white/40 uppercase mt-1 tracking-wider">
                                                 {(block.title ||
-                                                    (block.type === 'sop_reference' && block.content_data?.sop_id ? moduleData.referencedTitles?.[block.content_data.sop_id as string] : '') ||
+                                                    (block.type === 'sop_reference'
+                                                        ? moduleData.referencedTitles?.[
+                                                            ((block.content_data as Record<string, unknown> | null)?.sop_id as string)
+                                                            || (block as TrainingContentBlock).source_document_id
+                                                            || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
+                                                          ] : '') ||
                                                     (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : ''))
                                                     ? `${t('blockTitle', { number: idx + 1 })} â€¢ ${block.type.replace('_', ' ')}`
                                                     : block.type.replace('_', ' ')

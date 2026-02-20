@@ -41,8 +41,10 @@ import {
 import { useDepartments } from '@/hooks/useDepartments'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useTranslation } from "react-i18next";
 
 export function TrainingRulesList() {
+    const { t: t_ext } = useTranslation('extracted');
     const { data: rules, isLoading, error } = useTrainingRules()
     const { data: modules } = useTrainingModulesList()
     const { departments } = useDepartments()
@@ -183,7 +185,7 @@ export function TrainingRulesList() {
     if (error) {
         return (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                Failed to load training rules: {error instanceof Error ? error.message : 'Unknown error'}
+                {t_ext('failed_to_load_training_rules', 'Failed to load training rules:')}{error instanceof Error ? error.message : 'Unknown error'}
             </div>
         )
     }
@@ -193,23 +195,22 @@ export function TrainingRulesList() {
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <GraduationCap className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-medium">Training Auto-Assignment Rules</h3>
+                    <h3 className="text-lg font-medium">{t_ext('training_auto_assignment_rules', 'Training Auto-Assignment Rules')}</h3>
                 </div>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    New Rule
-                </Button>
+                    {t_ext('new_rule', 'New Rule')}</Button>
             </div>
 
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Target Module</TableHead>
-                            <TableHead>Criteria (Dept/Role/Title)</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{t_ext('target_module', 'Target Module')}</TableHead>
+                            <TableHead>{t_ext('criteria_dept_role_title', 'Criteria (Dept/Role/Title)')}</TableHead>
+                            <TableHead>{t_ext('created', 'Created')}</TableHead>
+                            <TableHead>{t_ext('status_1', 'Status')}</TableHead>
+                            <TableHead className="text-right">{t_ext('actions', 'Actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -221,13 +222,13 @@ export function TrainingRulesList() {
                                 <TableCell>
                                     <div className="flex flex-wrap gap-1">
                                 {rule.departments?.name && (
-                                    <Badge variant="outline">Dept: {rule.departments.name}</Badge>
+                                    <Badge variant="outline">{t_ext('dept', 'Dept:')}{rule.departments.name}</Badge>
                                 )}
                                 {rule.target_role && (
-                                    <Badge variant="outline">Role: {rule.target_role}</Badge>
+                                    <Badge variant="outline">{t_ext('role', 'Role:')}{rule.target_role}</Badge>
                                 )}
                                         {rule.job_titles?.title && (
-                                            <Badge variant="outline">Title: {rule.job_titles.title}</Badge>
+                                            <Badge variant="outline">{t_ext('title', 'Title:')}{rule.job_titles.title}</Badge>
                                         )}
                                     </div>
                                 </TableCell>
@@ -247,8 +248,7 @@ export function TrainingRulesList() {
                                             size="sm"
                                             onClick={() => handleEdit(rule)}
                                         >
-                                            Edit
-                                        </Button>
+                                            {t_ext('edit', 'Edit')}</Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -264,8 +264,7 @@ export function TrainingRulesList() {
                         {!rules?.length && (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                                    No auto-assignment rules found.
-                                </TableCell>
+                                    {t_ext('no_auto_assignment_rules_found', 'No auto-assignment rules found.')}</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
@@ -275,16 +274,14 @@ export function TrainingRulesList() {
             <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Rule?</AlertDialogTitle>
+                        <AlertDialogTitle>{t_ext('delete_rule', 'Delete Rule?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will stop automatic training assignments for this criteria. Existing assignments will not be affected.
-                        </AlertDialogDescription>
+                            {t_ext('this_will_stop_automatic_training_assign', 'This will stop automatic training assignments for this criteria. Existing assignments will not be affected.')}</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t_ext('cancel', 'Cancel')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
-                        </AlertDialogAction>
+                            {t_ext('delete', 'Delete')}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -302,13 +299,13 @@ export function TrainingRulesList() {
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label>Training Module</Label>
+                            <Label>{t_ext('training_module', 'Training Module')}</Label>
                             <Select
                                 value={formState.training_module_id}
                                 onValueChange={(val) => setFormState((prev) => ({ ...prev, training_module_id: val }))}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select module" />
+                                    <SelectValue placeholder={t_ext('select_module', 'Select module')} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {modules?.map((module: any) => (
@@ -319,16 +316,16 @@ export function TrainingRulesList() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Target Role (optional)</Label>
+                            <Label>{t_ext('target_role_optional', 'Target Role (optional)')}</Label>
                             <Select
                                 value={formState.target_role || 'none'}
                                 onValueChange={(val) => setFormState((prev) => ({ ...prev, target_role: val === 'none' ? '' : val }))}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Any role" />
+                                    <SelectValue placeholder={t_ext('any_role', 'Any role')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">Any role</SelectItem>
+                                    <SelectItem value="none">{t_ext('any_role', 'Any role')}</SelectItem>
                                     {roles.map(role => (
                                         <SelectItem key={role} value={role}>{role}</SelectItem>
                                     ))}
@@ -337,16 +334,16 @@ export function TrainingRulesList() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Target Department (optional)</Label>
+                            <Label>{t_ext('target_department_optional', 'Target Department (optional)')}</Label>
                             <Select
                                 value={formState.target_department_id || 'none'}
                                 onValueChange={(val) => setFormState((prev) => ({ ...prev, target_department_id: val === 'none' ? '' : val }))}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Any department" />
+                                    <SelectValue placeholder={t_ext('any_department', 'Any department')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">Any department</SelectItem>
+                                    <SelectItem value="none">{t_ext('any_department', 'Any department')}</SelectItem>
                                     {departments?.map((dept: any) => (
                                         <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                                     ))}
@@ -355,16 +352,16 @@ export function TrainingRulesList() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Job Title (optional)</Label>
+                            <Label>{t_ext('job_title_optional', 'Job Title (optional)')}</Label>
                             <Select
                                 value={formState.job_title_id || 'none'}
                                 onValueChange={(val) => setFormState((prev) => ({ ...prev, job_title_id: val === 'none' ? '' : val }))}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Any job title" />
+                                    <SelectValue placeholder={t_ext('any_job_title', 'Any job title')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">Any job title</SelectItem>
+                                    <SelectItem value="none">{t_ext('any_job_title', 'Any job title')}</SelectItem>
                                     {jobTitles?.map((jt: any) => (
                                         <SelectItem key={jt.id} value={jt.id}>{jt.title}</SelectItem>
                                     ))}
@@ -373,7 +370,7 @@ export function TrainingRulesList() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Rule Status</Label>
+                            <Label>{t_ext('rule_status', 'Rule Status')}</Label>
                             <Select
                                 value={formState.is_active ? 'active' : 'inactive'}
                                 onValueChange={(val) => setFormState((prev) => ({ ...prev, is_active: val === 'active' }))}
@@ -382,8 +379,8 @@ export function TrainingRulesList() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="active">Active</SelectItem>
-                                    <SelectItem value="inactive">Inactive</SelectItem>
+                                    <SelectItem value="active">{t_ext('active', 'Active')}</SelectItem>
+                                    <SelectItem value="inactive">{t_ext('inactive', 'Inactive')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -394,8 +391,7 @@ export function TrainingRulesList() {
                                 setEditingRule(null)
                                 resetForm()
                             }}>
-                                Cancel
-                            </Button>
+                                {t_ext('cancel', 'Cancel')}</Button>
                             <Button onClick={handleSaveRule} disabled={createMutation.isPending || updateMutation.isPending}>
                                 {editingRule ? 'Save Changes' : 'Create Rule'}
                             </Button>

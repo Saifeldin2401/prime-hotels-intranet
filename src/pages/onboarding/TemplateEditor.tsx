@@ -24,6 +24,7 @@ import type { OnboardingTaskDefinition } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
 
 export default function TemplateEditor() {
+    const { t: t_ext } = useTranslation('extracted');
     const { t } = useTranslation('onboarding')
     const navigate = useNavigate()
     const { id } = useParams()
@@ -252,7 +253,7 @@ export default function TemplateEditor() {
                                         <Command>
                                             <CommandInput placeholder={t('editor.select_job') + "..."} />
                                             <CommandList id={jobTitleListId}>
-                                                <CommandEmpty>No job title found.</CommandEmpty>
+                                                <CommandEmpty>{t_ext('no_job_title_found', 'No job title found.')}</CommandEmpty>
                                                 <CommandGroup>
                                                     {jobTitlesList?.map((item) => (
                                                         <CommandItem
@@ -264,15 +265,7 @@ export default function TemplateEditor() {
                                                             }}
                                                             className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                         >
-                                                            <div
-                                                                className="w-full flex items-center px-2 py-1.5 cursor-pointer"
-                                                                onPointerDown={(e) => e.preventDefault()}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    setJobTitle(item.title)
-                                                                    setOpenJobTitle(false)
-                                                                }}
-                                                            >
+                                                            <div className="w-full flex items-center px-2 py-1.5">
                                                                 <Check
                                                                     className={cn(
                                                                         "mr-2 h-4 w-4",
@@ -490,7 +483,7 @@ export default function TemplateEditor() {
                                                     id={`task-link-${index}`}
                                                     value={task.link_id || ''}
                                                     onChange={(e) => handleTaskChange(index, 'link_id', e.target.value)}
-                                                    placeholder="https://..."
+                                                    placeholder={t_ext('https', 'https://...')}
                                                 />
                                             </div>
                                         )}

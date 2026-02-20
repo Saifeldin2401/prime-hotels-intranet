@@ -16,6 +16,7 @@ import { PageTracker } from '@/components/analytics/PageTracker'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 
 const PublicHome = lazy(() => import('@/pages/public/PublicHome'))
+const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
 
 const RootLayout = () => {
     const { loading } = useAuth()
@@ -58,6 +59,7 @@ export const router = createBrowserRouter(
     createRoutesFromElements(
         <Route element={<RootLayout />} errorElement={<RouteErrorBoundary section="App"><Outlet /></RouteErrorBoundary>}>
             <Route path="/" element={<RootIndex />} />
+            <Route path="/verify/:code?" element={<VerifyCertificate />} />
 
             {AuthRoutes()}
             {AdminRoutes()}

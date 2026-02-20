@@ -7,6 +7,7 @@
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { CheckCircle, XCircle } from 'lucide-react'
+import { useTranslation } from "react-i18next";
 
 interface FillBlankQuestionProps {
     value: string

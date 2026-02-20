@@ -19,9 +19,11 @@ import {
     logCertificateAction,
     revokeCertificate,
     loadLogoAsDataUrl,
+    mapCertificateFromDb,
     type CertificateData,
     type Certificate
 } from '@/lib/certificateService'
+import { supabase } from '@/lib/supabase'
 import { showSuccessToast, showErrorToast } from '@/lib/toastHelpers'
 
 /**
@@ -33,6 +35,27 @@ export function useMyCertificates() {
     return useQuery({
         queryKey: ['certificates', 'my', user?.id],
         queryFn: () => getUserCertificates(user!.id),
+        enabled: !!user?.id
+    })
+}
+
+/**
+ * Fetch all certificates (admin view)
+ */
+export function useAllCertificates() {
+    const { user } = useAuth()
+
+    return useQuery({
+        queryKey: ['certificates', 'all'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('certificates')
+                .select('*')
+                .order('created_at', { ascending: false })
+
+            if (error) throw error
+            return data.map(mapCertificateFromDb)
+        },
         enabled: !!user?.id
     })
 }
@@ -192,7 +215,7 @@ export function useRevokeCertificate() {
  */
 export function useGenerateTrainingCertificate() {
     const queryClient = useQueryClient()
-    const { user, profile } = useAuth()
+    const { user, profile, properties, departments } = useAuth()
 
     return useMutation({
         mutationFn: async ({
@@ -217,7 +240,11 @@ export function useGenerateTrainingCertificate() {
                 completionDate: new Date(),
                 score: score,
                 trainingModuleId: trainingModule.id,
-                trainingProgressId: progress.id
+                trainingProgressId: progress.id,
+                propertyId: properties?.[0]?.id,
+                propertyName: properties?.[0]?.name,
+                departmentId: departments?.[0]?.id,
+                departmentName: departments?.[0]?.name
             }
 
             const certificate = await createCertificate(certificateData)
@@ -235,7 +262,7 @@ export function useGenerateTrainingCertificate() {
  */
 export function useGenerateSOPCertificate() {
     const queryClient = useQueryClient()
-    const { user, profile } = useAuth()
+    const { user, profile, properties, departments } = useAuth()
 
     return useMutation({
         mutationFn: async ({
@@ -268,7 +295,11 @@ export function useGenerateSOPCertificate() {
                 score: score,
                 passingScore: passingScore,
                 sopId: sop.id,
-                quizAttemptId: quizAttempt.id
+                quizAttemptId: quizAttempt.id,
+                propertyId: properties?.[0]?.id,
+                propertyName: properties?.[0]?.name,
+                departmentId: departments?.[0]?.id,
+                departmentName: departments?.[0]?.name
             }
 
             const certificate = await createCertificate(certificateData)

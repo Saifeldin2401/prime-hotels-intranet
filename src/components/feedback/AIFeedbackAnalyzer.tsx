@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAIFeedbackAnalyzer } from '@/hooks/useAIFeedbackAnalyzer'
+import { useTranslation } from "react-i18next";
 
 const sentimentConfig = {
     positive: {

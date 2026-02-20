@@ -16,15 +16,13 @@ import {
     GraduationCap,
     Megaphone,
     BookOpen,
-    ArrowRight,
     CornerDownLeft,
     Command,
     Clock,
-    X,
     Wrench,
     Briefcase,
+    CheckSquare,
     LayoutDashboard,
-    Settings,
     Sparkles,
     Hash
 } from 'lucide-react'
@@ -64,6 +62,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             training: <GraduationCap className="w-4 h-4" />,
             announcement: <Megaphone className="w-4 h-4" />,
             sop: <BookOpen className="w-4 h-4" />,
+            task: <CheckSquare className="w-4 h-4" />,
             ticket: <Wrench className="w-4 h-4" />,
             referral: <Briefcase className="w-4 h-4" />,
             page: <LayoutDashboard className="w-4 h-4" />,
@@ -78,6 +77,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             training: 'text-emerald-500 bg-emerald-50',
             announcement: 'text-amber-500 bg-amber-50',
             sop: 'text-indigo-500 bg-indigo-50',
+            task: 'text-green-600 bg-green-50',
             ticket: 'text-orange-500 bg-orange-50',
             referral: 'text-pink-500 bg-pink-50',
             page: 'text-gray-500 bg-gray-100',
@@ -92,6 +92,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             training: t('search.type_training', 'Training'),
             announcement: t('search.type_announcement', 'Announcement'),
             sop: t('search.type_sop', 'SOP'),
+            task: t('search.type_task', 'Task'),
             ticket: t('search.type_ticket', 'Ticket'),
             referral: t('search.type_referral', 'Referral'),
             page: t('search.type_page', 'Page'),
@@ -105,6 +106,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         setQuery('')
         navigate(url)
     }, [navigate, onOpenChange, query, saveSearch])
+
+    const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setQuery(e.target.value)
+        setSelectedIndex(0)
+    }, [])
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         const items = results.length > 0 ? results : []
@@ -139,13 +145,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             selected?.scrollIntoView({ block: 'nearest' })
         }
     }, [selectedIndex])
-
-    // Reset selected index on results change
-    const [prevResults, setPrevResults] = useState(results)
-    if (results !== prevResults) {
-        setPrevResults(results)
-        setSelectedIndex(0)
-    }
 
     if (!open) return null
 
@@ -185,7 +184,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                     ref={inputRef}
                                     type="text"
                                     value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
+                                    onChange={handleQueryChange}
                                     onKeyDown={handleKeyDown}
                                     placeholder={t('search.command_palette_placeholder', 'Search pages, people, documents...')}
                                     className="flex-1 bg-transparent outline-none text-lg text-gray-900 placeholder:text-gray-400"
@@ -217,9 +216,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                                 {t('search.clear', 'Clear')}
                                             </button>
                                         </div>
-                                        {recentSearches.slice(0, 5).map((search, idx) => (
+                                        {recentSearches.slice(0, 5).map((search) => (
                                             <button
-                                                key={idx}
+                                                key={search}
                                                 className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors text-start"
                                                 onClick={() => setQuery(search)}
                                             >

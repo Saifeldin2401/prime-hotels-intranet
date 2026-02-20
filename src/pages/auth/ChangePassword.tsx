@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Check, X, Eye, EyeOff, Loader2, ShieldCheck, Lock, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { markWizardPending } from '@/config/newUserTour'
+import { useTranslation } from "react-i18next";
 
 export default function ChangePassword() {
     const { user, profile, loading: authLoading, signOut, refreshSession } = useAuth()

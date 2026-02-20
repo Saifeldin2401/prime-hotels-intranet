@@ -14,9 +14,10 @@ import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from 'date-fns'
 import type { Notification } from '@/lib/types'
 import { useAuth } from '@/hooks/useAuth'
+import { useTranslation } from "react-i18next";
 
 export function NotificationBell() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingRead } = useNotifications()
   const { roles } = useAuth()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
@@ -110,7 +111,7 @@ export function NotificationBell() {
                 size="sm"
                 className="text-xs h-auto px-2 py-1"
                 onClick={() => markAllAsRead.mutate()}
-                disabled={markAllAsRead.isPending}
+                disabled={isMarkingRead}
               >
                 Mark all read
               </Button>
@@ -118,7 +119,7 @@ export function NotificationBell() {
           </div>
         </div>
         <div className="h-[300px] overflow-y-auto">
-          {notifications.length === 0 ? (
+          {(!notifications || notifications.length === 0) ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               No notifications
             </div>

@@ -7,6 +7,7 @@ import { AutomationSettings } from './components/AutomationSettings'
 import { TrainingRulesList } from './components/TrainingRulesList'
 import { TaskTemplateList } from './components/TaskTemplateList'
 import { Separator } from '@/components/ui/separator'
+import { useTranslation } from "react-i18next";
 
 export default function WorkflowDashboard() {
     return (

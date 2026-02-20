@@ -1,35 +1,16 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import type { AppRole } from '@/lib/constants'
-import { useState, useEffect } from 'react'
+import { useTranslation } from "react-i18next";
 
 /**
- * Smart Role-Based Dashboard Routing
- * 
- * Maps each role to their appropriate dashboard:
- * - staff → /staff-dashboard
- * - department_head → /dashboard/department-head
- * - property_manager → /dashboard/property-manager  
- * - property_hr → /dashboard/property-hr
- * - regional_hr → /dashboard/regional-hr
- * - regional_admin → /dashboard/corporate-admin
- * 
- * Falls back to /staff-dashboard for unknown roles or timeout
+ * Unified Dashboard Routing
+ *
+ * All roles land on /dashboard, which renders role-specific content.
  */
-
-const roleToDashboardPath: Record<AppRole, string> = {
-    corporate_admin: '/dashboard/corporate-admin',
-    staff: '/staff-dashboard',
-    department_head: '/dashboard/department-head',
-    property_manager: '/dashboard/property-manager',
-    property_hr: '/dashboard/property-hr',
-    regional_hr: '/dashboard/regional-hr',
-    regional_admin: '/dashboard/corporate-admin',
-    manager: '/staff-dashboard',
-}
-
 export function RoleBasedRedirect() {
-    const { user, primaryRole, roles, loading, rolesLoading } = useAuth()
+    const { t: t_ext } = useTranslation('extracted');
+    const { user, loading, rolesLoading } = useAuth()
 
     // Show loading while auth is loading
     if (loading) {
@@ -37,7 +18,7 @@ export function RoleBasedRedirect() {
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="mt-4 text-muted-foreground">Loading...</p>
+                    <p className="mt-4 text-muted-foreground">{t_ext('loading', 'Loading...')}</p>
                 </div>
             </div>
         )
@@ -55,29 +36,20 @@ export function RoleBasedRedirect() {
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="mt-4 text-muted-foreground">Preparing your dashboard...</p>
+                    <p className="mt-4 text-muted-foreground">{t_ext('preparing_your_dashboard', 'Preparing your dashboard...')}</p>
                 </div>
             </div>
         )
     }
 
-    // Get the dashboard path for the user's primary role
-    // Default to staff-dashboard if no roles (after timeout or genuinely no roles)
-    const dashboardPath = primaryRole
-        ? (roleToDashboardPath[primaryRole as AppRole] || '/staff-dashboard')
-        : '/staff-dashboard'
-
-    // Navigate to the appropriate dashboard
-
-    return <Navigate to={dashboardPath} replace />
+    // Always redirect to unified dashboard
+    return <Navigate to="/dashboard" replace />
 }
 
 /**
  * Helper function to get dashboard path for a role
  * Useful for programmatic navigation
  */
-export function getDashboardPathForRole(role: AppRole | string): string {
-    return roleToDashboardPath[role as AppRole] || '/dashboard'
+export function getDashboardPathForRole(_role: AppRole | string): string {
+    return '/dashboard'
 }
-
-

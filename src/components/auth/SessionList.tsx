@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime } from '@/lib/utils'
+import { useTranslation } from "react-i18next";
 
 interface Session {
   id: string
@@ -15,6 +16,7 @@ interface Session {
 }
 
 export function SessionList() {
+    const { t: t_ext } = useTranslation('extracted');
   const { user } = useAuth()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,18 +62,18 @@ export function SessionList() {
   }
 
   if (loading) {
-    return <div>Loading sessions...</div>
+    return <div>{t_ext('loading_sessions', 'Loading sessions...')}</div>
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Active Sessions</CardTitle>
-        <CardDescription>Manage your active sessions across devices</CardDescription>
+        <CardTitle>{t_ext('active_sessions', 'Active Sessions')}</CardTitle>
+        <CardDescription>{t_ext('manage_your_active_sessions_across_devic', 'Manage your active sessions across devices')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {sessions.length === 0 ? (
-          <p className="text-muted-foreground">No active sessions found</p>
+          <p className="text-muted-foreground">{t_ext('no_active_sessions_found', 'No active sessions found')}</p>
         ) : (
           <>
             {sessions.map((session) => (
@@ -80,19 +82,18 @@ export function SessionList() {
                 className="flex items-center justify-between p-4 border rounded-lg"
               >
                 <div>
-                  <p className="font-medium">Current Session</p>
+                  <p className="font-medium">{t_ext('current_session', 'Current Session')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Last active: {formatDateTime(session.updated_at)}
+                    {t_ext('last_active', 'Last active:')}{formatDateTime(session.updated_at)}
                   </p>
                   {session.ip && (
-                    <p className="text-sm text-muted-foreground">IP: {session.ip}</p>
+                    <p className="text-sm text-muted-foreground">{t_ext('ip', 'IP:')}{session.ip}</p>
                   )}
                 </div>
               </div>
             ))}
             <Button variant="destructive" onClick={handleSignOutAll} className="w-full">
-              Sign Out from All Devices
-            </Button>
+              {t_ext('sign_out_from_all_devices', 'Sign Out from All Devices')}</Button>
           </>
         )}
       </CardContent>

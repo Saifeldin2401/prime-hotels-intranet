@@ -220,7 +220,7 @@ export function useSidebarCounts() {
 
                 // Pending training assignments (always user-specific)
                 supabase
-                    .from('training_progress')
+                    .from('learning_progress')
                     .select('id', { count: 'exact', head: true })
                     .eq('user_id', user.id)
                     .in('status', ['not_started', 'in_progress']),

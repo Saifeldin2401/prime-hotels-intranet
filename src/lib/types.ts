@@ -336,12 +336,16 @@ export interface DocumentVersion {
   id: string
   document_id: string
   version_number: number
-  file_url: string
+  file_url: string | null
   storage_bucket?: string | null
   storage_path?: string | null
   change_summary: string | null
-  created_by: string
+  created_by: string | null
   created_at: string
+  title?: string | null
+  content?: string | null
+  status?: DocumentStatus | null
+  metadata?: Record<string, unknown> | null
 }
 
 export interface DocumentApproval {
@@ -401,6 +405,7 @@ export interface TrainingContentBlock {
   content: string
   content_url: string | null
   content_data: Record<string, unknown> | null
+  source_document_id?: string | null
   order: number
   is_mandatory: boolean
   created_at: string

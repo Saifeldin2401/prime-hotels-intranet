@@ -23,8 +23,10 @@ import {
 } from "@/components/ui/dialog"
 import { WorkflowEditor } from './WorkflowEditor'
 import type { WorkflowDefinition } from '@/services/workflowEngine'
+import { useTranslation } from "react-i18next";
 
 export function WorkflowList() {
+    const { t: t_ext } = useTranslation('extracted');
     const { data: workflows, isLoading, error } = useWorkflows()
     const toggleMutation = useToggleWorkflow()
     const executeMutation = useExecuteWorkflow()
@@ -115,7 +117,7 @@ export function WorkflowList() {
     if (error) {
         return (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                Failed to load workflows: {error instanceof Error ? error.message : 'Unknown error'}
+                {t_ext('failed_to_load_workflows', 'Failed to load workflows:')}{error instanceof Error ? error.message : 'Unknown error'}
             </div>
         )
     }
@@ -123,23 +125,22 @@ export function WorkflowList() {
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Workflow Definitions</h3>
+                <h3 className="text-lg font-medium">{t_ext('workflow_definitions', 'Workflow Definitions')}</h3>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    New Workflow
-                </Button>
+                    {t_ext('new_workflow', 'New Workflow')}</Button>
             </div>
 
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Workflow Name</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Trigger</TableHead>
-                            <TableHead>Last Updated</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{t_ext('workflow_name', 'Workflow Name')}</TableHead>
+                            <TableHead>{t_ext('type', 'Type')}</TableHead>
+                            <TableHead>{t_ext('trigger', 'Trigger')}</TableHead>
+                            <TableHead>{t_ext('last_updated', 'Last Updated')}</TableHead>
+                            <TableHead>{t_ext('status_1', 'Status')}</TableHead>
+                            <TableHead className="text-right">{t_ext('actions', 'Actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -178,8 +179,7 @@ export function WorkflowList() {
                                             onClick={() => setEditingWorkflow(workflow)}
                                         >
                                             <Settings2 className="h-4 w-4 mr-2" />
-                                            Edit
-                                        </Button>
+                                            {t_ext('edit', 'Edit')}</Button>
                                         <Button
                                             variant="outline"
                                             size="sm"
@@ -191,16 +191,14 @@ export function WorkflowList() {
                                             ) : (
                                                 <Play className="h-4 w-4 mr-2" />
                                             )}
-                                            Run
-                                        </Button>
+                                            {t_ext('run', 'Run')}</Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="text-destructive hover:text-destructive"
                                             onClick={() => setDeleteId(workflow.id)}
                                         >
-                                            Delete
-                                        </Button>
+                                            {t_ext('delete', 'Delete')}</Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -208,8 +206,7 @@ export function WorkflowList() {
                         {!workflows?.length && (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                                    No workflows found.
-                                </TableCell>
+                                    {t_ext('no_workflows_found', 'No workflows found.')}</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
@@ -219,7 +216,7 @@ export function WorkflowList() {
             <Dialog open={!!editingWorkflow} onOpenChange={() => setEditingWorkflow(null)}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Edit Workflow: {editingWorkflow?.name}</DialogTitle>
+                        <DialogTitle>{t_ext('edit_workflow', 'Edit Workflow:')}{editingWorkflow?.name}</DialogTitle>
                     </DialogHeader>
                     {editingWorkflow && (
                         <WorkflowEditor
@@ -233,17 +230,15 @@ export function WorkflowList() {
             <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete Workflow?</DialogTitle>
+                        <DialogTitle>{t_ext('delete_workflow', 'Delete Workflow?')}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                         <p className="text-sm text-muted-foreground">
-                            This will archive the workflow and remove it from active lists. Existing executions remain in history.
-                        </p>
+                            {t_ext('this_will_archive_the_workflow_and_remov', 'This will archive the workflow and remove it from active lists. Existing executions remain in history.')}</p>
                         <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+                            <Button variant="outline" onClick={() => setDeleteId(null)}>{t_ext('cancel', 'Cancel')}</Button>
                             <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
-                                Delete
-                            </Button>
+                                {t_ext('delete', 'Delete')}</Button>
                         </div>
                     </div>
                 </DialogContent>
@@ -252,7 +247,7 @@ export function WorkflowList() {
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Create New Workflow</DialogTitle>
+                        <DialogTitle>{t_ext('create_new_workflow', 'Create New Workflow')}</DialogTitle>
                     </DialogHeader>
                     <WorkflowEditor
                         workflow={{ id: '', name: '', type: 'event-based', trigger_config: {}, action_config: {}, is_active: true }}

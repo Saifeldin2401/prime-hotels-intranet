@@ -38,6 +38,7 @@ import { toast } from 'sonner'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { announcementSchema } from '@/lib/validationSchemas'
 import { LoadingButton } from '@/components/loading'
+import { useTranslation } from "react-i18next";
 
 interface AnnouncementEditorProps {
   initialData?: any

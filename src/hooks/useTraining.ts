@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -735,10 +736,39 @@ export function useAssignmentProgress(assignmentId: string | null) {
 
 export function useMyAssignments() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const channel = supabase
+      .channel(`my-assignments-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'learning_assignments' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['my-assignments', user.id] })
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'learning_progress', filter: `user_id=eq.${user.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['my-assignments', user.id] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id, queryClient])
 
   return useQuery({
     queryKey: ['my-assignments', user?.id],
     queryFn: () => learningService.getMyAssignments(),
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true
   })
 }

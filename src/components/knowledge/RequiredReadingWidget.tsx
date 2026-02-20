@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useRequiredReading } from '@/hooks/useKnowledge'
 import type { RequiredReading } from '@/types/knowledge'
+import { useTranslation } from "react-i18next";
 
 interface RequiredReadingWidgetProps {
     /** Maximum items to show */

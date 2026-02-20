@@ -86,6 +86,123 @@ interface TrainingTemplate {
   template_structure?: any
 }
 
+// Reusable utility functions moved outside of component to avoid hoisting issues
+const normalizeDurationMinutes = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return undefined
+  if (value <= 0) return undefined
+  if (value > 120) return Math.round(value / 60)
+  return value
+}
+
+const toDurationSeconds = (minutes?: number | null) => {
+  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) return null
+  if (minutes <= 0) return null
+  return Math.round(minutes * 60)
+}
+
+const normalizeEstimatedDuration = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return ''
+  if (value <= 0) return ''
+  if (value > 240) return Math.max(1, Math.round(value / 60))
+  return Math.round(value)
+}
+
+const estimateBlockDurationMinutes = (block: ContentBlockForm) => {
+  if (block.duration && block.duration > 0) return block.duration
+  if (block.type === 'text') {
+    const text = (block.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    const words = text ? text.split(' ').length : 0
+    if (!words) return 0
+    return Math.max(1, Math.round(words / 180))
+  }
+  switch (block.type) {
+    case 'image':
+      return 2
+    case 'document_link':
+      return 3
+    case 'quiz':
+      return 5
+    case 'sop_reference':
+      return 4
+    case 'audio':
+    case 'video':
+    case 'interactive':
+      return 5
+    default:
+      return 0
+  }
+}
+
+const deriveTitleFromUrl = (value: string) => {
+  if (!value) return ''
+  try {
+    const url = new URL(value)
+    const path = url.pathname.split('/').filter(Boolean)
+    const last = path[path.length - 1]
+    if (last) {
+      return decodeURIComponent(last)
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[_-]+/g, ' ')
+        .trim()
+    }
+    return url.hostname.replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+
+const stripHtml = (value: string) => {
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const buildSectionSourceText = (section: TrainingSection) => {
+  const sectionParts = [section.title, section.description || ''].filter(Boolean)
+
+  const itemParts = section.items.map(item => {
+    if (item.type === 'text') {
+      return stripHtml(item.content || '')
+    }
+    if (item.type === 'sop_reference') {
+      return item.title ? `SOP Reference: ${item.title}` : 'SOP Reference'
+    }
+    if (item.title) return item.title
+    return item.type
+  })
+
+  return [...sectionParts, ...itemParts].filter(Boolean).join('\n')
+}
+
+const buildModuleSourceText = (sections: TrainingSection[]) => {
+  return sections
+    .map(section => buildSectionSourceText(section))
+    .filter(Boolean)
+    .join('\n\n')
+    .slice(0, 8000)
+}
+
+function getBlockValidation(block: ContentBlockForm, t: (key: string, options?: any) => string) {
+  if (block.type === 'quiz' && !(block.content_data as any)?.quiz_id) {
+    return { ok: false, message: t('builder.missingQuiz') }
+  }
+  if (block.type === 'sop_reference' && !(block.content_data as any)?.sop_id) {
+    return { ok: false, message: t('builder.missingSop') }
+  }
+  if (['video', 'audio', 'image', 'document_link', 'interactive'].includes(block.type) && !block.content_url) {
+    return { ok: false, message: t('builder.missingUrl') }
+  }
+  if (block.type === 'text' && !block.content.trim()) {
+    return { ok: false, message: t('builder.missingContent') }
+  }
+  return { ok: true, message: t('builder.readyToSave', { defaultValue: 'Ready to save' }) }
+}
+
 export function TrainingBuilder() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
@@ -316,6 +433,9 @@ export function TrainingBuilder() {
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
   const [showQuestionDialog, setShowQuestionDialog] = useState(false)
   const [showAIDialog, setShowAIDialog] = useState(false)
+  const [aiPrefillContent, setAiPrefillContent] = useState('')
+  const [aiPrefillTitle, setAiPrefillTitle] = useState('')
+  const [aiTargetSectionId, setAiTargetSectionId] = useState<string | null>(null)
   const [showKBSidebar, setShowKBSidebar] = useState(false)
   const [showSmartWizard, setShowSmartWizard] = useState(false)
 
@@ -351,7 +471,7 @@ export function TrainingBuilder() {
   const totalItems = sections.reduce((acc, section) => acc + section.items.length, 0)
   const overrideDuration = useEstimatedDuration && estimatedDuration ? Number(estimatedDuration) : null
   const displayDuration = overrideDuration ?? calculatedDuration
-  const blockValidation = getBlockValidation(currentBlock)
+  const blockValidation = getBlockValidation(currentBlock, t)
   const recentUploadsForType = recentUploads.filter(upload => {
     if (currentBlock.type === 'image') return upload.type === 'image'
     if (currentBlock.type === 'audio') return upload.type === 'audio'
@@ -376,6 +496,25 @@ export function TrainingBuilder() {
   const selectedTemplate = templateOptions.find(template => template.id === templatePreset) || null
   const templateStats = getTemplateStats(selectedTemplate)
   const activeSectionName = sections.find(section => section.id === activeSection)?.title
+
+  const openAIGenerator = (content: string, title: string, targetSectionId: string | null) => {
+    setAiPrefillContent(content)
+    setAiPrefillTitle(title)
+    setAiTargetSectionId(targetSectionId)
+    setShowAIDialog(true)
+  }
+
+  const openAIGeneratorForSection = (sectionId: string) => {
+    const section = sections.find(s => s.id === sectionId)
+    if (!section) return
+    const content = buildSectionSourceText(section)
+    openAIGenerator(content, section.title, sectionId)
+  }
+
+  const openAIGeneratorForModule = () => {
+    const content = buildModuleSourceText(sections)
+    openAIGenerator(content, title || t('builder.untitledModule'), null)
+  }
 
   const steps = [
     { key: 'setup', label: t('builder.steps.setup'), description: t('builder.steps.setupDesc') },
@@ -593,67 +732,9 @@ export function TrainingBuilder() {
   const savedBlocksKey = 'training_builder_saved_blocks_v1'
   const recentUploadsKey = 'training_builder_recent_uploads_v1'
 
-  const normalizeDurationMinutes = (value?: number | null) => {
-    if (value === null || value === undefined || Number.isNaN(value)) return undefined
-    if (value <= 0) return undefined
-    if (value > 120) return Math.round(value / 60)
-    return value
-  }
+  // No changes needed here, just removing the old definitions
 
-  const toDurationSeconds = (minutes?: number | null) => {
-    if (minutes === null || minutes === undefined || Number.isNaN(minutes)) return null
-    if (minutes <= 0) return null
-    return Math.round(minutes * 60)
-  }
-
-  const normalizeEstimatedDuration = (value?: number | null) => {
-    if (value === null || value === undefined || Number.isNaN(value)) return ''
-    if (value <= 0) return ''
-    if (value > 240) return Math.max(1, Math.round(value / 60))
-    return Math.round(value)
-  }
-
-  const estimateBlockDurationMinutes = (block: ContentBlockForm) => {
-    if (block.duration && block.duration > 0) return block.duration
-    if (block.type === 'text') {
-      const text = (block.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-      const words = text ? text.split(' ').length : 0
-      if (!words) return 0
-      return Math.max(1, Math.round(words / 180))
-    }
-    switch (block.type) {
-      case 'image':
-        return 2
-      case 'document_link':
-        return 3
-      case 'quiz':
-        return 5
-      case 'sop_reference':
-        return 4
-      case 'audio':
-      case 'video':
-      case 'interactive':
-        return 5
-      default:
-        return 0
-    }
-  }
-
-  function getBlockValidation(block: ContentBlockForm) {
-    if (block.type === 'quiz' && !(block.content_data as any)?.quiz_id) {
-      return { ok: false, message: t('builder.missingQuiz') }
-    }
-    if (block.type === 'sop_reference' && !(block.content_data as any)?.sop_id) {
-      return { ok: false, message: t('builder.missingSop') }
-    }
-    if (['video', 'audio', 'image', 'document_link', 'interactive'].includes(block.type) && !block.content_url) {
-      return { ok: false, message: t('builder.missingUrl') }
-    }
-    if (block.type === 'text' && !block.content.trim()) {
-      return { ok: false, message: t('builder.missingContent') }
-    }
-    return { ok: true, message: t('builder.readyToSave', 'Ready to save') }
-  }
+  // getBlockValidation moved outside
 
   const addRecentUpload = (upload: { url: string; name: string; type: 'image' | 'audio' | 'document' }) => {
     setRecentUploads(prev => {
@@ -668,23 +749,7 @@ export function TrainingBuilder() {
     })
   }
 
-  const deriveTitleFromUrl = (value: string) => {
-    if (!value) return ''
-    try {
-      const url = new URL(value)
-      const path = url.pathname.split('/').filter(Boolean)
-      const last = path[path.length - 1]
-      if (last) {
-        return decodeURIComponent(last)
-          .replace(/\.[^/.]+$/, '')
-          .replace(/[_-]+/g, ' ')
-          .trim()
-      }
-      return url.hostname.replace(/^www\./, '')
-    } catch {
-      return ''
-    }
-  }
+  // deriveTitleFromUrl moved outside
 
   useEffect(() => {
     if (!showContentDialog) return
@@ -909,7 +974,7 @@ export function TrainingBuilder() {
   }
 
   const handleSaveBlockToLibrary = () => {
-    const validation = getBlockValidation(currentBlock)
+    const validation = getBlockValidation(currentBlock, t)
     if (!validation.ok) {
       toast({
         title: t('error', 'Error'),
@@ -989,7 +1054,7 @@ export function TrainingBuilder() {
 
   const saveContent = () => {
     if (!activeSection) return
-    const validation = getBlockValidation(currentBlock)
+    const validation = getBlockValidation(currentBlock, t)
     if (!validation.ok) {
       toast({
         title: t('error', 'Error'),
@@ -1949,6 +2014,7 @@ export function TrainingBuilder() {
           onDeleteContent={deleteContent}
           onReorderSection={handleReorderSection}
           onReorderContent={handleReorderContent}
+          onGenerateQuizFromSection={openAIGeneratorForSection}
         />
       )
     }
@@ -2247,7 +2313,7 @@ export function TrainingBuilder() {
               <Button
                 variant="outline"
                 className={cn("w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100", isRTL ? "flex-row-reverse" : "")}
-                onClick={() => setShowAIDialog(true)}
+                onClick={openAIGeneratorForModule}
               >
                 <FileQuestion className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
                 {t('builder.generateQuiz')}
@@ -3101,10 +3167,17 @@ export function TrainingBuilder() {
             */}
             <AIQuestionGenerator
               sopId="general"
-              sopTitle={title || t('builder.untitledModule')}
-              sopContent=""
+              sopTitle={aiPrefillTitle || title || t('builder.untitledModule')}
+              sopContent={aiPrefillContent}
+              initialContent={aiPrefillContent}
+              initialSourceType="text"
+              defaultGroundedOnly={aiPrefillContent.trim().length > 0}
+              defaultIncludeCitations={aiPrefillContent.trim().length > 0}
               onQuestionsCreated={async (count, ids) => {
                 setShowAIDialog(false)
+                setAiTargetSectionId(null)
+                setAiPrefillContent('')
+                setAiPrefillTitle('')
 
                 // Add quiz block to the active section (or first section) with the generated question IDs
                 if (ids && ids.length > 0) {
@@ -3170,7 +3243,7 @@ export function TrainingBuilder() {
                     }
 
                     // Determine target section: activeSection, or first section, or create a new one
-                    const targetSectionId = activeSection || sections[0]?.id
+                    const targetSectionId = aiTargetSectionId || activeSection || sections[0]?.id
 
                     if (targetSectionId) {
                       // Add to existing section

@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 
 export function UserSkillsDisplay({ userId }: { userId?: string }) {
+    const { t: t_ext } = useTranslation('extracted');
     const { user } = useAuth()
     const { t } = useTranslation('profile')
     const [skills, setSkills] = useState<UserSkill[]>([])
@@ -35,7 +36,7 @@ export function UserSkillsDisplay({ userId }: { userId?: string }) {
     }, [targetUserId, loadSkills])
 
     if (loading) {
-        return <div className="text-center py-8 text-gray-500">Loading skills...</div>
+        return <div className="text-center py-8 text-gray-500">{t_ext('loading_skills', 'Loading skills...')}</div>
     }
 
     if (skills.length === 0) {
@@ -44,11 +45,9 @@ export function UserSkillsDisplay({ userId }: { userId?: string }) {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Award className="w-5 h-5 text-hotel-gold" />
-                        Skills & Competencies
-                    </CardTitle>
+                        {t_ext('skills_competencies', 'Skills & Competencies')}</CardTitle>
                     <CardDescription>
-                        No skills recorded yet. Complete training modules to earn skills.
-                    </CardDescription>
+                        {t_ext('no_skills_recorded_yet_complete_training', 'No skills recorded yet. Complete training modules to earn skills.')}</CardDescription>
                 </CardHeader>
             </Card>
         )
@@ -82,18 +81,16 @@ export function UserSkillsDisplay({ userId }: { userId?: string }) {
                                 {userSkill.verified ? (
                                     <Badge variant="default" className="bg-green-600 hover:bg-green-700">
                                         <ShieldCheck className="w-3 h-3 mr-1" />
-                                        Verified
-                                    </Badge>
+                                        {t_ext('verified', 'Verified')}</Badge>
                                 ) : (
                                     <Badge variant="secondary" className="text-gray-500">
-                                        Unverified
-                                    </Badge>
+                                        {t_ext('unverified', 'Unverified')}</Badge>
                                 )}
                             </div>
 
                             <div className="space-y-2 mt-4">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Proficiency Level</span>
+                                    <span className="text-gray-600">{t_ext('proficiency_level', 'Proficiency Level')}</span>
                                     <span className="font-medium">{userSkill.proficiency_level} / 5</span>
                                 </div>
                                 <Progress value={(userSkill.proficiency_level / 5) * 100} className="h-2" />
@@ -110,6 +107,7 @@ export function UserSkillsDisplay({ userId }: { userId?: string }) {
 }
 
 function getSkillIcon(category?: string) {
+
     switch (category?.toLowerCase()) {
         case 'onboarding': return <BookOpen className="w-4 h-4" />
         case 'compliance': return <UserCheck className="w-4 h-4" />

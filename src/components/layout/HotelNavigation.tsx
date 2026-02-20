@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 import { canAccessPage } from '@/lib/rbac'
+import { useTranslation } from "react-i18next";
 
 interface HotelNavigationProps {
   user: User

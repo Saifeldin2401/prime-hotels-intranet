@@ -40,6 +40,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { RelatedArticle } from '@/types/knowledge'
+import { useTranslation } from "react-i18next";
 
 const RELATION_TYPES = [
     { value: 'see_also', label: 'Related / See Also', color: 'blue' },

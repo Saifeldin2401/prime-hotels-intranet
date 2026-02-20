@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import { useTranslation } from "react-i18next";
 
 export function ThemeToggle() {
   const { mode, setMode } = useTheme()

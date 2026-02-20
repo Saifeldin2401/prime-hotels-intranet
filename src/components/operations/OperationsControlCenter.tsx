@@ -74,7 +74,7 @@ export function OperationsControlCenter() {
             <Badge className="bg-green-50 text-green-700 border border-green-100">{departments.length}</Badge>
           </div>
           <Progress value={departments.length ? Math.min(100, departments.length * 10) : 0} className="mt-2" />
-          <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => (window.location.href = '/dashboard/my-team')}>
+          <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => (window.location.href = '/directory')}>
             {t('operations_center.manage_teams')}
           </Button>
         </EnhancedCard>

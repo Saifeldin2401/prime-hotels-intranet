@@ -1,6 +1,10 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import {
+  useMyCertificates,
+  useAllCertificates,
+  useDownloadCertificate,
+  useVerifyCertificate
+} from '@/hooks/useCertificates'
 import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -19,39 +23,18 @@ import {
   FileText,
   Shield,
   Printer,
-  AlertTriangle
+  AlertTriangle,
+  Copy
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import { useTranslation } from 'react-i18next'
 import { useToast } from "@/components/ui/use-toast"
-import type {
-  TrainingCertificate,
-  TrainingProgress,
-  TrainingModule,
-  Profile
-} from '@/lib/types'
-
-// Extended type for certificates with joined data
-interface CertificateWithDetails extends TrainingCertificate {
-  training_progress: TrainingProgress & {
-    training_modules: TrainingModule
-    profiles: Profile
-  }
-}
-
-type CertificateStatus = 'valid' | 'expired' | 'revoked' | 'pending'
-type CertificateType = 'standard' | 'advanced' | 'excellence'
-
-interface VerificationResult {
-  valid: boolean
-  certificate: CertificateWithDetails | null
-  message: string
-}
+import type { Certificate } from '@/lib/certificateService'
 
 export default function TrainingCertificates() {
   const { profile } = useAuth()
-  const { t, i18n } = useTranslation('training')
+  const { t, i18n } = useTranslation(['training', 'public', 'common'])
   const { toast } = useToast()
   const isRTL = i18n.language === 'ar'
   const dateLocale = i18n.language === 'ar' ? ar : enUS
@@ -59,199 +42,61 @@ export default function TrainingCertificates() {
   // State
   const [search, setSearch] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
-  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null)
-  const [selectedCertificate, setSelectedCertificate] = useState<CertificateWithDetails | null>(null)
+  const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null)
   const [showCertificateDialog, setShowCertificateDialog] = useState(false)
 
-  // Fetch user's certificates
-  const { data: myCertificates, isLoading: myLoading } = useQuery({
-    queryKey: ['my-certificates', profile?.id],
-    queryFn: async () => {
-      if (!profile?.id) return []
-      const { data, error } = await supabase
-        .from('training_certificates')
-        .select(`
-          *,
-          training_progress!inner(
-            *,
-            training_modules(id, title, description),
-            profiles!inner(id, full_name, email)
-          )
-        `)
-        .eq('training_progress.profiles.id', profile.id)
-        .order('issued_at', { ascending: false })
+  // Hooks
+  const { data: myCertificates, isLoading: myLoading } = useMyCertificates()
+  const { data: allCertificates, isLoading: allLoading } = useAllCertificates()
+  const downloadMutation = useDownloadCertificate()
+  const verifyMutation = useVerifyCertificate()
 
-      if (error) throw error
-      return data as CertificateWithDetails[]
-    },
-    enabled: !!profile?.id
-  })
-
-  // Admin: Fetch all certificates
-  const { data: allCertificates, isLoading: allLoading } = useQuery({
-    queryKey: ['all-certificates'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('training_certificates')
-        .select(`
-          *,
-          training_progress(
-            *,
-            training_modules(id, title, description),
-            profiles(id, full_name, email)
-          )
-        `)
-        .order('issued_at', { ascending: false })
-      if (error) throw error
-      return data as CertificateWithDetails[]
-    }
-  })
-
-  // Verify certificate mutation
-  const verifyCertificateMutation = useMutation({
-    mutationFn: async (code: string) => {
-      if (!code) return { valid: false, certificate: null, message: t('enterVerificationCode') }
-
-      const { data, error } = await supabase
-        .from('training_certificates')
-        .select(`
-          *,
-          training_progress!inner(
-            *,
-            training_modules(id, title, description),
-            profiles!inner(id, full_name, email)
-          )
-        `)
-        .eq('verification_code', code)
-        .maybeSingle()
-
-      if (error) {
-        console.error('Verification error:', error)
-        return {
-          valid: false,
-          certificate: null,
-          message: t('verificationError')
-        }
-      }
-
-      if (!data) {
-        return {
-          valid: false,
-          certificate: null,
-          message: t('certificateNotFound')
-        }
-      }
-
-      return {
-        valid: true,
-        certificate: data as CertificateWithDetails,
-        message: t('certificateVerified')
-      }
-    },
-    onSuccess: (result) => {
-      setVerificationResult(result)
-    }
-  })
-
-  const downloadCertificateMutation = useMutation({
-    mutationFn: async (certificateId: string) => {
-      const { data, error } = await supabase
-        .from('training_certificates')
-        .select('certificate_url')
-        .eq('id', certificateId)
-        .single()
-
-      if (error) throw error
-      if (!data?.certificate_url) throw new Error(t('errors.certificate_not_available', 'Certificate file not yet generated. Please contact support.'))
-
-      return data
-    },
-    onSuccess: (data) => {
-      if (data?.certificate_url) {
-        window.open(data.certificate_url, '_blank')
-        toast({
-          title: t('success.download_started', 'Download Started'),
-          description: t('success.download_desc', 'Your certificate should open in a new tab.')
-        })
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: t('common:common.error'),
-        description: error.message,
-        variant: 'destructive'
-      })
-    }
-  })
-
-  // Helper functions
-  const getCertificateStatus = (certificate: CertificateWithDetails): CertificateStatus => {
-    const now = new Date()
-    const expiredDate = certificate.expires_at ? new Date(certificate.expires_at) : null
-
-    if (expiredDate && expiredDate < now) return 'expired'
-    return 'valid'
-  }
-
-  const getCertificateType = (score: number): CertificateType => {
-    if (score >= 95) return 'excellence'
-    if (score >= 85) return 'advanced'
-    return 'standard'
-  }
-
-  const getStatusColor = (status: CertificateStatus) => {
+  // Helpers
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'valid': return 'bg-green-100 text-green-800'
-      case 'expired': return 'bg-red-100 text-red-800'
-      case 'revoked': return 'bg-gray-100 text-gray-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'active': return 'bg-green-100 text-green-800'
+      case 'revoked': return 'bg-red-100 text-red-800'
+      case 'expired': return 'bg-yellow-100 text-yellow-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
 
-  const getTypeColor = (type: CertificateType) => {
-    switch (type) {
-      case 'excellence': return 'bg-purple-100 text-purple-800'
-      case 'advanced': return 'bg-blue-100 text-blue-800'
-      case 'standard': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!verificationCode.trim()) return
-    verifyCertificateMutation.mutate(verificationCode)
+    await verifyMutation.mutateAsync(verificationCode.trim())
   }
 
-  const handleDownload = (certificateId: string) => {
-    downloadCertificateMutation.mutate(certificateId)
+  const handleDownload = async (certId: string) => {
+    await downloadMutation.mutateAsync(certId)
   }
 
-  const handleViewCertificate = (certificate: CertificateWithDetails) => {
-    setSelectedCertificate(certificate)
+  const handleView = (cert: Certificate) => {
+    setSelectedCertificate(cert)
     setShowCertificateDialog(true)
   }
 
-  const generateCertificateURL = (certificate: CertificateWithDetails) => {
-    const baseUrl = window.location.origin
-    return `${baseUrl}/certificates/${certificate.id}`
-  }
-
-  const copyCertificateLink = (certificate: CertificateWithDetails) => {
-    const url = generateCertificateURL(certificate)
+  const copyLink = (code: string) => {
+    const url = `${window.location.origin}/verify/${code}`
     navigator.clipboard.writeText(url)
-    alert(t('linkCopied', 'Link copied to clipboard'))
+    toast({
+      title: t('common:actions.copy_success', 'Link copied'),
+      description: t('common:actions.link_copied_desc', 'Verification link copied to clipboard')
+    })
   }
 
-  // Filter certificates
-  const filteredMyCertificates = myCertificates?.filter(cert =>
-    !search || cert.training_progress.training_modules.title.toLowerCase().includes(search.toLowerCase())
+  // Filter
+  const filteredMy = myCertificates?.filter(c =>
+    c.title.toLowerCase().includes(search.toLowerCase()) ||
+    c.certificateNumber.toLowerCase().includes(search.toLowerCase())
   ) || []
 
-  const filteredAllCertificates = allCertificates?.filter(cert =>
-    !search || cert.training_progress.training_modules.title.toLowerCase().includes(search.toLowerCase()) ||
-    cert.training_progress.profiles.full_name?.toLowerCase().includes(search.toLowerCase())
+  const filteredAll = allCertificates?.filter(c =>
+    c.title.toLowerCase().includes(search.toLowerCase()) ||
+    c.recipientName.toLowerCase().includes(search.toLowerCase()) ||
+    c.certificateNumber.toLowerCase().includes(search.toLowerCase())
   ) || []
+
+  const isAdmin = profile?.roles?.some(r => ['corporate_admin', 'regional_admin', 'admin', 'property_manager'].includes(r))
 
   return (
     <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -264,339 +109,249 @@ export default function TrainingCertificates() {
         <TabsList>
           <TabsTrigger value="my-certificates">{t('myCertificates')}</TabsTrigger>
           <TabsTrigger value="verify">{t('verifyCertificate')}</TabsTrigger>
-          <TabsTrigger value="all-certificates">{t('allCertificates')}</TabsTrigger>
-          <TabsTrigger value="history">{t('downloadHistory')}</TabsTrigger>
+          {isAdmin && <TabsTrigger value="all-certificates">{t('allCertificates')}</TabsTrigger>}
         </TabsList>
 
         {/* My Certificates */}
         <TabsContent value="my-certificates" className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
               <Input
                 placeholder={t('searchCertificates')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={`pl-10 ${isRTL ? 'pr-10' : ''}`}
+                className={isRTL ? 'pr-10' : 'pl-10'}
               />
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('myCertificates')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {myLoading ? (
-                <div className="text-center py-8 text-gray-700">{t('loading')}</div>
-              ) : filteredMyCertificates.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredMyCertificates.map((certificate) => {
-                    const status = getCertificateStatus(certificate)
-                    const score = certificate.training_progress.quiz_score || 0
-                    const type = getCertificateType(score)
+          {myLoading ? (
+            <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hotel-gold"></div></div>
+          ) : filteredMy.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredMy.map((cert) => (
+                <Card key={cert.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Award className="w-8 h-8 text-yellow-500" />
+                        <div>
+                          <h3 className="font-semibold text-sm line-clamp-2">{cert.title}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(cert.completionDate), 'PPP', { locale: dateLocale })}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className={getStatusColor(cert.status)}>{t(`status.${cert.status}`, cert.status)}</Badge>
+                    </div>
 
-                    return (
-                      <Card key={certificate.id} className="hover:shadow-lg transition-shadow">
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <Award className="w-8 h-8 text-yellow-500" />
-                              <div>
-                                <h3 className="font-medium text-sm">
-                                  {certificate.training_progress.training_modules.title}
-                                </h3>
-                                <div className="text-sm text-gray-600">
-                                  <div>{t('issuedOn')}: {format(new Date(certificate.issued_at), 'PPP', { locale: dateLocale })}</div>
-                                  {certificate.expires_at && (
-                                    <div>{t('expiresOn')}: {format(new Date(certificate.expires_at), 'PPP', { locale: dateLocale })}</div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <Badge className={getStatusColor(status)}>
-                              {t(status)}
-                            </Badge>
-                          </div>
+                    <div className="space-y-2 mb-6">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">{t('certificateNumber', 'Number')}:</span>
+                        <span className="font-mono">{cert.certificateNumber}</span>
+                      </div>
+                      {cert.score !== undefined && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{t('score')}:</span>
+                          <span className="font-medium">{cert.score}%</span>
+                        </div>
+                      )}
+                    </div>
 
-                          <div className="space-y-2 mb-4">
-                            <div className="flex justify-between text-sm">
-                              <span>{t('score')}:</span>
-                              <span className="font-medium">{score}%</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>{t('certificateType')}:</span>
-                              <Badge className={`bg-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-100 text-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-800 border border-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'} rounded-md`}>
-                                {t(type)}
-                              </Badge>
-                            </div>
-                            {certificate.expires_at && (
-                              <div className="flex justify-between text-sm">
-                                <span>{t('expiresOn')}:</span>
-                                <span>{format(new Date(certificate.expires_at), 'PPP', { locale: dateLocale })}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" onClick={() => handleViewCertificate(certificate)}>
-                              <FileText className="w-4 h-4 mr-2" />
-                              {t('viewCertificate')}
-                            </Button>
-                            <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleDownload(certificate.id)}>
-                              <Download className="w-4 h-4 mr-2" />
-                              {t('download')}
-                            </Button>
-                          </div>
-
-                          {certificate.verification_code && (
-                            <div className="mt-4 pt-4 border-t">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-600">
-                                  {t('verificationCode')}: {certificate.verification_code}
-                                </span>
-                                <Button size="sm" className="bg-hotel-navy text-white hover:bg-hotel-navy-light border border-hotel-navy rounded-md transition-colors" onClick={() => copyCertificateLink(certificate)}>
-                                  <ExternalLink className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-700">{t('noCertificates')}</div>
-              )}
-            </CardContent>
-          </Card>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleView(cert)}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        {t('viewCertificate')}
+                      </Button>
+                      <Button size="sm" className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-white" onClick={() => handleDownload(cert.id)} disabled={downloadMutation.isPending}>
+                        <Download className="w-4 h-4 mr-2" />
+                        {t('download')}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card><CardContent className="py-12 text-center text-muted-foreground">{t('noCertificates')}</CardContent></Card>
+          )}
         </TabsContent>
 
-        {/* Verify Certificate */}
-        <TabsContent value="verify" className="space-y-4">
+        {/* Verification Tab */}
+        <TabsContent value="verify">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
+                <Shield className="w-5 h-5 text-hotel-navy" />
                 {t('verifyCertificate')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="verification-code">{t('enterVerificationCode')}</Label>
+            <CardContent className="space-y-6">
+              <div className="max-w-md space-y-2">
+                <Label>{t('enterVerificationCode')}</Label>
                 <div className="flex gap-2">
                   <Input
-                    id="verification-code"
+                    placeholder="e.g. ABC123XYZ"
                     value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    placeholder={t('enterVerificationCode')}
-                    className="flex-1"
+                    onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
                   />
-                  <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors" onClick={handleVerify} disabled={verifyCertificateMutation.isPending}>
-                    {verifyCertificateMutation.isPending ? t('loading') : t('verifyButton')}
+                  <Button className="bg-hotel-navy hover:bg-hotel-navy-light text-white" onClick={handleVerify} disabled={verifyMutation.isPending}>
+                    {verifyMutation.isPending ? t('common:actions.processing') : t('verifyButton')}
                   </Button>
                 </div>
               </div>
 
-              {verificationResult && (
-                <Card className={verificationResult.valid ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      {verificationResult.valid ? (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
-                      )}
-                      <span className={`font-medium ${verificationResult.valid ? 'text-green-800' : 'text-red-800'}`}>
-                        {verificationResult.message}
-                      </span>
-                    </div>
-
-                    {verificationResult.certificate && (
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>{t('trainingModule')}:</span>
-                          <span className="font-medium">
-                            {verificationResult.certificate.training_progress.training_modules.title}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>{t('issuedTo')}:</span>
-                          <span className="font-medium">
-                            {verificationResult.certificate.training_progress.profiles.full_name}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>{t('issuedOn')}:</span>
-                          <span className="font-medium">
-                            {format(new Date(verificationResult.certificate.issued_at), 'PPP', { locale: dateLocale })}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>{t('score')}:</span>
-                          <span className="font-medium">
-                            {verificationResult.certificate.training_progress.quiz_score}%
-                          </span>
-                        </div>
-                      </div>
+              {verifyMutation.data && (
+                <div className={`p-4 rounded-lg border ${verifyMutation.data.isValid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    {verifyMutation.data.isValid ? (
+                      <CheckCircle className="w-6 h-6 text-green-600" />
+                    ) : (
+                      <AlertTriangle className="w-6 h-6 text-red-600" />
                     )}
-                  </CardContent>
-                </Card>
+                    <h4 className={`font-bold ${verifyMutation.data.isValid ? 'text-green-800' : 'text-red-800'}`}>
+                      {verifyMutation.data.isValid ? t('public:verification.valid_title') : t('public:verification.invalid_title')}
+                    </h4>
+                  </div>
+
+                  {verifyMutation.data.isValid && verifyMutation.data.certificate && (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">{t('public:verification.recipient')}</p>
+                        <p className="font-bold">{verifyMutation.data.certificate.recipientName}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">{t('public:verification.course')}</p>
+                        <p className="font-bold">{verifyMutation.data.certificate.title}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">{t('public:verification.issued_on')}</p>
+                        <p className="font-bold">{verifyMutation.data.certificate.completionDate?.toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">{t('public:verification.id')}</p>
+                        <p className="font-mono font-bold">{verifyMutation.data.certificate.certificateNumber}</p>
+                      </div>
+                    </div>
+                  )}
+                  {!verifyMutation.data.isValid && (
+                    <p className="text-sm text-red-700">{t('public:verification.invalid_code')}</p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* All Certificates (Admin) */}
-        <TabsContent value="all-certificates" className="space-y-4">
-          <div className="flex items-center gap-4">
+        {isAdmin && (
+          <TabsContent value="all-certificates" className="space-y-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
               <Input
                 placeholder={t('searchCertificates')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={`pl-10 ${isRTL ? 'pr-10' : ''}`}
+                className={isRTL ? 'pr-10' : 'pl-10'}
               />
             </div>
-          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('allCertificates')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {allLoading ? (
-                <div className="text-center py-8 text-gray-700">{t('loading')}</div>
-              ) : filteredAllCertificates.length > 0 ? (
-                <div className="space-y-4">
-                  {filteredAllCertificates.map((certificate) => {
-                    const status = getCertificateStatus(certificate)
-                    const score = certificate.training_progress.quiz_score || 0
-                    const type = getCertificateType(score)
-
-                    return (
-                      <div key={certificate.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50">
+            <Card>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {allLoading ? (
+                    <div className="p-8 text-center">{t('common:common.loading')}</div>
+                  ) : filteredAll.length > 0 ? (
+                    filteredAll.map(cert => (
+                      <div key={cert.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-4">
-                          <Award className="w-8 h-8 text-yellow-500" />
+                          <Award className="w-10 h-10 text-hotel-gold" />
                           <div>
-                            <h3 className="font-medium">
-                              {certificate.training_progress.training_modules.title}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              {certificate.training_progress.profiles.full_name}
-                            </p>
-                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
-                              <span>{t('issuedOn')}: {format(new Date(certificate.issued_at), 'PPP', { locale: dateLocale })}</span>
-                              <span>{t('score')}: {score}%</span>
-                            </div>
+                            <p className="font-bold text-sm">{cert.title}</p>
+                            <p className="text-xs text-muted-foreground">{cert.recipientName} • {cert.certificateNumber}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(status)}>
-                            {t(status)}
-                          </Badge>
-                          <Badge className={`bg-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-100 text-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'}-800 border border-${type === 'standard' ? 'green' : type === 'advanced' ? 'blue' : 'purple'} rounded-md`}>
-                            {t(type)}
-                          </Badge>
-                          <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleViewCertificate(certificate)}>
-                            {t('viewCertificate')}
+                          <Badge variant="outline" className={getStatusColor(cert.status)}>{cert.status}</Badge>
+                          <Button variant="ghost" size="icon" onClick={() => copyLink(cert.verificationCode)} title={t('copyLink')}>
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleView(cert)}>
+                            <ExternalLink className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
-                    )
-                  })}
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">{t('common:common.no_data')}</div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-center py-8 text-gray-700">{t('noCertificates')}</div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Download History */}
-        <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('downloadHistory')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-700">
-                <Download className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p>{t('downloadHistory')}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
-      {/* Certificate View Dialog */}
+      {/* Preview Dialog */}
       <Dialog open={showCertificateDialog} onOpenChange={setShowCertificateDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('certificateDetails')}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-4xl bg-stone-100 p-0 overflow-hidden border-hotel-gold">
           {selectedCertificate && (
-            <div className="space-y-6">
-              {/* Certificate Preview */}
-              <div className="border-2 border-double border-gray-300 p-8 bg-gradient-to-br from-yellow-50 to-white">
-                <div className="text-center space-y-4">
-                  <div className="flex justify-center mb-4">
-                    <Award className="w-16 h-16 text-yellow-500" />
+            <div className="flex flex-col h-full">
+              <div className="p-8 bg-white m-4 border-8 border-hotel-gold shadow-2xl relative">
+                {/* Visual Frame */}
+                <div className="absolute inset-2 border-2 border-hotel-navy/20 pointer-events-none" />
+
+                <div className="text-center space-y-8 relative z-10 py-12">
+                  <div className="flex justify-center">
+                    <div className="w-24 h-24 rounded-full bg-hotel-gold/10 flex items-center justify-center border-2 border-hotel-gold">
+                      <Award className="w-12 h-12 text-hotel-gold" />
+                    </div>
                   </div>
-                  <h1 className="text-3xl font-bold text-gray-800">
-                    {t('certificateOfCompletion', 'Certificate of Completion')}
-                  </h1>
-                  <p className="text-lg text-gray-600">
-                    {t('thisIsToCertifyThat', 'This is to certify that')}
-                  </p>
-                  <div className="py-4 border-b-2 border-yellow-400">
-                    <h2 className="text-2xl font-semibold text-gray-800">
-                      {selectedCertificate.training_progress.profiles.full_name}
-                    </h2>
+
+                  <div className="space-y-2">
+                    <h1 className="text-hotel-navy font-serif text-4xl font-bold tracking-widest">{t('certificateOfCompletion', 'CERTIFICATE OF COMPLETION')}</h1>
+                    <div className="h-1 w-32 bg-hotel-gold mx-auto" />
                   </div>
-                  <p className="text-gray-600">
-                    {t('successfullyCompletedModule', 'has successfully completed the training module')}
-                  </p>
-                  <h3 className="text-xl font-medium text-gray-800">
-                    {selectedCertificate.training_progress.training_modules.title}
-                  </h3>
-                  {selectedCertificate.training_progress.training_modules.description && (
-                    <p className="text-gray-600 max-w-2xl mx-auto">
-                      {selectedCertificate.training_progress.training_modules.description}
-                    </p>
-                  )}
-                  <div className="flex justify-center gap-8 pt-4">
+
+                  <p className="text-muted-foreground font-serif italic text-lg">{t('thisIsToCertifyThat', 'This is to certify that')}</p>
+
+                  <h2 className="text-hotel-navy text-5xl font-bold border-b-2 border-hotel-gold/30 inline-block px-12 pb-2 min-w-[300px]">
+                    {selectedCertificate.recipientName}
+                  </h2>
+
+                  <p className="text-muted-foreground font-serif">{t('successfullyCompletedModule', 'has successfully completed the training module')}</p>
+
+                  <h3 className="text-hotel-navy text-2xl font-bold max-w-2xl mx-auto">{selectedCertificate.title}</h3>
+
+                  <div className="flex justify-center gap-12 pt-12 border-t border-muted max-w-md mx-auto">
                     <div className="text-center">
-                      <p className="text-sm text-gray-600">{t('score')}</p>
-                      <p className="text-2xl font-bold text-gray-800">
-                        {selectedCertificate.training_progress.quiz_score}%
-                      </p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">{t('issuedOn')}</p>
+                      <p className="font-bold text-hotel-navy">{format(new Date(selectedCertificate.completionDate), 'PPP', { locale: dateLocale })}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-600">{t('completionDate')}</p>
-                      <p className="text-lg font-medium text-gray-800">
-                        {format(new Date(selectedCertificate.issued_at), 'PPP', { locale: dateLocale })}
-                      </p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">{t('certificateNumber')}</p>
+                      <p className="font-mono font-bold text-hotel-navy">{selectedCertificate.certificateNumber}</p>
                     </div>
+                  </div>
+
+                  <div className="pt-8 opacity-50 text-[10px] uppercase tracking-[0.2em]">
+                    Verified by phg-connect.com/verify
                   </div>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-center gap-4">
-                <Button onClick={() => handleDownload(selectedCertificate.id)}>
+              <div className="bg-white/80 backdrop-blur p-4 flex justify-center gap-4 border-t border-hotel-gold/20">
+                <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark" onClick={() => handleDownload(selectedCertificate.id)} disabled={downloadMutation.isPending}>
                   <Download className="w-4 h-4 mr-2" />
                   {t('download')}
                 </Button>
-                <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => window.print()}>
+                <Button variant="outline" onClick={() => window.print()}>
                   <Printer className="w-4 h-4 mr-2" />
                   {t('printCertificate')}
                 </Button>
-                <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => copyCertificateLink(selectedCertificate)}>
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  {t('copyLink')}
+                <Button variant="outline" onClick={() => setShowCertificateDialog(false)}>
+                  {t('common:actions.close')}
                 </Button>
               </div>
             </div>

@@ -28,6 +28,7 @@ import {
 
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem } from '@/types/knowledge'
+import { useTranslation } from "react-i18next";
 
 // ============================================================================
 // VIDEO CONTENT BUILDER

@@ -4,6 +4,7 @@ import { sanitizeHtml } from '@/lib/sanitize'
 import { Button } from '@/components/ui/button'
 import { Download, Loader2 } from 'lucide-react'
 import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
+import { useTranslation } from "react-i18next";
 
 interface DocumentViewerProps {
   open: boolean

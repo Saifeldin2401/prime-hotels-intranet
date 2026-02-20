@@ -1,0 +1,18 @@
+﻿
+File: admin.json
+Missing 13 keys in Arabic translation:
+  - ai_governance.reports.view
+  - ai_governance.reports.detail_title
+  - ai_governance.reports.close
+  - ai_governance.reports.kpi.proposals
+  - ai_governance.reports.kpi.decisions
+  - ai_governance.reports.kpi.changes
+  - ai_governance.reports.kpi.audit
+  - ai_governance.reports.metrics_section
+  - ai_governance.reports.metrics_items
+  - ai_governance.reports.metrics_empty
+  - ai_governance.reports.recent_proposals
+  - ai_governance.reports.recent_changes
+  - ai_governance.reports.none
+
+Total missing translation keys: 13

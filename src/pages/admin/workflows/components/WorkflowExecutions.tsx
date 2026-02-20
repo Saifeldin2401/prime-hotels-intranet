@@ -29,8 +29,10 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { useExecuteWorkflow } from '@/hooks/useWorkflows'
+import { useTranslation } from "react-i18next";
 
 export function WorkflowExecutions() {
+    const { t: t_ext } = useTranslation('extracted');
     const { data: executions, isLoading, error } = useWorkflowExecutions(undefined, 50)
     const [selectedExecution, setSelectedExecution] = useState<any>(null)
     const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -63,7 +65,7 @@ export function WorkflowExecutions() {
     if (error) {
         return (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                Failed to load execution logs: {error instanceof Error ? error.message : 'Unknown error'}
+                {t_ext('failed_to_load_execution_logs', 'Failed to load execution logs:')}{error instanceof Error ? error.message : 'Unknown error'}
             </div>
         )
     }
@@ -77,34 +79,33 @@ export function WorkflowExecutions() {
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Statuses</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="failed">Failed</SelectItem>
-                            <SelectItem value="running">Running</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="all">{t_ext('all_statuses', 'All Statuses')}</SelectItem>
+                            <SelectItem value="completed">{t_ext('completed', 'Completed')}</SelectItem>
+                            <SelectItem value="failed">{t_ext('failed_1', 'Failed')}</SelectItem>
+                            <SelectItem value="running">{t_ext('running', 'Running')}</SelectItem>
+                            <SelectItem value="pending">{t_ext('pending', 'Pending')}</SelectItem>
                         </SelectContent>
                     </Select>
                     <Input
-                        placeholder="Search by workflow or execution ID..."
+                        placeholder={t_ext('search_by_workflow_or_execution_id', 'Search by workflow or execution ID...')}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         className="w-[260px]"
                     />
                 </div>
                 <div className="text-xs text-muted-foreground">
-                    Showing {filteredExecutions.length} of {executions?.length || 0} executions
-                </div>
+                    {t_ext('showing', 'Showing')}{filteredExecutions.length} of {executions?.length || 0} {t_ext('executions', 'executions')}</div>
             </div>
 
             <div className="rounded-md border">
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Workflow</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Started At</TableHead>
-                        <TableHead>Duration</TableHead>
-                        <TableHead>Trigger</TableHead>
+                        <TableHead>{t_ext('workflow', 'Workflow')}</TableHead>
+                        <TableHead>{t_ext('status_1', 'Status')}</TableHead>
+                        <TableHead>{t_ext('started_at', 'Started At')}</TableHead>
+                        <TableHead>{t_ext('duration', 'Duration')}</TableHead>
+                        <TableHead>{t_ext('trigger', 'Trigger')}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -136,8 +137,7 @@ export function WorkflowExecutions() {
                     {filteredExecutions.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                                No execution history found for the selected filters.
-                            </TableCell>
+                                {t_ext('no_execution_history_found_for_the_selec', 'No execution history found for the selected filters.')}</TableCell>
                         </TableRow>
                     )}
                 </TableBody>
@@ -147,7 +147,7 @@ export function WorkflowExecutions() {
             <Sheet open={!!selectedExecution} onOpenChange={(open) => !open && setSelectedExecution(null)}>
                 <SheetContent className="w-[400px] sm:w-[540px]">
                     <SheetHeader>
-                        <SheetTitle>Execution Details</SheetTitle>
+                        <SheetTitle>{t_ext('execution_details', 'Execution Details')}</SheetTitle>
                         <SheetDescription>
                             {selectedExecution?.id}
                         </SheetDescription>
@@ -157,7 +157,7 @@ export function WorkflowExecutions() {
                         <div className="mt-6 space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
-                                    <h4 className="text-sm font-medium">Status</h4>
+                                    <h4 className="text-sm font-medium">{t_ext('status_1', 'Status')}</h4>
                                     <div className="flex items-center gap-2">
                                         {selectedExecution.status === 'completed' ? (
                                             <CheckCircle className="h-4 w-4 text-green-500" />
@@ -170,7 +170,7 @@ export function WorkflowExecutions() {
                                     </div>
                                 </div>
                                 <div className="space-y-1 text-right">
-                                    <h4 className="text-sm font-medium">Duration</h4>
+                                    <h4 className="text-sm font-medium">{t_ext('duration', 'Duration')}</h4>
                                     <p className="text-sm text-muted-foreground">
                                         {selectedExecution.execution_time_ms}ms
                                     </p>
@@ -179,7 +179,7 @@ export function WorkflowExecutions() {
 
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
-                                    <h4 className="text-sm font-medium">Workflow</h4>
+                                    <h4 className="text-sm font-medium">{t_ext('workflow', 'Workflow')}</h4>
                                     <p className="text-sm text-muted-foreground">
                                         {selectedExecution.workflow_definitions?.name || selectedExecution.workflow_id}
                                     </p>
@@ -190,13 +190,12 @@ export function WorkflowExecutions() {
                                     onClick={() => executeMutation.mutate({ workflowId: selectedExecution.workflow_id, metadata: { retry_of: selectedExecution.id } })}
                                     disabled={executeMutation.isPending}
                                 >
-                                    Retry Run
-                                </Button>
+                                    {t_ext('retry_run', 'Retry Run')}</Button>
                             </div>
 
                             {selectedExecution.error && (
                                 <div className="space-y-2">
-                                    <h4 className="text-sm font-medium text-destructive">Error</h4>
+                                    <h4 className="text-sm font-medium text-destructive">{t_ext('error', 'Error')}</h4>
                                     <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive font-mono whitespace-pre-wrap">
                                         {selectedExecution.error}
                                     </div>
@@ -205,7 +204,7 @@ export function WorkflowExecutions() {
 
                             {selectedExecution.result && (
                                 <div className="space-y-2">
-                                    <h4 className="text-sm font-medium">Result</h4>
+                                    <h4 className="text-sm font-medium">{t_ext('result', 'Result')}</h4>
                                     <ScrollArea className="h-[200px] w-full rounded-md border bg-muted/50 p-4">
                                         <pre className="text-xs font-mono">
                                             {JSON.stringify(selectedExecution.result, null, 2)}
@@ -215,7 +214,7 @@ export function WorkflowExecutions() {
                             )}
 
                             <div className="space-y-2">
-                                <h4 className="text-sm font-medium">Metadata</h4>
+                                <h4 className="text-sm font-medium">{t_ext('metadata', 'Metadata')}</h4>
                                 <div className="rounded-md border bg-muted/50 p-4">
                                     <pre className="text-xs font-mono">
                                         {JSON.stringify(selectedExecution.metadata, null, 2)}

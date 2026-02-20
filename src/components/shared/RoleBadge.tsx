@@ -12,6 +12,7 @@ interface RoleBadgeProps {
 }
 
 export function RoleBadge({ role, profile, mode = 'auto', showDebug = false }: RoleBadgeProps) {
+    const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation(['common', 'nav'])
 
   // Auto mode: prefer job title if available, fall back to system role
@@ -24,7 +25,7 @@ export function RoleBadge({ role, profile, mode = 'auto', showDebug = false }: R
           </Badge>
           {showDebug && role && (
             <span className="text-xs text-gray-500">
-              System Role: {ROLES[role].label}
+              {t_ext('system_role', 'System Role:')}{ROLES[role].label}
             </span>
           )}
         </div>
@@ -47,5 +48,5 @@ export function RoleBadge({ role, profile, mode = 'auto', showDebug = false }: R
     return <Badge variant="secondary">{t(`roles.${role}`)}</Badge>
   }
 
-  return <Badge variant="outline">N/A</Badge>
+  return <Badge variant="outline">{t_ext('n_a', 'N/A')}</Badge>
 }

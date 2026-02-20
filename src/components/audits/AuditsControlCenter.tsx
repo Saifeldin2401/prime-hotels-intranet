@@ -20,6 +20,7 @@ import {
 } from '@/hooks/useAudits'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { useTranslation } from "react-i18next";
 
 const SCOPE_TYPES = [
   { value: 'global', label: 'Global' },

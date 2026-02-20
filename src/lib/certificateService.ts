@@ -51,6 +51,12 @@ export interface Certificate extends CertificateData {
     createdAt: Date
 }
 
+type TrainingProgressSnapshot = {
+    id: string
+    training_id: string
+    quiz_score: number | null
+}
+
 // Brand colors for Prime Hotels
 const BRAND_COLORS = {
     navy: '#1a365d',
@@ -63,7 +69,7 @@ const BRAND_COLORS = {
     text: '#1a202c'
 }
 
-const CERTIFICATE_VERIFY_URL = import.meta.env.VITE_CERTIFICATE_VERIFY_URL || 'verify.phg-connect.com'
+const CERTIFICATE_VERIFY_URL = import.meta.env.VITE_CERTIFICATE_VERIFY_URL || 'phg-connect.com/verify'
 
 /**
  * Generate a professional PDF certificate
@@ -226,7 +232,7 @@ export async function generateCertificatePDF(
         doc.setTextColor(100, 100, 100)
         let contextText = ''
         if (certificate.propertyName && certificate.departmentName) {
-            contextText = `${certificate.departmentName} • ${certificate.propertyName}`
+            contextText = `${certificate.departmentName} | ${certificate.propertyName}`
         } else {
             contextText = certificate.propertyName || certificate.departmentName || ''
         }
@@ -330,6 +336,90 @@ function generateVerificationCode(): string {
  * Create a new certificate in the database
  */
 export async function createCertificate(data: CertificateData): Promise<Certificate | null> {
+    let resolvedTrainingModuleId = data.trainingModuleId
+    let resolvedTrainingProgressId = data.trainingProgressId
+    let resolvedScore = data.score
+    let resolvedPassingScore = data.passingScore
+
+    if (data.certificateType === 'training' && data.userId) {
+        const resolveProgressById = async (progressId: string): Promise<TrainingProgressSnapshot | null> => {
+            const { data: progress, error } = await supabase
+                .from('training_progress')
+                .select('id, training_id, quiz_score')
+                .eq('id', progressId)
+                .eq('user_id', data.userId)
+                .eq('is_deleted', false)
+                .maybeSingle()
+
+            if (error || !progress) return null
+            return progress as TrainingProgressSnapshot
+        }
+
+        const resolveProgressByModule = async (moduleId: string): Promise<TrainingProgressSnapshot | null> => {
+            const { data: progress, error } = await supabase
+                .from('training_progress')
+                .select('id, training_id, quiz_score')
+                .eq('user_id', data.userId)
+                .eq('training_id', moduleId)
+                .eq('is_deleted', false)
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+
+            if (error || !progress) return null
+            return progress as TrainingProgressSnapshot
+        }
+
+        if (resolvedTrainingProgressId) {
+            const progress = await resolveProgressById(resolvedTrainingProgressId)
+            if (progress) {
+                if (!resolvedTrainingModuleId) {
+                    resolvedTrainingModuleId = progress.training_id
+                }
+                if (resolvedScore === undefined || resolvedScore === null) {
+                    resolvedScore = progress.quiz_score ?? undefined
+                }
+            }
+        }
+
+        if (!resolvedTrainingProgressId && resolvedTrainingModuleId) {
+            const progress = await resolveProgressByModule(resolvedTrainingModuleId)
+            if (progress) {
+                resolvedTrainingProgressId = progress.id
+                if (resolvedScore === undefined || resolvedScore === null) {
+                    resolvedScore = progress.quiz_score ?? undefined
+                }
+            }
+        }
+
+        if (!resolvedPassingScore && resolvedTrainingModuleId) {
+            const { data: moduleInfo } = await supabase
+                .from('training_modules')
+                .select('passing_score_percentage')
+                .eq('id', resolvedTrainingModuleId)
+                .maybeSingle()
+
+            const modulePassingScore = moduleInfo?.passing_score_percentage
+            if (typeof modulePassingScore === 'number') {
+                resolvedPassingScore = modulePassingScore
+            }
+        }
+
+        if (resolvedTrainingProgressId) {
+            const { data: existingCert, error: existingCertError } = await supabase
+                .from('certificates')
+                .select('*')
+                .eq('training_progress_id', resolvedTrainingProgressId)
+                .eq('certificate_type', 'training')
+                .eq('status', 'active')
+                .maybeSingle()
+
+            if (!existingCertError && existingCert) {
+                return mapCertificateFromDb(existingCert)
+            }
+        }
+    }
+
     const certificateNumber = generateCertificateNumber()
     const verificationCode = generateVerificationCode()
 
@@ -346,10 +436,10 @@ export async function createCertificate(data: CertificateData): Promise<Certific
             description: data.description,
             completion_date: data.completionDate.toISOString(),
             expiry_date: data.expiryDate?.toISOString(),
-            score: data.score,
-            passing_score: data.passingScore,
-            training_module_id: data.trainingModuleId,
-            training_progress_id: data.trainingProgressId,
+            score: resolvedScore,
+            passing_score: resolvedPassingScore,
+            training_module_id: resolvedTrainingModuleId,
+            training_progress_id: resolvedTrainingProgressId,
             sop_id: data.sopId,
             quiz_attempt_id: data.quizAttemptId,
             property_id: data.propertyId,
@@ -366,8 +456,48 @@ export async function createCertificate(data: CertificateData): Promise<Certific
         .single()
 
     if (error) {
+        if (resolvedTrainingProgressId && error.code === '23505') {
+            const { data: existingCert, error: existingCertError } = await supabase
+                .from('certificates')
+                .select('*')
+                .eq('training_progress_id', resolvedTrainingProgressId)
+                .eq('certificate_type', 'training')
+                .eq('status', 'active')
+                .maybeSingle()
+
+            if (!existingCertError && existingCert) {
+                return mapCertificateFromDb(existingCert)
+            }
+        }
         console.error('Failed to create certificate:', error)
         return null
+    }
+
+    // Automated email dispatch for attained certificates
+    try {
+        if (data.recipientEmail) {
+            await supabase.functions.invoke('send-email', {
+                body: {
+                    to: data.recipientEmail,
+                    userId: data.userId,
+                    templateKey: 'certificate_earned',
+                    subject: 'Your Certificate of Completion: ' + data.title,
+                    title: 'Certificate Attained',
+                    message: `Congratulations ${data.recipientName}! You have successfully earned the ${data.title} certificate.`,
+                    actionUrl: '/training/certificates',
+                    businessDomain: 'operations',
+                    notificationType: 'training_completed',
+                    variables: {
+                        recipient_name: data.recipientName,
+                        module_title: data.title,
+                        certificate_number: certificateNumber,
+                        verification_code: verificationCode
+                    }
+                }
+            })
+        }
+    } catch (emailError) {
+        console.error('Failed to dispatch certificate email:', emailError)
     }
 
     return mapCertificateFromDb(cert)
@@ -483,7 +613,11 @@ export async function revokeCertificate(
  * Map database record to Certificate type
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapCertificateFromDb(record: any): Certificate {
+/**
+ * Map database record to Certificate type
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapCertificateFromDb(record: any): Certificate {
     return {
         id: record.id,
         certificateNumber: record.certificate_number,

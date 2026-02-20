@@ -32,8 +32,10 @@ import {
 } from "@/components/ui/dialog"
 import { TriggerEditor } from './TriggerEditor'
 import type { TriggerRule } from '@/hooks/useTriggers'
+import { useTranslation } from "react-i18next";
 
 export function TriggerList() {
+    const { t: t_ext } = useTranslation('extracted');
     const { data: triggers, isLoading, error } = useTriggers()
     const updateMutation = useUpdateTrigger()
     const deleteMutation = useDeleteTrigger()
@@ -90,7 +92,7 @@ export function TriggerList() {
     if (error) {
         return (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                Failed to load trigger rules: {error instanceof Error ? error.message : 'Unknown error'}
+                {t_ext('failed_to_load_trigger_rules', 'Failed to load trigger rules:')}{error instanceof Error ? error.message : 'Unknown error'}
             </div>
         )
     }
@@ -98,23 +100,22 @@ export function TriggerList() {
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Active Trigger Rules</h3>
+                <h3 className="text-lg font-medium">{t_ext('active_trigger_rules', 'Active Trigger Rules')}</h3>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    New Trigger
-                </Button>
+                    {t_ext('new_trigger', 'New Trigger')}</Button>
             </div>
 
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Rule Name</TableHead>
-                            <TableHead>Event Type</TableHead>
-                            <TableHead>Action</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{t_ext('rule_name', 'Rule Name')}</TableHead>
+                            <TableHead>{t_ext('event_type', 'Event Type')}</TableHead>
+                            <TableHead>{t_ext('action', 'Action')}</TableHead>
+                            <TableHead>{t_ext('created', 'Created')}</TableHead>
+                            <TableHead>{t_ext('status_1', 'Status')}</TableHead>
+                            <TableHead className="text-right">{t_ext('actions', 'Actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -167,8 +168,7 @@ export function TriggerList() {
                         {!triggers?.length && (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                                    No trigger rules found.
-                                </TableCell>
+                                    {t_ext('no_trigger_rules_found', 'No trigger rules found.')}</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
@@ -178,16 +178,14 @@ export function TriggerList() {
             <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>{t_ext('are_you_sure', 'Are you sure?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete the trigger rule. Systems relying on this trigger will stop responding to the associated events.
-                        </AlertDialogDescription>
+                            {t_ext('this_will_permanently_delete_the_trigger', 'This will permanently delete the trigger rule. Systems relying on this trigger will stop responding to the associated events.')}</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t_ext('cancel', 'Cancel')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
-                        </AlertDialogAction>
+                            {t_ext('delete', 'Delete')}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -195,7 +193,7 @@ export function TriggerList() {
             <Dialog open={!!editingTrigger} onOpenChange={() => setEditingTrigger(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edit Trigger Rule</DialogTitle>
+                        <DialogTitle>{t_ext('edit_trigger_rule', 'Edit Trigger Rule')}</DialogTitle>
                     </DialogHeader>
                     {editingTrigger && (
                         <TriggerEditor
@@ -209,7 +207,7 @@ export function TriggerList() {
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Create Trigger Rule</DialogTitle>
+                        <DialogTitle>{t_ext('create_trigger_rule', 'Create Trigger Rule')}</DialogTitle>
                     </DialogHeader>
                     <TriggerEditor
                         onClose={() => setIsCreateOpen(false)}

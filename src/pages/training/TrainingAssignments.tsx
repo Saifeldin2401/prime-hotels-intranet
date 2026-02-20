@@ -300,79 +300,91 @@ export function TrainingAssignmentsPanel({
 
       if (!sendNotifications) return
 
-      // Send bulk notifications to affected users
-      const moduleTitle = modules?.find(m => m.id === formModuleId)?.title || t('unknownModule')
-      const notificationData = {
-        title: t('notifications.newAssignmentTitle'),
-        message: t('notifications.newAssignmentMessage', { title: moduleTitle }),
-        moduleId: formModuleId,
-        deadline: formDeadline || undefined
-      }
-
-      let userIdsToNotify: string[] = []
-
-      if (formTargetType === 'all') {
-        // Get all active user IDs
-        const { data: allUsers } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('is_active', true)
-        userIdsToNotify = allUsers?.map(u => u.id) || []
-      } else if (formTargetType === 'users') {
-        userIdsToNotify = formTargetIds
-      } else if (formTargetType === 'departments') {
-        // Resolve users from departments
-        const { data: deptUsers } = await supabase
-          .from('user_departments')
-          .select('user_id')
-          .in('department_id', formTargetIds)
-        userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
-      } else if (formTargetType === 'properties') {
-        // Resolve users from properties
-        const { data: propUsers } = await supabase
-          .from('user_properties')
-          .select('user_id')
-          .in('property_id', formTargetIds)
-        userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
-      }
-
-      // Use bulk notification system for 10+ users, direct for smaller groups
-      if (userIdsToNotify.length >= 10) {
-        // Queue for bulk processing
-        const { data: session } = await supabase.auth.getSession()
-        if (session?.session?.access_token) {
-          try {
-            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.session.access_token}`
-              },
-              body: JSON.stringify({
-                action: 'create_batch',
-                userIds: userIdsToNotify,
-                notificationType: 'training_assigned',
-                businessDomain: 'operations',
-                templateKey: 'operations_incident_alert',
-                channels: ['in_app', 'email'],
-                sendEmail: true,
-                notificationData: {
-                  ...notificationData,
-                  link: `/learning/training/${formModuleId}`
-                }
-              })
-            })
-            // Notifications queued for bulk processing
-          } catch (err) {
-            console.error('Bulk notification error:', err)
+      const notifyUsers = async () => {
+        try {
+          // Send bulk notifications to affected users
+          const moduleTitle = modules?.find(m => m.id === formModuleId)?.title || t('unknownModule')
+          const notificationData = {
+            title: t('notifications.newAssignmentTitle'),
+            message: t('notifications.newAssignmentMessage', { title: moduleTitle }),
+            moduleId: formModuleId,
+            deadline: formDeadline || undefined
           }
-        }
-      } else {
-        // Small group - send directly
-        for (const userId of userIdsToNotify) {
-          await notifyTrainingAssigned(userId, formModuleId, moduleTitle, formDeadline || undefined)
+
+          let userIdsToNotify: string[] = []
+
+          if (formTargetType === 'all') {
+            // Get all active user IDs
+            const { data: allUsers } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('is_active', true)
+            userIdsToNotify = allUsers?.map(u => u.id) || []
+          } else if (formTargetType === 'users') {
+            userIdsToNotify = formTargetIds
+          } else if (formTargetType === 'departments') {
+            // Resolve users from departments
+            const { data: deptUsers } = await supabase
+              .from('user_departments')
+              .select('user_id')
+              .in('department_id', formTargetIds)
+            userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
+          } else if (formTargetType === 'properties') {
+            // Resolve users from properties
+            const { data: propUsers } = await supabase
+              .from('user_properties')
+              .select('user_id')
+              .in('property_id', formTargetIds)
+            userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
+          }
+
+          if (userIdsToNotify.length === 0) return
+
+          // Use bulk notification system for 10+ users, direct for smaller groups
+          if (userIdsToNotify.length >= 10) {
+            // Queue for bulk processing
+            const { data: session } = await supabase.auth.getSession()
+            if (session?.session?.access_token) {
+              try {
+                await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.session.access_token}`
+                  },
+                  body: JSON.stringify({
+                    action: 'create_batch',
+                    userIds: userIdsToNotify,
+                    notificationType: 'training_assigned',
+                    businessDomain: 'operations',
+                    templateKey: 'operations_incident_alert',
+                    channels: ['in_app', 'email'],
+                    sendEmail: true,
+                    notificationData: {
+                      ...notificationData,
+                      link: `/learning/training/${formModuleId}`
+                    }
+                  })
+                })
+                // Notifications queued for bulk processing
+              } catch (err) {
+                console.error('Bulk notification error:', err)
+              }
+            }
+          } else {
+            // Small group - send directly
+            await Promise.all(
+              userIdsToNotify.map(userId =>
+                notifyTrainingAssigned(userId, formModuleId, moduleTitle, formDeadline || undefined)
+              )
+            )
+          }
+        } catch (err) {
+          console.error('Notification dispatch failed:', err)
         }
       }
+
+      void notifyUsers()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
@@ -388,6 +400,22 @@ export function TrainingAssignmentsPanel({
         .delete()
         .eq('id', id)
       if (error) throw error
+    },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['learning-assignments'] })
+      const previousAssignments = queryClient.getQueryData<any[]>(['learning-assignments'])
+      if (previousAssignments) {
+        queryClient.setQueryData(
+          ['learning-assignments'],
+          previousAssignments.filter(assignment => assignment.id !== id)
+        )
+      }
+      return { previousAssignments }
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previousAssignments) {
+        queryClient.setQueryData(['learning-assignments'], context.previousAssignments)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })

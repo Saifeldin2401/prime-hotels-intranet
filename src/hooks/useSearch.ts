@@ -17,7 +17,7 @@ import { SYSTEM_PAGES } from '@/lib/searchConfig'
 
 interface SearchResult {
   id: string
-  type: 'document' | 'user' | 'training' | 'announcement' | 'sop' | 'ticket' | 'referral' | 'page'
+  type: 'document' | 'user' | 'training' | 'announcement' | 'sop' | 'task' | 'ticket' | 'referral' | 'page'
   title: string
   description?: string
   category?: string
@@ -32,6 +32,7 @@ interface UseSearchOptions {
   includeTraining?: boolean
   includeAnnouncements?: boolean
   includeSOPs?: boolean
+  includeTasks?: boolean
   includeTickets?: boolean
   includeReferrals?: boolean
   limit?: number
@@ -41,7 +42,7 @@ interface UseSearchOptions {
 
 export function useSearch(query: string, options: UseSearchOptions = {}) {
 
-  const { profile, primaryRole } = useAuth()
+  const { user, primaryRole } = useAuth()
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
 
@@ -51,6 +52,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     includeTraining = true,
     includeAnnouncements = true,
     includeSOPs = true,
+    includeTasks = true,
     includeTickets = true,
     includeReferrals = true,
     limit = 20,
@@ -209,6 +211,97 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           } catch (e) {
             console.warn('SOP search failed:', e)
           }
+        }
+
+        // Search Tasks
+        if (includeTasks) {
+          try {
+            const { data: tasks } = await supabase
+              .from('tasks')
+              .select('id, title, description, status, due_date')
+              .eq('is_deleted', false)
+              .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`)
+              .limit(Math.ceil(limit / 4))
+
+            if (tasks) {
+              results.push(...tasks.map(task => ({
+                id: task.id,
+                type: 'task' as const,
+                title: task.title || 'Untitled Task',
+                description: task.description || undefined,
+                category: 'Task',
+                url: `/tasks/${task.id}`,
+                metadata: { status: task.status, due_date: task.due_date },
+                relevance_score: calculateRelevanceScore(query, task.title || '', task.description || '')
+              })))
+            }
+          } catch (e) { console.error('Error searching tasks:', e) }
+        }
+
+        // Search Maintenance Tickets
+        if (includeTickets) {
+          try {
+            const { data: tickets } = await supabase
+              .from('maintenance_tickets')
+              .select('id, title, description, status, priority, room_number')
+              .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,room_number.ilike.%${escapedQuery}%`)
+              .limit(Math.ceil(limit / 4))
+
+            if (tickets) {
+              results.push(...tickets.map(ticket => ({
+                id: ticket.id,
+                type: 'ticket' as const,
+                title: ticket.title || 'Maintenance Ticket',
+                description: ticket.description || undefined,
+                category: 'Maintenance',
+                url: `/maintenance/tickets/${ticket.id}`,
+                metadata: { status: ticket.status, priority: ticket.priority, room_number: ticket.room_number },
+                relevance_score: calculateRelevanceScore(query, ticket.title || '', ticket.description || ticket.room_number || '')
+              })))
+            }
+          } catch (e) { console.error('Error searching maintenance tickets:', e) }
+        }
+
+        // Search Referrals (Job Applications with referrer)
+        if (includeReferrals) {
+          try {
+            const canViewAllReferrals = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager']
+              .includes(primaryRole || '')
+
+            if (!canViewAllReferrals && !user?.id) {
+              // No user context to scope referrals, skip query
+            } else {
+              let referralsQuery = supabase
+                .from('job_applications')
+                .select('id, applicant_name, applicant_email, applicant_phone, status, referred_by')
+                .not('referred_by', 'is', null)
+                .or(`applicant_name.ilike.%${escapedQuery}%,applicant_email.ilike.%${escapedQuery}%,applicant_phone.ilike.%${escapedQuery}%`)
+                .limit(Math.ceil(limit / 4))
+
+              if (!canViewAllReferrals) {
+                referralsQuery = referralsQuery.eq('referred_by', user!.id)
+              }
+
+              const { data: referrals } = await referralsQuery
+
+              if (referrals) {
+                results.push(...referrals.map(referral => ({
+                  id: referral.id,
+                  type: 'referral' as const,
+                  title: referral.applicant_name || 'Referral',
+                  description: referral.applicant_email || referral.applicant_phone || undefined,
+                  category: 'Referral',
+                  url: '/jobs/referrals',
+                  metadata: { status: referral.status },
+                  relevance_score: calculateRelevanceScore(
+                    query,
+                    referral.applicant_name || '',
+                    [referral.applicant_email, referral.applicant_phone].filter(Boolean).join(' ')
+                  )
+                })))
+              }
+            }
+          } catch (e) { console.error('Error searching referrals:', e) }
         }
 
         // Sort by relevance score

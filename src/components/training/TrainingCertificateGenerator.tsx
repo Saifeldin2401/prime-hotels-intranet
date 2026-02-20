@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -142,18 +141,39 @@ export function TrainingCertificateGenerator({
       // Generate HTML certificate
       const certificateHtml = generateCertificateHTML(template, certificateData)
 
-      // Create download link
-      const blob = new Blob([certificateHtml], { type: 'text/html' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `certificate-${certificateData.recipient_name.replace(/\s+/g, '-')}.html`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-    } catch {
-      toast.error(t('certificateGenerator.failedDownload'))
+      // Create a temporary container
+      const container = document.createElement('div')
+      container.innerHTML = certificateHtml
+      container.style.position = 'absolute'
+      container.style.left = '-9999px'
+      container.style.top = '-9999px'
+      document.body.appendChild(container)
+
+      // Use html2pdf to generate and enforce PDF download
+      const element = container.querySelector('.certificate')
+      if (!element) {
+        throw new Error("Invalid certificate HTML structure")
+      }
+
+      // @ts-ignore
+      const html2pdf = (await import('html2pdf.js')).default
+
+      const opt = {
+        margin: 0,
+        filename: `certificate-${certificateData.recipient_name.replace(/\s+/g, '-')}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'px', format: [800, 600] as [number, number], orientation: 'landscape' as const }
+      }
+
+      await html2pdf().set(opt).from(element as HTMLElement).save()
+
+      // Cleanup
+      document.body.removeChild(container)
+      toast.success(t('certificateGenerator.downloadSuccess', 'Certificate downloaded successfully'))
+    } catch (e) {
+      console.error(e)
+      toast.error(t('certificateGenerator.failedDownload', 'Failed to generate PDF download'))
     }
   }
 

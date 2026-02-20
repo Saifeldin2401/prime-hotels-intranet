@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
+import { useTranslation } from "react-i18next";
 
 interface DocumentSummary {
     summary: string

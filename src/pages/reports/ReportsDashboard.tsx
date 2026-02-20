@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Activity, FileText, CheckSquare, MessageSquare, AlertTriangle, Clock, Download } from 'lucide-react'
 import { format } from 'date-fns'
 import { downloadCSV } from '@/lib/exportUtils'
+import { useTranslation } from "react-i18next";
 
 export default function ReportsDashboard() {
     const { user } = useAuth()

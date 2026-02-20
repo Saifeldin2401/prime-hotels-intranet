@@ -51,6 +51,7 @@ const statusColors: Record<string, string> = {
 }
 
 export default function MaintenanceTicketDetail() {
+    const { t: t_ext } = useTranslation('extracted');
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { user, roles, primaryRole } = useAuth()
@@ -237,10 +238,10 @@ export default function MaintenanceTicketDetail() {
                                         <Badge variant="outline" className={statusColors[ticket.status]}>{t(ticket.status)}</Badge>
                                         {ticket.due_at && (
                                             <Badge className={isOverdue ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}>
-                                                Due {format(new Date(ticket.due_at), 'MMM d, yyyy')}
+                                                {t_ext('due_1', 'Due')}{format(new Date(ticket.due_at), 'MMM d, yyyy')}
                                             </Badge>
                                         )}
-                                        {isOverdue && <Badge className="bg-red-100 text-red-800 border border-red-200">Overdue</Badge>}
+                                        {isOverdue && <Badge className="bg-red-100 text-red-800 border border-red-200">{t_ext('overdue', 'Overdue')}</Badge>}
                                     </div>
                                     <CardTitle className="text-2xl">{ticket.title}</CardTitle>
                                     <p className="text-sm text-muted-foreground mt-1">#{ticket.id.slice(0, 8)}</p>
@@ -259,8 +260,7 @@ export default function MaintenanceTicketDetail() {
                                         )}
                                         <Button onClick={openManageDialog} size="sm" variant="outline">
                                             <Settings className="w-4 h-4 mr-2" />
-                                            Manage
-                                        </Button>
+                                            {t_ext('manage', 'Manage')}</Button>
                                     </div>
                                 )}
                             </div>
@@ -369,48 +369,48 @@ export default function MaintenanceTicketDetail() {
             <Dialog open={manageOpen} onOpenChange={setManageOpen}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Manage Ticket</DialogTitle>
-                        <DialogDescription>Update status, priority, assignee, and scheduling details.</DialogDescription>
+                        <DialogTitle>{t_ext('manage_ticket', 'Manage Ticket')}</DialogTitle>
+                        <DialogDescription>{t_ext('update_status_priority_assignee_and_sche', 'Update status, priority, assignee, and scheduling details.')}</DialogDescription>
                     </DialogHeader>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Status</Label>
+                            <Label>{t_ext('status_1', 'Status')}</Label>
                             <Select value={manageStatus} onValueChange={setManageStatus}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select status" />
+                                    <SelectValue placeholder={t_ext('select_status', 'Select status')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="open">Open</SelectItem>
-                                    <SelectItem value="in_progress">In Progress</SelectItem>
-                                    <SelectItem value="pending_parts">Pending Parts</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
-                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                    <SelectItem value="open">{t_ext('open', 'Open')}</SelectItem>
+                                    <SelectItem value="in_progress">{t_ext('in_progress', 'In Progress')}</SelectItem>
+                                    <SelectItem value="pending_parts">{t_ext('pending_parts', 'Pending Parts')}</SelectItem>
+                                    <SelectItem value="completed">{t_ext('completed', 'Completed')}</SelectItem>
+                                    <SelectItem value="cancelled">{t_ext('cancelled', 'Cancelled')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Priority</Label>
+                            <Label>{t_ext('priority', 'Priority')}</Label>
                             <Select value={managePriority} onValueChange={setManagePriority}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select priority" />
+                                    <SelectValue placeholder={t_ext('select_priority', 'Select priority')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="low">Low</SelectItem>
-                                    <SelectItem value="medium">Medium</SelectItem>
-                                    <SelectItem value="high">High</SelectItem>
-                                    <SelectItem value="urgent">Urgent</SelectItem>
-                                    <SelectItem value="critical">Critical</SelectItem>
+                                    <SelectItem value="low">{t_ext('low', 'Low')}</SelectItem>
+                                    <SelectItem value="medium">{t_ext('medium', 'Medium')}</SelectItem>
+                                    <SelectItem value="high">{t_ext('high', 'High')}</SelectItem>
+                                    <SelectItem value="urgent">{t_ext('urgent', 'Urgent')}</SelectItem>
+                                    <SelectItem value="critical">{t_ext('critical', 'Critical')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
-                            <Label>Assignee</Label>
+                            <Label>{t_ext('assignee', 'Assignee')}</Label>
                             <Select value={manageAssignee} onValueChange={setManageAssignee}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select a user" />
+                                    <SelectValue placeholder={t_ext('select_a_user_1', 'Select a user')} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {(assignableUsersQuery.data || []).map((p: any) => (
@@ -423,7 +423,7 @@ export default function MaintenanceTicketDetail() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Estimated Completion Date</Label>
+                            <Label>{t_ext('estimated_completion_date', 'Estimated Completion Date')}</Label>
                             <Input
                                 type="date"
                                 value={manageEta}
@@ -432,16 +432,16 @@ export default function MaintenanceTicketDetail() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Parts Needed</Label>
+                            <Label>{t_ext('parts_needed', 'Parts Needed')}</Label>
                             <Input
                                 value={manageParts}
                                 onChange={(e) => setManageParts(e.target.value)}
-                                placeholder="Optional"
+                                placeholder={t_ext('optional', 'Optional')}
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Estimated Cost</Label>
+                            <Label>{t_ext('estimated_cost', 'Estimated Cost')}</Label>
                             <Input
                                 type="number"
                                 min="0"
@@ -452,7 +452,7 @@ export default function MaintenanceTicketDetail() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Labor Hours</Label>
+                            <Label>{t_ext('labor_hours', 'Labor Hours')}</Label>
                             <Input
                                 type="number"
                                 min="0"
@@ -464,7 +464,7 @@ export default function MaintenanceTicketDetail() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Material Cost</Label>
+                            <Label>{t_ext('material_cost', 'Material Cost')}</Label>
                             <Input
                                 type="number"
                                 min="0"
@@ -475,12 +475,12 @@ export default function MaintenanceTicketDetail() {
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
-                            <Label>Internal Note</Label>
+                            <Label>{t_ext('internal_note', 'Internal Note')}</Label>
                             <Textarea
                                 value={manageInternalNote}
                                 onChange={(e) => setManageInternalNote(e.target.value)}
                                 rows={3}
-                                placeholder="Add internal notes or instructions"
+                                placeholder={t_ext('add_internal_notes_or_instructions', 'Add internal notes or instructions')}
                             />
                         </div>
 
@@ -490,18 +490,16 @@ export default function MaintenanceTicketDetail() {
                                 checked={notifyReporter}
                                 onCheckedChange={(checked) => setNotifyReporter(!!checked)}
                             />
-                            <Label htmlFor="notify-reporter">Notify reporter about updates</Label>
+                            <Label htmlFor="notify-reporter">{t_ext('notify_reporter_about_updates', 'Notify reporter about updates')}</Label>
                         </div>
                     </div>
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setManageOpen(false)} disabled={manageSaving}>
-                            Cancel
-                        </Button>
+                            {t_ext('cancel', 'Cancel')}</Button>
                         <Button onClick={handleManageSave} disabled={manageSaving}>
                             {manageSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            Save Changes
-                        </Button>
+                            {t_ext('save_changes', 'Save Changes')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

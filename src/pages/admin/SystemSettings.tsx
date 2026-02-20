@@ -17,6 +17,7 @@ import {
     Save,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useTranslation } from "react-i18next";
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode; description: string }> = {
     general: { label: 'General', icon: <Settings className="w-4 h-4" />, description: 'Core application settings' },

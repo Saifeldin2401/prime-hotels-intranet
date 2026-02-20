@@ -30,6 +30,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { KnowledgeQuestion, QuestionDifficulty, QuestionType } from '@/types/questions'
 import { QUESTION_TYPE_CONFIG, DIFFICULTY_CONFIG } from '@/types/questions'
+import { useTranslation } from "react-i18next";
 
 interface QuestionBankSelectorProps {
     /** IDs of already selected questions (to show as selected) */
@@ -201,7 +202,15 @@ export function QuestionBankSelector({
                     filteredQuestions.map((q) => (
                         <div
                             key={q.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={() => handleToggle(q)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    handleToggle(q)
+                                }
+                            }}
                             className={cn(
                                 "p-3 flex items-start gap-3 cursor-pointer hover:bg-gray-50 transition-colors",
                                 localSelected.has(q.id) && "bg-primary/5"

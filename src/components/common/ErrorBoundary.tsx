@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { analytics } from '@/services/analyticsService'
 import * as Sentry from "@sentry/react"
+import { useTranslation } from "react-i18next";
 
 interface Props {
   children: ReactNode

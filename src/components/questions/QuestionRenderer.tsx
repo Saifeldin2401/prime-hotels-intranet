@@ -24,6 +24,7 @@ import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
 import { MCQQuestion } from './MCQQuestion'
 import { TrueFalseQuestion } from './TrueFalseQuestion'
 import { FillBlankQuestion } from './FillBlankQuestion'
+import { useTranslation } from "react-i18next";
 
 export interface QuestionRendererProps {
     question: KnowledgeQuestion
@@ -66,6 +67,12 @@ export function QuestionRenderer({
     const [timeRemaining, setTimeRemaining] = useState(timeLimit || 0)
     const [startTime] = useState(() => Date.now())
 
+    const handleSubmit = useCallback(() => {
+        if (!selectedAnswer || hasSubmitted) return
+        setHasSubmitted(true)
+        onAnswer(selectedAnswer)
+    }, [selectedAnswer, hasSubmitted, onAnswer])
+
     // Randomize options if needed
     const [shuffledOptions, setShuffledOptions] = useState<QuestionOption[]>([])
 
@@ -101,11 +108,7 @@ export function QuestionRenderer({
         setSelectedAnswer(answer)
     }, [disabled, hasSubmitted])
 
-    const handleSubmit = useCallback(() => {
-        if (!selectedAnswer || hasSubmitted) return
-        setHasSubmitted(true)
-        onAnswer(selectedAnswer)
-    }, [selectedAnswer, hasSubmitted, onAnswer])
+
 
     const handleShowHint = () => {
         setShowHintPanel(true)
@@ -137,6 +140,14 @@ export function QuestionRenderer({
                 return correctIds.length === selectedIds.length &&
                     correctIds.every(id => selectedIds.includes(id))
             }
+            case 'scenario': {
+                if (shuffledOptions.length > 0) {
+                    const selected = shuffledOptions.find(o => o.id === selectedAnswer)
+                    return selected?.is_correct
+                }
+                return (selectedAnswer as string).toLowerCase().trim() ===
+                    question.correct_answer?.toLowerCase().trim()
+            }
             default: {
                 return undefined
             }
@@ -145,7 +156,7 @@ export function QuestionRenderer({
 
     // Get feedback for selected option (MCQ)
     const selectedOptionFeedback = (() => {
-        if (question.question_type !== 'mcq') return null
+        if (question.question_type !== 'mcq' && question.question_type !== 'scenario') return null
         const selected = shuffledOptions.find(o => o.id === selectedAnswer)
         return selected?.feedback
     })()
@@ -250,6 +261,26 @@ export function QuestionRenderer({
                         correctAnswer={hasSubmitted && showFeedback ? question.correct_answer : undefined}
                         isCorrect={hasSubmitted ? answerIsCorrect : undefined}
                     />
+                )}
+
+                {question.question_type === 'scenario' && (
+                    shuffledOptions.length > 0 ? (
+                        <MCQQuestion
+                            options={shuffledOptions}
+                            selectedAnswer={selectedAnswer as string | null}
+                            onSelect={handleAnswerChange}
+                            disabled={disabled || hasSubmitted}
+                            showCorrect={hasSubmitted && showFeedback}
+                        />
+                    ) : (
+                        <FillBlankQuestion
+                            value={selectedAnswer as string || ''}
+                            onChange={(val) => handleAnswerChange(val)}
+                            disabled={disabled || hasSubmitted}
+                            correctAnswer={hasSubmitted && showFeedback ? question.correct_answer : undefined}
+                            isCorrect={hasSubmitted ? answerIsCorrect : undefined}
+                        />
+                    )
                 )}
 
                 {/* Hint Panel */}

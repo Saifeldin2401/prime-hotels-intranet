@@ -15,6 +15,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { supabase } from '@/lib/supabase'
+import { useTranslation } from "react-i18next";
 
 interface WorkflowEditorProps {
     workflow: WorkflowDefinition
@@ -22,6 +23,7 @@ interface WorkflowEditorProps {
 }
 
 export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
+    const { t: t_ext } = useTranslation('extracted');
     const { data: steps, isLoading: stepsLoading } = useWorkflowSteps(workflow.id)
     const updateWorkflowMutation = useUpdateWorkflow()
     const createWorkflowMutation = useCreateWorkflow()
@@ -139,33 +141,33 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         <div className="space-y-6">
             <div className="space-y-4 border-b pb-6">
                 <div className="grid gap-2">
-                    <Label htmlFor="name">Workflow Name</Label>
+                    <Label htmlFor="name">{t_ext('workflow_name', 'Workflow Name')}</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">{t_ext('description_1', 'Description')}</Label>
                     <Textarea
                         id="description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        placeholder="What does this workflow do?"
+                        placeholder={t_ext('what_does_this_workflow_do', 'What does this workflow do?')}
                     />
                 </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="type">Workflow Type</Label>
+                    <Label htmlFor="type">{t_ext('workflow_type', 'Workflow Type')}</Label>
                     <Select value={type} onValueChange={(val) => setType(val as WorkflowDefinition['type'])}>
                         <SelectTrigger>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="scheduled">Scheduled</SelectItem>
-                            <SelectItem value="event-based">Event Based</SelectItem>
-                            <SelectItem value="manual">Manual</SelectItem>
+                            <SelectItem value="scheduled">{t_ext('scheduled', 'Scheduled')}</SelectItem>
+                            <SelectItem value="event-based">{t_ext('event_based', 'Event Based')}</SelectItem>
+                            <SelectItem value="manual">{t_ext('manual', 'Manual')}</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="trigger_config">Trigger Config (JSON)</Label>
+                    <Label htmlFor="trigger_config">{t_ext('trigger_config_json', 'Trigger Config (JSON)')}</Label>
                     <Textarea
                         id="trigger_config"
                         value={triggerConfig}
@@ -174,7 +176,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                     />
                 </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="action_config">Workflow Action Config (JSON)</Label>
+                    <Label htmlFor="action_config">{t_ext('workflow_action_config_json', 'Workflow Action Config (JSON)')}</Label>
                     <Textarea
                         id="action_config"
                         value={actionConfig}
@@ -182,18 +184,17 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                         className="font-mono text-xs h-28"
                     />
                     <p className="text-xs text-muted-foreground">
-                        Used when no steps are defined. Example: {"{\"action\":\"send_training_reminders\"}"}
+                        {t_ext('used_when_no_steps_are_defined_example', 'Used when no steps are defined. Example:')}{"{\"action\":\"send_training_reminders\"}"}
                     </p>
                 </div>
             </div>
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Workflow Steps</h3>
+                    <h3 className="text-lg font-medium">{t_ext('workflow_steps', 'Workflow Steps')}</h3>
                     <Button type="button" variant="outline" size="sm" onClick={handleAddStep}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Step
-                    </Button>
+                        {t_ext('add_step', 'Add Step')}</Button>
                 </div>
 
                 <div className="space-y-3">
@@ -205,7 +206,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                             <div className="flex-1 space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="grid gap-1.5">
-                                        <Label className="text-xs">Step Name</Label>
+                                        <Label className="text-xs">{t_ext('step_name', 'Step Name')}</Label>
                                         <Input
                                             size={1}
                                             className="h-8"
@@ -214,7 +215,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                         />
                                     </div>
                                     <div className="grid gap-1.5">
-                                        <Label className="text-xs">Action Type</Label>
+                                        <Label className="text-xs">{t_ext('action_type', 'Action Type')}</Label>
                                         <Select
                                             value={step.action}
                                             onValueChange={(val) => handleStepChange(index, 'action', val)}
@@ -223,15 +224,15 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="send_notification">Send Notification</SelectItem>
-                                                <SelectItem value="create_task">Create Task</SelectItem>
-                                                <SelectItem value="assign_training">Assign Training</SelectItem>
+                                                <SelectItem value="send_notification">{t_ext('send_notification', 'Send Notification')}</SelectItem>
+                                                <SelectItem value="create_task">{t_ext('create_task', 'Create Task')}</SelectItem>
+                                                <SelectItem value="assign_training">{t_ext('assign_training', 'Assign Training')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 </div>
                                 <div className="grid gap-1.5">
-                                    <Label className="text-xs">Config (JSON)</Label>
+                                    <Label className="text-xs">{t_ext('config_json', 'Config (JSON)')}</Label>
                                     <Textarea
                                         className="font-mono text-xs min-h-[60px]"
                                         value={JSON.stringify(step.config)}
@@ -255,22 +256,20 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                     ))}
                     {localSteps.length === 0 && (
                         <div className="text-center py-8 border border-dashed rounded-lg text-muted-foreground">
-                            No steps defined. Add a step to get started.
-                        </div>
+                            {t_ext('no_steps_defined_add_a_step_to_get_start', 'No steps defined. Add a step to get started.')}</div>
                     )}
                 </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-6 border-t">
-                <Button variant="outline" onClick={onClose}>Cancel</Button>
+                <Button variant="outline" onClick={onClose}>{t_ext('cancel', 'Cancel')}</Button>
                 <Button onClick={handleSave} disabled={updateWorkflowMutation.isPending || updateStepsMutation.isPending || createWorkflowMutation.isPending}>
                     {updateWorkflowMutation.isPending || updateStepsMutation.isPending || createWorkflowMutation.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                         <Save className="mr-2 h-4 w-4" />
                     )}
-                    Save Workflow
-                </Button>
+                    {t_ext('save_workflow', 'Save Workflow')}</Button>
             </div>
         </div>
     )

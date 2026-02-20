@@ -31,6 +31,7 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
+import { useTranslation } from "react-i18next";
 
 interface Document {
   id: string

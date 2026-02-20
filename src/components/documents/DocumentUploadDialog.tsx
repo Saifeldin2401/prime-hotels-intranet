@@ -28,6 +28,7 @@ import { getUserFriendlyError } from '@/lib/errorMessages'
 import { useToast } from '@/components/ui/use-toast'
 import { LoadingButton } from '@/components/loading'
 import { scanFile } from '@/hooks/useVirusScan'
+import { useTranslation } from "react-i18next";
 
 interface DocumentUploadDialogProps {
   open: boolean

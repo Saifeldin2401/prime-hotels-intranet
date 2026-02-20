@@ -156,7 +156,7 @@ export default function EmployeeDocuments({ userId }: { userId?: string }) {
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => handleDownload(doc)}
-                                            title="Download"
+                                            title={t_ext('download', 'Download')}
                                         >
                                             <Download className="h-4 w-4 text-gray-500" />
                                         </Button>
@@ -165,7 +165,7 @@ export default function EmployeeDocuments({ userId }: { userId?: string }) {
                                             size="icon"
                                             className="text-red-500 hover:text-red-600 hover:bg-red-50"
                                             onClick={() => handleDelete(doc)}
-                                            title="Delete"
+                                            title={t_ext('delete', 'Delete')}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>

@@ -4,12 +4,12 @@ import { useAuth } from '@/hooks/useAuth'
 
 import { useProperty } from '@/contexts/PropertyContext'
 
-export function useMaintenanceStats() {
+export function useMaintenanceStats(propertyId?: string) {
   const { user, roles, properties, primaryRole } = useAuth()
   const { currentProperty } = useProperty()
 
   return useQuery({
-    queryKey: ['maintenance-stats', user?.id, properties, currentProperty?.id],
+    queryKey: ['maintenance-stats', user?.id, properties, currentProperty?.id, propertyId],
     queryFn: async () => {
       if (!user?.id) return null
 
@@ -18,11 +18,16 @@ export function useMaintenanceStats() {
 
       let baseQuery = supabase.from('maintenance_tickets').select('*')
 
-      // Filter by current property if selected (and not 'all')
-      if (currentProperty && currentProperty.id !== 'all') {
+      // 1. If propertyId is passed directly (e.g. from widget pro), use it
+      if (propertyId && propertyId !== 'all') {
+        baseQuery = baseQuery.eq('property_id', propertyId)
+      }
+      // 2. Fallback to context currentProperty if no prop passed
+      else if (currentProperty && currentProperty.id !== 'all') {
         baseQuery = baseQuery.eq('property_id', currentProperty.id)
-      } else if (!canManageAll && properties.length > 0) {
-        // Fallback to all assigned properties if "All" is selected or no specific property
+      }
+      // 3. Last resort: if user can't manage all, filter by their assigned properties
+      else if (!canManageAll && properties.length > 0) {
         baseQuery = baseQuery.in('property_id', properties.map(p => p.id))
       }
 

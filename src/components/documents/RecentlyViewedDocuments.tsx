@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatRelativeTime } from '@/lib/utils'
+import { useTranslation } from "react-i18next";
 
 const STORAGE_KEY = 'docs_recently_viewed'
 const MAX_ITEMS = 20

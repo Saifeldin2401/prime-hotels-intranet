@@ -18,6 +18,7 @@ import { differenceInMinutes } from 'date-fns'
 import { formatRelativeTime } from '@/lib/utils'
 import { getApproverForRequest } from '@/lib/approvalService'
 import { toast } from 'sonner'
+import { useTranslation } from "react-i18next";
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',

@@ -256,60 +256,104 @@ async function executeAction(supabase: any, actionType: string, config: any, con
         }
 
         case 'escalate_approval': {
-            // Escalate an approval request by switching its current approver.
-            // NOTE: The legacy approval_chain_entries/approval_chains tables do not exist in this schema.
-            const approvalRequestId =
+            // Escalate a request by switching its current assignee in the unified requests workflow.
+            const requestId =
+                effectiveConfig.request_id ||
                 effectiveConfig.approval_request_id ||
                 effectiveConfig.approval_id ||
+                context?.request_id ||
                 context?.approval_request_id ||
                 context?.approval_id;
 
-            if (!approvalRequestId) {
-                throw new Error('escalate_approval requires approval_request_id');
+            if (!requestId) {
+                throw new Error('escalate_approval requires request_id');
             }
 
             const escalatedTo = effectiveConfig.escalate_to;
             if (!escalatedTo) {
-                // Fallback: run centralized escalation routine (processes all approvals).
-                await supabase.rpc('check_and_escalate_approvals');
-                console.log('OK Escalation routine executed for approvals');
+                // Fallback: run centralized escalation routine for unified requests
+                await supabase.rpc('check_and_escalate_requests');
+                console.log('OK Escalation routine executed for unified requests');
                 break;
             }
 
-            const { data: approvalReq, error: fetchError } = await supabase
-                .from('approval_requests')
-                .select('id, current_approver_id')
-                .eq('id', approvalRequestId)
+            const { data: request, error: fetchReqError } = await supabase
+                .from('requests')
+                .select('id, current_assignee_id, request_no, entity_type')
+                .eq('id', requestId)
                 .single();
 
-            if (fetchError || !approvalReq) throw new Error('Approval request not found');
+            if (fetchReqError || !request) throw new Error('Request not found');
+
+            const { data: currentStep, error: fetchStepError } = await supabase
+                .from('request_steps')
+                .select('id, assignee_id')
+                .eq('request_id', requestId)
+                .eq('status', 'pending')
+                .order('step_order', { ascending: true })
+                .limit(1)
+                .single();
+
+            if (!fetchStepError && currentStep) {
+                await supabase
+                    .from('request_steps')
+                    .update({
+                        assignee_id: escalatedTo,
+                        escalated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentStep.id);
+            }
 
             const { error: updateError } = await supabase
-                .from('approval_requests')
+                .from('requests')
                 .update({
-                    current_approver_id: escalatedTo,
-                    updated_at: new Date().toISOString()
+                    current_assignee_id: escalatedTo,
+                    last_action_at: new Date().toISOString()
                 })
-                .eq('id', approvalRequestId);
+                .eq('id', requestId);
 
             if (updateError) throw updateError;
 
-            await supabase.from('approval_history').insert({
-                approval_request_id: approvalRequestId,
-                approver_id: escalatedTo,
-                action: 'escalated',
-                original_approver_id: approvalReq.current_approver_id
+            await supabase.from('request_events').insert({
+                request_id: requestId,
+                event_type: 'forwarded',
+                payload: {
+                    escalated: true,
+                    old_assignee_id: request.current_assignee_id,
+                    new_assignee_id: escalatedTo,
+                    note: 'System automated escalation'
+                }
+            });
+
+            await supabase.from('audit_logs').insert({
+                action: 'escalate',
+                entity_type: request.entity_type || 'request',
+                entity_id: requestId,
+                new_values: {
+                    old_assignee_id: request.current_assignee_id,
+                    new_assignee_id: escalatedTo,
+                }
             });
 
             await supabase.from('notifications').insert({
                 user_id: escalatedTo,
                 type: 'escalation_alert',
-                title: 'Approval Escalated to You',
-                message: 'An approval has been escalated and requires your attention.',
-                metadata: { approval_request_id: approvalRequestId, workflow_triggered: true }
+                title: 'Request Escalated to You',
+                message: `Request #${request.request_no || 'Unknown'} has been escalated and requires your attention.`,
+                metadata: { request_id: requestId, workflow_triggered: true }
             });
 
-            console.log(`OK Escalated approval request ${approvalRequestId}`);
+            if (request.current_assignee_id) {
+                await supabase.from('notifications').insert({
+                    user_id: request.current_assignee_id,
+                    type: 'escalation_alert',
+                    title: 'Request Escalated',
+                    message: `Request #${request.request_no || 'Unknown'} has been escalated to another approver.`,
+                    metadata: { request_id: requestId, workflow_triggered: true }
+                });
+            }
+
+            console.log(`OK Escalated unified request ${requestId}`);
             break;
         }
 

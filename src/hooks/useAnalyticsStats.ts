@@ -24,7 +24,7 @@ export interface AdminAnalyticsStats {
     }
 }
 
-export function useAnalyticsStats() {
+export function useAnalyticsStats(options?: { enabled?: boolean }) {
     return useQuery({
         queryKey: ['admin-analytics'],
         queryFn: async (): Promise<AdminAnalyticsStats> => {
@@ -50,6 +50,7 @@ export function useAnalyticsStats() {
                 searchMetrics: searchData
             }
         },
+        enabled: options?.enabled ?? true,
         refetchInterval: 60000 // Refresh every minute
     })
 }

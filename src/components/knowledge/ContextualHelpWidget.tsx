@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useContextualHelp } from '@/hooks/useKnowledge'
 import type { KnowledgeContentType, ContextualHelp } from '@/types/knowledge'
+import { useTranslation } from "react-i18next";
 
 const CONTENT_TYPE_ICONS: Record<KnowledgeContentType, any> = {
     sop: FileText,

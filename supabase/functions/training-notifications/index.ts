@@ -1,5 +1,4 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from '../_shared/auth.ts'
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -8,6 +7,29 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+function isAuthorizedServiceRoleRequest(authHeader: string | null, key: string): boolean {
+    if (!key) return false;
+    const expected = `Bearer ${key}`;
+    const actual = authHeader ?? '';
+    if (actual.length !== expected.length) return false;
+
+    const a = new TextEncoder().encode(actual);
+    const b = new TextEncoder().encode(expected);
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) {
+        diff |= a[i] ^ b[i];
+    }
+    return diff === 0;
+}
+
+function getServiceRoleToken(authHeader: string | null): string | null {
+    if (!authHeader || !serviceRoleKey) return null;
+    const token = authHeader.startsWith('Bearer ')
+        ? authHeader.slice('Bearer '.length).trim()
+        : authHeader.trim();
+    return token === serviceRoleKey ? token : null;
+}
 
 Deno.serve(async (req) => {
     if (req.method === "OPTIONS") {
@@ -45,11 +67,10 @@ Deno.serve(async (req) => {
               content_id,
               due_date,
               target_type,
-              target_id,
-              status
+              target_id
             `)
             .eq('content_type', 'module')
-            .eq('is_deleted', false)
+            .or('is_deleted.is.null,is_deleted.eq.false')
             .not('due_date', 'is', null)
             .gte('due_date', now.toISOString())
             .lte('due_date', tomorrow.toISOString());
@@ -59,7 +80,10 @@ Deno.serve(async (req) => {
         // 2. Process upcoming deadlines
         const notifications = [];
         const reminderRows = [];
-        const emailPromises = [];
+        const emailJobs: Array<{
+            to: string;
+            body: Record<string, unknown>;
+        }> = [];
         const todayIso = now.toISOString().split('T')[0];
 
         const moduleIds = Array.from(new Set((upcomingAssignments || []).map((a) => a.content_id).filter(Boolean)));
@@ -80,17 +104,38 @@ Deno.serve(async (req) => {
         }
 
         for (const assignment of upcomingAssignments || []) {
-            if (assignment.status === 'completed') continue;
-
             const targets = await resolveAssignmentTargets(
                 supabase,
                 assignment.target_type,
                 assignment.target_id
             );
+            if (targets.length === 0) continue;
 
             const moduleTitle = moduleTitleById.get(assignment.content_id) || 'Training Module';
+            const targetIds = targets.map((target) => target.id);
+            const completedUsers = new Set<string>();
+
+            if (targetIds.length > 0) {
+                const { data: completedProgress, error: progressError } = await supabase
+                    .from('learning_progress')
+                    .select('user_id')
+                    .eq('content_type', 'module')
+                    .eq('content_id', assignment.content_id)
+                    .eq('status', 'completed')
+                    .in('user_id', targetIds);
+
+                if (progressError) {
+                    console.error('Failed to check completion for assignment:', assignment.id, progressError);
+                } else {
+                    for (const row of completedProgress || []) {
+                        if (row?.user_id) completedUsers.add(row.user_id);
+                    }
+                }
+            }
 
             for (const target of targets) {
+                if (completedUsers.has(target.id)) continue;
+
                 const { data: existingReminder } = await supabase
                     .from('scheduled_reminders')
                     .select('id')
@@ -108,7 +153,12 @@ Deno.serve(async (req) => {
                     type: 'training_deadline',
                     title: 'Training Due Soon',
                     message: `Your training "${moduleTitle}" is due on ${new Date(assignment.due_date).toLocaleDateString()}.`,
-                    link: `/learning/my-learning`
+                    link: `/learning/my-learning`,
+                    metadata: {
+                        assignment_id: assignment.id,
+                        content_id: assignment.content_id,
+                        reminder_type: 'due_24h'
+                    }
                 });
 
                 reminderRows.push({
@@ -122,68 +172,59 @@ Deno.serve(async (req) => {
                 });
 
                 // Send Email Notification
-                emailPromises.push(
-                    fetch(`${supabaseUrl}/functions/v1/send-email`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${serviceRoleKey}`
-                        },
-                        body: JSON.stringify({
+                if (target.email) {
+                    emailJobs.push({
+                        to: target.email,
+                        body: {
                             to: target.email,
                             templateKey: 'learning_deadline_reminder',
                             title: 'Training Deadline Tomorrow',
+                            userId: target.id,
                             variables: {
                                 recipient_name: target.full_name || 'Team Member',
                                 module_title: moduleTitle
                             },
                             actionUrl: '/learning/my-learning',
-                            businessDomain: 'hr',
-                            notificationType: 'system'
-                        })
-                    }).catch(err => console.error(`Email failed for ${target.email}:`, err))
-                );
+                            businessDomain: 'operations',
+                            notificationType: 'training_deadline'
+                        }
+                    });
+                }
             }
         }
 
         // 3. Process Certificate Expiry (30 days and 7 days)
         const { data: expiringCertificates, error: expiryError } = await supabase
-            .from('training_certificates')
-            .select(`
-                id,
-                expires_at,
-                training_progress!inner(
-                    user_id,
-                    training_modules!inner(title)
-                ),
-                profiles!inner(email, full_name)
-            `)
-            .gt('expires_at', now.toISOString())
-            .not('expires_at', 'is', null);
+            .from('certificates')
+            .select('id, user_id, training_module_id, title, expiry_date, status')
+            .eq('status', 'active')
+            .gt('expiry_date', now.toISOString())
+            .not('expiry_date', 'is', null);
 
         if (expiryError) throw expiryError;
 
         for (const cert of expiringCertificates || []) {
-            if (!cert.expires_at) continue;
+            if (!cert.expiry_date) continue;
 
-            const expiresAt = new Date(cert.expires_at);
+            const expiresAt = new Date(cert.expiry_date);
             const daysUntilExpiry = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
             if (daysUntilExpiry === 30 || daysUntilExpiry === 7) {
+                const moduleTitle = cert.title || 'Training Module';
                 notifications.push({
-                    user_id: cert.training_progress.user_id,
+                    user_id: cert.user_id,
                     type: 'system',
-                    title: 'Certificate Expiring',
-                    message: `Your certificate for "${cert.training_progress.training_modules.title}" expires in ${daysUntilExpiry} days. Please retake the training.`,
+                    title: 'Certificate Expiry Reminder',
+                    message: `Your certificate for "${moduleTitle}" expires in ${daysUntilExpiry} days. Please retake the training.`,
                     link: `/training/certificates`
                 });
             }
         }
 
         // 4. Wait for all email triggers (fire & forget style but awaited for summary)
-        if (emailPromises.length > 0) {
-            console.log(`Triggering ${emailPromises.length} learning emails...`);
-            await Promise.all(emailPromises);
+        if (emailJobs.length > 0) {
+            console.log(`Triggering ${emailJobs.length} learning emails with rate limiting...`);
+            await dispatchEmailJobs(emailJobs);
         }
 
         // 5. Insert notifications & Tracking
@@ -206,7 +247,7 @@ Deno.serve(async (req) => {
         return new Response(
             JSON.stringify({
                 processed: notifications.length,
-                emails_triggered: emailPromises.length,
+                emails_triggered: emailJobs.length,
                 message: 'Training notifications processed'
             }),
             {
@@ -231,10 +272,19 @@ interface TargetUser {
 }
 
 async function resolveAssignmentTargets(supabase: ReturnType<typeof createClient>, targetType: string, targetId: string | null): Promise<TargetUser[]> {
+    const dedupe = (rows: TargetUser[]): TargetUser[] => {
+        const map = new Map<string, TargetUser>();
+        for (const row of rows) {
+            if (!row?.id || !row?.email) continue;
+            map.set(row.id, row);
+        }
+        return Array.from(map.values());
+    };
+
     switch (targetType) {
         case 'everyone': {
             const { data } = await supabase.from('profiles').select('id, email, full_name').eq('is_active', true);
-            return (data || []) as TargetUser[];
+            return dedupe((data || []) as TargetUser[]);
         }
         case 'user': {
             if (!targetId) return [];
@@ -247,7 +297,7 @@ async function resolveAssignmentTargets(supabase: ReturnType<typeof createClient
                 .from('user_departments')
                 .select('profiles(id, email, full_name)')
                 .eq('department_id', targetId);
-            return (data || []).map((u: any) => u.profiles) as TargetUser[];
+            return dedupe((data || []).map((u: any) => u.profiles).filter(Boolean) as TargetUser[]);
         }
         case 'property': {
             if (!targetId) return [];
@@ -255,9 +305,44 @@ async function resolveAssignmentTargets(supabase: ReturnType<typeof createClient
                 .from('user_properties')
                 .select('profiles(id, email, full_name)')
                 .eq('property_id', targetId);
-            return (data || []).map((u: any) => u.profiles) as TargetUser[];
+            return dedupe((data || []).map((u: any) => u.profiles).filter(Boolean) as TargetUser[]);
+        }
+        case 'role': {
+            if (!targetId) return [];
+            const { data } = await supabase
+                .from('user_roles')
+                .select('profiles(id, email, full_name)')
+                .eq('role', targetId);
+            return dedupe((data || []).map((u: any) => u.profiles).filter(Boolean) as TargetUser[]);
         }
         default:
             return [];
     }
+}
+
+async function dispatchEmailJobs(jobs: Array<{ to: string; body: Record<string, unknown> }>): Promise<void> {
+    for (let i = 0; i < jobs.length; i++) {
+        const job = jobs[i];
+
+        try {
+            await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${serviceRoleKey}`
+                },
+                body: JSON.stringify(job.body)
+            });
+        } catch (err) {
+            console.error(`Email failed for ${job.to}:`, err);
+        }
+
+        if (i < jobs.length - 1) {
+            await delay(600);
+        }
+    }
+}
+
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
 }

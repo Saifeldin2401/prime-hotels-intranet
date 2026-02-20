@@ -22,6 +22,7 @@ const RoutingHealth = lazy(() => import('@/pages/admin/RoutingHealth'))
 const DelegationSettings = lazy(() => import('@/pages/admin/DelegationSettings'))
 const SystemSettings = lazy(() => import('@/pages/admin/SystemSettings'))
 const SLASettings = lazy(() => import('@/pages/admin/SLASettings'))
+const ManualCertificateGenerator = lazy(() => import('@/pages/admin/ManualCertificateGenerator'))
 
 export const AdminRoutes = () => (
     <>
@@ -217,6 +218,16 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
                     <AppLayout>
                         <SystemSettings />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/certificates/generate"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <ManualCertificateGenerator />
                     </AppLayout>
                 </ProtectedRoute>
             }

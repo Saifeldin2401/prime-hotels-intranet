@@ -65,6 +65,7 @@ import { createNotification } from '@/lib/notificationService'
 import { useTranslationAI } from '@/hooks/useTranslationAI'
 
 export default function KnowledgeReview() {
+    const { t: t_ext } = useTranslation('extracted');
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const navigate = useNavigate()
     const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null)
@@ -550,18 +551,18 @@ export default function KnowledgeReview() {
 
                             <div className="space-y-3">
                                 <div>
-                                    <Label className="text-xs text-gray-400 mb-1 block">Title (Arabic)</Label>
+                                    <Label className="text-xs text-gray-400 mb-1 block">{t_ext('title_arabic', 'Title (Arabic)')}</Label>
                                     <Input
                                         value={translationData.title_ar}
                                         onChange={(e) => setTranslationData({ ...translationData, title_ar: e.target.value })}
                                         placeholder="العنوان باللغة العربية"
                                         dir="rtl"
                                     />
-                                    <p className="text-[10px] text-gray-400 mt-1">English: {selectedArticle?.title}</p>
+                                    <p className="text-[10px] text-gray-400 mt-1">{t_ext('english', 'English:')}{selectedArticle?.title}</p>
                                 </div>
 
                                 <div>
-                                    <Label className="text-xs text-gray-400 mb-1 block">Description (Arabic)</Label>
+                                    <Label className="text-xs text-gray-400 mb-1 block">{t_ext('description_arabic', 'Description (Arabic)')}</Label>
                                     <Textarea
                                         value={translationData.description_ar}
                                         onChange={(e) => setTranslationData({ ...translationData, description_ar: e.target.value })}
@@ -569,11 +570,11 @@ export default function KnowledgeReview() {
                                         rows={2}
                                         dir="rtl"
                                     />
-                                    <p className="text-[10px] text-gray-400 mt-1">English: {selectedArticle?.description}</p>
+                                    <p className="text-[10px] text-gray-400 mt-1">{t_ext('english', 'English:')}{selectedArticle?.description}</p>
                                 </div>
 
                                 <div>
-                                    <Label className="text-xs text-gray-400 mb-1 block">Content (Arabic)</Label>
+                                    <Label className="text-xs text-gray-400 mb-1 block">{t_ext('content_arabic', 'Content (Arabic)')}</Label>
                                     <Textarea
                                         value={translationData.content_ar}
                                         onChange={(e) => setTranslationData({ ...translationData, content_ar: e.target.value })}

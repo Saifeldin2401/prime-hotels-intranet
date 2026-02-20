@@ -33,6 +33,7 @@ import { useTranslation } from 'react-i18next'
 type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive'
 
 export default function UserManagement() {
+    const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation('users')
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
@@ -336,11 +337,19 @@ export default function UserManagement() {
               {filteredUsers.map((user) => (
                 <div
                   key={user.id}
+                  role="button"
+                  tabIndex={0}
                   className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors gap-3 sm:gap-4 min-h-touch active:bg-gray-100 ${selectedUserIds.has(user.id)
                     ? 'border-hotel-navy/40 bg-hotel-navy/5'
                     : 'border-gray-200'
                     }`}
                   onClick={() => handleEdit(user)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleEdit(user)
+                    }
+                  }}
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
                     {/* Checkbox */}
@@ -396,8 +405,7 @@ export default function UserManagement() {
                     {user.force_password_reset && (
                       <Badge variant="outline" className="text-[10px] gap-0.5 border-amber-400 text-amber-600">
                         <KeyRound className="w-3 h-3" />
-                        Reset
-                      </Badge>
+                        {t_ext('reset', 'Reset')}</Badge>
                     )}
 
                     <div className="flex items-center gap-1">
@@ -547,7 +555,7 @@ export default function UserManagement() {
 
             {actionType === 'suspend' && (
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-1">Suspend Until (Optional)</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-1">{t_ext('suspend_until_optional', 'Suspend Until (Optional)')}</Label>
                 <input
                   type="datetime-local"
                   value={suspendUntil}
@@ -560,14 +568,14 @@ export default function UserManagement() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Checkbox id="notify-user" checked={notifyUser} onCheckedChange={(checked) => setNotifyUser(!!checked)} />
-                <Label htmlFor="notify-user" className="text-sm">Notify user about this action</Label>
+                <Label htmlFor="notify-user" className="text-sm">{t_ext('notify_user_about_this_action', 'Notify user about this action')}</Label>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-1">Internal Note (Optional)</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-1">{t_ext('internal_note_optional', 'Internal Note (Optional)')}</Label>
                 <textarea
                   value={actionNote}
                   onChange={(e) => setActionNote(e.target.value)}
-                  placeholder="Add a note for the audit trail"
+                  placeholder={t_ext('add_a_note_for_the_audit_trail', 'Add a note for the audit trail')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-hotel-navy focus:border-hotel-navy resize-none"
                   rows={2}
                 />
@@ -585,7 +593,7 @@ export default function UserManagement() {
                 )}
                 {actionTargetUser.suspended_until && (
                   <p className="text-xs text-red-400 mt-1">
-                    Suspended until: {new Date(actionTargetUser.suspended_until).toLocaleString()}
+                    {t_ext('suspended_until', 'Suspended until:')}{new Date(actionTargetUser.suspended_until).toLocaleString()}
                   </p>
                 )}
               </div>
@@ -593,7 +601,7 @@ export default function UserManagement() {
 
             {actionNotesQuery.data && actionNotesQuery.data.length > 0 && (
               <div className="border rounded-md p-3">
-                <p className="text-xs font-medium text-gray-600 mb-2">Recent Admin Notes</p>
+                <p className="text-xs font-medium text-gray-600 mb-2">{t_ext('recent_admin_notes', 'Recent Admin Notes')}</p>
                 <div className="space-y-2">
                   {actionNotesQuery.data.map((note: any) => (
                     <div key={note.id} className="text-xs text-gray-600">

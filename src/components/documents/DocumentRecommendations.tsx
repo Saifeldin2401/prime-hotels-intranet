@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from "react-i18next";
 
 export function DocumentRecommendations() {
   const { user } = useAuth();
@@ -92,7 +93,7 @@ export function DocumentRecommendations() {
               <span className="truncate">{doc.title}</span>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
-              {doc.is_company_wide ? (
+              {doc.visibility === 'all_properties' ? (
                 <Star className="h-3 w-3 text-yellow-500" />
               ) : (
                 <Building2 className="h-3 w-3 text-blue-500" />

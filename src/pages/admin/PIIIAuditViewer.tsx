@@ -19,6 +19,7 @@ import type { DateRange } from 'react-day-picker'
 import { useTranslation } from 'react-i18next'
 
 export function PIIAuditViewer() {
+    const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation(['admin', 'common'])
   const [filters, setFilters] = useState({
     user_id: '',
@@ -330,7 +331,7 @@ export function PIIAuditViewer() {
                         <Badge className={getResourceTypeColor(log.resource_type)}>
                           {t(`pii_audit.resource_types.${log.resource_type}`, { defaultValue: log.resource_type.replace('_', ' ') })}
                         </Badge>
-                        <span className="text-sm text-muted-foreground">ID: {log.resource_id}</span>
+                        <span className="text-sm text-muted-foreground">{t_ext('id', 'ID:')}{log.resource_id}</span>
                       </div>
                     </TableCell>
                     <TableCell>

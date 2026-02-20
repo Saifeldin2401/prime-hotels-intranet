@@ -543,5 +543,37 @@
             "empty": "No audit events recorded.",
             "entity": "Entity: {{value}}"
         }
+    },
+    "manual_certificates": {
+        "title": "Manual Certificates",
+        "description": "Generate certificates manually for users affected by system errors or external programs.",
+        "form": {
+            "title": "Certificate Details",
+            "description": "Fill in the details to generate a new certificate.",
+            "user": "Select User",
+            "select_user": "Select a user...",
+            "cert_type": "Certificate Type",
+            "select_type": "Select type...",
+            "completion_date": "Completion Date",
+            "course_title": "Course / Program Title",
+            "course_title_placeholder": "e.g., Advanced Fire Safety Training"
+        },
+        "types": {
+            "training": "Training",
+            "sop": "SOP Acknowledgment",
+            "course": "External Course",
+            "achievement": "Special Achievement"
+        },
+        "actions": {
+            "generate": "Generate Certificate",
+            "generating": "Generating..."
+        },
+        "success": {
+            "generated": "Certificate successfully generated."
+        },
+        "errors": {
+            "missing_fields": "Please fill in all required fields.",
+            "generation_failed": "Failed to generate certificate."
+        }
     }
 }

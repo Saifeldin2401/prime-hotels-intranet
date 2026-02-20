@@ -7,6 +7,10 @@ import './i18n/i18n'
 import * as Sentry from "@sentry/react";
 import App from './App'
 
+if (typeof globalThis.t_ext !== 'function') {
+  globalThis.t_ext = (_key: string, fallback?: string) => fallback ?? _key
+}
+
 const redirectParam = new URLSearchParams(window.location.search).get('__redirect')
 let redirectPath: string | null = null
 if (redirectParam) {

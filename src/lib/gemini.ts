@@ -24,6 +24,9 @@ interface QuizQuestion {
   explanation?: string
   hint?: string
   difficulty_level?: string
+  source_snippet?: string
+  linked_section?: string
+  confidence_score?: number
 }
 
 const cleanText = (text: string): string => {
@@ -96,7 +99,8 @@ const heuristicQuiz = (): QuizQuestion[] => {
       question_type: "mcq",
       options: ["Ensure Operational Consistency", "Reduce Costs", "Marketing usage", "Staff Scheduling"],
       correct_answer: "Ensure Operational Consistency",
-      points: 10
+      points: 10,
+      source_snippet: "Extracted from provided SOP content."
     }
   ]
 }
@@ -153,7 +157,10 @@ export const aiService = {
     difficulty?: string,
     language?: string,
     includeHints?: boolean,
-    includeExplanations?: boolean
+    includeExplanations?: boolean,
+    groundedOnly?: boolean,
+    includeCitations?: boolean,
+    sourceTitle?: string
   }): Promise<QuizQuestion[]> {
     const context = request.sopContent.replace(/<[^>]*>/g, '').substring(0, 3000)
     const count = request.count || 5
@@ -161,12 +168,23 @@ export const aiService = {
     const difficulty = request.difficulty || 'medium'
     const language = request.language || 'English'
     const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
+    const groundedInstruction = request.groundedOnly
+      ? 'ONLY use facts stated in the provided content. Do not add external knowledge. If a fact is not in the content, skip it.'
+      : 'You may use general knowledge to clarify, but prioritize the provided content.'
+    const citationsInstruction = request.includeCitations
+      ? 'Include a short "source_snippet" (1-2 sentences) quoted or closely paraphrased from the provided content.'
+      : 'Do NOT include any source_snippet field.'
+    const sourceTitle = request.sourceTitle ? `Source Title: ${request.sourceTitle}` : ''
+    const citationField = request.includeCitations
+      ? '\n        "source_snippet": "Short source excerpt from the provided content"'
+      : ''
 
     const prompt = `You are a Senior Hotel Training Manager. Create EXACTLY ${count} quiz questions based on the SOP content below.
     
     Target Audience: Hotel Staff.
     Tone: Professional, Clear, and Educational.
     Target Language: ${language}
+    ${sourceTitle}
     
     
     REQUIREMENTS:
@@ -175,6 +193,8 @@ export const aiService = {
     - Difficulty level: ${difficulty}
     - ${request.includeHints ? 'Include a helpful "hint" for each question' : 'Do NOT include hints'}
     - ${request.includeExplanations ? 'Include a clear "explanation" for why the answer is correct' : 'Do NOT include explanations'}
+    - Grounding: ${groundedInstruction}
+    - Citations: ${citationsInstruction}
     ${isArabic ? '- OUTPUT ONLY IN ARABIC. Translate content where necessary.' : ''}
     
     Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTLY ${count} objects.
@@ -187,7 +207,7 @@ export const aiService = {
         "correct_answer": "Opt 2",
         "points": 10,
         "explanation": "Exp 1",
-        "hint": "Hint 1"
+        "hint": "Hint 1"${citationField}
       },
       {
         "question_text": "Question 2 Content in ${language}",
@@ -196,7 +216,7 @@ export const aiService = {
         "correct_answer": "True",
         "points": 10,
         "explanation": "Exp 2",
-        "hint": "Hint 2"
+        "hint": "Hint 2"${citationField}
       }
       ... (continue for ${count} items)
     ]

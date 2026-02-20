@@ -28,6 +28,7 @@ import { useMyExpenseClaims, useSubmitExpenseClaim } from '@/hooks/useExpenseCla
 import type { ExpenseClaim } from '@/lib/types'
 import { openUrlInNewTab, resolveExpenseReceiptUrl } from '@/lib/secureFileAccess'
 import { Plus, Receipt, Loader2, Eye, FileText } from 'lucide-react'
+import { useTranslation } from "react-i18next";
 
 const EXPENSE_CATEGORIES: Array<{ value: ExpenseClaim['category']; label: string }> = [
   { value: 'travel', label: 'Travel' },

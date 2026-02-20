@@ -121,7 +121,7 @@ export function useDepartmentKPIs(propertyId?: string) {
                     .in('target_id', userIds)
 
                 const { count: completedTraining } = await supabase
-                    .from('training_progress')
+                    .from('learning_progress')
                     .select('*', { count: 'exact', head: true })
                     .in('user_id', userIds)
                     .eq('status', 'completed')

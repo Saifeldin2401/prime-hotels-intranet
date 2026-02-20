@@ -130,7 +130,7 @@ CREATE TRIGGER trigger_set_certificate_identifiers
 CREATE TRIGGER trigger_certificates_updated_at
   BEFORE UPDATE ON certificates
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
+  EXECUTE FUNCTION update_updated_at_column();
 
 -- RLS Policies
 ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
@@ -147,9 +147,10 @@ CREATE POLICY "Managers can view property certificates"
   USING (
     EXISTS (
       SELECT 1 FROM user_roles ur
+      JOIN user_properties up ON up.user_id = ur.user_id
       WHERE ur.user_id = auth.uid()
-      AND ur.property_id = certificates.property_id
       AND ur.role IN ('property_manager', 'property_hr', 'department_head')
+      AND up.property_id = certificates.property_id
     )
   );
 

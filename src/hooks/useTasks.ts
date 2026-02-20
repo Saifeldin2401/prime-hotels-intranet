@@ -11,12 +11,14 @@ import { escapeSearchQuery } from '@/lib/utils'
 // Fetch tasks
 export function useTasks(filters?: {
   status?: string
+  statuses?: string[]
   priority?: string
   assignedTo?: string
   createdBy?: string
   propertyId?: string
   departmentId?: string
   search?: string
+  limit?: number
   ignorePropertyFilter?: boolean // Allow bypassing property filter for regional admins
 }) {
   const { currentProperty } = useProperty()
@@ -36,7 +38,9 @@ export function useTasks(filters?: {
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
-      if (filters?.status) {
+      if (filters?.statuses && filters.statuses.length > 0) {
+        query = query.in('status', filters.statuses)
+      } else if (filters?.status) {
         query = query.eq('status', filters.status)
       }
       if (filters?.priority) {
@@ -63,6 +67,10 @@ export function useTasks(filters?: {
       if (filters?.search) {
         const escaped = escapeSearchQuery(filters.search)
         query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
+      }
+
+      if (filters?.limit) {
+        query = query.limit(filters.limit)
       }
 
       const { data, error } = await query

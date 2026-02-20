@@ -11,7 +11,8 @@ import {
     FileQuestion,
     BookOpen,
     Headphones,
-    Gamepad2
+    Gamepad2,
+    Sparkles
 } from 'lucide-react'
 import React from 'react'
 import { Button } from '@/components/ui/button'
@@ -57,6 +58,7 @@ interface BuilderCanvasProps {
     onDeleteContent: (sectionId: string, contentId: string) => void
     onReorderSection: (dragIndex: number, hoverIndex: number) => void
     onReorderContent: (sectionId: string, dragIndex: number, hoverIndex: number) => void
+    onGenerateQuizFromSection?: (sectionId: string) => void
 }
 
 export const BuilderCanvas = ({
@@ -69,7 +71,8 @@ export const BuilderCanvas = ({
     onEditContent,
     onDeleteContent,
     onReorderSection,
-    onReorderContent
+    onReorderContent,
+    onGenerateQuizFromSection
 }: BuilderCanvasProps) => {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
@@ -186,6 +189,20 @@ export const BuilderCanvas = ({
                                             </Badge>
                                         </div>
                                         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                            {onGenerateQuizFromSection && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-8 px-2 text-xs text-slate-600 hover:text-purple-600 hover:bg-purple-50"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        onGenerateQuizFromSection(section.id)
+                                                    }}
+                                                >
+                                                    <Sparkles className={cn("w-3.5 h-3.5", isRTL ? "ml-1" : "mr-1")} />
+                                                    {t('builder.aiQuiz', 'AI Quiz')}
+                                                </Button>
+                                            )}
                                             <Button
                                                 size="icon"
                                                 variant="ghost"

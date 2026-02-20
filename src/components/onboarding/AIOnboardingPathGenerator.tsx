@@ -37,6 +37,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAIOnboardingPath } from '@/hooks/useAIOnboardingPath'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProperties } from '@/hooks/useProperties'
+import { useTranslation } from "react-i18next";
 
 const stepTypeIcons = {
     training: BookOpen,

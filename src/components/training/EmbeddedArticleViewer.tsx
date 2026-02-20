@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { FileText, Download, ExternalLink, AlertCircle, BookOpen, Loader2 } from 'lucide-react'
-import { useDocument } from '@/hooks/useDocuments'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,6 +17,18 @@ interface EmbeddedArticleViewerProps {
     translationDir?: 'ltr' | 'rtl'
     translationTarget?: TranslationTargetLanguage | null
     className?: string
+}
+
+type LegacySopDocument = {
+    id: string
+    title: string
+    description?: string | null
+    content?: string | null
+    status?: string | null
+    file_url?: string | null
+    updated_at?: string | null
+    published_at?: string | null
+    code?: string | null
 }
 
 export const EmbeddedArticleViewer = (props: EmbeddedArticleViewerProps) => {
@@ -37,8 +50,49 @@ const EmbeddedArticleViewerInner = ({
     className
 }: EmbeddedArticleViewerProps) => {
     const { t } = useTranslation('training')
-    // ... rest of the component logic ...
-    const { data: document, isLoading, error } = useDocument(sopId)
+    const { data: documentData, isLoading: isDocumentLoading, error: documentError } = useQuery({
+        queryKey: ['document-embed', sopId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('documents')
+                .select('id, title, description, content, status, file_url, updated_at, is_deleted')
+                .eq('id', sopId)
+                .or('is_deleted.is.null,is_deleted.eq.false')
+                .maybeSingle()
+
+            if (error) throw error
+            return data as LegacySopDocument | null
+        },
+        enabled: !!sopId
+    })
+    const shouldTryLegacy = !!sopId && !isDocumentLoading && (!documentData || !!documentError)
+
+    const isLikelyUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+
+    const { data: legacyDocument, isLoading: isLegacyLoading, error: legacyError } = useQuery({
+        queryKey: ['legacy-sop-document', sopId],
+        queryFn: async () => {
+            let query = supabase
+                .from('sop_documents')
+                .select('id, title, description, content, status, updated_at, published_at, code')
+
+            if (isLikelyUuid(sopId)) {
+                query = query.eq('id', sopId)
+            } else {
+                query = query.eq('code', sopId)
+            }
+
+            const { data, error } = await query.maybeSingle()
+
+            if (error) throw error
+            return data as LegacySopDocument | null
+        },
+        enabled: shouldTryLegacy
+    })
+
+    const document = (documentData || legacyDocument) as LegacySopDocument | null
+    const isLoading = isDocumentLoading || (shouldTryLegacy && isLegacyLoading)
+    const resolvedError = document ? null : (documentError || legacyError)
     const [viewMode, setViewMode] = useState<'inline' | 'fallback'>('inline')
 
     // Translation state
@@ -46,16 +100,32 @@ const EmbeddedArticleViewerInner = ({
     const [translatedContent, setTranslatedContent] = useState<string | null>(null)
     const [translatedTitle, setTranslatedTitle] = useState<string | null>(null)
     const [isTranslating, setIsTranslating] = useState(false)
+    const [translationError, setTranslationError] = useState<string | null>(null)
+    const translationAttemptRef = useRef<{ key: string; status: 'pending' | 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        setTranslatedContent(null)
+        setTranslatedTitle(null)
+        setTranslationError(null)
+        translationAttemptRef.current = null
+    }, [document?.id, translationTarget])
 
     // Effect to trigger translation
     useEffect(() => {
         const translateContent = async () => {
             if (!document || !translationTarget || !document.content) return
 
-            // If we already have it, don't re-fetch
-            if (translatedContent) return
+            if (translatedContent || isTranslating) return
+
+            const attemptKey = `${document.id}-${translationTarget}`
+            if (translationAttemptRef.current?.key === attemptKey) {
+                if (translationAttemptRef.current.status !== 'pending') return
+            } else {
+                translationAttemptRef.current = { key: attemptKey, status: 'pending' }
+            }
 
             setIsTranslating(true)
+            setTranslationError(null)
             try {
                 // Translate content
                 const contentRes = await translateAI.mutateAsync({
@@ -75,8 +145,17 @@ const EmbeddedArticleViewerInner = ({
                     })
                     setTranslatedTitle(titleRes.translated_text)
                 }
+
+                if (translationAttemptRef.current?.key === attemptKey) {
+                    translationAttemptRef.current.status = 'success'
+                }
             } catch (err) {
                 console.error("SOP Translation error:", err)
+                const message = err instanceof Error ? err.message : 'Translation failed'
+                setTranslationError(message)
+                if (translationAttemptRef.current?.key === attemptKey) {
+                    translationAttemptRef.current.status = 'error'
+                }
             } finally {
                 setIsTranslating(false)
             }
@@ -85,7 +164,7 @@ const EmbeddedArticleViewerInner = ({
         if (translationTarget && document && document.content) {
             translateContent()
         }
-    }, [document, translationTarget, translateAI, translatedContent])
+    }, [document?.id, document?.content, document?.title, translationTarget, translateAI, translatedContent, isTranslating])
 
     // Effect to determine initial view mode based on file type
     useEffect(() => {
@@ -122,7 +201,7 @@ const EmbeddedArticleViewerInner = ({
         )
     }
 
-    if (error || !document) {
+    if (resolvedError || !document) {
         return (
             <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -178,7 +257,8 @@ const EmbeddedArticleViewerInner = ({
         )
     }
 
-    const displayTitle = (translationTarget && translatedTitle) ? translatedTitle : document.title
+    const displayTitle = (translationTarget && translatedTitle) ? translatedTitle : (document.title || t('sopReference', 'Standard Operating Procedure'))
+    const openInNewTabHref = documentData ? `/documents/${sopId}` : `/knowledge/${sopId}`
 
     return (
         <Card className={`overflow-hidden border-slate-200 shadow-sm ${className}`}>
@@ -194,7 +274,7 @@ const EmbeddedArticleViewerInner = ({
                                 <h3 className="font-semibold text-lg text-hotel-navy leading-tight">
                                     {displayTitle}
                                 </h3>
-                                {document.status !== 'PUBLISHED' && (
+                                {document.status && document.status !== 'PUBLISHED' && (
                                     <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold tracking-wide">
                                         {document.status}
                                     </span>
@@ -207,6 +287,11 @@ const EmbeddedArticleViewerInner = ({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                        {translationError && (
+                            <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded">
+                                {translationError}
+                            </span>
+                        )}
                         {document.file_url && (
                             <Button variant="outline" size="sm" asChild className="h-9">
                                 <a href={document.file_url} target="_blank" rel="noreferrer">
@@ -216,7 +301,7 @@ const EmbeddedArticleViewerInner = ({
                             </Button>
                         )}
                         <Button variant="ghost" size="sm" asChild className="h-9 text-slate-500 hover:text-hotel-navy">
-                            <a href={`/documents/${sopId}`} target="_blank" rel="noreferrer">
+                            <a href={openInNewTabHref} target="_blank" rel="noreferrer">
                                 <ExternalLink className="mr-2 h-4 w-4" />
                                 {t('openInNewTab', 'Open in New Tab')}
                             </a>

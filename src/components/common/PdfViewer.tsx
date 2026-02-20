@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { FileText, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import * as pdfjsLib from 'pdfjs-dist'
+import { useTranslation } from "react-i18next";
 
 // Set worker source locally using Vite's URL handling
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(

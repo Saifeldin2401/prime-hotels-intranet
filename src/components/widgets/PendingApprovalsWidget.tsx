@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useApprovalStats, usePendingApprovals } from '@/hooks/useApprovalStats'
 import { useApproveLeaveRequest, useRejectLeaveRequest } from '@/hooks/useLeaveRequests'
 import { cn } from '@/lib/utils'
+import { useTranslation } from "react-i18next";
 
 interface PendingApprovalsWidgetProps {
     className?: string

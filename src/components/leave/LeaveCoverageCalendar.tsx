@@ -6,6 +6,7 @@ import { useDepartmentCoverage, useLeaveEvents, useLeaveConflicts } from '@/hook
 import { Calendar, ChevronLeft, ChevronRight, Users, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths } from 'date-fns'
+import { useTranslation } from "react-i18next";
 
 interface LeaveCoverageCalendarProps {
     departmentId?: string

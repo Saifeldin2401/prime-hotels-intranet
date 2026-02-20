@@ -9,6 +9,17 @@ import type {
 } from '@/types/learning'
 import type { QuestionStatus } from '@/types/questions'
 
+function shuffleArray<T>(items: T[]): T[] {
+    const result = [...items]
+    for (let i = result.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1))
+        const temp = result[i]
+        result[i] = result[j]
+        result[j] = temp
+    }
+    return result
+}
+
 export const learningService = {
     // ==========================================
     // QUIZZES
@@ -55,9 +66,13 @@ export const learningService = {
 
         if (error) throw error
 
-        // Sort questions by display_order
+        // Respect quiz setting: randomize question order in player when enabled.
         if (data.questions) {
-            data.questions.sort((a: LearningQuizQuestion, b: LearningQuizQuestion) => (a.display_order || 0) - (b.display_order || 0))
+            if (data.randomize_questions) {
+                data.questions = shuffleArray(data.questions)
+            } else {
+                data.questions.sort((a: LearningQuizQuestion, b: LearningQuizQuestion) => (a.display_order || 0) - (b.display_order || 0))
+            }
         }
 
         return data as LearningQuiz
@@ -221,26 +236,39 @@ export const learningService = {
         // For now, simpler fetch via RLS which filters for us
         const { data, error } = await supabase
             .from('learning_assignments')
-            .select(`
-                *,
-                progress:learning_progress(*)
-            `)
+            .select('*')
+            .or('is_deleted.is.null,is_deleted.eq.false')
             .order('created_at', { ascending: false })
 
         if (error) throw error
 
         // Also fetch quiz titles manually since simple join might not work dynamically for polymorphic content
         // Or we can fetch content details in a second step
-        const assignments = data as LearningAssignment[]
+        const assignments = (data || []) as LearningAssignment[]
 
-        // Filter progress to only include current user's progress
-        assignments.forEach(a => {
-            if (Array.isArray(a.progress)) {
-                // Find this user's progress entry
-                const userProgress = a.progress.find(p => p.user_id === user.id)
-                a.progress = userProgress || null
-            }
-        })
+        // Fetch only current user's progress (avoid loading all progress rows)
+        const assignmentIds = assignments.map(a => a.id).filter(Boolean)
+        if (assignmentIds.length > 0) {
+            const { data: progressRows, error: progressError } = await supabase
+                .from('learning_progress')
+                .select('*')
+                .eq('user_id', user.id)
+                .in('assignment_id', assignmentIds)
+
+            if (progressError) throw progressError
+
+            const progressByAssignment = new Map(
+                (progressRows || []).map((p: LearningProgress) => [p.assignment_id, p])
+            )
+
+            assignments.forEach(a => {
+                a.progress = progressByAssignment.get(a.id) || null
+            })
+        } else {
+            assignments.forEach(a => {
+                a.progress = null
+            })
+        }
 
         // Enrich with titles
         // Enrich with titles and details
@@ -252,57 +280,53 @@ export const learningService = {
             .filter(a => a.content_type === 'module')
             .map(a => a.content_id)
 
-        if (quizIds.length > 0) {
-            // Only fetch published quizzes - users shouldn't see draft content
-            const { data: quizzes, error: quizError } = await supabase
-                .from('learning_quizzes')
-                .select('id, title, description, time_limit_minutes, status')
-                .in('id', quizIds)
-                .eq('status', 'published')
+        const [quizResult, moduleResult] = await Promise.all([
+            quizIds.length > 0
+                ? supabase
+                    .from('learning_quizzes')
+                    .select('id, title, description, time_limit_minutes, status')
+                    .in('id', quizIds)
+                    .eq('status', 'published')
+                : Promise.resolve({ data: [], error: null }),
+            moduleIds.length > 0
+                ? supabase
+                    .from('training_modules')
+                    .select('id, title, description, estimated_duration_minutes, status, is_active')
+                    .in('id', moduleIds)
+                    .eq('is_active', true)
+                    .eq('is_deleted', false)
+                : Promise.resolve({ data: [], error: null })
+        ])
 
-            if (quizError) console.error('Error fetching quizzes:', quizError)
+        if (quizResult?.error) console.error('Error fetching quizzes:', quizResult.error)
+        if (moduleResult?.error) console.error('Error fetching modules:', moduleResult.error)
 
-            const quizMap = new Map(quizzes?.map(q => [q.id, q]))
+        const quizMap = new Map((quizResult?.data || []).map((q: any) => [q.id, q]))
+        const moduleMap = new Map((moduleResult?.data || []).map((m: any) => [m.id, m]))
 
-            assignments.forEach(a => {
-                if (a.content_type === 'quiz') {
-                    const q = quizMap.get(a.content_id)
-                    if (q) {
-                        a.content_title = q.title
-                        a.content_metadata = {
-                            description: q.description,
-                            duration: q.time_limit_minutes,
-                            // question_count not available in direct fetch
-                        }
+        assignments.forEach(a => {
+            if (a.content_type === 'quiz') {
+                const q = quizMap.get(a.content_id)
+                if (q) {
+                    a.content_title = q.title
+                    a.content_metadata = {
+                        description: q.description,
+                        duration: q.time_limit_minutes,
+                        // question_count not available in direct fetch
                     }
                 }
-            })
-        }
-
-        if (moduleIds.length > 0) {
-            // Fetch active modules - training_modules uses is_active not status
-            const { data: modules } = await supabase
-                .from('training_modules')
-                .select('id, title, description, estimated_duration_minutes, status, is_active')
-                .in('id', moduleIds)
-                .eq('is_active', true)
-                .eq('is_deleted', false)
-
-            const moduleMap = new Map(modules?.map(m => [m.id, m]))
-
-            assignments.forEach(a => {
-                if (a.content_type === 'module') {
-                    const m = moduleMap.get(a.content_id)
-                    if (m) {
-                        a.content_title = m.title
-                        a.content_metadata = {
-                            description: m.description,
-                            duration: m.estimated_duration_minutes
-                        }
+            }
+            if (a.content_type === 'module') {
+                const m = moduleMap.get(a.content_id)
+                if (m) {
+                    a.content_title = m.title
+                    a.content_metadata = {
+                        description: m.description,
+                        duration: m.estimated_duration_minutes
                     }
                 }
-            })
-        }
+            }
+        })
 
         // Filter out assignments where content could not be resolved (e.g. deleted or RLS restricted draft)
         const validAssignments = assignments.filter(a => {

@@ -95,7 +95,7 @@ export interface RouteConfig {
     /**
      * Role-specific path overrides
      * Same nav label routes to different destinations per role
-     * Example: Dashboard -> /dashboard/property-manager for property_manager
+     * Example: Reports -> /reports/summary for regional_admin
      */
     rolePathOverrides?: Partial<Record<AppRole, string>>
 }
@@ -230,26 +230,6 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: 'all',
         group: 'home',
         order: 1,
-        // Role-specific dashboard routing - same label, different destinations
-        rolePathOverrides: {
-            staff: '/staff-dashboard',
-            department_head: '/dashboard/department-head',
-            property_manager: '/dashboard/property-manager',
-            property_hr: '/dashboard/property-hr',
-            regional_hr: '/dashboard/regional-hr',
-            regional_admin: '/dashboard/corporate-admin',
-            corporate_admin: '/dashboard/corporate-admin',
-            manager: '/staff-dashboard'
-        }
-    },
-    {
-        path: '/dashboard/my-team',
-        title: 'my_team',
-        icon: Users,
-        description: 'View and manage your direct reports',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'home',
-        order: 2
     },
 
     // -------------------------------------------------------------------------
@@ -736,6 +716,15 @@ export const ROUTES: RouteConfig[] = [
         order: 3
     },
     {
+        path: '/admin/certificates/generate',
+        title: 'manual_certificates',
+        icon: Award,
+        description: 'Generate manual certificates for users',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 3.1
+    },
+    {
         path: '/admin/analytics',
         title: 'system_analytics',
         icon: Activity,
@@ -1001,7 +990,7 @@ export function getMobileQuickActions(role: AppRole | null): RouteConfig[] {
 
     // Priority routes for quick access
     const priorityPaths = role === 'staff'
-        ? ['/staff-dashboard', '/learning/my', '/tasks', '/messaging', '/profile']
+        ? ['/dashboard', '/learning/my', '/tasks', '/messaging', '/profile']
         : ['/dashboard', '/approvals', '/tasks', '/messaging', '/profile']
 
     return priorityPaths

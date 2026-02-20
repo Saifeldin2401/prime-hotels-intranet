@@ -4,7 +4,7 @@
  * Component for generating questions from SOP content using AI.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -52,6 +52,10 @@ interface AIQuestionGeneratorProps {
     sopContent: string
     onQuestionsCreated?: (count: number, ids?: string[]) => void
     className?: string
+    initialContent?: string
+    initialSourceType?: 'text' | 'sop' | 'file'
+    defaultGroundedOnly?: boolean
+    defaultIncludeCitations?: boolean
 }
 
 export function AIQuestionGenerator({
@@ -59,19 +63,26 @@ export function AIQuestionGenerator({
     sopTitle,
     sopContent,
     onQuestionsCreated,
-    className
+    className,
+    initialContent,
+    initialSourceType,
+    defaultGroundedOnly,
+    defaultIncludeCitations
 }: AIQuestionGeneratorProps) {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.language === 'ar'
     const generateQuestions = useGenerateQuestions()
     const createQuestion = useCreateQuestion()
 
+    const initialText = initialContent ?? sopContent ?? ''
+
     // Sources state
-    const [sourceType, setSourceType] = useState<'text' | 'sop' | 'file'>('text')
+    const [sourceType, setSourceType] = useState<'text' | 'sop' | 'file'>(initialSourceType || (initialText ? 'text' : 'text'))
     const [selectedSopId, setSelectedSopId] = useState<string | null>(null)
     const [extractedText, setExtractedText] = useState('')
     const [fileName, setFileName] = useState('')
     const [isExtracting, setIsExtracting] = useState(false)
+    const [fileError, setFileError] = useState<string | null>(null)
 
     // Fetch available SOPs (list without content)
     const { data: sops, isLoading: isLoadingSOPs } = useArticles({
@@ -89,6 +100,8 @@ export function AIQuestionGenerator({
     const [includeHints, setIncludeHints] = useState(true)
     const [includeExplanations, setIncludeExplanations] = useState(true)
     const [language, setLanguage] = useState<'en' | 'ar'>('en')
+    const [groundedOnly, setGroundedOnly] = useState(defaultGroundedOnly ?? false)
+    const [includeCitations, setIncludeCitations] = useState(defaultIncludeCitations ?? false)
 
     // Generated questions state
     const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([])
@@ -97,8 +110,27 @@ export function AIQuestionGenerator({
     const [saving, setSaving] = useState(false)
 
     // Manual input state
-    const [manualContent, setManualContent] = useState('')
+    const [manualContent, setManualContent] = useState(initialText)
     const [sopSearch, setSopSearch] = useState('')
+
+    useEffect(() => {
+        if (initialText) {
+            setManualContent(initialText)
+            setSourceType(initialSourceType || 'text')
+        }
+    }, [initialText, initialSourceType])
+
+    useEffect(() => {
+        if (defaultGroundedOnly !== undefined) {
+            setGroundedOnly(defaultGroundedOnly)
+        }
+    }, [defaultGroundedOnly])
+
+    useEffect(() => {
+        if (defaultIncludeCitations !== undefined) {
+            setIncludeCitations(defaultIncludeCitations)
+        }
+    }, [defaultIncludeCitations])
 
     const filteredSops = sops?.filter(sop =>
         sop.title.toLowerCase().includes(sopSearch.toLowerCase())
@@ -110,9 +142,15 @@ export function AIQuestionGenerator({
 
         setFileName(file.name)
         setExtractedText('') // Reset while processing
+        setFileError(null)
         setIsExtracting(true)
 
-        if (file.type === 'text/plain') {
+        const lowerName = file.name.toLowerCase()
+        const isTxt = file.type === 'text/plain' || lowerName.endsWith('.txt')
+        const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf')
+        const isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || lowerName.endsWith('.docx')
+
+        if (isTxt) {
             // Handle plain text files
             const reader = new FileReader()
             reader.onload = (event) => {
@@ -121,7 +159,7 @@ export function AIQuestionGenerator({
             }
             reader.readAsText(file)
             reader.onloadend = () => setIsExtracting(false)
-        } else if (file.type === 'application/pdf') {
+        } else if (isPdf) {
             // Extract text from PDF using pdfjs-dist
             try {
                 const pdfjsLib = await import('pdfjs-dist')
@@ -152,25 +190,38 @@ export function AIQuestionGenerator({
                     // PDF might be scanned/image-based with no selectable text
                     console.warn('PDF has no extractable text - may be scanned/image-based')
                     setExtractedText('')
+                    setFileError('No extractable text found in this PDF.')
                 }
             } catch (error) {
                 console.error('PDF extraction error:', error)
                 setExtractedText('')
+                setFileError('Failed to extract text from PDF.')
+            } finally {
+                setIsExtracting(false)
+            }
+        } else if (isDocx) {
+            try {
+                const mammoth = await import('mammoth')
+                const arrayBuffer = await file.arrayBuffer()
+                const result = await mammoth.extractRawText({ arrayBuffer })
+                const text = result.value?.trim() || ''
+                if (text.length > 0) {
+                    setExtractedText(text)
+                } else {
+                    setExtractedText('')
+                    setFileError('No extractable text found in this DOCX.')
+                }
+            } catch (error) {
+                console.error('DOCX extraction error:', error)
+                setExtractedText('')
+                setFileError('Failed to extract text from DOCX.')
             } finally {
                 setIsExtracting(false)
             }
         } else {
-            // For other file types, try reading as text
-            const reader = new FileReader()
-            reader.onload = (event) => {
-                const text = event.target?.result as string
-                setExtractedText(text || '')
-            }
-            reader.onerror = () => {
-                setExtractedText('')
-            }
-            reader.readAsText(file)
-            reader.onloadend = () => setIsExtracting(false)
+            setExtractedText('')
+            setFileError('Unsupported file type. Please upload PDF, DOCX, or TXT.')
+            setIsExtracting(false)
         }
     }
 
@@ -203,7 +254,10 @@ export function AIQuestionGenerator({
             difficulty,
             include_hints: includeHints,
             include_explanations: includeExplanations,
-            language
+            language,
+            grounded_only: groundedOnly,
+            include_citations: includeCitations,
+            source_title: currentSopTitle
         })
 
         setGeneratedQuestions(result)
@@ -258,6 +312,10 @@ export function AIQuestionGenerator({
             const q = generatedQuestions[index]
             if (!q) continue
 
+            const tags = new Set(q.tags || [])
+            if (groundedOnly) tags.add('grounded')
+            if (includeCitations) tags.add('citations')
+
             const formData: QuestionFormData = {
                 question_text: q.question_text,
                 question_text_ar: q.question_text_ar,
@@ -267,8 +325,8 @@ export function AIQuestionGenerator({
                 explanation: q.explanation,
                 hint: q.hint,
                 linked_sop_id: (sopId && sopId !== 'manual_input' && sopId !== 'general') ? sopId : undefined,
-                linked_sop_section: q.linked_section,
-                tags: q.tags || [],
+                linked_sop_section: q.source_snippet || q.linked_section,
+                tags: Array.from(tags),
                 estimated_time_seconds: 30,
                 points: DIFFICULTY_CONFIG[q.difficulty_level].points,
                 options: q.options?.map(o => ({
@@ -367,11 +425,13 @@ export function AIQuestionGenerator({
                                     ) : (
                                         <div className="space-y-1">
                                             {filteredSops?.map(sop => (
-                                                <div
+                                                <button
                                                     key={sop.id}
+                                                    type="button"
+                                                    aria-pressed={selectedSopId === sop.id}
                                                     onClick={() => setSelectedSopId(sop.id)}
                                                     className={cn(
-                                                        "flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors",
+                                                        "w-full text-start flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors",
                                                         selectedSopId === sop.id
                                                             ? "bg-hotel-gold/10 border-hotel-gold text-hotel-gold"
                                                             : "hover:bg-slate-50 text-slate-700"
@@ -382,7 +442,7 @@ export function AIQuestionGenerator({
                                                         <span className="text-sm font-medium truncate">{sop.title}</span>
                                                     </div>
                                                     {selectedSopId === sop.id && <CheckCircle className="h-4 w-4" />}
-                                                </div>
+                                                </button>
                                             ))}
                                             {filteredSops?.length === 0 && (
                                                 <div className="text-center py-8 text-slate-400 text-sm italic">
@@ -431,6 +491,11 @@ export function AIQuestionGenerator({
                                                 <>
                                                     <CheckCircle className="h-3 w-3" />
                                                     {fileName} - {extractedText.length} characters extracted
+                                                </>
+                                            ) : fileError ? (
+                                                <>
+                                                    <AlertTriangle className="h-3 w-3" />
+                                                    {fileError}
                                                 </>
                                             ) : (
                                                 <>
@@ -526,6 +591,22 @@ export function AIQuestionGenerator({
                                 onCheckedChange={setIncludeExplanations}
                             />
                             <Label htmlFor="explanations-toggle" className="text-sm font-medium text-slate-700">Include explanations</Label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Switch
+                                id="grounded-toggle"
+                                checked={groundedOnly}
+                                onCheckedChange={setGroundedOnly}
+                            />
+                            <Label htmlFor="grounded-toggle" className="text-sm font-medium text-slate-700">Use only provided content</Label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Switch
+                                id="citations-toggle"
+                                checked={includeCitations}
+                                onCheckedChange={setIncludeCitations}
+                            />
+                            <Label htmlFor="citations-toggle" className="text-sm font-medium text-slate-700">Include source snippets</Label>
                         </div>
                         <div className="flex items-center gap-2 ml-auto">
                             <Label className="text-sm font-medium text-slate-700">Language:</Label>
@@ -751,6 +832,13 @@ export function AIQuestionGenerator({
                                             <p className="text-sm text-amber-700 mt-2">
                                                 💡 Hint: {question.hint}
                                             </p>
+                                        )}
+
+                                        {(question.source_snippet || question.linked_section) && (
+                                            <div className="mt-3 border-l-2 border-slate-200 pl-3 text-xs text-slate-500">
+                                                <span className="font-medium text-slate-600">Source:</span>{' '}
+                                                {question.source_snippet || question.linked_section}
+                                            </div>
                                         )}
                                     </>
                                 )}

@@ -18,20 +18,22 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { useTranslation } from "react-i18next";
 
 interface DocumentVersion {
   id: string
   document_id: string
   version_number: number
-  title: string
-  content: string
-  changes_summary?: string
+  title?: string | null
+  content?: string | null
+  change_summary?: string | null
+  file_url?: string | null
   created_at: string
-  created_by: string
+  created_by: string | null
   user_name: string
   user_avatar?: string
-  is_current: boolean
-  status: string
+  is_current?: boolean
+  status?: string | null
 }
 
 interface DocumentVersionComparisonProps {
@@ -60,9 +62,9 @@ const VersionCard = ({ version, isSelected, onSelect }: {
             </Badge>
           )}
         </div>
-        <Badge variant="outline">{version.status}</Badge>
+        <Badge variant="outline">{version.status || 'unknown'}</Badge>
       </div>
-      <CardTitle className="text-base">{version.title}</CardTitle>
+      <CardTitle className="text-base">{version.title || `Version ${version.version_number}`}</CardTitle>
     </CardHeader>
     <CardContent className="pt-0">
       <div className="space-y-2 text-sm text-muted-foreground">
@@ -74,10 +76,10 @@ const VersionCard = ({ version, isSelected, onSelect }: {
           <Calendar className="h-4 w-4" />
           {formatDistanceToNow(new Date(version.created_at), { addSuffix: true })}
         </div>
-        {version.changes_summary && (
+        {version.change_summary && (
           <div className="flex items-start gap-2">
             <MessageSquare className="h-4 w-4 mt-0.5" />
-            <span className="line-clamp-2">{version.changes_summary}</span>
+            <span className="line-clamp-2">{version.change_summary}</span>
           </div>
         )}
       </div>
@@ -117,7 +119,7 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
         .from('document_versions')
         .select(`
           *,
-          user:created_by(id, full_name, avatar_url)
+          user:profiles!document_versions_created_by_fkey(id, full_name, avatar_url)
         `)
         .eq('document_id', documentId)
         .order('version_number', { ascending: false })
@@ -150,8 +152,8 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
     if (!v1 || !v2) return null
 
     // Simple text comparison (in real app, you'd use a proper diff library)
-    const content1 = v1.content.split('\n')
-    const content2 = v2.content.split('\n')
+      const content1 = (v1.content || '').split('\n')
+      const content2 = (v2.content || '').split('\n')
 
     const changes = []
     const maxLines = Math.max(content1.length, content2.length)

@@ -14,6 +14,7 @@ import { NotificationSettings } from './NotificationSettings'
 import { useUserSettings } from '@/contexts/UserSettingsContext'
 
 export default function Settings() {
+    const { t: t_ext } = useTranslation('extracted');
     const { user } = useAuth()
     const { t, i18n } = useTranslation('settings')
     const {
@@ -157,7 +158,7 @@ export default function Settings() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col gap-1">
                                         <Label className="text-gray-900 dark:text-gray-100 font-medium">{t('language.label')}</Label>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">Choose your primary interface language</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{t_ext('choose_your_primary_interface_language', 'Choose your primary interface language')}</p>
                                     </div>
                                     <Select value={language} onValueChange={handleLanguageChange}>
                                         <SelectTrigger id="language-select" className="w-[180px] bg-white dark:bg-hotel-navy-dark">
@@ -185,9 +186,9 @@ export default function Settings() {
                                             <SelectValue placeholder={t('general.timezone.select_placeholder')} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Asia/Riyadh">Riyadh (GMT+3)</SelectItem>
-                                            <SelectItem value="Asia/Dubai">Dubai (GMT+4)</SelectItem>
-                                            <SelectItem value="UTC">UTC</SelectItem>
+                                            <SelectItem value="Asia/Riyadh">{t_ext('riyadh_gmt_3', 'Riyadh (GMT+3)')}</SelectItem>
+                                            <SelectItem value="Asia/Dubai">{t_ext('dubai_gmt_4', 'Dubai (GMT+4)')}</SelectItem>
+                                            <SelectItem value="UTC">{t_ext('utc', 'UTC')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -201,7 +202,7 @@ export default function Settings() {
                                     <Accessibility className="h-5 w-5 text-hotel-gold" />
                                     {t('appearance.accessibility.title')}
                                 </CardTitle>
-                                <CardDescription className="text-gray-600 dark:text-gray-400">Tailor the interface to your visual and motor needs</CardDescription>
+                                <CardDescription className="text-gray-600 dark:text-gray-400">{t_ext('tailor_the_interface_to_your_visual_and_', 'Tailor the interface to your visual and motor needs')}</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 pt-6">
                                 <div className="flex items-center justify-between">
@@ -244,7 +245,7 @@ export default function Settings() {
                                     <Keyboard className="h-5 w-5 text-hotel-gold" />
                                     {t('appearance.shortcuts.title')}
                                 </CardTitle>
-                                <CardDescription className="text-gray-600 dark:text-gray-400">Speed up your workflow with power-user tools</CardDescription>
+                                <CardDescription className="text-gray-600 dark:text-gray-400">{t_ext('speed_up_your_workflow_with_power_user_t', 'Speed up your workflow with power-user tools')}</CardDescription>
                             </CardHeader>
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
@@ -273,13 +274,12 @@ export default function Settings() {
                             <CardHeader className="bg-slate-50/50 dark:bg-white/5 border-b border-border/50">
                                 <CardTitle className="text-base flex items-center gap-2">
                                     <Shield className="h-4 w-4 text-hotel-gold" />
-                                    Change Password
-                                </CardTitle>
-                                <CardDescription>Update your password to keep your account secure</CardDescription>
+                                    {t_ext('change_password', 'Change Password')}</CardTitle>
+                                <CardDescription>{t_ext('update_your_password_to_keep_your_accoun', 'Update your password to keep your account secure')}</CardDescription>
                             </CardHeader>
                             <CardContent className="pt-6 space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Label htmlFor="new-password">{t_ext('new_password', 'New Password')}</Label>
                                     <Input
                                         id="new-password"
                                         name="new-password"
@@ -290,10 +290,10 @@ export default function Settings() {
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         className="w-full bg-slate-50 dark:bg-hotel-navy-dark border border-border/50"
                                     />
-                                    <p className="text-xs text-gray-400">Must be at least 8 characters</p>
+                                    <p className="text-xs text-gray-400">{t_ext('must_be_at_least_8_characters', 'Must be at least 8 characters')}</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                    <Label htmlFor="confirm-password">{t_ext('confirm_new_password', 'Confirm New Password')}</Label>
                                     <Input
                                         id="confirm-password"
                                         name="confirm-password"
@@ -311,8 +311,7 @@ export default function Settings() {
                                     className="w-full bg-hotel-gold hover:bg-hotel-gold-dark text-white font-semibold py-2 rounded-md transition-colors text-sm flex items-center justify-center gap-2"
                                 >
                                     {updatingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    Update Password
-                                </button>
+                                    {t_ext('update_password', 'Update Password')}</button>
                             </CardContent>
                         </Card>
 
@@ -321,9 +320,8 @@ export default function Settings() {
                             <CardHeader className="bg-slate-50/50 dark:bg-white/5 border-b border-border/50">
                                 <CardTitle className="text-base flex items-center gap-2">
                                     <Shield className="h-4 w-4 text-hotel-gold" />
-                                    Active Sessions
-                                </CardTitle>
-                                <CardDescription>Devices currently signed into your account</CardDescription>
+                                    {t_ext('active_sessions', 'Active Sessions')}</CardTitle>
+                                <CardDescription>{t_ext('devices_currently_signed_into_your_accou', 'Devices currently signed into your account')}</CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div className="divide-y divide-border/50">
@@ -333,24 +331,23 @@ export default function Settings() {
                                                 <div className="w-2 h-2 rounded-full bg-green-500" />
                                             </div>
                                             <div>
-                                                <p className="text-sm font-medium">Current Session</p>
-                                                <p className="text-xs text-gray-500">Your active workspace</p>
+                                                <p className="text-sm font-medium">{t_ext('current_session', 'Current Session')}</p>
+                                                <p className="text-xs text-gray-500">{t_ext('your_active_workspace', 'Your active workspace')}</p>
                                             </div>
                                         </div>
-                                        <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">Active</span>
+                                        <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">{t_ext('active', 'Active')}</span>
                                     </div>
                                     <div className="p-6 bg-slate-50/50 dark:bg-white/5">
                                         <div className="flex flex-col gap-4">
                                             <div className="space-y-1">
-                                                <h4 className="text-sm font-medium">Other Active Devices</h4>
-                                                <p className="text-xs text-gray-500">To secure your account, you can terminate all other active sessions across your devices.</p>
+                                                <h4 className="text-sm font-medium">{t_ext('other_active_devices', 'Other Active Devices')}</h4>
+                                                <p className="text-xs text-gray-500">{t_ext('to_secure_your_account_you_can_terminate', 'To secure your account, you can terminate all other active sessions across your devices.')}</p>
                                             </div>
                                             <button
                                                 onClick={handleSignOutOthers}
                                                 className="w-fit text-sm text-red-600 hover:text-red-700 font-medium px-4 py-2 border border-red-200 dark:border-red-900/50 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                             >
-                                                Sign out of all other devices
-                                            </button>
+                                                {t_ext('sign_out_of_all_other_devices', 'Sign out of all other devices')}</button>
                                         </div>
                                     </div>
                                 </div>

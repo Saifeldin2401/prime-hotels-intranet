@@ -110,5 +110,12 @@
     "newRequest": "طلب جديد",
     "reportIssue": "الإبلاغ عن مشكلة",
     "chat": "المحادثة",
-    "sla_settings": "SLA Settings"
+    "sla_settings": "إعدادات اتفاقية مستوى الخدمة",
+    "skip_to_main_content": "التخطي إلى المحتوى الرئيسي",
+    "sign_out": "تسجيل الخروج",
+    "administrative_context": "السياق الإداري",
+    "online": "متصل",
+    "good_evening": "مساء الخير",
+    "good_morning": "صباح الخير",
+    "good_afternoon": "مساء الخير"
 }

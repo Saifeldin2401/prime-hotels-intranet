@@ -26,18 +26,10 @@ export function isAuthorizedServiceRole(authHeader: string | null, serviceRoleKe
 /**
  * Authorize internal calls using either:
  * 1) Exact service-role key match, or
- * 2) A JWT with role=service_role.
- *
- * IMPORTANT:
- * - The JWT branch must only be used behind Edge Function verify_jwt=true,
- *   because this helper only inspects token payload claims.
+ * 2) (legacy) no longer supported via payload-only inspection.
  */
 export function isAuthorizedServiceRoleRequest(authHeader: string | null, serviceRoleKey: string): boolean {
-  if (serviceRoleKey && isAuthorizedServiceRole(authHeader, serviceRoleKey)) {
-    return true
-  }
-
-  return getServiceRoleToken(authHeader) !== null
+  return Boolean(serviceRoleKey) && isAuthorizedServiceRole(authHeader, serviceRoleKey)
 }
 
 /**
@@ -70,27 +62,14 @@ export function isAuthorizedInternal(authHeader: string | null, serviceRoleKey: 
   return false
 }
 
-type JwtPayload = {
-  role?: string
-}
-
-const decodeBase64Url = (value: string) =>
-  atob(value.replace(/-/g, '+').replace(/_/g, '/'))
-
 export function getServiceRoleToken(authHeader: string | null): string | null {
   if (!authHeader) return null
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  if (!serviceRoleKey) return null
+
   const token = authHeader.startsWith('Bearer ')
     ? authHeader.slice('Bearer '.length).trim()
     : authHeader.trim()
-  const parts = token.split('.')
-  if (parts.length < 2) return null
-  try {
-    const payload = JSON.parse(decodeBase64Url(parts[1])) as JwtPayload
-    if (payload?.role === 'service_role') {
-      return token
-    }
-  } catch {
-    return null
-  }
-  return null
+
+  return token === serviceRoleKey ? token : null
 }

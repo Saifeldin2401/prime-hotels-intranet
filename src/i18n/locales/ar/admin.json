@@ -158,10 +158,10 @@
             "export": "تصدير",
             "delete": "حذف"
         },
-        "access_history": "???? ?????",
-        "reason_label": "Reason ?????",
-        "no_logs": "?? Logs",
-        "loading": "???? ???????"
+        "access_history": "سجل الوصول",
+        "reason_label": "تصنيف السبب",
+        "no_logs": "لا توجد سجلات",
+        "loading": "جاري التحميل"
     },
     "notification_batches": {
         "title": "دفعات الإشعارات",
@@ -462,71 +462,118 @@
         "success": "تمت العملية بنجاح"
     },
     "report_builder": {
-        "next_run": "?????? Run",
+        "next_run": "التشغيل التالي",
         "placeholders": {
-            "type": "???",
-            "scope": "Scope",
-            "name": "Name",
-            "description": "Placeholders ?????",
-            "schedule": "Schedule"
+            "type": "النوع",
+            "scope": "النطاق",
+            "name": "الاسم",
+            "description": "وصف المتغيرات",
+            "schedule": "الجدول"
         },
-        "inactive": "Inactive",
+        "inactive": "غير نشط",
         "actions": {
-            "delete": "???",
-            "disable": "Disable",
-            "create": "?????",
-            "run": "Run",
-            "enable": "Enable"
+            "delete": "حذف",
+            "disable": "تعطيل",
+            "create": "إنشاء",
+            "run": "تشغيل",
+            "enable": "تفعيل"
         },
-        "run_label": "Run ?????",
-        "no_runs": "?? Runs",
-        "no_description": "?? ?????",
-        "recent_runs": "Recent Runs",
-        "title": "????? Builder"
+        "run_label": "تصنيف التشغيل",
+        "no_runs": "لا توجد عمليات تشغيل",
+        "no_description": "بدون وصف",
+        "recent_runs": "أحدث عمليات التشغيل",
+        "title": "منشئ التقارير"
     },
     "ai_governance": {
-        "title": "????? ?????? ?????????",
-        "description": "???? ?????? ????????? ?????? ???????? ??????? ??????? ?????????.",
+        "title": "حوكمة الذكاء الاصطناعي",
+        "description": "مستوى التحكم التشغيلي للسياسة المستقلة للحوكمة والتحقق وإعداد التقارير.",
         "actions": {
-            "full_cycle": "????? ?????? ???????",
-            "metrics_only": "??? ????????",
-            "optimizer_only": "????? ????????",
-            "validate_pending": "???? ?? ?????????",
-            "apply_pending": "????? ???????",
-            "daily_report": "????? ?????"
-        },
-        "toast_running": "???? ????? {{action}}...",
-        "toast_completed": "????? {{action}}",
-        "toast_failed": "??? {{action}}",
-        "metrics": {
-            "title": "??? ????????",
-            "description": "???? ???? ????????",
-            "window": "??????: {{start}} ? {{end}}",
-            "tracked": "?? ???? {{count}} ??????",
-            "empty": "?? ???? ???? ?????? ???."
-        },
-        "policy_sets": {
-            "title": "??????? ????????",
-            "description": "?????? ??????? ??????",
-            "empty": "?? ???? ??????? ??????."
+            "full_cycle": "تشغيل دورة كاملة",
+            "metrics_only": "جمع المقاييس",
+            "optimizer_only": "تشغيل المحسن",
+            "validate_pending": "تحقق من المعلق",
+            "apply_pending": "تطبيق ما تم التحقق منه",
+            "daily_report": "إنشاء تقرير"
         },
         "reports": {
-            "title": "???????? ???????",
-            "description": "??? 14 ?????? ?????? ?????? ?????????",
-            "empty": "?? ??? ????? ?????? ???."
+            "title": "التقارير اليومية",
+            "description": "آخر 14 ملخص حوكمة للذكاء الاصطناعي",
+            "empty": "لم يتم إنشاء تقارير بعد.",
+            "view": "عرض",
+            "detail_title": "تقرير يومي",
+            "close": "إغلاق",
+            "kpi": {
+                "proposals": "مقترحات",
+                "decisions": "قرارات",
+                "changes": "تغيير السياسات",
+                "audit": "أحداث التدقيق"
+            },
+            "metrics_section": "لقطة المقاييس",
+            "metrics_items": "تم التقاط {{count}} مقياس",
+            "metrics_empty": "لم يتم تسجيل أي لقطة مقاييس.",
+            "recent_proposals": "المقترحات الأخيرة",
+            "recent_changes": "تغييرات السياسة الأخيرة",
+            "none": "لا شيء"
+        },
+        "toast_running": "جاري تشغيل {{action}}...",
+        "toast_completed": "اكتمل {{action}}",
+        "toast_failed": "فشل {{action}}",
+        "metrics": {
+            "title": "أحدث المقاييس",
+            "description": "أحدث لقطة قياس عن بعد",
+            "window": "النافذة: {{start}} إلى {{end}}",
+            "tracked": "تم تتبع {{count}} مقياس",
+            "empty": "لا توجد لقطة مقاييس بعد."
+        },
+        "policy_sets": {
+            "title": "مجموعات السياسات",
+            "description": "تكوينات الحوكمة النشطة",
+            "empty": "لم يتم العثور على مجموعات سياسات."
         },
         "proposals": {
-            "title": "???? ?????????",
-            "description": "??? ?????? ??????? ??????? ?????????",
-            "empty": "?? ???? ???????.",
-            "risk": "???????: {{value}}",
-            "created": "??????: {{value}}"
+            "title": "المقترحات الأخيرة",
+            "description": "أحدث توصيات تحسين الذكاء الاصطناعي",
+            "empty": "لا توجد مقترحات.",
+            "risk": "المخاطرة: {{value}}",
+            "created": "تاريخ الإنشاء: {{value}}"
         },
         "audit": {
-            "title": "??? ???????",
-            "description": "??? ????? ???????",
-            "empty": "?? ???? ????? ?????.",
-            "entity": "??????: {{value}}"
+            "title": "سجل التدقيق",
+            "description": "أحدث أحداث الحوكمة",
+            "empty": "لا توجد أحداث تدقيق.",
+            "entity": "الكيان: {{value}}"
+        }
+    },
+    "manual_certificates": {
+        "title": "إصدار الشهادات اليدوي",
+        "description": "إصدار الشهادات يدويًا للمستخدمين المتأثرين بأخطاء النظام أو البرامج الخارجية.",
+        "form": {
+            "title": "تفاصيل الشهادة",
+            "description": "قم بتعبئة التفاصيل لإصدار شهادة جديدة.",
+            "user": "اختر المستخدم",
+            "select_user": "اختر مستخدماً...",
+            "cert_type": "نوع الشهادة",
+            "select_type": "اختر النوع...",
+            "completion_date": "تاريخ الإكمال",
+            "course_title": "عنوان البرنامج / الدورة",
+            "course_title_placeholder": "مثال: تدريب متقدم على مكافحة الحرائق"
+        },
+        "types": {
+            "training": "تدريب",
+            "sop": "إقرار إجراء قياسي",
+            "course": "دورة خارجية",
+            "achievement": "إنجاز خاص"
+        },
+        "actions": {
+            "generate": "إصدار الشهادة",
+            "generating": "جاري الإصدار..."
+        },
+        "success": {
+            "generated": "تم إصدار الشهادة بنجاح."
+        },
+        "errors": {
+            "missing_fields": "يرجى تعبئة جميع الحقول المطلوبة.",
+            "generation_failed": "فشل في إصدار الشهادة."
         }
     }
 }

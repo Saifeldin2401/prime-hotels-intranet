@@ -31,6 +31,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+    const { t: t_ext } = useTranslation('extracted');
   const navigate = useNavigate()
   const location = useLocation()
   const { user, signOut } = useAuth()
@@ -108,8 +109,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background text-foreground flex flex-col no-horizontal-scroll">
       {/* Skip to content link for keyboard accessibility */}
       <a href="#main-content" className="skip-to-content">
-        Skip to main content
-      </a>
+        {t_ext('skip_to_main_content', 'Skip to main content')}</a>
 
       {/* Desktop Sidebar */}
       <SidebarNavigation

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Loader2, FileText, User, GraduationCap, Megaphone, BookOpen, AlertCircle, X } from 'lucide-react'
+import { Search, Loader2, FileText, User, GraduationCap, Megaphone, BookOpen, AlertCircle, X, CheckSquare, Wrench, Briefcase } from 'lucide-react'
 import { useSearch, useSearchSuggestions, useRecentSearches } from '@/hooks/useSearch'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -12,6 +12,7 @@ interface GlobalSearchProps {
 }
 
 export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
+    const { t: t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['nav', 'common'])
     const navigate = useNavigate()
     const [query, setQuery] = useState('')
@@ -66,7 +67,11 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
         return results.reduce((acc, result) => {
             const group = result.type === 'page' ? 'Pages' :
                 result.type === 'user' ? 'Staff' :
-                    result.type === 'sop' ? 'SOPs' : 'Content'
+                    result.type === 'sop' ? 'SOPs' :
+                        result.type === 'task' ? 'Tasks' :
+                            result.type === 'ticket' ? 'Tickets' :
+                                result.type === 'referral' ? 'Referrals' :
+                                    'Content'
             if (!acc[group]) acc[group] = []
             acc[group].push(result)
             return acc
@@ -110,6 +115,9 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
             case 'training': return <GraduationCap className="h-4 w-4 text-green-500" />
             case 'announcement': return <Megaphone className="h-4 w-4 text-purple-500" />
             case 'sop': return <BookOpen className="h-4 w-4 text-teal-500" />
+            case 'task': return <CheckSquare className="h-4 w-4 text-emerald-500" />
+            case 'ticket': return <Wrench className="h-4 w-4 text-amber-500" />
+            case 'referral': return <Briefcase className="h-4 w-4 text-pink-500" />
             case 'page': return <div className="h-4 w-4 text-indigo-500 flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-current" /></div>
             default: return <Search className="h-4 w-4 text-gray-400" />
         }
@@ -162,12 +170,12 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                         <div className="flex-1 min-w-0 border-b sm:border-b-0 sm:border-e border-gray-100 dark:border-slate-800">
                             {query.trim().length === 0 ? (
                                 <div className="p-4">
-                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recent Searches</h3>
+                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t_ext('recent_searches', 'Recent Searches')}</h3>
                                     {recentSearches.length > 0 ? (
                                         <div className="space-y-1">
-                                            {recentSearches.map((term, i) => (
+                                            {recentSearches.map((term) => (
                                                 <button
-                                                    key={i}
+                                                    key={term}
                                                     type="button"
                                                     onClick={() => setQuery(term)}
                                                     className="w-full text-start px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2 transition-colors"
@@ -178,7 +186,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-gray-400 italic">No recent searches</p>
+                                        <p className="text-sm text-gray-400 italic">{t_ext('no_recent_searches', 'No recent searches')}</p>
                                     )}
                                 </div>
                             ) : hasResults ? (
@@ -229,8 +237,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                                                         </div>
                                                         {isSelected && (
                                                             <span className="text-[10px] text-gray-400 flex-shrink-0">
-                                                                Enter
-                                                            </span>
+                                                                {t_ext('enter', 'Enter')}</span>
                                                         )}
                                                     </button>
                                                 )
@@ -281,11 +288,11 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                                     </button>
                                 )) : (
                                     <div className="text-sm text-gray-400">
-                                        <p className="mb-2">Try searching for:</p>
+                                        <p className="mb-2">{t_ext('try_searching_for', 'Try searching for:')}</p>
                                         <ul className="space-y-1 ml-2">
-                                            <li>• SOPs</li>
-                                            <li>• Employee Handbook</li>
-                                            <li>• Training</li>
+                                            <li>{t_ext('sops', '• SOPs')}</li>
+                                            <li>{t_ext('employee_handbook', '• Employee Handbook')}</li>
+                                            <li>{t_ext('training', '• Training')}</li>
                                         </ul>
                                     </div>
                                 )}
@@ -296,13 +303,13 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                     <div className="bg-white dark:bg-slate-900 p-2 px-4 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-100 dark:border-slate-800">
                         <div className="flex gap-2">
                             <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">↑↓</span>
-                            <span>Navigate</span>
+                            <span>{t_ext('navigate', 'Navigate')}</span>
                             <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">↵</span>
-                            <span>Select</span>
+                            <span>{t_ext('select', 'Select')}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">ESC</span>
-                            <span>to close</span>
+                            <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">{t_ext('esc', 'ESC')}</span>
+                            <span>{t_ext('to_close', 'to close')}</span>
                         </div>
                     </div>
                 </div>

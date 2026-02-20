@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { useQuestionsForContext, useRecordAttempt } from '@/hooks/useQuestions'
 import { QuestionRenderer } from './QuestionRenderer'
 import type { KnowledgeQuestion } from '@/types/questions'
+import { useTranslation } from "react-i18next";
 
 interface InlineQuizWidgetProps {
     sopId: string

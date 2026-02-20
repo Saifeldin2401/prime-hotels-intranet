@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { addDays, differenceInMinutes, format } from 'date-fns'
 import { ALL_PERMISSIONS, PERMISSION_CATEGORIES, PERMISSION_CATEGORY_LABELS, formatPermissionLabel } from '@/lib/permissionCatalog'
+import { useTranslation } from "react-i18next";
 
 const toLocalInputValue = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000
@@ -73,6 +74,7 @@ const durationPresets = [
 ]
 
 export default function DelegationSettings() {
+    const { t: t_ext } = useTranslation('extracted');
     const { user } = useAuth()
     const { hasPermission } = usePermissions()
     const {
@@ -305,28 +307,28 @@ export default function DelegationSettings() {
     const getDelegationTypeBadge = (type: Delegation['delegation_type']) => {
         switch (type) {
             case 'full_access':
-                return <Badge variant="destructive" className="text-[10px]">Full Access</Badge>
+                return <Badge variant="destructive" className="text-[10px]">{t_ext('full_access', 'Full Access')}</Badge>
             case 'specific_permissions':
-                return <Badge variant="default" className="text-[10px]">Specific Permissions</Badge>
+                return <Badge variant="default" className="text-[10px]">{t_ext('specific_permissions', 'Specific Permissions')}</Badge>
             case 'approval_authority':
-                return <Badge variant="secondary" className="text-[10px]">Approval Authority</Badge>
+                return <Badge variant="secondary" className="text-[10px]">{t_ext('approval_authority', 'Approval Authority')}</Badge>
         }
     }
 
     const getStatusBadge = (delegation: Delegation) => {
         if (delegation.revoked_at) {
-            return <Badge variant="outline" className="text-[10px] border-red-300 text-red-500 gap-0.5"><XCircle className="w-3 h-3" /> Revoked</Badge>
+            return <Badge variant="outline" className="text-[10px] border-red-300 text-red-500 gap-0.5"><XCircle className="w-3 h-3" /> {t_ext('revoked', 'Revoked')}</Badge>
         }
         if (delegation.auto_expired || new Date(delegation.ends_at) <= new Date()) {
-            return <Badge variant="outline" className="text-[10px] border-gray-300 text-gray-500 gap-0.5"><Clock className="w-3 h-3" /> Expired</Badge>
+            return <Badge variant="outline" className="text-[10px] border-gray-300 text-gray-500 gap-0.5"><Clock className="w-3 h-3" /> {t_ext('expired', 'Expired')}</Badge>
         }
         if (!delegation.is_active) {
-            return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 gap-0.5"><PauseCircle className="w-3 h-3" /> Paused</Badge>
+            return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 gap-0.5"><PauseCircle className="w-3 h-3" /> {t_ext('paused', 'Paused')}</Badge>
         }
         if (new Date(delegation.starts_at) > new Date()) {
-            return <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-600 gap-0.5"><CalendarRange className="w-3 h-3" /> Scheduled</Badge>
+            return <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-600 gap-0.5"><CalendarRange className="w-3 h-3" /> {t_ext('scheduled', 'Scheduled')}</Badge>
         }
-        return <Badge variant="default" className="text-[10px] gap-0.5 bg-green-100 text-green-700 border-0"><ShieldCheck className="w-3 h-3" /> Active</Badge>
+        return <Badge variant="default" className="text-[10px] gap-0.5 bg-green-100 text-green-700 border-0"><ShieldCheck className="w-3 h-3" /> {t_ext('active', 'Active')}</Badge>
     }
 
     const renderDelegationCard = (delegation: Delegation, showRevoke: boolean = false) => (
@@ -356,8 +358,7 @@ export default function DelegationSettings() {
                         {delegation.max_approvals ? (
                             <span className="flex items-center gap-1">
                                 <ShieldCheck className="w-3 h-3" />
-                                {delegation.approvals_used ?? 0}/{delegation.max_approvals} approvals
-                            </span>
+                                {delegation.approvals_used ?? 0}/{delegation.max_approvals} {t_ext('approvals', 'approvals')}</span>
                         ) : null}
 
                         {delegation.reason && (
@@ -376,8 +377,7 @@ export default function DelegationSettings() {
                         disabled={pauseDelegation.isPending}
                     >
                         <PauseCircle className="w-3.5 h-3.5 me-1" />
-                        Pause
-                    </Button>
+                        {t_ext('pause', 'Pause')}</Button>
                 )}
                 {showRevoke && !delegation.is_active && !delegation.revoked_at && new Date(delegation.ends_at) > new Date() && (
                     <Button
@@ -388,8 +388,7 @@ export default function DelegationSettings() {
                         disabled={resumeDelegation.isPending}
                     >
                         <PlayCircle className="w-3.5 h-3.5 me-1" />
-                        Resume
-                    </Button>
+                        {t_ext('resume', 'Resume')}</Button>
                 )}
                 {showRevoke && new Date(delegation.ends_at) > new Date() && !delegation.revoked_at && (
                     <Button
@@ -402,8 +401,7 @@ export default function DelegationSettings() {
                         }}
                     >
                         <Pencil className="w-3.5 h-3.5 me-1" />
-                        Edit
-                    </Button>
+                        {t_ext('edit', 'Edit')}</Button>
                 )}
                 {showRevoke && delegation.is_active && new Date(delegation.ends_at) > new Date() && (
                     <Button
@@ -420,8 +418,7 @@ export default function DelegationSettings() {
                         disabled={updateDelegation.isPending}
                     >
                         <CalendarPlus className="w-3.5 h-3.5 me-1" />
-                        Extend 7d
-                    </Button>
+                        {t_ext('extend_7d', 'Extend 7d')}</Button>
                 )}
                 {showRevoke && delegation.is_active && new Date(delegation.ends_at) > new Date() && (
                     <Button
@@ -432,8 +429,7 @@ export default function DelegationSettings() {
                         disabled={revokeDelegation.isPending}
                     >
                         <ShieldOff className="w-3.5 h-3.5 me-1" />
-                        Revoke
-                    </Button>
+                        {t_ext('revoke', 'Revoke')}</Button>
                 )}
             </div>
         </div>
@@ -467,8 +463,8 @@ export default function DelegationSettings() {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Delegation Management"
-                description="Manage temporary delegation of administrative permissions"
+                title={t_ext('delegation_management', 'Delegation Management')}
+                description={t_ext('manage_temporary_delegation_of_administr', 'Manage temporary delegation of administrative permissions')}
                 actions={
                     <Button
                         onClick={() => {
@@ -478,8 +474,7 @@ export default function DelegationSettings() {
                         className="gap-2"
                     >
                         <Plus className="w-4 h-4" />
-                        New Delegation
-                    </Button>
+                        {t_ext('new_delegation', 'New Delegation')}</Button>
                 }
             />
 
@@ -488,19 +483,19 @@ export default function DelegationSettings() {
                 <Card>
                     <CardContent className="p-4 text-center">
                         <p className="text-2xl font-bold text-green-600">{activeDelegations.length}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Active</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t_ext('active', 'Active')}</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4 text-center">
                         <p className="text-2xl font-bold text-gray-400">{expiredDelegations.length}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Expired/Revoked</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t_ext('expired_revoked', 'Expired/Revoked')}</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4 text-center">
                         <p className="text-2xl font-bold text-amber-600">{pausedDelegations.length}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Paused</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t_ext('paused', 'Paused')}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -508,7 +503,7 @@ export default function DelegationSettings() {
                         <p className="text-2xl font-bold text-blue-600">
                             {activeDelegations.filter(d => d.delegator_id === user?.id).length}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">Delegated by Me</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t_ext('delegated_by_me', 'Delegated by Me')}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -516,7 +511,7 @@ export default function DelegationSettings() {
                         <p className="text-2xl font-bold text-amber-600">
                             {activeDelegations.filter(d => d.delegate_id === user?.id).length}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">Received</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t_ext('received', 'Received')}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -525,15 +520,15 @@ export default function DelegationSettings() {
                 <TabsList>
                     <TabsTrigger value="active">
                         <ShieldCheck className="w-4 h-4 me-1" />
-                        Active ({activeDelegations.length})
+                        {t_ext('active_1', 'Active (')}{activeDelegations.length})
                     </TabsTrigger>
                     <TabsTrigger value="paused">
                         <PauseCircle className="w-4 h-4 me-1" />
-                        Paused ({pausedDelegations.length})
+                        {t_ext('paused_1', 'Paused (')}{pausedDelegations.length})
                     </TabsTrigger>
                     <TabsTrigger value="expired">
                         <Clock className="w-4 h-4 me-1" />
-                        History ({expiredDelegations.length})
+                        {t_ext('history', 'History (')}{expiredDelegations.length})
                     </TabsTrigger>
                 </TabsList>
 
@@ -550,7 +545,7 @@ export default function DelegationSettings() {
                         <Card>
                             <CardContent className="py-8 text-center">
                                 <UserCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                                <p className="text-sm text-muted-foreground">No active delegations</p>
+                                <p className="text-sm text-muted-foreground">{t_ext('no_active_delegations', 'No active delegations')}</p>
                             </CardContent>
                         </Card>
                     )}
@@ -565,7 +560,7 @@ export default function DelegationSettings() {
                         <Card>
                             <CardContent className="py-8 text-center">
                                 <PauseCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                                <p className="text-sm text-muted-foreground">No paused delegations</p>
+                                <p className="text-sm text-muted-foreground">{t_ext('no_paused_delegations', 'No paused delegations')}</p>
                             </CardContent>
                         </Card>
                     )}
@@ -580,7 +575,7 @@ export default function DelegationSettings() {
                         <Card>
                             <CardContent className="py-8 text-center">
                                 <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                                <p className="text-sm text-muted-foreground">No delegation history</p>
+                                <p className="text-sm text-muted-foreground">{t_ext('no_delegation_history', 'No delegation history')}</p>
                             </CardContent>
                         </Card>
                     )}
@@ -639,22 +634,21 @@ export default function DelegationSettings() {
                                         id="acknowledge-warnings"
                                     />
                                     <Label htmlFor="acknowledge-warnings" className="text-xs">
-                                        I understand the warnings and want to proceed.
-                                    </Label>
+                                        {t_ext('i_understand_the_warnings_and_want_to_pr', 'I understand the warnings and want to proceed.')}</Label>
                                 </div>
                             </div>
                         )}
 
                         <div className="space-y-3">
                             <div>
-                                <h4 className="text-sm font-semibold">Delegate</h4>
-                                <p className="text-xs text-muted-foreground">Choose who will receive your permissions.</p>
+                                <h4 className="text-sm font-semibold">{t_ext('delegate', 'Delegate')}</h4>
+                                <p className="text-xs text-muted-foreground">{t_ext('choose_who_will_receive_your_permissions', 'Choose who will receive your permissions.')}</p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Delegate To</label>
+                                <label className="block text-sm font-medium mb-1">{t_ext('delegate_to', 'Delegate To')}</label>
                                 <Select value={delegateId} onValueChange={setDelegateId}>
                                     <SelectTrigger disabled={!!editingDelegation}>
-                                        <SelectValue placeholder="Select a user..." />
+                                        <SelectValue placeholder={t_ext('select_a_user', 'Select a user...')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {staffOptions.map((s) => (
@@ -678,8 +672,8 @@ export default function DelegationSettings() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <h4 className="text-sm font-semibold">Delegation Type</h4>
-                                    <p className="text-xs text-muted-foreground">Define the level of access you are granting.</p>
+                                    <h4 className="text-sm font-semibold">{t_ext('delegation_type', 'Delegation Type')}</h4>
+                                    <p className="text-xs text-muted-foreground">{t_ext('define_the_level_of_access_you_are_grant', 'Define the level of access you are granting.')}</p>
                                 </div>
                                 {getDelegationTypeBadge(delegationType)}
                             </div>
@@ -688,9 +682,9 @@ export default function DelegationSettings() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="approval_authority">Approval Authority</SelectItem>
-                                    <SelectItem value="specific_permissions">Specific Permissions</SelectItem>
-                                    <SelectItem value="full_access">Full Access</SelectItem>
+                                    <SelectItem value="approval_authority">{t_ext('approval_authority', 'Approval Authority')}</SelectItem>
+                                    <SelectItem value="specific_permissions">{t_ext('specific_permissions', 'Specific Permissions')}</SelectItem>
+                                    <SelectItem value="full_access">{t_ext('full_access', 'Full Access')}</SelectItem>
                                 </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">
@@ -703,8 +697,7 @@ export default function DelegationSettings() {
                             {delegationType === 'full_access' && (
                                 <div className="flex items-center gap-2 mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
                                     <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                                    Full access grants all your permissions to the delegate.
-                                </div>
+                                    {t_ext('full_access_grants_all_your_permissions_', 'Full access grants all your permissions to the delegate.')}</div>
                             )}
                         </div>
 
@@ -713,16 +706,15 @@ export default function DelegationSettings() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <h4 className="text-sm font-semibold">Schedule</h4>
-                                    <p className="text-xs text-muted-foreground">Set the start and end time for this delegation.</p>
+                                    <h4 className="text-sm font-semibold">{t_ext('schedule', 'Schedule')}</h4>
+                                    <p className="text-xs text-muted-foreground">{t_ext('set_the_start_and_end_time_for_this_dele', 'Set the start and end time for this delegation.')}</p>
                                 </div>
                                 <Button type="button" variant="outline" size="sm" onClick={setStartNow}>
-                                    Start now
-                                </Button>
+                                    {t_ext('start_now', 'Start now')}</Button>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Starts At</label>
+                                    <label className="block text-sm font-medium mb-1">{t_ext('starts_at', 'Starts At')}</label>
                                     <input
                                         type="datetime-local"
                                         value={startsAt}
@@ -731,7 +723,7 @@ export default function DelegationSettings() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Ends At</label>
+                                    <label className="block text-sm font-medium mb-1">{t_ext('ends_at', 'Ends At')}</label>
                                     <input
                                         type="datetime-local"
                                         value={endsAt}
@@ -753,7 +745,7 @@ export default function DelegationSettings() {
                                     </Button>
                                 ))}
                             </div>
-                            <p className="text-[11px] text-muted-foreground">Time zone: {timeZone}</p>
+                            <p className="text-[11px] text-muted-foreground">{t_ext('time_zone', 'Time zone:')}{timeZone}</p>
                         </div>
 
                         {delegationType === 'specific_permissions' && (
@@ -762,8 +754,8 @@ export default function DelegationSettings() {
                                 <div className="space-y-3">
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div>
-                                            <h4 className="text-sm font-semibold">Permissions</h4>
-                                            <p className="text-xs text-muted-foreground">Grant only the permissions needed for coverage.</p>
+                                            <h4 className="text-sm font-semibold">{t_ext('permissions', 'Permissions')}</h4>
+                                            <p className="text-xs text-muted-foreground">{t_ext('grant_only_the_permissions_needed_for_co', 'Grant only the permissions needed for coverage.')}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Button
@@ -772,21 +764,19 @@ export default function DelegationSettings() {
                                                 size="sm"
                                                 onClick={() => setSelectedPermissions(availablePermissions)}
                                             >
-                                                Select all
-                                            </Button>
+                                                {t_ext('select_all', 'Select all')}</Button>
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => setSelectedPermissions([])}
                                             >
-                                                Clear
-                                            </Button>
+                                                {t_ext('clear', 'Clear')}</Button>
                                         </div>
                                     </div>
 
                                     {permissionGroups.length === 0 ? (
-                                        <p className="text-xs text-muted-foreground">No permissions available for your role.</p>
+                                        <p className="text-xs text-muted-foreground">{t_ext('no_permissions_available_for_your_role', 'No permissions available for your role.')}</p>
                                     ) : (
                                         <div className="space-y-4">
                                             {permissionGroups.map((group) => (
@@ -830,24 +820,24 @@ export default function DelegationSettings() {
 
                         <div className="space-y-3">
                             <div>
-                                <h4 className="text-sm font-semibold">Controls & Notifications</h4>
-                                <p className="text-xs text-muted-foreground">Add safeguards and decide who gets notified.</p>
+                                <h4 className="text-sm font-semibold">{t_ext('controls_notifications', 'Controls & Notifications')}</h4>
+                                <p className="text-xs text-muted-foreground">{t_ext('add_safeguards_and_decide_who_gets_notif', 'Add safeguards and decide who gets notified.')}</p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="space-y-2">
-                                    <label htmlFor="max-approvals" className="text-sm font-medium">Max approvals (optional)</label>
+                                    <label htmlFor="max-approvals" className="text-sm font-medium">{t_ext('max_approvals_optional', 'Max approvals (optional)')}</label>
                                     <Input
                                         id="max-approvals"
                                         type="number"
                                         min={1}
                                         value={maxApprovals}
                                         onChange={(e) => setMaxApprovals(e.target.value)}
-                                        placeholder="e.g., 10"
+                                        placeholder={t_ext('e_g_10', 'e.g., 10')}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Fallback delegates</Label>
+                                    <Label>{t_ext('fallback_delegates', 'Fallback delegates')}</Label>
                                     <div className="max-h-32 overflow-y-auto rounded-md border bg-muted/20 p-2">
                                         {fallbackOptions.length > 0 ? (
                                             fallbackOptions.map((option) => (
@@ -865,34 +855,29 @@ export default function DelegationSettings() {
                                                 </label>
                                             ))
                                         ) : (
-                                            <p className="text-xs text-muted-foreground">No fallback candidates.</p>
+                                            <p className="text-xs text-muted-foreground">{t_ext('no_fallback_candidates', 'No fallback candidates.')}</p>
                                         )}
                                     </div>
-                                    <p className="text-[11px] text-muted-foreground">{fallbackDelegateIds.length} selected</p>
+                                    <p className="text-[11px] text-muted-foreground">{fallbackDelegateIds.length} {t_ext('selected', 'selected')}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                 <label className="flex items-center gap-2 rounded-md border p-2">
                                     <Checkbox checked={allowRedelegate} onCheckedChange={(val) => setAllowRedelegate(!!val)} />
-                                    Allow delegate to re-delegate
-                                </label>
+                                    {t_ext('allow_delegate_to_re_delegate', 'Allow delegate to re-delegate')}</label>
                                 <label className="flex items-center gap-2 rounded-md border p-2">
                                     <Checkbox checked={notifyDelegate} onCheckedChange={(val) => setNotifyDelegate(!!val)} />
-                                    Notify delegate when created
-                                </label>
+                                    {t_ext('notify_delegate_when_created', 'Notify delegate when created')}</label>
                                 <label className="flex items-center gap-2 rounded-md border p-2">
                                     <Checkbox checked={notifyDelegator} onCheckedChange={(val) => setNotifyDelegator(!!val)} />
-                                    Notify me on changes
-                                </label>
+                                    {t_ext('notify_me_on_changes', 'Notify me on changes')}</label>
                                 <label className="flex items-center gap-2 rounded-md border p-2">
                                     <Checkbox checked={notifyOnAction} onCheckedChange={(val) => setNotifyOnAction(!!val)} />
-                                    Notify on approval actions
-                                </label>
+                                    {t_ext('notify_on_approval_actions', 'Notify on approval actions')}</label>
                                 <label className="flex items-center gap-2 rounded-md border p-2">
                                     <Checkbox checked={notifyOnExpiry} onCheckedChange={(val) => setNotifyOnExpiry(!!val)} />
-                                    Notify on expiry
-                                </label>
+                                    {t_ext('notify_on_expiry', 'Notify on expiry')}</label>
                             </div>
                         </div>
 
@@ -901,8 +886,8 @@ export default function DelegationSettings() {
                         <div className="space-y-3">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div>
-                                    <h4 className="text-sm font-semibold">Reason</h4>
-                                    <p className="text-xs text-muted-foreground">Optional context shown in audit logs.</p>
+                                    <h4 className="text-sm font-semibold">{t_ext('reason', 'Reason')}</h4>
+                                    <p className="text-xs text-muted-foreground">{t_ext('optional_context_shown_in_audit_logs', 'Optional context shown in audit logs.')}</p>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     {reasonTemplates.map((template) => (
@@ -921,7 +906,7 @@ export default function DelegationSettings() {
                             <textarea
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
-                                placeholder="e.g., On vacation, covering for leave..."
+                                placeholder={t_ext('e_g_on_vacation_covering_for_leave', 'e.g., On vacation, covering for leave...')}
                                 className="w-full px-3 py-2 border rounded-md text-sm resize-none focus:ring-2 focus:ring-hotel-navy"
                                 rows={3}
                             />
@@ -930,33 +915,33 @@ export default function DelegationSettings() {
                         <Separator />
 
                         <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Summary</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t_ext('summary', 'Summary')}</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                 <div>
-                                    <p className="text-muted-foreground">Delegate</p>
+                                    <p className="text-muted-foreground">{t_ext('delegate', 'Delegate')}</p>
                                     <p className="font-medium">
                                         {selectedDelegate?.full_name || selectedDelegate?.email || 'Not selected'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Access Level</p>
+                                    <p className="text-muted-foreground">{t_ext('access_level', 'Access Level')}</p>
                                     <p className="font-medium">{summaryPermissionsLabel}</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Duration</p>
+                                    <p className="text-muted-foreground">{t_ext('duration', 'Duration')}</p>
                                     <p className="font-medium">{durationLabel}</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Type</p>
+                                    <p className="text-muted-foreground">{t_ext('type', 'Type')}</p>
                                     <p className="font-medium capitalize">{delegationType.replace(/_/g, ' ')}</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Max approvals</p>
+                                    <p className="text-muted-foreground">{t_ext('max_approvals', 'Max approvals')}</p>
                                     <p className="font-medium">{maxApprovals ? maxApprovals : 'Unlimited'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Fallbacks</p>
-                                    <p className="font-medium">{fallbackDelegateIds.length} selected</p>
+                                    <p className="text-muted-foreground">{t_ext('fallbacks', 'Fallbacks')}</p>
+                                    <p className="font-medium">{fallbackDelegateIds.length} {t_ext('selected', 'selected')}</p>
                                 </div>
                             </div>
                             {startDate && endDate && (
@@ -975,8 +960,7 @@ export default function DelegationSettings() {
                                 setEditingDelegation(null)
                             }}
                         >
-                            Cancel
-                        </Button>
+                            {t_ext('cancel', 'Cancel')}</Button>
                         <Button
                             onClick={handleSave}
                             disabled={validationErrors.length > 0 || createDelegation.isPending || updateDelegation.isPending}

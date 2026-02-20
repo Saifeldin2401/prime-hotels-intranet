@@ -28,7 +28,7 @@ function buildCurrentUser(params: {
   }
 }
 
-export function useUnifiedSocialFeed() {
+export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
   const { user, profile, primaryRole, roles, departments, properties } = useAuth()
   const { currentProperty } = useProperty()
   const { t, i18n } = useTranslation('common')
@@ -472,236 +472,15 @@ export function useUnifiedSocialFeed() {
         })
       })
 
-      // 8. Recent payslips
-      const { data: payslips } = await supabase
-        .from('payslips')
-        .select('*')
-        .eq('employee_id', user.id)
-        .order('period_end', { ascending: false })
-        .limit(1)
-
-      payslips?.forEach((p: any) => {
-        if (!p.period_end) return
-        const periodDate = new Date(p.period_end)
-        const isRecent = periodDate > thirtyDaysAgo
-        if (isRecent) {
-          feedItems.push({
-            id: `pay-${p.id}`,
-            type: 'announcement',
-            author: {
-              id: 'system',
-              name: t('social_feed.labels.payroll_dept', 'Payroll Dept'),
-              email: '',
-              avatar: null,
-              role: 'property_hr',
-              department: t('social_feed.labels.finance', 'Finance'),
-              property: t('social_feed.labels.system', 'System'),
-              permissions: []
-            },
-            title: t('social_feed.titles.payslip_available', 'New Payslip Available'),
-            content: t('social_feed.messages.payslip_message', { date: formatDate(periodDate, { dateStyle: 'medium' }) }),
-            timestamp: new Date(p.created_at || p.period_end),
-            reactions: {},
-            comments: [],
-            actionButton: {
-              text: t('social_feed.actions.view_payslip', 'View Payslip'),
-              onClick: () => {
-                window.location.href = `/hr/payslips`
-              }
-            }
-          })
-        }
-      })
-
-      // 9. Recent performance reviews
-      const { data: recentReviews } = await supabase
-        .from('performance_reviews')
-        .select('*')
-        .eq('employee_id', user.id)
-        .order('review_date', { ascending: false })
-        .limit(1)
-
-      recentReviews?.forEach((r: any) => {
-        if (!r.review_date) return
-        const reviewDate = new Date(r.review_date)
-        const isRecent = reviewDate > thirtyDaysAgo
-        if (isRecent) {
-          feedItems.push({
-            id: `rev-${r.id}`,
-            type: 'recognition',
-            author: {
-              id: r.reviewer_id || 'system',
-              name: t('social_feed.labels.performance_review', 'Performance Review'),
-              email: '',
-              avatar: null,
-              role: 'property_manager',
-              department: t('social_feed.labels.management', 'Management'),
-              property: t('social_feed.labels.system', 'System'),
-              permissions: []
-            },
-            title: t('social_feed.titles.performance_review', 'New Performance Review'),
-            content: t('social_feed.messages.performance_review_message', { date: formatDate(reviewDate, { dateStyle: 'medium' }) }),
-            timestamp: new Date(r.created_at || r.review_date),
-            reactions: {},
-            comments: [],
-            actionButton: {
-              text: t('social_feed.actions.view_review', 'View Review'),
-              onClick: () => {
-                window.location.href = `/hr/performance`
-              }
-            }
-          })
-        }
-      })
-
-      // 10. Recent attendance (last 24 hours)
-      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-      const { data: attendance } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('employee_id', user.id)
-        .gte('check_in', twentyFourHoursAgo.toISOString())
-        .order('check_in', { ascending: false })
-        .limit(2)
-
-      attendance?.forEach((a: any) => {
-        if (a.check_in) {
-          feedItems.push({
-            id: `att-in-${a.id}`,
-            type: 'announcement',
-            author: {
-              id: user.id,
-              name: t('social_feed.labels.you', 'You'),
-              email: '',
-              avatar: null,
-              role: 'staff',
-              department: '',
-              property: '',
-              permissions: []
-            },
-            title: t('social_feed.titles.shift_started', 'Shift Started'),
-            content: t('social_feed.messages.shift_started_message', { time: formatTime(new Date(a.check_in)) }),
-            timestamp: new Date(a.check_in),
-            reactions: {},
-            comments: []
-          })
-        }
-
-        if (a.check_out) {
-          feedItems.push({
-            id: `att-out-${a.id}`,
-            type: 'announcement',
-            author: {
-              id: user.id,
-              name: t('social_feed.labels.you', 'You'),
-              email: '',
-              avatar: null,
-              role: 'staff',
-              department: '',
-              property: '',
-              permissions: []
-            },
-            title: t('social_feed.titles.shift_ended', 'Shift Ended'),
-            content: t('social_feed.messages.shift_ended_message', { time: formatTime(new Date(a.check_out)) }),
-            timestamp: new Date(a.check_out),
-            reactions: {},
-            comments: []
-          })
-        }
-      })
-
-      // 11. Recent earned certificates
-      const certificateUserIds = shouldScopeToTeam
-        ? Array.from(new Set([...scopedTeamUserIds, user.id]))
-        : [user.id]
-      let certificatesQuery = supabase
-        .from('certificates')
-        .select('*, user:profiles!certificates_user_id_fkey(id, full_name, avatar_url)')
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(5)
-
-      if (!allowGlobalFallback) {
-        certificatesQuery = certificatesQuery.in('user_id', certificateUserIds)
-      }
-
-      const { data: myCerts } = await certificatesQuery
-
-      myCerts?.forEach((c: any) => {
-        const certificateOwner = c.user || {}
-        feedItems.push({
-          id: `cert-${c.id}`,
-          type: 'recognition',
-          author: {
-            id: certificateOwner.id || 'system',
-            name: certificateOwner.full_name || t('social_feed.labels.certification', 'Certification'),
-            email: '',
-            avatar: certificateOwner.avatar_url || null,
-            role: 'staff',
-            department: '',
-            property: '',
-            permissions: []
-          },
-          title: t('social_feed.titles.certificate', { title: c.title }),
-          content: t('social_feed.messages.certificate_message', "Congratulations! You've earned a new certificate."),
-          timestamp: new Date(c.created_at),
-          reactions: {},
-          comments: [],
-          actionButton: {
-            text: t('social_feed.actions.view_certificate', 'View Certificate'),
-            onClick: () => {
-              window.location.href = `/profile`
-            }
-          }
-        })
-      })
-
-      // 12. Recently completed goals
-      const goalUserIds = shouldScopeToTeam
-        ? Array.from(new Set([...scopedTeamUserIds, user.id]))
-        : [user.id]
-      let goalsQuery = supabase
-        .from('goals')
-        .select('*, employee:profiles!goals_employee_id_fkey(id, full_name, avatar_url)')
-        .eq('status', 'completed')
-        .gte('updated_at', thirtyDaysAgo.toISOString())
-        .order('updated_at', { ascending: false })
-        .limit(5)
-
-      if (!allowGlobalFallback) {
-        goalsQuery = goalsQuery.in('employee_id', goalUserIds)
-      }
-
-      const { data: recentGoals } = await goalsQuery
-
-      recentGoals?.forEach((g: any) => {
-        const goalOwner = g.employee || {}
-        feedItems.push({
-          id: `goal-comp-${g.id}`,
-          type: 'recognition',
-          author: {
-            id: goalOwner.id || user.id,
-            name: goalOwner.full_name || t('social_feed.labels.you', 'You'),
-            email: '',
-            avatar: goalOwner.avatar_url || null,
-            role: 'staff',
-            department: '',
-            property: '',
-            permissions: []
-          },
-          title: t('social_feed.titles.goal_completed', { title: g.title }),
-          content: t('social_feed.messages.goal_message', "You've successfully completed a career milestone!"),
-          timestamp: new Date(g.updated_at),
-          reactions: {},
-          comments: []
-        })
-      })
+      // Disabled missing data sources: payslips, reviews, attendance, certificates, goals
+      // To enable these, create the respective tables: payslips, performance_reviews, attendance, certificates, goals
 
       // Sort by timestamp desc
       return feedItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
     },
-    enabled: !!user?.id,
-    staleTime: 1000 * 60 * 5
+    enabled: (options?.enabled ?? true) && !!user?.id,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false
   })
 
   const feedItemIds = useMemo(() => fetchedItems.map(i => i.id), [fetchedItems])
@@ -825,26 +604,26 @@ export function useUnifiedSocialFeed() {
       } as any
     }))
 
-    ;(async () => {
-      const { data: existing } = await supabase
-        .from('feed_reactions')
-        .select('id')
-        .eq('feed_item_id', itemId)
-        .eq('user_id', user.id)
-        .eq('reaction_type', reaction)
-        .maybeSingle()
+      ; (async () => {
+        const { data: existing } = await supabase
+          .from('feed_reactions')
+          .select('id')
+          .eq('feed_item_id', itemId)
+          .eq('user_id', user.id)
+          .eq('reaction_type', reaction)
+          .maybeSingle()
 
-      if (existing?.id) {
-        await supabase
-          .from('feed_reactions')
-          .delete()
-          .eq('id', existing.id)
-      } else {
-        await supabase
-          .from('feed_reactions')
-          .insert({ feed_item_id: itemId, user_id: user.id, reaction_type: reaction })
-      }
-    })()
+        if (existing?.id) {
+          await supabase
+            .from('feed_reactions')
+            .delete()
+            .eq('id', existing.id)
+        } else {
+          await supabase
+            .from('feed_reactions')
+            .insert({ feed_item_id: itemId, user_id: user.id, reaction_type: reaction })
+        }
+      })()
   }, [user?.id])
 
   const onComment = useCallback((itemId: string, content: string) => {
@@ -867,35 +646,35 @@ export function useUnifiedSocialFeed() {
       }
     }))
 
-    ;(async () => {
-      const { data, error } = await supabase
-        .from('feed_comments')
-        .insert({ feed_item_id: itemId, author_id: currentUser.id, content })
-        .select('id, created_at')
-        .single()
+      ; (async () => {
+        const { data, error } = await supabase
+          .from('feed_comments')
+          .insert({ feed_item_id: itemId, author_id: currentUser.id, content })
+          .select('id, created_at')
+          .single()
 
-      if (error || !data?.id) {
+        if (error || !data?.id) {
+          setFeedItems(prev => prev.map(item => {
+            if (item.id !== itemId) return item
+            return {
+              ...item,
+              comments: item.comments.filter(c => c.id !== tempId)
+            }
+          }))
+          return
+        }
+
         setFeedItems(prev => prev.map(item => {
           if (item.id !== itemId) return item
           return {
             ...item,
-            comments: item.comments.filter(c => c.id !== tempId)
+            comments: item.comments.map(c => c.id === tempId
+              ? { ...c, id: data.id, timestamp: new Date(data.created_at) }
+              : c
+            )
           }
         }))
-        return
-      }
-
-      setFeedItems(prev => prev.map(item => {
-        if (item.id !== itemId) return item
-        return {
-          ...item,
-          comments: item.comments.map(c => c.id === tempId
-            ? { ...c, id: data.id, timestamp: new Date(data.created_at) }
-            : c
-          )
-        }
-      }))
-    })()
+      })()
   }, [currentUser])
 
   const onShare = useCallback((_itemId: string) => {

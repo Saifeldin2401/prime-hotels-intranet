@@ -10,6 +10,10 @@ const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com").replace(/\/+$/, "");
 const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "PHG Connect";
 const ENV_DEFAULT_FROM_EMAIL = Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
+const RESEND_MIN_INTERVAL_MS = 550;
+const RESEND_MAX_RETRIES = 3;
+const RESEND_RETRY_BASE_MS = 750;
+let resendLastRequestAt = 0;
 
 type NotificationChannel = "in_app" | "email";
 type NotificationDomain = "system" | "user_management" | "operations" | "hr" | "finance" | "sales" | "management";
@@ -718,10 +722,11 @@ async function createInAppNotification(
     title: asText(dataPayload.title, "New Notification"),
     message: asText(dataPayload.message, "You have a new notification"),
     link,
-    entity_type: entityType,
-    entity_id: entityId,
-    metadata,
-    data: metadata,
+    metadata: {
+      ...(metadata ?? {}),
+      entity_type: entityType,
+      entity_id: entityId,
+    },
   });
 }
 
@@ -760,29 +765,59 @@ async function sendWithResend(params: {
     return { ok: false, payload: {}, errorMessage: "Missing RESEND_API_KEY" };
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${params.apiKey}`,
-    },
-    body: JSON.stringify({
-      from: `${params.fromName} <${params.fromEmail}>`,
-      to: [params.to],
-      subject: params.subject,
-      html: params.html,
-      text: params.text || undefined,
-      tags: params.tags,
-    }),
-  });
+  let lastErrorMessage = "Resend send failed";
+  let lastPayload: Record<string, unknown> = {};
 
-  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok) {
-    const errorMessage = typeof payload?.message === "string" ? payload.message : "Resend send failed";
-    return { ok: false, payload, errorMessage };
+  for (let attempt = 1; attempt <= RESEND_MAX_RETRIES; attempt++) {
+    try {
+      const now = Date.now();
+      const waitMs = resendLastRequestAt + RESEND_MIN_INTERVAL_MS - now;
+      if (waitMs > 0) {
+        await sleep(waitMs);
+      }
+
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${params.apiKey}`,
+        },
+        body: JSON.stringify({
+          from: `${params.fromName} <${params.fromEmail}>`,
+          to: [params.to],
+          subject: params.subject,
+          html: params.html,
+          text: params.text || undefined,
+          tags: params.tags,
+        }),
+      });
+
+      resendLastRequestAt = Date.now();
+      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      if (response.ok) {
+        return { ok: true, payload };
+      }
+
+      lastPayload = payload;
+      lastErrorMessage = typeof payload?.message === "string" ? payload.message : "Resend send failed";
+
+      const shouldRetry = response.status === 429 || response.status >= 500;
+      if (!shouldRetry || attempt === RESEND_MAX_RETRIES) {
+        return { ok: false, payload, errorMessage: lastErrorMessage };
+      }
+
+      const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+      await sleep(retryAfterMs ?? RESEND_RETRY_BASE_MS * attempt);
+    } catch (error) {
+      lastErrorMessage = error instanceof Error ? error.message : "Resend request failed";
+      if (attempt === RESEND_MAX_RETRIES) {
+        return { ok: false, payload: lastPayload, errorMessage: lastErrorMessage };
+      }
+      await sleep(RESEND_RETRY_BASE_MS * attempt);
+    }
   }
 
-  return { ok: true, payload };
+  return { ok: false, payload: lastPayload, errorMessage: lastErrorMessage };
 }
 
 async function logDeliveryEvent(
@@ -1002,4 +1037,18 @@ function readSecretString(value: unknown): string | null {
 
 function isUUID(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function parseRetryAfterMs(value: string | null): number | null {
+  if (!value) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.ceil(seconds * 1000);
+  }
+  return null;
+}
+
+function sleep(ms: number): Promise<void> {
+  const clamped = Number.isFinite(ms) && ms > 0 ? ms : 0;
+  return new Promise((resolve) => setTimeout(resolve, clamped));
 }

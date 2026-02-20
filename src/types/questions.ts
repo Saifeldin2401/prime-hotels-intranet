@@ -188,13 +188,14 @@ export interface GeneratedQuestion {
     explanation?: string
     hint?: string
     linked_section?: string
+    source_snippet?: string
     tags?: string[]
     confidence_score?: number
 }
 
 export interface AIQuestionGenerationRequest {
     sop_content: string
-    sop_id: string
+    sop_id?: string
     sop_title?: string
     count?: number
     types?: QuestionType[]
@@ -202,6 +203,9 @@ export interface AIQuestionGenerationRequest {
     include_hints?: boolean
     include_explanations?: boolean
     language?: 'en' | 'ar' | 'both'
+    grounded_only?: boolean
+    include_citations?: boolean
+    source_title?: string
 }
 
 export interface AIQuestionGenerationResponse {
