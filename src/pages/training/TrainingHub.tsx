@@ -141,6 +141,7 @@ export default function TrainingHub() {
       let query = supabase
         .from('training_modules')
         .select('*')
+        .not('is_deleted', 'is', true)
         .order(sortBy, { ascending: sortOrder === 'asc' })
 
       if (statusFilter !== 'all') {
