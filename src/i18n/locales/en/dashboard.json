@@ -15,6 +15,10 @@
         "pending_desc": "Items requiring your attention",
         "activity": "Recent Activity",
         "activity_desc": "Latest updates and assignments",
+        "schedule_title": "Schedule",
+        "schedule_desc": "Your events and shifts",
+        "online_users_title": "Online Now",
+        "online_users_desc": "{{count}} team members active",
         "view_documents": "View Documents",
         "view_training": "View Training",
         "view_announcements": "View Announcements",
@@ -27,92 +31,202 @@
         "documents_desc": "Published documents",
         "training_desc": "{{count}} in progress",
         "announcements_desc": "Unread announcements",
-        "pending_widget": {
-            "title": "Pending Items",
-            "subtitle": "Items requiring your attention",
-            "approvals": "Pending Approvals",
-            "notifications": "Unread Notifications",
-            "announcements": "Unread Announcements",
-            "items_waiting": "{{count}} item waiting",
-            "items_waiting_other": "{{count}} items waiting",
-            "notifications_count": "{{count}} new notification",
-            "notifications_count_other": "{{count}} new notifications",
-            "announcements_count": "{{count}} new announcement",
-            "announcements_count_other": "{{count}} new announcements",
-            "all_caught_up": "All caught up! No pending items."
-        },
-        "activity_widget": {
-            "assigned": "Assigned {{date}}",
-            "due": "Due {{date}}",
-            "default_training_title": "Training Assignment"
-        },
-        "active_users": {
-            "title": "Active Team Members",
-            "online": "Online",
-            "no_active": "No other active users right now."
-        },
-        "dept_kpi": {
-            "title": "Department Performance",
-            "no_data": "No department data available",
-            "top_depts": "Top Departments",
-            "rankings": "Department Performance Rankings",
-            "tasks": "Tasks",
+        "my_tasks_title": "My Tasks",
+        "my_tasks_desc": "Your pending tasks",
+        "activity_feed": "Activity Feed",
+        "activity_desc": "Latest updates and assignments",
+        "quick_actions_items": {
+            "documents": "Documents",
+            "documents_desc": "Access procedures and policies",
             "training": "Training",
-            "sops": "SOPs"
-        },
-        "knowledge": {
-            "title": "Knowledge Base",
-            "view_all": "View All",
-            "progress": "Required Reading Progress",
-            "required": "Required Reading",
-            "recently_updated": "Recently Updated",
-            "updated_at": "Updated {{time}}",
-            "all_caught_up": "You're all caught up!",
-            "explore": "Explore Knowledge Base"
-        },
-        "team_list": {
-            "title": "Department Team",
-            "search_team_members": "Search team members...",
-            "loading_team": "Loading team...",
-            "no_team_found": "No team members found in your department(s).",
-            "no_job_title": "No Job Title",
-            "unknown": "Unknown",
-            "view": "View"
-        },
-        "maintenance_labels": {
-            "critical": "critical",
-            "urgent": "urgent"
-        },
-        "role_widget": {
-            "properties": "properties",
-            "departments": "departments"
-        },
-        "quick_actions_widget": {
-            "view": "View",
-            "search": "Search",
-            "go_back": "Go Back"
-        },
-        "motivation": {
-            "refresh": "Refresh"
-        },
-        "employee_of_the_month": {
-            "title": "Employee of the Month",
-            "congratulations": "Congratulations!",
-            "no_winner": "No winner announced yet for this month.",
-            "view_previous": "View Previous Winners",
-            "manage": "Manage EOM",
-            "no_employee_found": "No Employee Found"
-        },
-        "birthdays": {
-            "title": "Upcoming Birthdays",
-            "today": "Today!",
-            "tomorrow": "Tomorrow",
-            "in_days": "In {{count}} days",
-            "no_birthdays": "No birthdays in the next 7 days.",
-            "send_wish": "Send Birthday Wish"
-        },
-        "my_tasks": "My Tasks",
-        "activity_feed": "Activity Feed"
+            "training_desc": "My learning modules",
+            "tasks": "My Tasks",
+            "tasks_desc": "View assigned tasks",
+            "directory": "Directory",
+            "directory_desc": "Employee contacts",
+            "schedule": "Schedule",
+            "schedule_desc": "My shifts",
+            "messages": "Messages",
+            "messages_desc": "Team chat",
+            "maintenance": "Maintenance",
+            "maintenance_desc": "Track maintenance requests",
+            "analytics": "Analytics",
+            "analytics_desc": "View performance data"
+        }
+    },
+    "schedule": {
+        "title": "Schedule",
+        "subtitle": "Your events and shifts",
+        "no_events": "No events scheduled",
+        "select_date": "Select a date",
+        "upcoming": "Next Up",
+        "today_events": "{{count}} event today",
+        "today_events_other": "{{count}} events today",
+        "no_events_today": "No events today",
+        "go_to_today": "Today",
+        "enjoy_day": "Enjoy your day!",
+        "add_event": "Add",
+        "event_created": "Event created successfully",
+        "event_deleted": "Event deleted successfully",
+        "event_title_placeholder": "e.g., Team Briefing",
+        "location_placeholder": "e.g., Conference Room A",
+        "desc_placeholder": "Add more details...",
+        "calendar": {
+            "sun": "Sun",
+            "mon": "Mon",
+            "tue": "Tue",
+            "wed": "Wed",
+            "thu": "Thu",
+            "fri": "Fri",
+            "sat": "Sat",
+            "shift": "Shift",
+            "work": "Work",
+            "property": "Property",
+            "meeting": "Meeting",
+            "training": "Training",
+            "deadline": "Deadline",
+            "general": "General"
+        }
+    },
+    "pending_widget": {
+        "title": "Pending Items",
+        "subtitle": "Items requiring your attention",
+        "approvals": "Pending Approvals",
+        "notifications": "Unread Notifications",
+        "announcements": "Unread Announcements",
+        "items_waiting": "{{count}} item waiting",
+        "items_waiting_other": "{{count}} items waiting",
+        "notifications_count": "{{count}} new notification",
+        "notifications_count_other": "{{count}} new notifications",
+        "announcements_count": "{{count}} new announcement",
+        "announcements_count_other": "{{count}} new announcements",
+        "all_caught_up": "All caught up! No pending items."
+    },
+    "activity_widget": {
+        "assigned": "Assigned {{date}}",
+        "due": "Due {{date}}",
+        "default_training_title": "Training Assignment"
+    },
+    "active_users": {
+        "title": "Active Team Members",
+        "online": "Online",
+        "no_active": "No other active users right now."
+    },
+    "online_users": {
+        "title": "Online Now",
+        "online": "Online",
+        "no_active": "No other team members online right now",
+        "check_back": "Check back later",
+        "search_placeholder": "Search team members...",
+        "just_now": "Just now",
+        "minutes": "{{count}}m",
+        "hours": "{{count}}h",
+        "days": "{{count}}d",
+        "team_member": "Team Member"
+    },
+    "notifications": {
+        "title": "Notifications",
+        "unread_count": "{{count}} unread",
+        "unread_count_other": "{{count}} unread",
+        "all_caught_up": "All caught up!",
+        "no_notifications": "No notifications yet",
+        "mark_all_read": "Mark all read",
+        "clear_all": "Clear all",
+        "view_details": "View details"
+    },
+    "dept_kpi": {
+        "title": "Department Performance",
+        "no_data": "No department data available",
+        "top_depts": "Top Departments",
+        "rankings": "Department Performance Rankings",
+        "tasks": "Tasks",
+        "training": "Training",
+        "sops": "SOPs"
+    },
+    "knowledge": {
+        "title": "Knowledge Base",
+        "view_all": "View All",
+        "progress": "Required Reading Progress",
+        "required": "Required Reading",
+        "recently_updated": "Recently Updated",
+        "updated_at": "Updated {{time}}",
+        "all_caught_up": "You're all caught up!",
+        "explore": "Explore Knowledge Base"
+    },
+    "team_list": {
+        "title": "Department Team",
+        "search_team_members": "Search team members...",
+        "loading_team": "Loading team...",
+        "no_team_found": "No team members found in your department(s).",
+        "no_job_title": "No Job Title",
+        "unknown": "Unknown",
+        "view": "View"
+    },
+    "maintenance_labels": {
+        "critical": "critical",
+        "urgent": "urgent"
+    },
+    "role_widget": {
+        "properties": "properties",
+        "departments": "departments"
+    },
+    "quick_actions_widget": {
+        "view": "View",
+        "search": "Search",
+        "go_back": "Go Back"
+    },
+    "motivation": {
+        "refresh": "Refresh"
+    },
+    "employee_of_the_month": {
+        "title": "Employee of the Month",
+        "congratulations": "Congratulations!",
+        "no_winner": "No winner announced yet for this month.",
+        "view_previous": "View Previous Winners",
+        "manage": "Manage EOM",
+        "no_employee_found": "No Employee Found"
+    },
+    "birthdays": {
+        "title": "Upcoming Birthdays",
+        "today": "Today!",
+        "tomorrow": "Tomorrow",
+        "in_days": "In {{count}} days",
+        "no_birthdays": "No birthdays in the next 7 days.",
+        "send_wish": "Send Birthday Wish"
+    },
+    "schedule": {
+        "title": "Schedule",
+        "subtitle": "Your events and shifts",
+        "no_events": "No events scheduled",
+        "select_date": "Select a date",
+        "upcoming": "Next Up",
+        "today_events": "{{count}} event today",
+        "today_events_other": "{{count}} events today",
+        "no_events_today": "No events today",
+        "go_to_today": "Today",
+        "enjoy_day": "Enjoy your day!",
+        "add_event": "Add",
+        "event_created": "Event created successfully",
+        "event_deleted": "Event deleted successfully",
+        "event_title_placeholder": "e.g., Team Briefing",
+        "location_placeholder": "e.g., Conference Room A",
+        "desc_placeholder": "Add more details...",
+        "calendar": {
+            "sun": "Sun",
+            "mon": "Mon",
+            "tue": "Tue",
+            "wed": "Wed",
+            "thu": "Thu",
+            "fri": "Fri",
+            "sat": "Sat",
+            "shift": "Shift",
+            "work": "Work",
+            "property": "Property",
+            "meeting": "Meeting",
+            "training": "Training",
+            "deadline": "Deadline",
+            "general": "General"
+        }
     },
     "analytics": {
         "title": "Analytics Dashboard",
@@ -150,6 +264,11 @@
         "total": "Total",
         "pending": "Pending",
         "completed": "Completed"
+    },
+    "common": {
+        "show_more": "Show {{count}} More",
+        "show_less": "Show Less",
+        "user": "User"
     },
     "actions": {
         "view_all": "View All",

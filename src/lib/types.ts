@@ -34,17 +34,25 @@ export interface Profile {
   last_login_at?: string | null
   force_password_reset?: boolean
 
-  // Employment details
-  employment_type?: 'full_time' | 'part_time' | 'contract' | 'probation' | 'intern'
-  contract_end_date?: string | null
-  iqama_number?: string | null
-  iqama_expiry?: string | null
+    // Employment details
+    employment_type?: 'full_time' | 'part_time' | 'contract' | 'probation' | 'intern'
+    contract_end_date?: string | null
+    iqama_number?: string | null
+    iqama_expiry?: string | null
 
-  // Relations
-  reporting_to_profile?: Profile // Populated when fetching with joins
-  roles?: AppRole[]
-  properties?: Property[]
-  departments?: Department[]
+    // Public profile fields (added by migration 20260221170000)
+    bio?: string | null
+    phone_extension?: string | null
+
+    // Private profile fields – HR/Admin only (added by migration 20260221170000)
+    national_id?: string | null
+    salary_grade?: string | null
+
+    // Relations
+    reporting_to_profile?: Profile // Populated when fetching with joins
+    roles?: AppRole[]
+    properties?: Property[]
+    departments?: Department[]
 }
 
 export interface UserRole {
@@ -322,10 +330,15 @@ export interface Document {
   status: DocumentStatus
   requires_acknowledgment: boolean
   created_by: string
+  updated_by?: string | null
   current_version: number
+  published_version_number?: number | null
+  last_published_at?: string | null
+  last_published_by?: string | null
   created_at: string
   updated_at: string
   view_count: number
+  estimated_read_time?: number | null
   content_type: string
   departments?: { id: string; name: string } | null
   properties?: { id: string; name: string } | null
@@ -343,6 +356,7 @@ export interface DocumentVersion {
   created_by: string | null
   created_at: string
   title?: string | null
+  description?: string | null
   content?: string | null
   status?: DocumentStatus | null
   metadata?: Record<string, unknown> | null
@@ -1036,4 +1050,3 @@ export interface OnboardingTask {
   // Relations
   assigned_to?: Profile
 }
-

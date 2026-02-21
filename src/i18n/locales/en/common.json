@@ -9,6 +9,7 @@
         "edit": "Edit",
         "delete": "Delete",
         "create": "Create",
+        "add": "Add",
         "submit": "Submit",
         "back": "Back",
         "next": "Next",
@@ -75,7 +76,8 @@
         "system": "System",
         "update": "Update",
         "updating": "Updating",
-        "password": "Password"
+        "password": "Password",
+        "ksa": "Saudi Arabia"
     },
     "nav": {
         "dashboard": "Dashboard",

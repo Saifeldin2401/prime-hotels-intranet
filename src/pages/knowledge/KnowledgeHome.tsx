@@ -1,4 +1,4 @@
-/**
+﻿/**
  * KnowledgeHome - Knowledge Base Homepage (Full Redesign)
  * Premium, content-forward design inspired by modern documentation platforms.
  */
@@ -32,7 +32,8 @@ import {
     BookMarked,
     Flame,
     GraduationCap,
-    Zap
+    Zap,
+    Pencil
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -49,7 +50,7 @@ import {
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
 import { KnowledgeAIAssistant } from '@/components/knowledge/KnowledgeAIAssistant'
 
-/* ─── Content Type Configuration ───────────────────────────── */
+/* â”€â”€â”€ Content Type Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const TYPE_CONFIG: Record<string, {
     icon: React.ElementType
     gradient: string
@@ -74,10 +75,11 @@ const fadeUp = {
     })
 }
 
-/* ─── Helper ───────────────────────────────────────────────── */
-function readTime(content?: string): number {
-    if (!content) return 2
-    return Math.max(1, Math.round(content.split(/\s+/).length / 200))
+/* â”€â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function readTime(article: { estimated_read_time?: number; content?: string }): number {
+    if (article.estimated_read_time && article.estimated_read_time > 0) return article.estimated_read_time
+    if (!article.content) return 2
+    return Math.max(1, Math.round(article.content.split(/\s+/).length / 200))
 }
 
 function timeAgo(dateStr: string): string {
@@ -90,9 +92,9 @@ function timeAgo(dateStr: string): string {
     return `${Math.floor(days / 30)}mo ago`
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    COMPONENT
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 export default function KnowledgeHome() {
     const { t } = useTranslation('knowledge')
     const navigate = useNavigate()
@@ -128,10 +130,10 @@ export default function KnowledgeHome() {
         { type: 'video', label: t('content_types.video'), desc: t('content_type_desc.video') },
     ], [t])
 
-    /* ─── Render ─────────────────────────────────────────────── */
+    /* â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     return (
         <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-slate-50 to-white pb-16">
-            {/* ═══ HERO ═══════════════════════════════════════════ */}
+            {/* â•â•â• HERO â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
             <div className="relative overflow-hidden">
                 {/* Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950" />
@@ -162,7 +164,7 @@ export default function KnowledgeHome() {
                             {t('subtitle', 'Your centralized hub for operational knowledge')}
                         </h1>
                         <p className="text-base md:text-lg text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
-                            {t('hero_description', 'Access SOPs, policies, guides, and training materials — everything your team needs in one place.')}
+                            {t('hero_description', 'Access SOPs, policies, guides, and training materials â€” everything your team needs in one place.')}
                         </p>
                     </motion.div>
 
@@ -224,10 +226,10 @@ export default function KnowledgeHome() {
                 </div>
             </div>
 
-            {/* ═══ MAIN CONTENT (Negative margin overlap) ═══════ */}
+            {/* â•â•â• MAIN CONTENT (Negative margin overlap) â•â•â•â•â•â•â• */}
             <div className="container mx-auto px-4 md:px-6 -mt-10 relative z-10">
 
-                {/* ── Required Reading Alert ────────────────────── */}
+                {/* â”€â”€ Required Reading Alert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 {pendingRequired.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.97 }}
@@ -255,7 +257,7 @@ export default function KnowledgeHome() {
                     </motion.div>
                 )}
 
-                {/* ── Category Cards ────────────────────────────── */}
+                {/* â”€â”€ Category Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 <section className="mb-12">
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         {categoryCards.map((cat, idx) => {
@@ -295,10 +297,10 @@ export default function KnowledgeHome() {
                     </div>
                 </section>
 
-                {/* ── Two-Column Layout ─────────────────────────── */}
+                {/* â”€â”€ Two-Column Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                    {/* ▌LEFT COLUMN (8 cols) ────────────────────── */}
+                    {/* â–ŒLEFT COLUMN (8 cols) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     <div className="lg:col-span-8 space-y-10">
 
                         {/* Gateway Tiles */}
@@ -352,7 +354,7 @@ export default function KnowledgeHome() {
                             )}
                         </div>
 
-                        {/* ── Featured Articles ────────────────────── */}
+                        {/* â”€â”€ Featured Articles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {featured && featured.length > 0 && (
                             <section>
                                 <div className="flex items-center justify-between mb-5">
@@ -367,7 +369,7 @@ export default function KnowledgeHome() {
                                     </Link>
                                 </div>
 
-                                {/* Feature card — first article large, rest in grid */}
+                                {/* Feature card â€” first article large, rest in grid */}
                                 <div className="space-y-4">
                                     {/* Hero Feature */}
                                     {featured[0] && (() => {
@@ -392,13 +394,14 @@ export default function KnowledgeHome() {
                                                                         {t(`content_types.${article.content_type}`)}
                                                                     </Badge>
                                                                     <span className="text-[11px] text-gray-400 flex items-center gap-1">
-                                                                        <Clock className="w-3 h-3" /> {readTime(article.content)} {t('article.min_read', 'min read')}
+                                                                        <Clock className="w-3 h-3" /> {readTime(article)} {t('article.min_read', 'min read')}
                                                                     </span>
-                                                                    {article.view_count > 0 && (
-                                                                        <span className="text-[11px] text-gray-400 flex items-center gap-1">
-                                                                            <Eye className="w-3 h-3" /> {article.view_count}
-                                                                        </span>
-                                                                    )}
+                                                                    <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                                                                        <Eye className="w-3 h-3" /> {article.view_count || 0}
+                                                                    </span>
+                                                                    <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                                                                        <Pencil className="w-3 h-3" /> v{article.current_version || article.version || 1}
+                                                                    </span>
                                                                 </div>
                                                                 <h3 className="text-base md:text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors mb-1 line-clamp-1">
                                                                     {article.title}
@@ -407,11 +410,12 @@ export default function KnowledgeHome() {
                                                                     {article.description || article.summary || ''}
                                                                 </p>
                                                                 <div className="flex items-center gap-3 mt-3 text-xs text-gray-400">
-                                                                    {article.author?.full_name && (
-                                                                        <span className="flex items-center gap-1">
-                                                                            <Users className="w-3 h-3" /> {article.author.full_name}
-                                                                        </span>
-                                                                    )}
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Users className="w-3 h-3" /> {article.author?.full_name || t('home.unknown_author', 'System admin')}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Pencil className="w-3 h-3" /> {article.last_editor?.full_name || t('home.unknown_editor', 'System admin')}
+                                                                    </span>
                                                                     {article.department?.name && (
                                                                         <span className="flex items-center gap-1">
                                                                             <Building2 className="w-3 h-3" /> {article.department.name}
@@ -454,14 +458,16 @@ export default function KnowledgeHome() {
                                                                         {t(`content_types.${article.content_type}`)}
                                                                     </span>
                                                                     <span className="text-[10px] text-gray-400">
-                                                                        {readTime(article.content)} {t('article.min_read', 'min')}
+                                                                        {readTime(article)} {t('article.min_read', 'min')}
                                                                     </span>
                                                                 </div>
                                                                 <h4 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-snug">
                                                                     {article.title}
                                                                 </h4>
                                                                 <span className="text-[11px] text-gray-400 mt-1.5 block">
-                                                                    {article.department?.name && `${article.department.name} · `}{timeAgo(article.updated_at)}
+                                                                    {article.department?.name && `${article.department.name} · `}
+                                                                    {(article.last_editor?.full_name || t('home.unknown_editor', 'System admin')) && `${article.last_editor?.full_name || t('home.unknown_editor', 'System admin')} · `}
+                                                                    v{article.current_version || article.version || 1} · {timeAgo(article.updated_at)}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -474,7 +480,7 @@ export default function KnowledgeHome() {
                             </section>
                         )}
 
-                        {/* ── Recently Updated ─────────────────────── */}
+                        {/* â”€â”€ Recently Updated â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {recentArticles && recentArticles.length > 0 && (
                             <section>
                                 <div className="flex items-center justify-between mb-5">
@@ -514,7 +520,7 @@ export default function KnowledgeHome() {
                                                             {t(`content_types.${article.content_type}`)}
                                                         </span>
                                                         {article.department?.name && (
-                                                            <span className="text-[10px] text-gray-400">· {article.department.name}</span>
+                                                            <span className="text-[10px] text-gray-400">Â· {article.department.name}</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -532,7 +538,7 @@ export default function KnowledgeHome() {
                         )}
                     </div>
 
-                    {/* ▌RIGHT COLUMN (4 cols) ───────────────────── */}
+                    {/* â–ŒRIGHT COLUMN (4 cols) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     <div className="lg:col-span-4 space-y-6">
 
                         {/* AI Assistant */}
@@ -675,3 +681,4 @@ export default function KnowledgeHome() {
         </div>
     )
 }
+

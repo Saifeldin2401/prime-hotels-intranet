@@ -25,6 +25,7 @@ import type { NavigationGroupWithItems } from '@/hooks/useNavigation'
 export function Sidebar() {
   const location = useLocation()
   const { t } = useTranslation('nav')
+  const { t: t_ext } = useTranslation('extracted')
   const { signOut } = useAuth()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const { groupedNavigation } = useNavigation()

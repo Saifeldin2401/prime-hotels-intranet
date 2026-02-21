@@ -295,9 +295,14 @@ export function QuizComponentEnhanced({
     ): boolean => {
         switch (question.question_type) {
             case 'mcq': {
+                const hasOptions = (question.options?.length || 0) > 0
+                if (hasOptions) {
+                    const selected = typeof userAnswer === 'string' ? userAnswer : ''
+                    const selectedOption = question.options?.find(o => o.id === selected)
+                    return !!selectedOption?.is_correct
+                }
                 const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                const selectedOption = question.options?.find(o => o.id === selected)
-                return !!selectedOption?.is_correct
+                return selected.toLowerCase().trim() === (question.correct_answer || '').toLowerCase().trim()
             }
             case 'mcq_multi': {
                 const selectedOptions = normalizeSelectedOptions(userAnswer)
@@ -686,7 +691,7 @@ export function QuizComponentEnhanced({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
                 onClick={advanceQuestion}
             >
                 <motion.div
@@ -902,48 +907,57 @@ export function QuizComponentEnhanced({
                                 {/* Answer Options */}
                                 <div className="space-y-3">
                                     {currentQuestion.question?.question_type === 'mcq' && (
-                                        <RadioGroup
-                                            value={typeof answers[currentQuestion.question_id] === 'string' ? answers[currentQuestion.question_id] as string : ''}
-                                            onValueChange={(val) => setAnswers({ ...answers, [currentQuestion.question_id]: val })}
-                                            className="grid gap-3"
-                                        >
-                                            {currentQuestion.question.options?.map((opt, idx) => {
-                                                const isEliminated = eliminatedOptions.has(opt.id)
-                                                const isSelected = answers[currentQuestion.question_id] === opt.id
-                                                const translatedOption = displayOptionText(opt.id, opt.option_text)
+                                        (currentQuestion.question.options?.length || 0) > 0 ? (
+                                            <RadioGroup
+                                                value={typeof answers[currentQuestion.question_id] === 'string' ? answers[currentQuestion.question_id] as string : ''}
+                                                onValueChange={(val) => setAnswers({ ...answers, [currentQuestion.question_id]: val })}
+                                                className="grid gap-3"
+                                            >
+                                                {currentQuestion.question.options?.map((opt, idx) => {
+                                                    const isEliminated = eliminatedOptions.has(opt.id)
+                                                    const isSelected = answers[currentQuestion.question_id] === opt.id
+                                                    const translatedOption = displayOptionText(opt.id, opt.option_text)
 
-                                                if (isEliminated) return null
+                                                    if (isEliminated) return null
 
-                                                return (
-                                                    <motion.div
-                                                        key={opt.id || idx}
-                                                        whileHover={{ scale: 1.01 }}
-                                                        whileTap={{ scale: 0.99 }}
-                                                        className={cn(
-                                                            "group flex items-center gap-4 border-2 p-4 rounded-xl transition-all cursor-pointer",
-                                                            isSelected
-                                                                ? 'bg-hotel-navy/5 border-hotel-gold shadow-md'
-                                                                : 'bg-white border-slate-100 hover:border-hotel-gold/50'
-                                                        )}
-                                                        onClick={() => setAnswers({ ...answers, [currentQuestion.question_id]: opt.id })}
-                                                    >
-                                                        <div className={cn(
-                                                            "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                                                            isSelected ? "border-hotel-gold bg-hotel-gold" : "border-slate-200"
-                                                        )}>
-                                                            {isSelected && <div className="h-2 w-2 rounded-full bg-hotel-navy" />}
-                                                        </div>
-                                                        <span className={cn(
-                                                            "flex-1 text-base",
-                                                            isSelected ? "text-hotel-navy font-bold" : "text-slate-600",
-                                                            isRTL && "text-right"
-                                                        )}>
-                                                            {translatedOption}
-                                                        </span>
-                                                    </motion.div>
-                                                )
-                                            })}
-                                        </RadioGroup>
+                                                    return (
+                                                        <motion.div
+                                                            key={opt.id || idx}
+                                                            whileHover={{ scale: 1.01 }}
+                                                            whileTap={{ scale: 0.99 }}
+                                                            className={cn(
+                                                                "group flex items-center gap-4 border-2 p-4 rounded-xl transition-all cursor-pointer",
+                                                                isSelected
+                                                                    ? 'bg-hotel-navy/5 border-hotel-gold shadow-md'
+                                                                    : 'bg-white border-slate-100 hover:border-hotel-gold/50'
+                                                            )}
+                                                            onClick={() => setAnswers({ ...answers, [currentQuestion.question_id]: opt.id })}
+                                                        >
+                                                            <div className={cn(
+                                                                "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                                                                isSelected ? "border-hotel-gold bg-hotel-gold" : "border-slate-200"
+                                                            )}>
+                                                                {isSelected && <div className="h-2 w-2 rounded-full bg-hotel-navy" />}
+                                                            </div>
+                                                            <span className={cn(
+                                                                "flex-1 text-base",
+                                                                isSelected ? "text-hotel-navy font-bold" : "text-slate-600",
+                                                                isRTL && "text-right"
+                                                            )}>
+                                                                {translatedOption}
+                                                            </span>
+                                                        </motion.div>
+                                                    )
+                                                })}
+                                            </RadioGroup>
+                                        ) : (
+                                            <Input
+                                                value={typeof answers[currentQuestion.question_id] === 'string' ? answers[currentQuestion.question_id] as string : ''}
+                                                onChange={(e) => setAnswers({ ...answers, [currentQuestion.question_id]: e.target.value })}
+                                                placeholder="Type your answer..."
+                                                className="text-lg p-6 h-auto rounded-xl border-2"
+                                            />
+                                        )
                                     )}
 
                                     {currentQuestion.question?.question_type === 'mcq_multi' && (

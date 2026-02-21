@@ -140,6 +140,8 @@ export default function TrainingPlayer() {
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [completedBlocks, setCompletedBlocks] = useState<Set<string>>(new Set())
     const [quizScore, setQuizScore] = useState<number | null>(null)
+    const [completionScore, setCompletionScore] = useState<number | null>(null)
+    const [completionPassed, setCompletionPassed] = useState<boolean | null>(null)
     const [isFinished, setIsFinished] = useState(false)
     const [translationTarget, setTranslationTarget] = useState<TranslationTargetLanguage | null>(null)
     const [showBilingual, setShowBilingual] = useState(false)
@@ -189,6 +191,10 @@ export default function TrainingPlayer() {
         setTimeSpentSeconds(0)
         setCompletedBlocks(new Set())
         setCompletedMediaBlocks(new Set())
+        setQuizScore(null)
+        setCompletionScore(null)
+        setCompletionPassed(null)
+        setIsFinished(false)
         setResumeNotice(null)
         setTranslationTarget(null)
         setShowBilingual(false)
@@ -419,6 +425,7 @@ export default function TrainingPlayer() {
     }, [moduleData?.module.id, resetModuleInteractionState])
 
     const totalBlocks = moduleData?.blocks.length || 1
+    const hasQuizBlock = (moduleData?.blocks || []).some(block => block.type === 'quiz')
     const isLastBlock = activeBlockIndex === totalBlocks - 1
     const completedCount = new Set([...completedBlocks, ...completedMediaBlocks]).size
     const progressSteps = Math.max(completedCount, activeBlockIndex + 1)
@@ -466,27 +473,6 @@ export default function TrainingPlayer() {
         try {
             const nowIso = new Date().toISOString()
             const timeSpent = totalTimeRef.current + Math.max(0, Math.floor((Date.now() - blockStartRef.current) / 1000))
-            await learningService.submitQuizProgress({
-                assignment_id: assignmentId || undefined,
-                content_id: moduleData.module.id,
-                content_type: 'module',
-                user_id: user.id,
-                status: 'completed',
-                progress_percentage: 100,
-                passed: true,
-                score_percentage: quizScore !== null ? quizScore : undefined,
-                completed_at: nowIso,
-                last_accessed_at: nowIso,
-                last_activity_at: nowIso,
-                last_block_index: activeBlockIndex,
-                last_block_id: activeBlock?.id || null,
-                time_spent_seconds: timeSpent,
-                metadata: {
-                    completed_blocks: Array.from(completedBlocks),
-                    completed_media_blocks: Array.from(completedMediaBlocks),
-                    active_block_id: activeBlock?.id || null
-                }
-            })
 
             let linkedTrainingProgressId: string | undefined
             let linkedTrainingQuizScore: number | undefined
@@ -509,17 +495,48 @@ export default function TrainingPlayer() {
                 // Certificate generation can continue without this linkage.
             }
 
+            const passingScore = moduleData.module.passing_score_percentage || 80
+            const effectiveScore = quizScore ?? linkedTrainingQuizScore
+
+            if (hasQuizBlock && typeof effectiveScore !== 'number') {
+                toast({
+                    title: t('quizNotPassed'),
+                    description: t('completeQuizBeforeFinish', 'Please complete the quiz before finishing this module.'),
+                    variant: 'destructive'
+                })
+                return
+            }
+
+            const isPassed = !hasQuizBlock || (typeof effectiveScore === 'number' && effectiveScore >= passingScore)
+
+            await learningService.submitQuizProgress({
+                assignment_id: assignmentId || undefined,
+                content_id: moduleData.module.id,
+                content_type: 'module',
+                user_id: user.id,
+                status: 'completed',
+                progress_percentage: 100,
+                passed: isPassed,
+                score_percentage: typeof effectiveScore === 'number' ? effectiveScore : undefined,
+                completed_at: nowIso,
+                last_accessed_at: nowIso,
+                last_activity_at: nowIso,
+                last_block_index: activeBlockIndex,
+                last_block_id: activeBlock?.id || null,
+                time_spent_seconds: timeSpent,
+                metadata: {
+                    completed_blocks: Array.from(completedBlocks),
+                    completed_media_blocks: Array.from(completedMediaBlocks),
+                    active_block_id: activeBlock?.id || null
+                }
+            })
+
             try {
                 await skillsService.awardModuleSkills(user.id, moduleData.module.id)
             } catch (_skillError) {
                 // Silently fail - skills are optional, don't block completion
                 // Error is logged but doesn't prevent certificate generation
             }
-
-            // Grant certificate when quiz score meets or exceeds passing score
-            const passingScore = moduleData.module.passing_score_percentage || 80
-            const effectiveScore = quizScore ?? linkedTrainingQuizScore
-            const isPassed = typeof effectiveScore === 'number' && effectiveScore >= passingScore
 
             if (isPassed && user && moduleData.module && moduleData.module.certificate_enabled) {
                 try {
@@ -555,6 +572,8 @@ export default function TrainingPlayer() {
                 }
             }
 
+            setCompletionScore(typeof effectiveScore === 'number' ? effectiveScore : null)
+            setCompletionPassed(isPassed)
             setIsFinished(true)
         } catch (caughtError) {
             const errorDetails = getUserFriendlyError(caughtError)
@@ -1217,6 +1236,10 @@ export default function TrainingPlayer() {
         </div>
     )
 
+    const passingScore = moduleData.module.passing_score_percentage || 80
+    const finalScore = completionScore ?? quizScore
+    const finalPassed = completionPassed ?? (!hasQuizBlock || (typeof finalScore === 'number' && finalScore >= passingScore))
+
     if (isFinished) {
         return (
             <LazyMotion features={domAnimation}>
@@ -1246,11 +1269,13 @@ export default function TrainingPlayer() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                             <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">{t('finalScore')}</p>
-                            <p className="text-2xl font-bold text-hotel-navy">{quizScore !== null ? `${quizScore}%` : t('n_a')}</p>
+                            <p className="text-2xl font-bold text-hotel-navy">{finalScore !== null ? `${finalScore}%` : t('n_a')}</p>
                         </div>
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                             <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">{t('status')}</p>
-                            <p className="text-2xl font-bold text-emerald-600">{t('passed')}</p>
+                            <p className={cn("text-2xl font-bold", finalPassed ? "text-emerald-600" : "text-rose-600")}>
+                                {finalPassed ? t('passed') : t('quizNotPassed')}
+                            </p>
                         </div>
                     </div>
 

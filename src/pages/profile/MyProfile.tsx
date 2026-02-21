@@ -5,9 +5,11 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, Save, Upload, User as UserIcon, Key, Clock, Star, Target, Wallet, Shield, Briefcase, Building, Calendar, Mail, Phone, MapPin } from 'lucide-react'
+import { Progress } from '@/components/ui/progress'
+import { Loader2, Save, Upload, User as UserIcon, Key, Clock, Star, Target, Wallet, Shield, Briefcase, Building, Calendar, Mail, Phone, FileText, CheckCircle2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -18,6 +20,36 @@ import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
 import { getReportingLineDisplay } from '@/lib/displayHelpers'
 import { toast } from 'sonner'
 import { format, differenceInYears, differenceInMonths } from 'date-fns'
+
+// ─── Profile Completion ────────────────────────────────────────────────────────
+function computeCompletion(p: {
+    full_name?: string | null
+    avatar_url?: string | null
+    phone?: string | null
+    nationality?: string | null
+    bio?: string | null
+    phone_extension?: string | null
+    job_title?: string | null
+    hire_date?: string | null
+    emergency_contact_name?: string | null
+    emergency_contact_phone?: string | null
+}): { percent: number; missing: string[] } {
+    const fields: Array<{ label: string; value: string | null | undefined }> = [
+        { label: 'Full Name', value: p.full_name },
+        { label: 'Profile Photo', value: p.avatar_url },
+        { label: 'Phone', value: p.phone },
+        { label: 'Nationality', value: p.nationality },
+        { label: 'Bio / About', value: p.bio },
+        { label: 'Phone Extension', value: p.phone_extension },
+        { label: 'Job Title', value: p.job_title },
+        { label: 'Joining Date', value: p.hire_date },
+        { label: 'Emergency Contact Name', value: p.emergency_contact_name },
+        { label: 'Emergency Contact Phone', value: p.emergency_contact_phone },
+    ]
+    const missing = fields.filter(f => !f.value).map(f => f.label)
+    const percent = Math.round(((fields.length - missing.length) / fields.length) * 100)
+    return { percent, missing }
+}
 
 export default function MyProfile() {
     const { user, profile: authProfile, refreshSession } = useAuth()
@@ -36,6 +68,8 @@ export default function MyProfile() {
     const [bloodGroup, setBloodGroup] = useState('')
     const [emergencyName, setEmergencyName] = useState('')
     const [emergencyPhone, setEmergencyPhone] = useState('')
+    const [bio, setBio] = useState('')
+    const [phoneExtension, setPhoneExtension] = useState('')
 
     useEffect(() => {
         if (authProfile) {
@@ -46,32 +80,45 @@ export default function MyProfile() {
             setBloodGroup(authProfile.blood_group || '')
             setEmergencyName(authProfile.emergency_contact_name || '')
             setEmergencyPhone(authProfile.emergency_contact_phone || '')
+            setBio(authProfile.bio || '')
+            setPhoneExtension(authProfile.phone_extension || '')
         }
     }, [authProfile])
+
+    // Compute completion from live form values
+    const completion = computeCompletion({
+        full_name: fullName,
+        avatar_url: avatarUrl,
+        phone,
+        nationality,
+        bio,
+        phone_extension: phoneExtension,
+        job_title: authProfile?.job_title,
+        hire_date: authProfile?.hire_date,
+        emergency_contact_name: emergencyName,
+        emergency_contact_phone: emergencyPhone,
+    })
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!user) return
-
         try {
             setLoading(true)
-            const updates = {
-                full_name: fullName,
-                phone,
-                nationality,
-                blood_group: bloodGroup,
-                emergency_contact_name: emergencyName,
-                emergency_contact_phone: emergencyPhone,
-                updated_at: new Date().toISOString(),
-            }
-
             const { error } = await supabase
                 .from('profiles')
-                .update(updates)
+                .update({
+                    full_name: fullName,
+                    phone,
+                    nationality,
+                    blood_group: bloodGroup,
+                    emergency_contact_name: emergencyName,
+                    emergency_contact_phone: emergencyPhone,
+                    bio: bio || null,
+                    phone_extension: phoneExtension || null,
+                    updated_at: new Date().toISOString(),
+                })
                 .eq('id', user.id)
-
             if (error) throw error
-
             await refreshSession()
             toast.success(t('messages.profile_updated', 'Profile Updated'), {
                 description: t('messages.profile_updated_desc', 'Your profile has been updated successfully.')
@@ -87,60 +134,38 @@ export default function MyProfile() {
     const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         try {
             setUploading(true)
-
-            if (!event.target.files || event.target.files.length === 0) {
-                throw new Error('You must select an image to upload.')
-            }
-
-            if (!user?.id) {
-                throw new Error('User not authenticated')
-            }
-
+            if (!event.target.files || event.target.files.length === 0) throw new Error('You must select an image to upload.')
+            if (!user?.id) throw new Error('User not authenticated')
             const file = event.target.files[0]
+            if (!file.type.startsWith('image/')) throw new Error('Only image files are allowed.')
+            if (file.size > 5 * 1024 * 1024) throw new Error('Image must be smaller than 5 MB.')
+
             const fileExt = file.name.split('.').pop()
             const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`
 
             const { error: uploadError } = await supabase.storage
                 .from('documents')
-                .upload(filePath, file, {
-                    cacheControl: '3600',
-                    upsert: false
-                })
+                .upload(filePath, file, { cacheControl: '3600', upsert: false })
+            if (uploadError) throw uploadError
 
-            if (uploadError) {
-                console.error('Upload error:', uploadError)
-                throw uploadError
-            }
-
-            const { data: urlData } = supabase.storage
-                .from('documents')
-                .getPublicUrl(filePath)
+            const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath)
 
             const { error: updateError } = await supabase
                 .from('profiles')
                 .update({ avatar_url: urlData.publicUrl })
                 .eq('id', user.id)
-
-            if (updateError) {
-                console.error('Profile update error:', updateError)
-                throw updateError
-            }
+            if (updateError) throw updateError
 
             setAvatarUrl(urlData.publicUrl)
             await refreshSession()
-            toast.success(t('messages.avatar_updated', 'Avatar Updated'), {
-                description: t('messages.avatar_updated_desc', 'Your avatar has been updated successfully.')
-            })
+            toast.success(t('messages.avatar_updated', 'Avatar Updated'))
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : t('common:messages.error_action_failed', 'Failed to upload avatar')
-            console.error('Error uploading avatar:', error)
-            toast.error(errorMessage)
+            toast.error(error instanceof Error ? error.message : t('common:messages.error_action_failed', 'Failed to upload avatar'))
         } finally {
             setUploading(false)
         }
     }
 
-    // Calculate tenure
     const getTenure = () => {
         if (!authProfile?.hire_date) return null
         const hireDate = new Date(authProfile.hire_date)
@@ -156,11 +181,9 @@ export default function MyProfile() {
         <div className="container mx-auto py-0 max-w-5xl">
             {/* Hero Header */}
             <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-indigo-900 rounded-b-2xl overflow-hidden mb-8">
-                {/* Decorative elements */}
                 <div className="absolute top-0 end-0 w-1/3 h-full bg-indigo-500/10 -skew-x-12 transform translate-x-1/2" />
                 <div className="absolute -bottom-16 -start-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl" />
-
-                <div className="relative z-10 px-8 pt-10 pb-20" >
+                <div className="relative z-10 px-8 pt-10 pb-20">
                     <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
                         {/* Avatar */}
                         <div className="relative group">
@@ -177,24 +200,13 @@ export default function MyProfile() {
                             >
                                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                             </button>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                accept="image/*"
-                                onChange={handleAvatarUpload}
-                                disabled={uploading}
-                            />
+                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} />
                         </div>
 
                         {/* Name / Role Info */}
                         <div className="text-center md:text-start flex-1">
-                            <h1 className="text-3xl font-bold text-white mb-1">
-                                {authProfile?.full_name || user?.email}
-                            </h1>
-                            <p className="text-white/70 text-lg mb-3">
-                                {authProfile?.job_title || t('not_specified', 'Not specified')}
-                            </p>
+                            <h1 className="text-3xl font-bold text-white mb-1">{authProfile?.full_name || user?.email}</h1>
+                            <p className="text-white/70 text-lg mb-3">{authProfile?.job_title || t('not_specified', 'Not specified')}</p>
                             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                                 <Badge className="bg-white/10 text-white/90 border-white/20 hover:bg-white/15">
                                     <Briefcase className="w-3 h-3 me-1.5" />
@@ -221,35 +233,54 @@ export default function MyProfile() {
                         {/* Quick info pills */}
                         <div className="hidden md:flex flex-col gap-2 text-sm text-white/60">
                             {user?.email && (
-                                <span className="flex items-center gap-2">
-                                    <Mail className="w-3.5 h-3.5" /> {user.email}
-                                </span>
+                                <span className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {user.email}</span>
                             )}
                             {authProfile?.staff_id && (
-                                <span className="flex items-center gap-2">
-                                    <Shield className="w-3.5 h-3.5" /> {authProfile.staff_id}
-                                </span>
+                                <span className="flex items-center gap-2"><Shield className="w-3.5 h-3.5" /> {authProfile.staff_id}</span>
+                            )}
+                            {phoneExtension && (
+                                <span className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> Ext. {phoneExtension}</span>
                             )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Tabs - pulled up over hero */}
+            {/* Profile Completion Banner */}
+            {completion.percent < 100 && (
+                <div className="px-4 mb-4">
+                    <Card className="border-amber-200 bg-amber-50/70 shadow-sm">
+                        <CardContent className="py-4 px-5">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                                    <span className="text-sm font-semibold text-amber-800">Profile {completion.percent}% Complete</span>
+                                </div>
+                                <span className="text-xs text-amber-600">{completion.missing.length} field{completion.missing.length !== 1 ? 's' : ''} missing</span>
+                            </div>
+                            <Progress value={completion.percent} className="h-2 bg-amber-200" />
+                            {completion.missing.length > 0 && (
+                                <p className="text-xs text-amber-700 mt-2">
+                                    Missing: {completion.missing.slice(0, 4).join(', ')}{completion.missing.length > 4 ? ` +${completion.missing.length - 4} more` : ''}
+                                </p>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Tabs */}
             <div className="-mt-12 px-4 relative z-20">
                 <Tabs defaultValue="personal" className="space-y-6">
                     <TabsList className="bg-white shadow-lg rounded-xl border border-gray-100 grid w-full grid-cols-3 lg:w-[500px] p-1 h-auto">
                         <TabsTrigger value="personal" className="py-2.5 text-sm">
-                            <UserIcon className="w-4 h-4 me-2" />
-                            {t('personal_info')}
+                            <UserIcon className="w-4 h-4 me-2" />{t('personal_info')}
                         </TabsTrigger>
                         <TabsTrigger value="skills" className="py-2.5 text-sm">
-                            <Star className="w-4 h-4 me-2" />
-                            {t('skills', 'Skills')}
+                            <Star className="w-4 h-4 me-2" />{t('skills', 'Skills')}
                         </TabsTrigger>
                         <TabsTrigger value="documents" className="py-2.5 text-sm">
-                            <Briefcase className="w-4 h-4 me-2" />
-                            {t('documents')}
+                            <Briefcase className="w-4 h-4 me-2" />{t('documents')}
                         </TabsTrigger>
                     </TabsList>
 
@@ -257,9 +288,7 @@ export default function MyProfile() {
                         <Card className="border-gray-100 shadow-sm">
                             <CardHeader>
                                 <CardTitle>{t('personal_info')}</CardTitle>
-                                <CardDescription>
-                                    {t('personal_info_desc')}
-                                </CardDescription>
+                                <CardDescription>{t('personal_info_desc')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleUpdateProfile} className="space-y-8">
@@ -269,49 +298,31 @@ export default function MyProfile() {
                                             <UserIcon className="w-4 h-4 text-indigo-500" />
                                             <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-500">{t('general_info')}</h3>
                                         </div>
-
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label htmlFor="fullName">{t('full_name')}</Label>
-                                                <Input
-                                                    id="fullName"
-                                                    name="name"
-                                                    autoComplete="name"
-                                                    value={fullName}
-                                                    onChange={(e) => setFullName(e.target.value)}
-                                                />
+                                                <Input id="fullName" name="name" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label htmlFor="email">{t('email')}</Label>
                                                 <Input id="email" name="email" autoComplete="email" value={user?.email || ''} disabled className="bg-gray-50" />
                                             </div>
                                         </div>
-
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label htmlFor="phone">{t('phone_number')}</Label>
-                                                <Input
-                                                    id="phone"
-                                                    name="tel"
-                                                    autoComplete="tel"
-                                                    value={phone}
-                                                    onChange={(e) => setPhone(e.target.value)}
-                                                    style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }}
-                                                />
+                                                <Input id="phone" name="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }} />
                                             </div>
                                             <div className="grid gap-2">
-                                                <Label htmlFor="nationality">{t('nationality')}</Label>
-                                                <Input
-                                                    id="nationality"
-                                                    name="country-name"
-                                                    autoComplete="country-name"
-                                                    value={nationality}
-                                                    onChange={(e) => setNationality(e.target.value)}
-                                                />
+                                                <Label htmlFor="phoneExtension">Phone Extension</Label>
+                                                <Input id="phoneExtension" placeholder="e.g. 1234" value={phoneExtension} onChange={(e) => setPhoneExtension(e.target.value)} style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }} />
                                             </div>
                                         </div>
-
                                         <div className="grid md:grid-cols-2 gap-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="nationality">{t('nationality')}</Label>
+                                                <Input id="nationality" name="country-name" autoComplete="country-name" value={nationality} onChange={(e) => setNationality(e.target.value)} />
+                                            </div>
                                             <div className="grid gap-2">
                                                 <Label htmlFor="bloodGroup">{t('blood_group')}</Label>
                                                 <Select value={bloodGroup} onValueChange={setBloodGroup}>
@@ -326,6 +337,25 @@ export default function MyProfile() {
                                                 </Select>
                                             </div>
                                         </div>
+                                        {/* Bio */}
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="bio">
+                                                <span className="flex items-center gap-1.5">
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                    Bio / About Me
+                                                    <span className="text-xs text-gray-400 font-normal">(visible to colleagues)</span>
+                                                </span>
+                                            </Label>
+                                            <Textarea
+                                                id="bio"
+                                                placeholder="Share a little about yourself, your role, and what you enjoy at work..."
+                                                value={bio}
+                                                onChange={(e) => setBio(e.target.value)}
+                                                rows={3}
+                                                maxLength={500}
+                                            />
+                                            <p className="text-xs text-gray-400 text-right">{bio.length}/500</p>
+                                        </div>
                                     </div>
 
                                     <Separator />
@@ -335,55 +365,38 @@ export default function MyProfile() {
                                         <div className="flex items-center gap-2 mb-2">
                                             <Shield className="w-4 h-4 text-red-500" />
                                             <h3 className="text-sm font-bold uppercase tracking-wider text-red-500">{t('emergency_info')}</h3>
+                                            <span className="text-xs text-red-400 font-normal">(private – HR only)</span>
                                         </div>
-
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label htmlFor="emergencyName">{t('emergency_contact_name')}</Label>
-                                                <Input
-                                                    id="emergencyName"
-                                                    name="emergency-contact-name"
-                                                    value={emergencyName}
-                                                    onChange={(e) => setEmergencyName(e.target.value)}
-                                                />
+                                                <Input id="emergencyName" value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} />
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label htmlFor="emergencyPhone">{t('emergency_contact_phone')}</Label>
-                                                <Input
-                                                    id="emergencyPhone"
-                                                    name="emergency-contact-phone"
-                                                    value={emergencyPhone}
-                                                    onChange={(e) => setEmergencyPhone(e.target.value)}
-                                                    style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }}
-                                                />
+                                                <Input id="emergencyPhone" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }} />
                                             </div>
                                         </div>
                                     </div>
 
                                     <Separator />
 
-                                    {/* Organizational Info */}
+                                    {/* Organizational Info (read-only) */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 mb-2">
                                             <Briefcase className="w-4 h-4 text-indigo-500" />
                                             <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-500">{t('org_info')}</h3>
                                         </div>
-
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label>{t('job_title')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
-                                                    {authProfile?.job_title || t('not_specified', 'Not specified')}
-                                                </div>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{authProfile?.job_title || t('not_specified', 'Not specified')}</div>
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label>{t('staff_id', 'Staff ID')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
-                                                    {authProfile?.staff_id || t('not_assigned', 'Not assigned')}
-                                                </div>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{authProfile?.staff_id || t('not_assigned', 'Not assigned')}</div>
                                             </div>
                                         </div>
-
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label>{t('hire_date', 'Hire Date')}</Label>
@@ -393,18 +406,13 @@ export default function MyProfile() {
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label>{t('reports_to')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
-                                                    {getReportingLineDisplay(authProfile) || t('not_specified', 'Not specified')}
-                                                </div>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{getReportingLineDisplay(authProfile) || t('not_specified', 'Not specified')}</div>
                                             </div>
                                         </div>
-
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label>{t('employment_type')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100 capitalize">
-                                                    {authProfile?.employment_type?.replace('_', ' ') || t('not_specified', 'Not specified')}
-                                                </div>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100 capitalize">{authProfile?.employment_type?.replace('_', ' ') || t('not_specified', 'Not specified')}</div>
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label>{t('contract_end_date')}</Label>
@@ -413,13 +421,10 @@ export default function MyProfile() {
                                                 </div>
                                             </div>
                                         </div>
-
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label>{t('iqama_number')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
-                                                    {authProfile?.iqama_number || t('not_specified', 'Not specified')}
-                                                </div>
+                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{authProfile?.iqama_number || t('not_specified', 'Not specified')}</div>
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label>{t('iqama_expiry')}</Label>
@@ -428,49 +433,20 @@ export default function MyProfile() {
                                                 </div>
                                             </div>
                                         </div>
-
                                         <div className="grid gap-2 pt-4">
                                             <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400">{t('hr_quick_links')}</Label>
                                             <div className="flex flex-wrap gap-2 mt-1">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => navigate('/hr/attendance')}
-                                                    className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
-                                                >
-                                                    <Clock className="w-3.5 h-3.5 me-2" />
-                                                    {t('attendance')}
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/hr/attendance')} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
+                                                    <Clock className="w-3.5 h-3.5 me-2" />{t('attendance')}
                                                 </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => navigate('/hr/performance')}
-                                                    className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
-                                                >
-                                                    <Star className="w-3.5 h-3.5 me-2" />
-                                                    {t('performance')}
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/hr/performance')} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
+                                                    <Star className="w-3.5 h-3.5 me-2" />{t('performance')}
                                                 </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => navigate('/hr/goals')}
-                                                    className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
-                                                >
-                                                    <Target className="w-3.5 h-3.5 me-2" />
-                                                    {t('career_goals')}
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/hr/goals')} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
+                                                    <Target className="w-3.5 h-3.5 me-2" />{t('career_goals')}
                                                 </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => navigate('/hr/payslips')}
-                                                    className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
-                                                >
-                                                    <Wallet className="w-3.5 h-3.5 me-2" />
-                                                    {t('payroll')}
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/hr/payslips')} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
+                                                    <Wallet className="w-3.5 h-3.5 me-2" />{t('payroll')}
                                                 </Button>
                                             </div>
                                         </div>
@@ -478,11 +454,7 @@ export default function MyProfile() {
 
                                     <div className="flex justify-end pt-4 border-t border-gray-100">
                                         <Button type="submit" disabled={loading} className="bg-gray-900 hover:bg-gray-800">
-                                            {loading ? (
-                                                <Loader2 className="w-4 h-4 animate-spin me-2" />
-                                            ) : (
-                                                <Save className="w-4 h-4 me-2" />
-                                            )}
+                                            {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Save className="w-4 h-4 me-2" />}
                                             {t('save_changes')}
                                         </Button>
                                     </div>
@@ -496,20 +468,14 @@ export default function MyProfile() {
                                 <CardDescription>{t('security_desc')}</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-1">
-                                            <Label>{t('password')}</Label>
-                                            <p className="text-sm text-gray-500">{t('password_desc')}</p>
-                                        </div>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => navigate('/change-password')}
-                                        >
-                                            <Key className="w-4 h-4 me-2" />
-                                            {t('change_password')}
-                                        </Button>
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <Label>{t('password')}</Label>
+                                        <p className="text-sm text-gray-500">{t('password_desc')}</p>
                                     </div>
+                                    <Button variant="outline" onClick={() => navigate('/change-password')}>
+                                        <Key className="w-4 h-4 me-2" />{t('change_password')}
+                                    </Button>
                                 </div>
                             </CardContent>
                         </Card>

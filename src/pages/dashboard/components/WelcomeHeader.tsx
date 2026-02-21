@@ -54,7 +54,7 @@ function FloatingParticles() {
           key={i}
           className="absolute w-2 h-2 bg-white/20 rounded-full"
           initial={{ 
-            x: Math.random() * 100 + '%', 
+            x: `${(i * 17) % 100}%`, 
             y: '100%',
             opacity: 0 
           }}
@@ -64,7 +64,7 @@ function FloatingParticles() {
             scale: [0.5, 1.5, 0.5]
           }}
           transition={{ 
-            duration: 8 + Math.random() * 4,
+            duration: 8 + (i % 3) * 2,
             repeat: Infinity,
             delay: i * 1.5,
             ease: "easeOut"

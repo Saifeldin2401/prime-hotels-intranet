@@ -358,82 +358,22 @@ export const learningService = {
     },
 
     async submitQuizProgress(progress: Partial<LearningProgress>) {
-        // Use upsert with the unique constraint to avoid 409 conflicts
-        // The unique constraint is on (user_id, content_type, content_id)
+        if (!progress.user_id || !progress.content_id || !progress.content_type) {
+            throw new Error('Missing required progress keys (user_id, content_id, content_type)')
+        }
 
         const progressData = {
             ...progress,
             updated_at: new Date().toISOString()
         }
 
-        // First try to find existing record
-        let existingId = null
+        const { data, error } = await supabase
+            .from('learning_progress')
+            .upsert(progressData, { onConflict: 'user_id,content_type,content_id' })
+            .select()
+            .single()
 
-        if (progress.assignment_id && progress.content_type) {
-            const { data } = await supabase
-                .from('learning_progress')
-                .select('id')
-                .eq('user_id', progress.user_id)
-                .eq('assignment_id', progress.assignment_id)
-                .eq('content_type', progress.content_type)
-                .maybeSingle()
-            existingId = data?.id
-        }
-
-        if (!existingId && progress.content_id && progress.content_type) {
-            const { data } = await supabase
-                .from('learning_progress')
-                .select('id')
-                .eq('user_id', progress.user_id)
-                .eq('content_id', progress.content_id)
-                .eq('content_type', progress.content_type)
-                .maybeSingle()
-            existingId = data?.id
-        }
-
-        if (existingId) {
-            // Update existing record
-            const { data, error } = await supabase
-                .from('learning_progress')
-                .update(progressData)
-                .eq('id', existingId)
-                .select()
-                .single()
-            if (error) throw error
-            return data as LearningProgress
-        } else {
-            // Insert new record
-            const { data, error } = await supabase
-                .from('learning_progress')
-                .insert(progressData)
-                .select()
-                .single()
-            if (error) {
-                // If conflict error, try to update instead
-                if (error.code === '23505') {
-                    // Unique constraint violation - try update
-                    const { data: existing } = await supabase
-                        .from('learning_progress')
-                        .select('id')
-                        .eq('user_id', progress.user_id)
-                        .eq('content_id', progress.content_id)
-                        .eq('content_type', progress.content_type)
-                        .maybeSingle()
-
-                    if (existing) {
-                        const { data: updated, error: upError } = await supabase
-                            .from('learning_progress')
-                            .update(progressData)
-                            .eq('id', existing.id)
-                            .select()
-                            .single()
-                        if (upError) throw upError
-                        return updated as LearningProgress
-                    }
-                }
-                throw error
-            }
-            return data as LearningProgress
-        }
+        if (error) throw error
+        return data as LearningProgress
     },
 }

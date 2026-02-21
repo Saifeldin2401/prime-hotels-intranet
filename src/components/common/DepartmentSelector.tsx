@@ -22,6 +22,7 @@ export function DepartmentSelector({
   showAllDepartments = false,
   disabled = false
 }: DepartmentSelectorProps) {
+  const { t: t_ext } = useTranslation('extracted')
   const { departments, properties } = useAuth()
   const { canAccessDepartment, canAccessProperty } = usePermissions()
 

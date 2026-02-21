@@ -168,6 +168,11 @@
         "publish": "نشر",
         "save_draft": "حفظ كمسودة",
         "submit_for_review": "تقديم للمراجعة",
+        "duplicate_warning": "قد توجد مقالات مشابهة بالفعل.",
+        "dismiss_warning": "تجاهل",
+        "suggest_tags": "اقتراح وسوم بالذكاء الاصطناعي",
+        "generating_tags": "جارٍ إنشاء اقتراحات الوسوم...",
+        "suggested_tags": "الوسوم المقترحة:",
         "publishing": "جاري النشر...",
         "saving": "جاري الحفظ...",
         "title_label": "العنوان",
@@ -205,12 +210,12 @@
         "access_title": "الوصول والصلاحيات",
         "visibility_label": "مستوى الرؤية",
         "target_property": "ينطبق على منشأة",
-        "current_property": "المنشأة الحالية",
         "requires_ack": "يتطلب إقراراً",
         "alerts": {
             "title_required": "العنوان مطلوب",
             "file_uploading": "الرجاء انتظار اكتمال تحميل الملف",
             "dept_required": "الرجاء اختيار قسم لرؤية تعتمد على القسم",
+            "property_required": "الرجاء اختيار منشأة",
             "ai_success": "اكتمل توليد الذكاء الاصطناعي!",
             "ai_failed": "فشل الذكاء الاصطناعي",
             "upload_success": "تم تحميل PDF بنجاح",
@@ -222,6 +227,9 @@
             "save_error": "فشل الحفظ: ",
             "submitted_for_review": "تم تقديم المستند للمراجعة! تم إشعار المراجعين."
         },
+        "selected_property": "المنشأة المحددة",
+        "current_property": "المنشأة الحالية",
+        "selected_team": "الفريق المحدد",
         "visibility": {
             "all_properties": "جميع المنشآت",
             "all_properties_desc": "مرئي لجميع الموظفين عبر المنظمة",
@@ -241,7 +249,25 @@
             "specific_departments": "أقسام محددة (مخصص)",
             "specific_departments_desc": "مرئي للأقسام المحددة عبر المنشآت المختلفة",
             "specific_departments_label": "اختر الأقسام المستهدفة",
-            "select_depts": "اختر الأقسام..."
+            "select_depts": "اختر الأقسام...",
+            "simple_all_hotels": "جميع الفنادق",
+            "simple_all_hotels_desc": "مرئي لجميع الموظفين عبر جميع المنشآت",
+            "simple_one_hotel": "هذا الفندق فقط",
+            "simple_one_hotel_desc": "مرئي فقط للموظفين في هذه المنشأة",
+            "simple_team_one_hotel": "هذه الفريق (الفندق الحالي)",
+            "simple_team_one_hotel_desc": "مرئي فقط لأعضاء هذه الفريق في هذه المنشأة",
+            "simple_team_all_hotels": "هذه الفريق (جميع الفنادق)",
+            "simple_team_all_hotels_desc": "مرئي لهذه الفريق عبر جميع المنشآت",
+            "simple_custom": "مخصص",
+            "simple_custom_desc": "تكوين قواعد رؤية محددة",
+            "simple_role_advanced": "متقدم قائم على الدور",
+            "simple_role_advanced_desc": "تكوين قواعد وصول معقدة قائمة على الدور",
+            "summary_all_hotels": "جميع المنشآت والأقسام",
+            "summary_property": "هذه المنشأة فقط",
+            "summary_department": "هذا القسم فقط (المنشأة الحالية)",
+            "summary_group_department": "هذا القسم عبر جميع المنشآت",
+            "summary_specific_departments": "أقسام محددة عبر المنشآت",
+            "summary_role": "المستخدمون ذوي دور محدد"
         }
     },
     "browse": {
@@ -304,7 +330,7 @@
             "changes_requested": "تم طلب تغييرات (بقي كمسودة)",
             "failed": "فشلت المراجعة: ",
             "no_desc": "لا يوجد وصف",
-            "unknown_author": "غير معروف"
+            "unknown_author": "مسؤول النظام"
         }
     },
     "viewer": {
@@ -322,6 +348,7 @@
         "not_found_desc": "المستند الذي تبحث عنه غير موجود أو ليس لديك صلاحية الوصول إليه.",
         "back_to_home": "العودة إلى قاعدة المعرفة",
         "updated_at": "تم التحديث في {{date}}",
+        "updated_since_view": "تم التحديث منذ آخر زيارة",
         "preview_doc": "معاينة المستند",
         "download_attachment": "تحميل / عرض المرفق",
         "no_content": "لا يوجد محتوى متاح.",
@@ -339,6 +366,7 @@
         "leave_comment": "اترك تعليقاً...",
         "post": "نشر",
         "no_comments": "لا توجد تعليقات بعد.",
+        "unknown_author": "مسؤول النظام",
         "on_this_page": "في هذه الصفحة",
         "tags": "الوسوم",
         "linked_learning": "التعلم المرتبط",
@@ -368,7 +396,7 @@
         },
         "match": "Match",
         "submit_feedback": "Submit Feedback",
-        "unknown_author": "Unknown Author",
+        "unknown_author": "مسؤول النظام",
         "translate": "Translate",
         "feedback_placeholder_neg": "Feedback ?? ?????? Neg",
         "translate_ai": "Translate AI",
@@ -410,7 +438,22 @@
         },
         "results_count": "تم العثور على {{count}} مقال",
         "no_results": "لم يتم العثور على نتائج",
-        "no_results_hint": "حاول تعديل البحث أو المرشحات"
+        "no_results_hint": "حاول تعديل البحث أو المرشحات",
+        "request_content": "طلب توثيق هذا الموضوع",
+        "unknown_author": "مسؤول النظام",
+        "unknown_editor": "مسؤول النظام"
+    },
+    "request_content": {
+        "title": "طلب توثيق غير موجود",
+        "description": "لا تجد ما تبحث عنه؟ أخبرنا وسنقوم بإنشائه.",
+        "topic_label": "ما الموضوع الذي تحتاج توثيقه؟",
+        "topic_placeholder": "مثال: إجراءات المغادرة المتأخرة لكبار الضيوف",
+        "details_label": "تفاصيل إضافية (اختياري)",
+        "details_placeholder": "اشرح المعلومات المطلوبة أو سبب أهميتها...",
+        "submit": "إرسال الطلب",
+        "submitting": "جارٍ الإرسال...",
+        "success": "تم إرسال طلب المحتوى! سيقوم فريق الإدارة بالمراجعة.",
+        "error": "فشل إرسال الطلب. يرجى المحاولة مرة أخرى."
     },
     "analytics": {
         "title": "إحصائيات قاعدة المعرفة",
@@ -490,6 +533,8 @@
         "master_library": "المكتبة الرئيسية للمعرفة",
         "create_new": "مقال جديد",
         "no_description": "لا يوجد وصف مدخل",
+        "unknown_author": "مسؤول النظام",
+        "unknown_editor": "مسؤول النظام",
         "view": "عرض",
         "no_bookmarks": "لا توجد محفوظات بعد",
         "bookmarks": "المحفوظات",
@@ -504,6 +549,10 @@
         "version": "Version",
         "all_knowledge": "???? ???????",
         "pending": "??? ????????"
+    },
+    "home": {
+        "unknown_author": "مسؤول النظام",
+        "unknown_editor": "مسؤول النظام"
     },
     "status": {
         "draft": "مسودة",

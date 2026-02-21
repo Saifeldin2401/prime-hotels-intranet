@@ -71,7 +71,21 @@ export const securityConfig = {
       'style-src': ["'self'", "'unsafe-inline'"], // Needed for Tailwind
       'img-src': ["'self'", "data:", "https:"],
       'font-src': ["'self'"],
-      'connect-src': ["'self'", "https://api.supabase.co", "https://o4508792767840256.ingest.de.sentry.io", "https://*.sentry.io"],
+      'connect-src': [
+        "'self'",
+        "https://*.supabase.co",
+        "wss://*.supabase.co",
+        "https://api-inference.huggingface.co",
+        "https://huggingface.co",
+        "https://router.huggingface.co",
+        "https://api.deepseek.com",
+        "https://*.hf.co",
+        "https://*.huggingface.co",
+        "https://cdn.jsdelivr.net",
+        "https://date.nager.at",
+        "https://o4508792767840256.ingest.de.sentry.io",
+        "https://*.sentry.io"
+      ],
       // Allow YouTube and Vimeo video embeds in knowledge base articles
       'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com"],
       'frame-ancestors': ["'none'"],

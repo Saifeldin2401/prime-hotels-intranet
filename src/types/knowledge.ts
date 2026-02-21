@@ -78,6 +78,10 @@ export interface KnowledgeArticle {
     requires_acknowledgment: boolean
     view_count: number
     estimated_read_time?: number
+    current_version?: number
+    published_version_number?: number | null
+    last_published_at?: string | null
+    updated_by?: string | null
 
     // Timestamps and authorship
     created_by?: string
@@ -88,6 +92,11 @@ export interface KnowledgeArticle {
 
     // Author info (joined)
     author?: {
+        id: string
+        full_name: string
+        avatar_url?: string
+    }
+    last_editor?: {
         id: string
         full_name: string
         avatar_url?: string

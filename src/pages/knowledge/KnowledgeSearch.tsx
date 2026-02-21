@@ -30,7 +30,9 @@ import {
     SlidersHorizontal,
     ArrowLeft,
     Building2,
-    Sparkles
+    Sparkles,
+    Pencil,
+    Lightbulb
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -50,6 +52,7 @@ import { useArticles, useCategories } from '@/hooks/useKnowledge'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProperties } from '@/hooks/useProperties'
 import type { KnowledgeContentType } from '@/types/knowledge'
+import { RequestContentDialog } from '@/components/knowledge/RequestContentDialog'
 
 /* Type Configuration */
 const TYPE_CONFIG: Record<KnowledgeContentType, {
@@ -73,9 +76,10 @@ const TYPE_CONFIG: Record<KnowledgeContentType, {
 }
 
 /* Helpers */
-function readTime(content?: string): number {
-    if (!content) return 2
-    return Math.max(1, Math.round(content.split(/\s+/).length / 200))
+function readTime(article: { estimated_read_time?: number; content?: string }): number {
+    if (article.estimated_read_time && article.estimated_read_time > 0) return article.estimated_read_time
+    if (!article.content) return 2
+    return Math.max(1, Math.round(article.content.split(/\s+/).length / 200))
 }
 
 function timeAgo(dateStr: string): string {
@@ -114,6 +118,7 @@ export default function KnowledgeSearch() {
     const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'relevance')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
     const [showFilters, setShowFilters] = useState(false)
+    const [showRequestDialog, setShowRequestDialog] = useState(false)
 
     const SORT_OPTIONS = [
         { value: 'relevance', label: t('search_page.sort.relevance', 'Relevance') },
@@ -534,9 +539,23 @@ export default function KnowledgeSearch() {
                         <p className="text-sm text-gray-400 max-w-xs mx-auto mb-6">
                             {t('search_page.no_results_hint', 'Try adjusting your search or filters')}
                         </p>
-                        <Button variant="outline" onClick={clearFilters} className="rounded-xl">
-                            {t('search_page.clear_filters', 'Clear all filters')}
-                        </Button>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                            <Button variant="outline" onClick={clearFilters} className="rounded-xl">
+                                {t('search_page.clear_filters', 'Clear all filters')}
+                            </Button>
+                            <Button 
+                                variant="default" 
+                                onClick={() => setShowRequestDialog(true)} 
+                                className="rounded-xl bg-indigo-600 hover:bg-indigo-700"
+                            >
+                                {t('search_page.request_content', 'Request this documentation')}
+                            </Button>
+                        </div>
+                        <RequestContentDialog 
+                            isOpen={showRequestDialog} 
+                            onClose={() => setShowRequestDialog(false)} 
+                            searchQuery={searchQuery}
+                        />
                     </div>
                 ) : (
                     /* Results */
@@ -577,13 +596,17 @@ export default function KnowledgeSearch() {
                                                         )}
                                                         <div className="mt-auto pt-3 border-t border-gray-50 flex items-center gap-3 text-[10px] text-gray-400">
                                                             <span className="flex items-center gap-1">
-                                                                <Clock className="w-3 h-3" /> {readTime(article.content)} {t('article.min_read', 'min')}
+                                                                <Clock className="w-3 h-3" /> {readTime(article)} {t('article.min_read', 'min')}
                                                             </span>
-                                                            {article.view_count > 0 && (
-                                                                <span className="flex items-center gap-1">
-                                                                    <Eye className="w-3 h-3" /> {article.view_count}
-                                                                </span>
-                                                            )}
+                                                            <span className="flex items-center gap-1">
+                                                                <Eye className="w-3 h-3" /> {article.view_count || 0}
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                                <Pencil className="w-3 h-3" /> v{article.current_version || article.version || 1}
+                                                            </span>
+                                                            <span className="truncate max-w-[140px]">
+                                                                {article.author?.full_name || t('search_page.unknown_author', 'System admin')}
+                                                            </span>
                                                             <span className="ms-auto">
                                                                 {timeAgo(article.updated_at)}
                                                             </span>
@@ -623,13 +646,17 @@ export default function KnowledgeSearch() {
                                             <span className="max-w-full truncate">{article.category?.name || article.department?.name || t('general_category')}</span>
                                             <span className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
-                                                {readTime(article.content)} {t('article.min_read', 'min')}
+                                                {readTime(article)} {t('article.min_read', 'min')}
                                             </span>
-                                            {article.view_count > 0 && (
-                                                <span className="flex items-center gap-1">
-                                                    <Eye className="w-3 h-3" /> {article.view_count}
-                                                </span>
-                                            )}
+                                            <span className="flex items-center gap-1">
+                                                <Eye className="w-3 h-3" /> {article.view_count || 0}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Pencil className="w-3 h-3" /> v{article.current_version || article.version || 1}
+                                            </span>
+                                            <span className="max-w-full truncate">
+                                                {article.last_editor?.full_name || t('search_page.unknown_editor', 'System admin')}
+                                            </span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3 shrink-0">

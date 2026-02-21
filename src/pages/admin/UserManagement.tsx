@@ -7,6 +7,7 @@ import { UserForm } from '@/components/admin/UserForm'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Plus, Users, Loader2, Trash2, Edit, MoreVertical, ShieldOff, ShieldCheck, KeyRound, Unlock, AlertTriangle, Clock, CheckSquare, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import {
   DropdownMenu,
@@ -33,7 +34,7 @@ import { useTranslation } from 'react-i18next'
 type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive'
 
 export default function UserManagement() {
-    const { t: t_ext } = useTranslation('extracted');
+  const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation('users')
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
@@ -367,14 +368,15 @@ export default function UserManagement() {
                       )}
                     </button>
 
-                    <div className="w-10 h-10 sm:w-10 sm:h-10 rounded-full bg-hotel-gold/20 flex items-center justify-center border border-hotel-gold/40 flex-shrink-0">
-                      <span className="text-hotel-gold font-medium">
+                    <Avatar className="h-10 w-10 border border-hotel-gold/40 flex-shrink-0">
+                      <AvatarImage src={user.avatar_url || ''} className="object-cover" />
+                      <AvatarFallback className="bg-hotel-gold/20 text-hotel-gold font-bold">
                         {(user.full_name || user.email || '?').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-gray-900">{user.full_name || t('no_name')}</p>
+                        <p className="font-medium text-gray-900 capitalize">{user.full_name || t('no_name')}</p>
                         {user.staff_id && (
                           <Badge variant="secondary" className="text-[10px] h-4 px-1 bg-gray-100 text-gray-600 font-mono">
                             {user.staff_id}

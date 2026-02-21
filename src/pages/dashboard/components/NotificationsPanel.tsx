@@ -23,6 +23,7 @@ interface NotificationsPanelProps {
 }
 
 export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
+  const { t } = useTranslation('dashboard')
   const { notifications, isLoading } = useNotifications()
 
   const unreadCount = notifications?.filter(n => !n.is_read).length || 0
@@ -35,9 +36,9 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
       className="fixed right-0 top-0 h-full w-full sm:w-[400px] z-50"
     >
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      <Card className="absolute right-0 top-0 h-full w-full border-0 shadow-2xl rounded-none sm:rounded-l-2xl overflow-hidden">
+      <Card className="absolute right-0 top-0 h-full w-full border-0 shadow-2xl rounded-none sm:rounded-l-2xl overflow-hidden bg-white z-10">
         <CardHeader className="flex flex-row items-center justify-between pb-4 border-b bg-slate-50/50">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -47,9 +48,9 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
               )}
             </div>
             <div>
-              <CardTitle className="text-lg">Notifications</CardTitle>
+              <CardTitle className="text-lg">{t('notifications.title') || 'Notifications'}</CardTitle>
               <p className="text-xs text-muted-foreground">
-                {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+                {unreadCount > 0 ? t('notifications.unread_count', { count: unreadCount }) || `${unreadCount} unread` : t('notifications.all_caught_up') || 'All caught up!'}
               </p>
             </div>
           </div>
@@ -73,18 +74,18 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
           ) : notifications?.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
               <Bell className="w-16 h-16 mb-4 opacity-20" />
-              <p>No notifications yet</p>
+              <p>{t('notifications.no_notifications') || 'No notifications yet'}</p>
             </div>
           ) : (
             <>
               <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b">
                 <Button variant="ghost" size="sm" className="h-8 text-xs">
                   <Check className="w-3 h-3 mr-1" />
-                  Mark all read
+                  {t('notifications.mark_all_read') || 'Mark all read'}
                 </Button>
                 <Button variant="ghost" size="sm" className="h-8 text-xs text-red-600 hover:text-red-700">
                   <Trash2 className="w-3 h-3 mr-1" />
-                  Clear all
+                  {t('notifications.clear_all') || 'Clear all'}
                 </Button>
               </div>
 
@@ -126,7 +127,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
                           </p>
                           {notification.link && (
                             <Button variant="link" size="sm" className="h-auto p-0 mt-1 text-xs">
-                              View details
+                              {t('notifications.view_details') || 'View details'}
                             </Button>
                           )}
                         </div>

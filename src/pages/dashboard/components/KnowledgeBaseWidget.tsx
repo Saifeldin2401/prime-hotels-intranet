@@ -33,8 +33,10 @@ export function KnowledgeBaseWidget() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                     <CardTitle className="text-lg flex items-center gap-2">
-                        <Book className="w-5 h-5 text-indigo-500" />
-                        {t('widgets.knowledge_base', 'Knowledge Base')}
+                        <Link to="/knowledge" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                            <Book className="w-5 h-5 text-indigo-500" />
+                            {t('widgets.knowledge_base', 'Knowledge Base')}
+                        </Link>
                     </CardTitle>
                     <CardDescription>{t('widgets.knowledge_base_desc', 'Recent articles and SOPs')}</CardDescription>
                 </div>

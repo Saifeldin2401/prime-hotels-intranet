@@ -29,8 +29,15 @@ export function HospitalityNewsWidget() {
         <Card className="h-full border-0 shadow-lg bg-gradient-to-b from-white to-slate-50/50">
             <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
-                    <Newspaper className="w-5 h-5 text-blue-600" />
-                    {t('hospitality_news.title', 'Hospitality News')}
+                    <a 
+                        href="https://www.hoteliermiddleeast.com/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
+                        <Newspaper className="w-5 h-5 text-blue-600" />
+                        {t('hospitality_news.title', 'Hospitality News')}
+                    </a>
                 </CardTitle>
                 <CardDescription>{t('hospitality_news.subtitle', 'Latest industry updates')}</CardDescription>
             </CardHeader>

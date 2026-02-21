@@ -33,8 +33,10 @@ export function AnnouncementsWidget() {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Bell className="w-5 h-5 text-amber-500" />
-            {t('widgets.announcements_title', 'Announcements')}
+            <Link to="/announcements" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <Bell className="w-5 h-5 text-amber-500" />
+              {t('widgets.announcements_title') || 'Announcements'}
+            </Link>
           </CardTitle>
           <CardDescription>{t('widgets.announcements_desc', 'Latest updates from your organization')}</CardDescription>
         </div>

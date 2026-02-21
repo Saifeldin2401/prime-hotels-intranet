@@ -20,6 +20,7 @@ export function PropertySelector({
   showAllProperties = false,
   disabled = false
 }: PropertySelectorProps) {
+  const { t: t_ext } = useTranslation('extracted')
   const { properties, primaryRole } = useAuth()
   const { canAccessProperty } = usePermissions()
 

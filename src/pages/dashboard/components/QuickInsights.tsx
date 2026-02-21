@@ -3,69 +3,57 @@ import { Users, CheckCircle, GraduationCap, Clock, TrendingUp, TrendingDown, Min
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { useDashboardStats } from '@/hooks/useDashboardStats'
-import { useTaskStats } from '@/hooks/useTasks'
-import { useTrainingStats } from '@/hooks/useTraining'
-import { useAttendance } from '@/hooks/useAttendance'
-import { useAuth } from '@/hooks/useAuth'
+import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
 import { useTranslation } from 'react-i18next'
 
 export function QuickInsights() {
-  const { user } = useAuth()
   const { t } = useTranslation('dashboard')
-  const { data: dashboardStats, isLoading: isLoadingDashboard } = useDashboardStats()
-  const { data: taskStats, isLoading: isLoadingTasks } = useTaskStats()
-  const { data: trainingStats, isLoading: isLoadingTraining } = useTrainingStats()
-  const { data: attendance, isLoading: isLoadingAttendance } = useAttendance(user?.id)
-
-  const isLoading = isLoadingDashboard || isLoadingTasks || isLoadingTraining || isLoadingAttendance
-
-  // Calculate real metrics
-  const totalTasks = taskStats?.total_tasks || 0
-  const completedTasks = taskStats?.completed_tasks || 0
-  const taskCompletion = totalTasks > 0 
-    ? Math.round((completedTasks / totalTasks) * 100) 
-    : 0
-
-  const trainingProgress = trainingStats?.totalAssigned
-    ? Math.round(((trainingStats.completed || 0) / trainingStats.totalAssigned) * 100)
-    : 0
-  
-  // Attendance rate (mock calculation from actual data)
-  const attendanceRate = attendance?.length 
-    ? Math.round((attendance.filter((a: any) => a.status === 'present').length / attendance.length) * 100)
-    : 98
+  const { 
+    taskCompletion, 
+    trainingProgress, 
+    responseTime, 
+    attendanceRate,
+    isLoading 
+  } = useDashboardMetrics()
 
   const insights = [
     {
       label: t('insights.attendance_rate', 'Attendance Rate'),
-      value: `${attendanceRate}%`,
-      change: '+2.1%',
-      positive: true,
+      value: `${attendanceRate.value}%`,
+      change: attendanceRate.change,
+      showTrend: attendanceRate.change !== null,
+      positive: attendanceRate.positive,
+      direction: attendanceRate.direction,
       icon: Users,
       color: 'emerald'
     },
     {
       label: t('insights.task_completion', 'Task Completion'),
-      value: `${taskCompletion}%`,
-      change: taskCompletion > 50 ? '+5.3%' : '+2.1%',
-      positive: true,
+      value: `${taskCompletion.value}%`,
+      change: taskCompletion.change,
+      showTrend: taskCompletion.change !== null,
+      positive: taskCompletion.positive,
+      direction: taskCompletion.direction,
       icon: CheckCircle,
       color: 'blue'
     },
     {
       label: t('insights.training_progress', 'Training Progress'),
-      value: `${trainingProgress}%`,
-      change: trainingProgress > 30 ? '+12%' : '+5%',
-      positive: true,
+      value: `${trainingProgress.value}%`,
+      change: trainingProgress.change,
+      showTrend: trainingProgress.change !== null,
+      positive: trainingProgress.positive,
+      direction: trainingProgress.direction,
       icon: GraduationCap,
       color: 'amber'
     },
     {
       label: t('insights.response_time', 'Response Time'),
-      value: '2.4h',
-      change: '-15%',
-      positive: true,
+      value: `${responseTime.value}h`,
+      change: responseTime.change,
+      showTrend: responseTime.change !== null,
+      positive: responseTime.positive,
+      direction: responseTime.direction,
       icon: Clock,
       color: 'purple'
     }
@@ -90,7 +78,7 @@ export function QuickInsights() {
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {insights.map((insight, index) => {
         const Icon = insight.icon
-        const TrendIcon = insight.positive ? TrendingUp : insight.change === '0%' ? Minus : TrendingDown
+        const TrendIcon = insight.direction === 'flat' ? Minus : insight.positive ? TrendingUp : TrendingDown
         
         return (
           <motion.div
@@ -114,13 +102,15 @@ export function QuickInsights() {
                 </div>
                 <div className="flex items-end gap-2">
                   <span className="text-2xl font-bold">{insight.value}</span>
-                  <div className={cn(
-                    "flex items-center gap-0.5 text-xs font-medium mb-1",
-                    insight.positive ? "text-emerald-600" : "text-red-600"
-                  )}>
-                    <TrendIcon className="w-3 h-3" />
-                    {insight.change}
-                  </div>
+                  {insight.showTrend && (
+                    <div className={cn(
+                      "flex items-center gap-0.5 text-xs font-medium mb-1",
+                      insight.positive ? "text-emerald-600" : "text-red-600"
+                    )}>
+                      <TrendIcon className="w-3 h-3" />
+                      {insight.change}%
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

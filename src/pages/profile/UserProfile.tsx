@@ -1,301 +1,440 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { format } from 'date-fns'
 import { supabase } from '@/lib/supabase'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { useAuth } from '@/hooks/useAuth'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-    ArrowLeft,
-    RefreshCw,
-    Shield,
-    Award,
-    FileText,
-    User as UserIcon,
-    AlertCircle,
-    Mail,
-    Phone,
-    Building,
-    MapPin,
-    Calendar,
-    Briefcase,
-    Users
-} from 'lucide-react'
-import { format } from 'date-fns'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
-import EmployeeDocuments from './EmployeeDocuments'
 import { Separator } from '@/components/ui/separator'
+import EmployeeDocuments from './EmployeeDocuments'
+import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
+import {
+  ArrowLeft,
+  RefreshCw,
+  Mail,
+  Phone,
+  Building,
+  Users,
+  Calendar,
+  Shield,
+  MessageSquare,
+  AlertCircle,
+  Briefcase
+} from 'lucide-react'
 
-interface ProfileData {
-    id: string
-    full_name: string
-    email: string
-    phone: string | null
-    job_title: string | null
-    avatar_url: string | null
-    hire_date: string | null
-    is_active: boolean
-    reporting_to: string | null
-    emergency_contact_name: string | null
-    emergency_contact_phone: string | null
-    nationality: string | null
-    blood_group: string | null
-    staff_id: string | null
-    manager?: { id: string; full_name: string; job_title: string | null }
-    properties?: { name: string }[]
-    departments?: { name: string }[]
-    roles?: { role: string }[]
+type AppRole =
+  | 'corporate_admin'
+  | 'regional_admin'
+  | 'regional_hr'
+  | 'property_manager'
+  | 'property_hr'
+  | 'department_head'
+  | 'manager'
+  | 'staff'
+
+interface DirectReport {
+  id: string
+  full_name: string
+  job_title: string | null
+  avatar_url: string | null
+}
+
+interface PublicProfileData {
+  id: string
+  full_name: string
+  avatar_url: string | null
+  job_title: string | null
+  work_email: string
+  phone_extension: string | null
+  bio: string | null
+  joining_date: string | null
+  is_active: boolean
+  staff_id: string | null
+  manager_id: string | null
+  manager_name: string | null
+  manager_title: string | null
+  property_names: string[] | null
+  department_names: string[] | null
+  roles: AppRole[] | null
+  skills: string[] | null
+  certifications: string[] | null
+  direct_reports: DirectReport[] | null
+  updated_at: string
+  is_edited: boolean
+}
+
+interface PrivateProfileData {
+  date_of_birth: string | null
+  employee_id: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  national_id: string | null
+  salary_grade: string | null
+}
+
+const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr']
+
+function getInitials(name?: string | null) {
+  return name
+    ? name
+      .split(' ')
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase()
+    : '??'
 }
 
 export default function UserProfile() {
-    const { id } = useParams<{ id: string }>()
-    const navigate = useNavigate()
-    const { t, i18n } = useTranslation(['profile', 'common'])
-    const isRTL = i18n.dir() === 'rtl'
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { t } = useTranslation(['profile', 'common'])
+  const { user, primaryRole } = useAuth()
 
-    const { data: profile, isLoading, error } = useQuery({
-        queryKey: ['user-profile', id],
-        queryFn: async () => {
-            if (!id) throw new Error('No user ID provided')
+  const canViewPrivate = useMemo(() => {
+    if (!id || !user?.id) return false
+    return user.id === id || HR_ADMIN_ROLES.includes((primaryRole || 'staff') as AppRole)
+  }, [id, user?.id, primaryRole])
 
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, email, phone, job_title, avatar_url, hire_date, is_active, reporting_to, emergency_contact_name, emergency_contact_phone, nationality, blood_group, staff_id')
-                .eq('id', id)
-                .single()
+  const { data: profile, isLoading, error, refetch } = useQuery({
+    queryKey: ['employee-public-profile', id],
+    queryFn: async (): Promise<PublicProfileData> => {
+      if (!id) throw new Error('No user ID provided')
 
-            if (error) throw error
-            if (!data) throw new Error('User not found')
+      const { data, error } = await supabase.rpc('get_employee_public_profile', {
+        p_profile_id: id
+      })
 
-            // Fetch manager if exists
-            let manager = null
-            if (data.reporting_to) {
-                const { data: managerData } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, job_title')
-                    .eq('id', data.reporting_to)
-                    .single()
-                manager = managerData
-            }
+      if (error) throw error
+      const row = Array.isArray(data) ? data[0] : data
+      if (!row) throw new Error('Profile not found')
+      return row as PublicProfileData
+    },
+    enabled: !!id
+  })
 
-            // Fetch properties
-            const { data: propsData } = await supabase
-                .from('user_properties')
-                .select('properties(name)')
-                .eq('user_id', id)
+  const { data: privateProfile } = useQuery({
+    queryKey: ['employee-private-profile', id, canViewPrivate],
+    queryFn: async (): Promise<PrivateProfileData | null> => {
+      if (!id || !canViewPrivate) return null
+      const { data, error } = await supabase.rpc('get_employee_private_profile', {
+        p_profile_id: id,
+        p_reason: 'profile_page_view'
+      })
 
-            // Fetch departments
-            const { data: deptsData } = await supabase
-                .from('user_departments')
-                .select('departments(name)')
-                .eq('user_id', id)
+      if (error) throw error
+      const row = Array.isArray(data) ? data[0] : data
+      return (row || null) as PrivateProfileData | null
+    },
+    enabled: !!id && canViewPrivate
+  })
 
-            // Fetch roles
-            const { data: rolesData } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', id)
+  const properties = profile?.property_names || []
+  const departments = profile?.department_names || []
+  const roles = profile?.roles || []
+  const directReports = Array.isArray(profile?.direct_reports) ? profile.direct_reports : []
+  const skills = profile?.skills || []
+  const certifications = profile?.certifications || []
 
-            return {
-                ...data,
-                manager,
-                properties: propsData?.map((p: any) => p.properties).filter(Boolean) || [],
-                departments: deptsData?.map((d: any) => d.departments).filter(Boolean) || [],
-                roles: rolesData || []
-            } as ProfileData
-        },
-        enabled: !!id
-    })
-
-    const getInitials = (name: string) => {
-        return name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'
-    }
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
-    }
-
-    if (error || !profile) {
-        return (
-            <div className="container mx-auto py-6">
-                <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
-                        <Users className="h-12 w-12 mb-4 opacity-50" />
-                        <p className="text-lg font-medium">{t('common:error', 'Error')}</p>
-                        <p className="text-sm">User not found or you don't have access.</p>
-                        <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
-                            <ArrowLeft className="h-4 w-4 me-2" />
-                            {t('common:go_back', 'Go Back')}
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-
+  if (isLoading) {
     return (
-        <div className="container mx-auto py-6 space-y-6">
-            <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:w-[600px]">
-                    <TabsTrigger value="overview">{t('profile:overview', 'Overview')}</TabsTrigger>
-                    <TabsTrigger value="skills">{t('profile:skills_and_competencies', 'Skills')}</TabsTrigger>
-                    <TabsTrigger value="documents">{t('profile:documents', 'Documents')}</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview">
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex flex-col md:flex-row gap-8">
-                                {/* Avatar & Basic Info */}
-                                <div className="flex flex-col items-center text-center md:w-64">
-                                    <Avatar className="h-40 w-40 mb-4 border-4 border-hotel-gold/20">
-                                        <AvatarImage src={profile.avatar_url || ''} />
-                                        <AvatarFallback className="text-3xl bg-hotel-navy text-white">
-                                            {getInitials(profile.full_name)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <h2 className="text-2xl font-bold text-hotel-navy">{profile.full_name}</h2>
-                                    {profile.job_title && (
-                                        <p className="text-hotel-gold font-medium">{profile.job_title}</p>
-                                    )}
-                                    <div className="flex flex-wrap justify-center gap-2 mt-3">
-                                        <Badge variant={profile.is_active ? 'default' : 'secondary'} className="bg-hotel-navy hover:bg-hotel-navy/90">
-                                            {profile.is_active ? t('common:active', 'Active') : t('common:inactive', 'Inactive')}
-                                        </Badge>
-                                        {profile.roles?.map((r, i) => (
-                                            <Badge key={i} variant="outline" className="border-hotel-gold text-hotel-gold">{r.role}</Badge>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Details */}
-                                <div className="flex-1 space-y-8">
-                                    {/* General & Organization */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2 border-b border-hotel-gold/10 pb-2">
-                                                <UserIcon className="w-4 h-4 text-hotel-gold" />
-                                                <h3 className="font-bold text-hotel-navy uppercase tracking-wider text-xs">{t('profile:general_info')}</h3>
-                                            </div>
-                                            <div className="space-y-3 text-sm">
-                                                <div className="flex items-center gap-3">
-                                                    <Mail className="h-4 w-4 text-gray-400" />
-                                                    <a href={`mailto:${profile.email}`} className="text-gray-600 hover:text-hotel-gold transition-colors">
-                                                        {profile.email}
-                                                    </a>
-                                                </div>
-                                                {profile.phone && (
-                                                    <div className="flex items-center gap-3">
-                                                        <Phone className="h-4 w-4 text-gray-400" />
-                                                        <a href={`tel:${profile.phone}`} className="text-gray-600 hover:text-hotel-gold transition-colors font-mono" dir="ltr">
-                                                            {profile.phone}
-                                                        </a>
-                                                    </div>
-                                                )}
-                                                {profile.nationality && (
-                                                    <div className="flex items-center gap-3">
-                                                        <MapPin className="h-4 w-4 text-gray-400" />
-                                                        <span className="text-gray-600">{profile.nationality}</span>
-                                                    </div>
-                                                )}
-                                                {profile.blood_group && (
-                                                    <div className="flex items-center gap-3">
-                                                        <Shield className="h-4 w-4 text-gray-400" />
-                                                        <span className="text-gray-600">{t('profile:blood_group')}: {profile.blood_group}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2 border-b border-hotel-gold/10 pb-2">
-                                                <Briefcase className="w-4 h-4 text-hotel-gold" />
-                                                <h3 className="font-bold text-hotel-navy uppercase tracking-wider text-xs">{t('profile:org_info')}</h3>
-                                            </div>
-                                            <div className="space-y-3 text-sm">
-                                                {profile.properties && profile.properties.length > 0 && (
-                                                    <div className="flex items-center gap-3">
-                                                        <Building className="h-4 w-4 text-gray-400" />
-                                                        <span className="text-gray-600">{profile.properties.map(p => p.name).join(', ')}</span>
-                                                    </div>
-                                                )}
-                                                {profile.departments && profile.departments.length > 0 && (
-                                                    <div className="flex items-center gap-3">
-                                                        <Users className="h-4 w-4 text-gray-400" />
-                                                        <span className="text-gray-600">{profile.departments.map(d => d.name).join(', ')}</span>
-                                                    </div>
-                                                )}
-                                                <div className="flex items-center gap-3">
-                                                    <Shield className="h-4 w-4 text-gray-400" />
-                                                    <span className="text-gray-600">ID: {profile.staff_id || 'PH-0000'}</span>
-                                                </div>
-                                                {profile.manager && (
-                                                    <div className="flex items-center gap-3">
-                                                        <UserIcon className="h-4 w-4 text-gray-400" />
-                                                        <span className="text-gray-600">
-                                                            {t('profile:reports_to')}: {' '}
-                                                            <button
-                                                                className="text-hotel-gold hover:underline font-medium"
-                                                                onClick={() => navigate(`/profile/${profile.manager?.id}`)}
-                                                            >
-                                                                {profile.manager.full_name}
-                                                            </button>
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <Separator className="bg-hotel-gold/10" />
-
-                                    {/* Emergency & Employment */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2 border-b border-hotel-gold/10 pb-2">
-                                                <AlertCircle className="w-4 h-4 text-hotel-gold" />
-                                                <h3 className="font-bold text-hotel-navy uppercase tracking-wider text-xs">{t('profile:emergency_info')}</h3>
-                                            </div>
-                                            <div className="space-y-2 text-sm text-gray-600">
-                                                <p className="font-medium text-gray-900">{profile.emergency_contact_name || 'Not provided'}</p>
-                                                <p className="font-mono" dir="ltr">{profile.emergency_contact_phone || '--'}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2 border-b border-hotel-gold/10 pb-2">
-                                                <Calendar className="w-4 h-4 text-hotel-gold" />
-                                                <h3 className="font-bold text-hotel-navy uppercase tracking-wider text-xs">{t('profile:employment')}</h3>
-                                            </div>
-                                            <div className="space-y-2 text-sm text-gray-600">
-                                                <p>
-                                                    <span className="text-gray-400 me-2">{t('profile:hire_date')}:</span>
-                                                    {profile.hire_date ? format(new Date(profile.hire_date), 'MMMM d, yyyy') : '---'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                <TabsContent value="skills">
-                    <UserSkillsDisplay userId={id} />
-                </TabsContent>
-
-                <TabsContent value="documents">
-                    <EmployeeDocuments userId={id} />
-                </TabsContent>
-            </Tabs>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
     )
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
+            <Users className="h-12 w-12 mb-4 opacity-50" />
+            <p className="text-lg font-medium">{t('common:error', 'Error')}</p>
+            <p className="text-sm">{t('common:messages.error_action_failed', 'Unable to load profile')}</p>
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-4 w-4 me-2" />
+                {t('common:go_back', 'Go Back')}
+              </Button>
+              <Button variant="outline" onClick={() => refetch()}>
+                <RefreshCw className="h-4 w-4 me-2" />
+                {t('common:actions.retry', 'Retry')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[700px]">
+          <TabsTrigger value="overview">{t('profile:overview', 'Overview')}</TabsTrigger>
+          <TabsTrigger value="skills">{t('profile:skills_and_competencies', 'Skills')}</TabsTrigger>
+          <TabsTrigger value="documents">{t('profile:documents', 'Documents')}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <Card>
+            <CardContent className="pt-6 space-y-8">
+              <div className="flex flex-col lg:flex-row gap-8">
+                <div className="lg:w-80 flex flex-col items-center text-center gap-4">
+                  <div className="relative p-2">
+                    <div className="absolute inset-0 rounded-full bg-hotel-gold/5 blur-2xl transition-all duration-1000 group-hover:bg-hotel-gold/10" />
+                    <Avatar className="h-44 w-44 border-8 border-white shadow-2xl relative z-10 ring-1 ring-hotel-gold/10">
+                      <AvatarImage src={profile.avatar_url || ''} className="object-cover" />
+                      <AvatarFallback className="text-4xl bg-gradient-to-br from-hotel-navy to-hotel-navy-light text-white font-serif">
+                        {getInitials(profile.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 border-4 border-white rounded-full z-20 shadow-lg" title="Online" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h2 className="text-3xl font-bold text-hotel-navy capitalize tracking-tight">
+                      {profile.full_name}
+                    </h2>
+                    {profile.job_title && (
+                      <p className="text-hotel-gold font-semibold uppercase tracking-widest text-[10px] mt-1">
+                        {profile.job_title}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Badge variant={profile.is_active ? 'default' : 'secondary'}>
+                      {profile.is_active ? t('common:active', 'Active') : t('common:inactive', 'Inactive')}
+                    </Badge>
+                    {roles.map((role) => (
+                      <Badge key={role} variant="outline" className="border-hotel-gold text-hotel-gold">
+                        {role.replaceAll('_', ' ')}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <div className="flex w-full gap-2 pt-2">
+                    <Button
+                      className="flex-1"
+                      onClick={() => navigate(`/messaging?startChatWith=${profile.id}`)}
+                    >
+                      <MessageSquare className="h-4 w-4 me-2" />
+                      {t('directory:send_message', 'Send Message')}
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate(-1)}>
+                      <ArrowLeft className="h-4 w-4 me-2" />
+                      {t('common:go_back', 'Back')}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 border-b border-hotel-gold/10 pb-2">
+                        <Mail className="h-4 w-4 text-hotel-gold" />
+                        <h3 className="font-bold text-hotel-navy uppercase tracking-wider text-xs">
+                          {t('profile:general_info', 'General')}
+                        </h3>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <a href={`mailto:${profile.work_email}`} className="text-gray-700 hover:text-hotel-gold">
+                            {profile.work_email}
+                          </a>
+                        </div>
+                        {profile.phone_extension && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            <span className="text-gray-700">Ext. {profile.phone_extension}</span>
+                          </div>
+                        )}
+                        {profile.joining_date && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                            <span className="text-gray-700">
+                              {t('profile:hire_date', 'Joining Date')}: {format(new Date(profile.joining_date), 'MMMM d, yyyy')}
+                            </span>
+                          </div>
+                        )}
+                        {profile.staff_id && (
+                          <div className="flex items-center gap-2">
+                            <Shield className="h-4 w-4 text-gray-400" />
+                            <span className="text-gray-700">{t('profile:staff_id', 'Employee ID')}: {profile.staff_id}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 border-b border-hotel-gold/10 pb-2">
+                        <Building className="h-4 w-4 text-hotel-gold" />
+                        <h3 className="font-bold text-hotel-navy uppercase tracking-wider text-xs">
+                          {t('profile:org_info', 'Organization')}
+                        </h3>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-700">{properties.join(', ') || '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-700">{departments.join(', ') || '-'}</span>
+                        </div>
+                        {profile.manager_id && profile.manager_name && (
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-gray-400" />
+                            <button
+                              className="text-hotel-gold hover:underline font-medium"
+                              onClick={() => navigate(`/profile/${profile.manager_id}`)}
+                            >
+                              {profile.manager_name}
+                              {profile.manager_title ? ` (${profile.manager_title})` : ''}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {profile.bio && (
+                    <>
+                      <Separator className="bg-hotel-gold/10" />
+                      <div className="space-y-2">
+                        <h3 className="font-bold text-hotel-navy uppercase tracking-wider text-xs">
+                          {t('profile:bio', 'Bio / About')}
+                        </h3>
+                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+                      </div>
+                    </>
+                  )}
+
+                  {directReports.length > 0 && (
+                    <>
+                      <Separator className="bg-hotel-gold/10" />
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-hotel-navy uppercase tracking-wider text-xs">
+                          {t('profile:team_members', 'Team Members')}
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {directReports.map((report) => (
+                            <button
+                              key={report.id}
+                              className="flex items-center gap-3 rounded-md border px-3 py-2 text-start hover:bg-gray-50"
+                              onClick={() => navigate(`/profile/${report.id}`)}
+                            >
+                              <Avatar className="h-9 w-9">
+                                <AvatarImage src={report.avatar_url || ''} />
+                                <AvatarFallback>{getInitials(report.full_name)}</AvatarFallback>
+                              </Avatar>
+                              <span className="min-w-0">
+                                <span className="block font-medium truncate">{report.full_name}</span>
+                                <span className="block text-xs text-gray-500 truncate">{report.job_title || '-'}</span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {canViewPrivate && privateProfile && (
+                    <>
+                      <Separator className="bg-hotel-gold/10" />
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                          <h3 className="font-bold text-red-700 uppercase tracking-wider text-xs">
+                            {t('profile:private_info', 'Private HR/Admin Info')}
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:date_of_birth', 'Date of Birth')}</div>
+                            <div className="font-medium">
+                              {privateProfile.date_of_birth ? format(new Date(privateProfile.date_of_birth), 'MMMM d, yyyy') : '-'}
+                            </div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:staff_id', 'Employee ID')}</div>
+                            <div className="font-medium">{privateProfile.employee_id || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:emergency_contact_name', 'Emergency Contact')}</div>
+                            <div className="font-medium">{privateProfile.emergency_contact_name || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:emergency_contact_phone', 'Emergency Phone')}</div>
+                            <div className="font-medium">{privateProfile.emergency_contact_phone || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:national_id', 'National ID')}</div>
+                            <div className="font-medium">{privateProfile.national_id || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:salary_grade', 'Salary Grade')}</div>
+                            <div className="font-medium">{privateProfile.salary_grade || '-'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="skills">
+          <div className="space-y-4">
+            <UserSkillsDisplay userId={id} />
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('profile:certifications', 'Certifications')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {certifications.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('profile:no_certifications', 'No certifications recorded yet.')}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {certifications.map((cert) => (
+                      <Badge key={cert} variant="outline">{cert}</Badge>
+                    ))}
+                  </div>
+                )}
+                {skills.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-sm font-medium mb-2">{t('profile:skills_and_competencies', 'Skills')}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {skills.map((skill) => (
+                        <Badge key={skill} className="bg-blue-50 text-blue-700 border-blue-200" variant="outline">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <EmployeeDocuments userId={id} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
 }
+

@@ -86,6 +86,9 @@ import {
 import { STATUS_CONFIG } from '@/types/knowledge'
 import { RelatedArticles } from '@/components/knowledge'
 import { useTrackView } from '@/hooks/useRecentlyViewed'
+import { SectionLinkButton } from '@/components/knowledge/SectionLinkButton'
+import { SectionLinkInjector } from '@/components/knowledge/SectionLinkInjector'
+import { useLastViewed } from '@/hooks/useLastViewed'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
@@ -149,6 +152,18 @@ export default function KnowledgeViewer() {
 
     // Track view for "Recently Viewed" feature
     useTrackView(id)
+
+    // Track last viewed for "Updated since last view" feature
+    const { hasBeenUpdatedSinceLastView, markAsViewed, getTimeSinceLastView } = useLastViewed(user?.id)
+    
+    // Mark as viewed after 10 seconds (considered "read")
+    useEffect(() => {
+        if (!article?.id) return
+        const timer = setTimeout(() => {
+            markAsViewed(article.id)
+        }, 10000)
+        return () => clearTimeout(timer)
+    }, [article?.id, markAsViewed])
 
     const createComment = useCreateComment()
     const toggleBookmark = useToggleBookmark()
@@ -551,14 +566,14 @@ export default function KnowledgeViewer() {
                     `Department: ${article.department?.name || 'General'}`,
                     `Category: ${article.category?.name || 'Uncategorized'}`,
                     `Status: ${article.status}`,
-                    `Version: ${article.version || '1.0'}`
+                    `Version: v${article.current_version || article.version || 1}`
                 ]
             },
             logo || undefined
         )
     }
 
-    // Parse TOC from content
+    // Parse TOC from content and add section link buttons
     useEffect(() => {
         if (contentRef.current) {
             const headings = contentRef.current.querySelectorAll('h1, h2, h3, h4')
@@ -566,6 +581,13 @@ export default function KnowledgeViewer() {
             headings.forEach((heading, index) => {
                 const id = `section-${index}`
                 heading.setAttribute('id', id)
+                
+                // Add section link button if not already present
+                if (!heading.querySelector('.section-link-btn')) {
+                    heading.classList.add('group', 'relative')
+                    heading.style.position = 'relative'
+                }
+                
                 items.push({
                     id,
                     text: heading.textContent || '',
@@ -1125,6 +1147,12 @@ export default function KnowledgeViewer() {
                     <div className="flex flex-col gap-6">
                         {/* Upper Metadata */}
                         <div className="flex flex-wrap items-center gap-3">
+                            {/* Updated Since Last View Badge */}
+                            {article?.id && hasBeenUpdatedSinceLastView(article.id, article.updated_at) && (
+                                <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-orange-100 text-orange-700 ring-1 ring-orange-200 animate-pulse">
+                                    {t('viewer.updated_since_view', 'Updated since you last viewed')}
+                                </Badge>
+                            )}
                             <Badge className={cn(
                                 "rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider",
                                 statusConfig.color === 'green' && 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200',
@@ -1142,7 +1170,10 @@ export default function KnowledgeViewer() {
                             )}
                             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-50/50 border border-indigo-100/50 text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
                                 <ShieldCheck className="h-3 w-3" />
-                                {article.version || 'v1.0'}
+                                {`v${article.current_version || article.version || 1}`}
+                                {article.published_version_number && article.published_version_number !== (article.current_version || article.version)
+                                    ? ` · ${t('viewer.published_revision', 'Published')} v${article.published_version_number}`
+                                    : ''}
                             </div>
                         </div>
 
@@ -1187,6 +1218,13 @@ export default function KnowledgeViewer() {
                                     <div className="flex flex-col">
                                         <span className="text-sm font-bold text-slate-900">{article.author.full_name}</span>
                                     </div>
+                                </div>
+                            )}
+
+                            {article.last_editor?.full_name && (
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                    <Pencil className="h-3.5 w-3.5 text-slate-400" />
+                                    <span>{article.last_editor.full_name}</span>
                                 </div>
                             )}
 
@@ -1417,6 +1455,9 @@ export default function KnowledgeViewer() {
                                         </div>
                                     )
                                 )}
+
+                                {/* Section Link Injector - Adds copy buttons to headings */}
+                                <SectionLinkInjector containerRef={contentRef} isActive={!!article.content} />
 
                                 {/* Content Type Specific Renderers */}
                                 <div className="mt-12 space-y-12">

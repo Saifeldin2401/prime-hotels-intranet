@@ -63,6 +63,14 @@ const ICON_MAP: Record<string, any> = {
     File,
 }
 
+function readTime(article: { estimated_read_time?: number; content?: string }): number {
+    if (article.estimated_read_time && article.estimated_read_time > 0) return article.estimated_read_time
+    if (!article.content) return 2
+    const stripped = article.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    if (!stripped) return 2
+    return Math.max(1, Math.round(stripped.split(' ').length / 200))
+}
+
 export default function KnowledgeLibrary() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const { primaryRole } = useAuth()
@@ -352,14 +360,25 @@ export default function KnowledgeLibrary() {
                                                                     )}
                                                                     <span className="flex items-center gap-1">
                                                                         <Clock className="h-3 w-3" />
+                                                                        {readTime(article)} {t('article.min_read', 'min')}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Pencil className="h-3 w-3" />
+                                                                        v{article.current_version || article.version || 1}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Eye className="h-3 w-3" />
+                                                                        {article.view_count || 0}
+                                                                    </span>
+                                                                    <span className="truncate max-w-[160px]">
+                                                                        {article.author?.full_name || t('library.unknown_author', 'System admin')}
+                                                                    </span>
+                                                                    <span className="truncate max-w-[160px]">
+                                                                        {article.last_editor?.full_name || t('library.unknown_editor', 'System admin')}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1">
                                                                         {new Date(article.updated_at).toLocaleDateString()}
                                                                     </span>
-                                                                    {article.view_count > 0 && (
-                                                                        <span className="flex items-center gap-1">
-                                                                            <Eye className="h-3 w-3" />
-                                                                            {article.view_count}
-                                                                        </span>
-                                                                    )}
                                                                 </div>
                                                             </div>
 

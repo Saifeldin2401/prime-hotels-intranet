@@ -31,7 +31,6 @@ import {
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { TrainingBuilder } from './TrainingBuilder'
-import { ModuleFormDialog, type ModuleFormValues } from './components/ModuleFormDialog'
 import { TrainingAssignmentsPanel } from './TrainingAssignments'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import { ModuleTemplateSelector } from '@/components/training/hub/ModuleTemplateSelector'
@@ -124,10 +123,8 @@ export default function TrainingHub() {
   const shouldOpenAssign = searchParams.get('openAssign') === '1'
 
   // Dialog states
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [showWizardDialog, setShowWizardDialog] = useState(false)
-  const [editingModule, setEditingModule] = useState<TrainingModule | null>(null)
 
   // Delete states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -240,56 +237,6 @@ export default function TrainingHub() {
   })
 
   // Mutations
-  const createModuleMutation = useMutation({
-    mutationFn: async (values: ModuleFormValues) => {
-      const { data, error } = await supabase
-        .from('training_modules')
-        .insert({
-          ...values,
-          created_by: profile?.id,
-          status: 'draft'
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['training-modules'] })
-      toast({
-        title: t('moduleCreated'),
-        description: t('moduleCreatedDesc')
-      })
-      navigate(`/training/hub/${data.id}?view=builder`)
-    }
-  })
-
-  const updateModuleMutation = useMutation({
-    mutationFn: async ({ id, ...values }: { id: string } & ModuleFormValues) => {
-      const { data, error } = await supabase
-        .from('training_modules')
-        .update({
-          ...values,
-          updated_by: profile?.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['training-modules'] })
-      toast({
-        title: t('moduleUpdated'),
-        description: t('moduleUpdatedDesc')
-      })
-    }
-  })
-
   const deleteModuleMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -309,9 +256,8 @@ export default function TrainingHub() {
   })
 
   // Event handlers
-  const handleCreate = () => {
-    setEditingModule(null)
-    setShowCreateDialog(true)
+  const handleStartFromScratch = () => {
+    setViewMode('builder', { moduleId: 'new' })
   }
 
   const handleCreateFromTemplate = () => {
@@ -323,7 +269,6 @@ export default function TrainingHub() {
   }
 
   const handleEdit = (module: TrainingModule) => {
-    setEditingModule(module)
     navigate(`/training/hub/${module.id}?view=builder`)
   }
 
@@ -340,23 +285,6 @@ export default function TrainingHub() {
     if (moduleToDelete) {
       await deleteModuleMutation.mutateAsync(moduleToDelete.id)
       setModuleToDelete(null)
-    }
-  }
-
-  const handleSubmit = async (values: ModuleFormValues) => {
-    try {
-      if (editingModule) {
-        await updateModuleMutation.mutateAsync({
-          id: editingModule.id,
-          ...values
-        })
-      } else {
-        await createModuleMutation.mutateAsync(values)
-      }
-      setShowCreateDialog(false)
-      setEditingModule(null)
-    } catch (error) {
-      console.error('Error saving module:', error)
     }
   }
 
@@ -501,9 +429,9 @@ export default function TrainingHub() {
             <Layers className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
             {t('createFromTemplate')}
           </Button>
-          <Button onClick={handleCreate} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
+          <Button onClick={handleStartFromScratch} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
             <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-            {t('createModule')}
+            {t('startFromScratch', 'Start from Scratch')}
           </Button>
         </div>
       )
@@ -770,9 +698,9 @@ export default function TrainingHub() {
                             <Wand2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                             {t('createWithWizard')}
                           </Button>
-                          <Button onClick={handleCreate} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
+                          <Button onClick={handleStartFromScratch} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
                             <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-                            {t('createModule')}
+                            {t('startFromScratch', 'Start from Scratch')}
                           </Button>
                         </div>
                       </CardContent>
@@ -852,24 +780,6 @@ export default function TrainingHub() {
       </Tabs>
 
       {/* Dialogs */}
-      <ModuleFormDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        initialData={editingModule ? {
-          title: editingModule.title,
-          description: editingModule.description,
-          estimated_duration: editingModule.estimated_duration || '',
-          difficulty_level: editingModule.difficulty_level || 'beginner',
-          category: editingModule.category || '',
-          status: editingModule.status,
-          department_id: (editingModule as any).department_id || null,
-          certificate_enabled: editingModule.certificate_enabled ?? true
-        } : null}
-        onSubmit={handleSubmit}
-        isSubmitting={createModuleMutation.isPending || updateModuleMutation.isPending}
-        existingCategories={categories || []}
-      />
-
       <ModuleTemplateSelector
         open={showTemplateDialog}
         onOpenChange={setShowTemplateDialog}

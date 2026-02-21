@@ -223,7 +223,7 @@ export function useSidebarCounts() {
                     .from('learning_progress')
                     .select('id', { count: 'exact', head: true })
                     .eq('user_id', user.id)
-                    .in('status', ['not_started', 'in_progress']),
+                    .in('status', ['assigned', 'in_progress', 'overdue']),
 
                 // Pending goals
                 supabase

@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Mail, Phone, MapPin, Building, Briefcase, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Mail, Phone, MapPin, Building, Briefcase, Users, MessageSquare, UserCircle } from 'lucide-react'
 import { LazyLoadImage } from 'react-lazy-load-image-component'
 import 'react-lazy-load-image-component/src/effects/blur.css'
-import { useTranslation } from "react-i18next";
 
 interface EmployeeCardProps {
     profile: any
@@ -13,6 +15,18 @@ interface EmployeeCardProps {
 
 export function EmployeeCard({ profile, isRTL }: EmployeeCardProps) {
     const [imageError, setImageError] = useState(false)
+    const navigate = useNavigate()
+
+    const propertyName =
+        profile?.properties?.[0]?.name ||
+        profile?.primary_property_name ||
+        profile?.property_name ||
+        null
+    const departmentName =
+        profile?.departments?.[0]?.name ||
+        profile?.primary_department_name ||
+        profile?.department_name ||
+        null
 
     return (
         <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
@@ -39,9 +53,14 @@ export function EmployeeCard({ profile, isRTL }: EmployeeCardProps) {
             <CardContent className="pt-12 px-6 pb-6">
                 <div className="space-y-1 mb-4">
                     <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-lg leading-tight truncate" title={profile.full_name}>
+                        <button
+                            type="button"
+                            className="font-bold text-lg leading-tight truncate text-start hover:text-primary transition-colors"
+                            title={profile.full_name}
+                            onClick={() => navigate(`/profile/${profile.id}`)}
+                        >
                             {profile.full_name}
-                        </h3>
+                        </button>
                         {profile.staff_id && (
                             <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono border">
                                 {profile.staff_id}
@@ -53,6 +72,11 @@ export function EmployeeCard({ profile, isRTL }: EmployeeCardProps) {
                             <Briefcase className="h-3.5 w-3.5" />
                             <span className="truncate">{profile.job_title}</span>
                         </div>
+                    )}
+                    {typeof profile?.is_active === 'boolean' && (
+                        <Badge variant={profile.is_active ? 'default' : 'secondary'} className="mt-1 w-fit">
+                            {profile.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
                     )}
                 </div>
 
@@ -66,16 +90,16 @@ export function EmployeeCard({ profile, isRTL }: EmployeeCardProps) {
                             </span>
                         </div>
                     )}
-                    {profile.departments?.[0] && (
+                    {departmentName && (
                         <div className="flex items-center gap-2">
                             <Building className="h-4 w-4 text-gray-400 shrink-0" />
-                            <span className="truncate">{profile.departments[0].name}</span>
+                            <span className="truncate">{departmentName}</span>
                         </div>
                     )}
-                    {profile.properties?.[0] && (
+                    {propertyName && (
                         <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
-                            <span className="truncate">{profile.properties[0].name}</span>
+                            <span className="truncate">{propertyName}</span>
                         </div>
                     )}
                     {profile.email && (
@@ -94,6 +118,26 @@ export function EmployeeCard({ profile, isRTL }: EmployeeCardProps) {
                             </a>
                         </div>
                     )}
+                </div>
+
+                <div className="mt-4 flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => navigate(`/profile/${profile.id}`)}
+                    >
+                        <UserCircle className="h-3.5 w-3.5 me-1.5" />
+                        Profile
+                    </Button>
+                    <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => navigate(`/messaging?startChatWith=${profile.id}`)}
+                    >
+                        <MessageSquare className="h-3.5 w-3.5 me-1.5" />
+                        Message
+                    </Button>
                 </div>
             </CardContent>
         </Card>

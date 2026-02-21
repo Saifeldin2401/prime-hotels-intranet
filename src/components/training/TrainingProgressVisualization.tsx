@@ -18,7 +18,8 @@ import {
   Star,
   Users,
   Flame,
-  Trophy
+  Trophy,
+  AlertCircle
 } from 'lucide-react'
 import { ChartTooltipContent } from '@/components/ui/chart'
 import {
@@ -29,6 +30,8 @@ import {
 } from 'recharts'
 import { cn } from '@/lib/utils'
 import { calculateStreak } from '@/lib/training/analytics'
+import { useUserAchievements, useAchievementStats } from '@/hooks/useAchievements'
+import { AchievementBadge } from './AchievementBadge'
 
 interface TrainingProgressVisualizationProps {
   className?: string
@@ -123,7 +126,6 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
   })
 
   // Fetch ALL time progress for Streak calculation to be accurate
-  // We can optimize this later, but for now we need full history for streak
   const { data: fullHistory } = useQuery({
     queryKey: ['training-history-full', user?.id],
     queryFn: async () => {
@@ -139,11 +141,11 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
     }
   })
 
+  // REAL Department Progress Query
   const { data: departmentProgress } = useQuery({
-    queryKey: ['department-training-progress', user?.user_metadata?.department_id, timeRange],
+    queryKey: ['department-training-progress', user?.id, timeRange],
     queryFn: async () => {
-      const departmentId = user?.user_metadata?.department_id
-      if (!departmentId) return null
+      if (!user?.id) return null
 
       const startDate = new Date()
       switch (timeRange) {
@@ -161,15 +163,31 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
           break
       }
 
-      /* 
-       * Department progress query - temporarily disabled/mocked because 'department_id' 
-       * is not directly available on profiles and query complexity is high.
-       * Also updating table to training_progress.
-       */
+      // Get user's departments from user_departments junction table
+      const { data: userDepts, error: userDeptsError } = await supabase
+        .from('user_departments')
+        .select('department_id')
+        .eq('user_id', user.id)
 
-      return [] // returning empty for now to avoid errors while we fix schema
+      if (userDeptsError || !userDepts?.length) {
+        return []
+      }
 
-      /*
+      const departmentIds = userDepts.map(ud => ud.department_id)
+
+      // Get all users in these departments
+      const { data: deptUsers, error: deptUsersError } = await supabase
+        .from('user_departments')
+        .select('user_id')
+        .in('department_id', departmentIds)
+
+      if (deptUsersError || !deptUsers?.length) {
+        return []
+      }
+
+      const userIds = [...new Set(deptUsers.map(u => u.user_id))]
+
+      // Get training progress for all these users
       const { data, error } = await supabase
         .from('training_progress')
         .select(`
@@ -177,53 +195,12 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
           training_module:training_modules(id, title, category, estimated_duration_minutes),
           user:profiles(id, full_name)
         `)
-        // .eq('user.department_id', departmentId) // This relationship path is tricky with Supabase
+        .in('user_id', userIds)
         .gte('completed_at', startDate.toISOString())
-      */
-
-      // if (error) throw error
-      // return data
-    }
-  })
-
-  const { data: achievements } = useQuery({
-    queryKey: ['training-achievements', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return []
-
-      // MOCK: user_achievements table does not exist in schema yet
-      // Returning empty array to prevent 404 errors
-      const { data, error } = await supabase
-        .from('certificates') // using certificates as proxy for now if needed, or just empty
-        .select(`*, training_module:training_module_id(title)`)
-        .eq('user_id', user.id)
-        .limit(10)
-
-      if (error) return []
-
-      // Transform certificates to look like achievements for now
-      return data?.map(c => ({
-        id: c.id,
-        earned_at: c.issued_at,
-        achievement: {
-          title: c.training_module?.title || 'Certificate',
-          description: 'Course Completion',
-          points: 10,
-          icon: '',
-          category: 'Training'
-        }
-      })) || []
-
-      /* 
-        .from('user_achievements')
-        .select(`
-          *,
-          achievement:achievement_id(id, title, description, icon, points, category)
-        `)
-      */
+        .order('completed_at', { ascending: true })
 
       if (error) throw error
-      return data
+      return data || []
     }
   })
 
@@ -251,21 +228,21 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
     return Object.entries(categoryData).map(([category, count]) => ({
       category,
       count,
-      fullMark: 100, // For Radar chart scaling if needed
+      fullMark: 100,
       fill: getCategoryColor(category)
     }))
   }
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      'Safety': '#00C49F', // Green
-      'Service': '#0088FE', // Blue
-      'Operations': '#FFBB28', // Yellow
-      'Management': '#FF8042', // Orange
-      'Compliance': '#8884D8', // Purple
-      'Technical': '#82CA9D'  // Light Green
+      'Safety': '#00C49F',
+      'Service': '#0088FE',
+      'Operations': '#FFBB28',
+      'Management': '#FF8042',
+      'Compliance': '#8884D8',
+      'Technical': '#82CA9D'
     }
-    return colors[category] || '#94A3B8' // Gray default
+    return colors[category] || '#94A3B8'
   }
 
   const userDailyProgress = processProgressData(userProgress || [])
@@ -278,15 +255,19 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
     acc + (completion.training_module?.estimated_duration_minutes || 0) / 60, 0) || 0
   const averageScore = userProgress?.reduce((acc, completion) =>
     acc + (completion.score || 0), 0) / (totalCompletions || 1) || 0
-  const totalPoints = achievements?.reduce((acc, achievement) =>
-    acc + (achievement.achievement?.points || 0), 0) || 0
 
   const currentStreak = calculateStreak(fullHistory || [])
+
+  // Real achievements from database
+  const { data: achievements } = useUserAchievements()
+  const { data: achievementStats } = useAchievementStats()
+  
+  const totalPoints = achievementStats?.totalPoints || 0
 
   return (
     <div className={cn("space-y-6", className)}>
       {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -340,19 +321,6 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <div className={isRTL ? 'text-right' : 'text-left'}>
-                <p className="text-sm font-medium text-muted-foreground">{t('visualization.points')}</p>
-                <p className="text-2xl font-bold">{totalPoints}</p>
-                <p className="text-xs text-muted-foreground">{t('visualization.earned')}</p>
-              </div>
-              <Award className="w-8 h-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Time Range Selector */}
@@ -374,11 +342,19 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
       </div>
 
       {/* Charts */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'personal' | 'department' | 'achievements')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'personal' | 'department')} className="space-y-4">
         <TabsList className={isRTL ? 'flex-row-reverse' : ''}>
           <TabsTrigger value="personal">{t('visualization.personalProgress')}</TabsTrigger>
           <TabsTrigger value="department">{t('visualization.department')}</TabsTrigger>
-          <TabsTrigger value="achievements">{t('visualization.achievements')}</TabsTrigger>
+          <TabsTrigger value="achievements">
+            <Trophy className="w-4 h-4 mr-1" />
+            {t('visualization.achievements')}
+            {achievements && achievements.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {achievements.length}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal" className="space-y-4">
@@ -459,7 +435,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
               </CardContent>
             </Card>
 
-            {/* Skills Radar Chart - New Addition */}
+            {/* Skills Radar Chart */}
             <Card>
               <CardHeader className={isRTL ? 'text-right' : 'text-left'}>
                 <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -550,60 +526,86 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                 </ChartViewport>
               </CardContent>
             </Card>
+
+            {/* No Department Data Message */}
+            {(!departmentProgress || departmentProgress.length === 0) && (
+              <Card className="col-span-1 lg:col-span-2">
+                <CardContent className="p-8 text-center">
+                  <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">{t('visualization.noDeptData')}</h3>
+                  <p className="text-muted-foreground">
+                    {t('visualization.noDeptDataDesc')}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
           )}
         </TabsContent>
 
         <TabsContent value="achievements" className="space-y-4">
           {activeTab === 'achievements' && (
-          <Card>
-            <CardHeader className={isRTL ? 'text-right' : 'text-left'}>
-              <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <Star className="h-5 w-5" />
-                {t('visualization.recentAchievements')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {achievements?.map((userAchievement) => (
-                  <Card key={userAchievement.id} className={cn("border-l-4 border-l-yellow-500 hover:shadow-md transition-shadow", isRTL ? "text-right" : "text-left")}>
-                    <CardContent className="p-4">
-                      <div className={`flex items-start gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                        <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                          {userAchievement.achievement?.icon ? (
-                            <img src={userAchievement.achievement.icon} alt="" className="w-8 h-8" />
-                          ) : (
-                            <Award className="h-6 w-6 text-yellow-600" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-sm">{userAchievement.achievement?.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {userAchievement.achievement?.description}
-                          </p>
-                          <div className={`flex items-center gap-2 mt-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                            <Badge variant="secondary" className="text-xs bg-yellow-50 text-yellow-800 hover:bg-yellow-100">
-                              {userAchievement.achievement?.points} {t('skillsManagement.pts')}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(userAchievement.earned_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {(!achievements || achievements.length === 0) && (
-                  <div className="col-span-full text-center py-12 text-muted-foreground bg-slate-50 rounded-lg border border-dashed">
-                    <Award className="h-16 w-16 mx-auto mb-3 opacity-20" />
-                    <p className="text-lg font-medium">{t('visualization.noAchievements')}</p>
-                    <p className="text-sm">{t('visualization.completeTrainingToEarn')}</p>
+          <div className="space-y-6">
+            {/* Achievement Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Trophy className="w-8 h-8 text-amber-500" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Achievements</p>
+                      <p className="text-2xl font-bold">{achievements?.length || 0}</p>
+                    </div>
                   </div>
-                )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Star className="w-8 h-8 text-yellow-500" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Points</p>
+                      <p className="text-2xl font-bold">{totalPoints}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Flame className="w-8 h-8 text-orange-500" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Current Streak</p>
+                      <p className="text-2xl font-bold">{currentStreak} days</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Achievements List */}
+            {achievements && achievements.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {achievements.map((achievement) => (
+                  <AchievementBadge 
+                    key={achievement.id} 
+                    achievement={achievement}
+                    size="md"
+                  />
+                ))}
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Trophy className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Achievements Yet</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    Complete training modules, maintain streaks, and help colleagues to earn achievements!
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
           )}
         </TabsContent>
       </Tabs>

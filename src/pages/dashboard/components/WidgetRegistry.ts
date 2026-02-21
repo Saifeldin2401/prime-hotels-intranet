@@ -31,6 +31,8 @@ const EmployeeOfMonthWidget = lazy(() => import('./EmployeeOfMonthWidget').then(
 const TasksWidget = lazy(() => import('./TasksWidget').then(module => ({ default: module.TasksWidget })))
 const CalendarWidget = lazy(() => import('./CalendarWidget').then(module => ({ default: module.CalendarWidget })))
 const HospitalityNewsWidget = lazy(() => import('./HospitalityNewsWidget').then(module => ({ default: module.HospitalityNewsWidget })))
+const TodaysBirthdaysWidget = lazy(() => import('./TodaysBirthdaysWidget').then(module => ({ default: module.TodaysBirthdaysWidget })))
+const OnlineUsersWidget = lazy(() => import('./OnlineUsersWidget').then(module => ({ default: module.OnlineUsersWidget })))
 
 /**
  * WIDGET_REGISTRY
@@ -118,6 +120,14 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         defaultVisible: true,
         sensitivity: 'low'
     },
+    todaysBirthdays: {
+        id: 'todaysBirthdays',
+        component: TodaysBirthdaysWidget,
+        title: "Today's Birthdays",
+        requiredRoles: ['all'],
+        defaultVisible: true,
+        sensitivity: 'low'
+    },
     hospitalityNews: {
         id: 'hospitalityNews',
         component: HospitalityNewsWidget,
@@ -146,6 +156,14 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         id: 'teamActivity',
         component: TeamWidget,
         title: 'Team Activity',
+        requiredRoles: ['all'],
+        defaultVisible: true,
+        sensitivity: 'low'
+    },
+    onlineUsers: {
+        id: 'onlineUsers',
+        component: OnlineUsersWidget,
+        title: 'Online Users',
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'

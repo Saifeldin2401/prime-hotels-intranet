@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import {
   useConversations,
@@ -55,6 +55,7 @@ function formatMessageDate(dateStr: string, t: (key: string) => string) {
 export default function MessagingDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { t, i18n } = useTranslation('messages')
   const isRTL = i18n.dir() === 'rtl'
   const queryClient = useQueryClient()
@@ -65,6 +66,9 @@ export default function MessagingDashboard() {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [showSidebar, setShowSidebar] = useState(true)
+  const processedStartChatRef = useRef<string | null>(null)
+
+  const startChatWith = searchParams.get('startChatWith')
 
   // Real-time messaging
   const { isConnected } = useRealtimeMessaging()
@@ -173,7 +177,7 @@ export default function MessagingDashboard() {
     })
   }
 
-  const openNewChatWith = async (otherUserId: string) => {
+  const openNewChatWith = useCallback(async (otherUserId: string) => {
     setIsNewChatOpen(false)
     setUserSearch('')
     setActiveChannel(null)
@@ -195,7 +199,26 @@ export default function MessagingDashboard() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
       setShowSidebar(false)
     }
-  }
+  }, [conversations, createConversationMutation, queryClient, user?.id])
+
+  useEffect(() => {
+    if (!startChatWith || !user?.id) return
+    if (startChatWith === user.id) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('startChatWith')
+      setSearchParams(nextParams, { replace: true })
+      return
+    }
+
+    if (processedStartChatRef.current === startChatWith) return
+    processedStartChatRef.current = startChatWith
+
+    void openNewChatWith(startChatWith).finally(() => {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('startChatWith')
+      setSearchParams(nextParams, { replace: true })
+    })
+  }, [startChatWith, user?.id, openNewChatWith, searchParams, setSearchParams])
 
   const selectConversation = (convId: string) => {
     setActiveChannel(null)
@@ -433,12 +456,21 @@ export default function MessagingDashboard() {
                 </Avatar>
               ) : null}
               <div className="min-w-0">
-                <div className="font-semibold text-sm truncate text-gray-900">
-                  {activeChannel
-                    ? (activeChannel === 'broadcast' ? t('broadcast') : t('system'))
-                    : (otherParticipant?.full_name || otherParticipant?.email || t('select_conversation'))
-                  }
-                </div>
+                {activeChannel ? (
+                  <div className="font-semibold text-sm truncate text-gray-900">
+                    {activeChannel === 'broadcast' ? t('broadcast') : t('system')}
+                  </div>
+                ) : otherParticipant?.id ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/profile/${otherParticipant.id}`)}
+                    className="font-semibold text-sm truncate text-gray-900 hover:text-primary hover:underline text-start"
+                  >
+                    {otherParticipant?.full_name || otherParticipant?.email || t('select_conversation')}
+                  </button>
+                ) : (
+                  <div className="font-semibold text-sm truncate text-gray-900">{t('select_conversation')}</div>
+                )}
                 <div className="text-xs text-gray-500 truncate">
                   {activeChannel
                     ? (activeChannel === 'broadcast' ? t('broadcast_desc') : t('system_desc'))

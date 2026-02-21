@@ -32,6 +32,7 @@ interface SendEmailBody {
   variables?: Record<string, unknown>;
   fromName?: string;
   fromEmail?: string;
+  actionLabel?: string;
   userId?: string;
   batchId?: string;
   queueId?: string;
@@ -127,11 +128,25 @@ serve(async (req) => {
       }
     }
 
+    // Fetch profile for more context
+    let profileData: { full_name?: string | null; language?: string | null } | null = null;
+    const targetUserId = body.userId || (isServiceRoleCall ? null : user?.id);
+
+    if (targetUserId) {
+      const { data: profile } = await serviceClient
+        .from("profiles")
+        .select("full_name, language")
+        .eq("id", targetUserId)
+        .maybeSingle();
+      profileData = profile;
+    }
+
     const template = await resolveTemplate(serviceClient, body.templateKey);
     const context = buildContext(
       body,
-      user?.email ?? cleanedRecipients[0] ?? "team@phg-connect.com",
+      profileData?.full_name ?? user?.email ?? cleanedRecipients[0] ?? "team@phg-connect.com",
       runtimeConfig.appBaseUrl,
+      profileData?.language || "en"
     );
 
     const subject = body.subject || renderTemplate(template?.subject_template || "PHG Connect Notification - {{title}}", context);
@@ -163,7 +178,7 @@ serve(async (req) => {
 
     try {
       await trackDelivery(serviceClient, {
-        userId: body.userId,
+        userId: body.userId || (isServiceRoleCall ? null : user?.id) || undefined,
         recipientEmail: cleanedRecipients[0],
         templateKey: body.templateKey || template?.template_key || "system_generic_alert",
         businessDomain: normalizeDomain(body.businessDomain),
@@ -199,22 +214,113 @@ async function resolveTemplate(
   return data as TemplateRow;
 }
 
-function buildContext(body: SendEmailBody, fallbackRecipient: string, appBaseUrl: string): Record<string, string> {
+function buildContext(
+  body: SendEmailBody,
+  fallbackRecipient: string,
+  appBaseUrl: string,
+  language = "en"
+): Record<string, string> {
+  const isAr = language === "ar";
   const actionUrl = resolveAbsoluteUrl(body.actionUrl || "/notifications", appBaseUrl);
+  const domain = normalizeDomain(body.businessDomain);
+
+  // Resolution Logic for Premium Branding
+  const branding = resolveBranding(domain);
+
   const baseContext: Record<string, string> = {
     title: asText(body.title, body.subject || "Notification"),
-    message: asText(body.message, "You have a new update in PHG Connect."),
+    message: asText(body.message, isAr ? "لديك تحديث جديد في برايم كونكت." : "You have a new update in PHG Connect."),
     action_url: actionUrl,
+    action_label: asText(body.actionLabel, isAr ? "فتح المنصة" : "Open PHG Connect"),
     app_url: appBaseUrl,
-    logo_url: `${appBaseUrl}/prime-logo-white-full.png`,
+    logo_url: `${appBaseUrl}/prime-logo-white-full.png`, // Standard premium logo
     recipient_name: fallbackRecipient,
+    lang: language,
+    dir: isAr ? "rtl" : "ltr",
+    align: isAr ? "right" : "left",
+    align_opposite: isAr ? "left" : "right",
+    year: new Date().getFullYear().toString(),
+    brand_color: branding.color,
+    brand_gradient: branding.gradient,
+    business_unit_label: isAr ? branding.labelAr : branding.labelEn,
+    footer_text: isAr
+      ? "إشعار تلقائي من برايم كونكت. تم الإرسال بناءً على إجراء في قسمك أو تعيين مهمة لك."
+      : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
+    has_data_box: body.variables?.data_box ? "true" : "false",
+    data_box_content: asText(body.variables?.data_box, "")
   };
 
   for (const [key, value] of Object.entries(body.variables || {})) {
-    baseContext[key] = asText(value, "");
+    if (key !== "data_box") {
+      baseContext[key] = asText(value, "");
+    }
   }
 
   return baseContext;
+}
+
+function resolveBranding(domain: string) {
+  const map: Record<string, { color: string; gradient: string; labelEn: string; labelAr: string }> = {
+    hr: {
+      color: "#0D9488",
+      gradient: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
+      labelEn: "HR & Workplace Excellence",
+      labelAr: "الموارد البشرية والتميز"
+    },
+    learning: {
+      color: "#D97706",
+      gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
+      labelEn: "Learning & Academy",
+      labelAr: "التعلم والأكاديمية"
+    },
+    finance: {
+      color: "#2563EB",
+      gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+      labelEn: "Finance & Approvals",
+      labelAr: "المالية والاعتمادات"
+    },
+    operations: {
+      color: "#DC2626",
+      gradient: "linear-gradient(135deg, #DC2626 0%, #991B1B 100%)",
+      labelEn: "Operations & Safety",
+      labelAr: "العمليات والسلامة"
+    },
+    management: {
+      color: "#1E293B",
+      gradient: "linear-gradient(135deg, #334155 0%, #0F172A 100%)",
+      labelEn: "Corporate Management",
+      labelAr: "الإدارة العامة"
+    },
+    sales: {
+      color: "#4F46E5",
+      gradient: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)",
+      labelEn: "Sales & Pipelines",
+      labelAr: "المبيعات والنمو"
+    },
+    system: {
+      color: "#0F172A",
+      gradient: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+      labelEn: "System Administration",
+      labelAr: "إدارة النظام"
+    }
+  };
+
+  return map[domain] || map.system;
+}
+
+function renderTemplate(template: string, context: Record<string, string>): string {
+  let rendered = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, rawKey: string) => {
+    const key = rawKey.trim();
+    return context[key] ?? "";
+  });
+
+  if (context.has_data_box === "true") {
+    rendered = rendered.replace(/\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
+  } else {
+    rendered = rendered.replace(/\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g, "");
+  }
+
+  return rendered;
 }
 
 function defaultHtmlTemplate(): string {
@@ -223,13 +329,6 @@ function defaultHtmlTemplate(): string {
 
 function defaultTextTemplate(): string {
   return "PHG Connect | {{title}}\n\n{{message}}\n\n{{action_url}}";
-}
-
-function renderTemplate(template: string, context: Record<string, string>): string {
-  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, rawKey: string) => {
-    const key = rawKey.trim();
-    return context[key] ?? "";
-  });
 }
 
 function resolveAbsoluteUrl(pathOrUrl: string, appBaseUrl: string): string {

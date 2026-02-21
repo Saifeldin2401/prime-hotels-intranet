@@ -45,41 +45,10 @@ function SimpleBarChart({ data, color }: { data: number[]; color: string }) {
   )
 }
 
-// Sparkline Component
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  if (data.length < 2) return null
-
-  const max = Math.max(...data)
-  const min = Math.min(...data)
-  const range = max - min || 1
-  const width = 100
-  const height = 30
-  const points = data.map((value, idx) => {
-    const x = (idx / (data.length - 1)) * width
-    const y = height - ((value - min) / range) * height
-    return `${x},${y}`
-  }).join(' ')
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-8">
-      <motion.polyline
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 1, ease: "easeOut" }}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={points}
-      />
-    </svg>
-  )
-}
-
 export function PerformanceChart({ fullWidth = false }: PerformanceChartProps) {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter'>('week')
   const { primaryRole, user } = useAuth()
+  const { t } = useTranslation('dashboard');
   const canLoadAnalytics = ['corporate_admin', 'regional_admin', 'property_manager', 'department_head'].includes(primaryRole || '')
 
   // Get real stats
@@ -90,7 +59,7 @@ export function PerformanceChart({ fullWidth = false }: PerformanceChartProps) {
 
   const isLoading = isLoadingDashboard || (canLoadAnalytics && isLoadingAnalytics) || isLoadingTraining || isLoadingTasks
 
-  // Calculate real metrics from data
+  // Calculate real metrics from data only
   const metrics = useMemo(() => {
     // Task completion rate
     const totalTasks = (taskStats?.todo_tasks || 0) + (taskStats?.in_progress_tasks || 0) + (taskStats?.completed_tasks || 0)
@@ -101,82 +70,67 @@ export function PerformanceChart({ fullWidth = false }: PerformanceChartProps) {
     // Training progress
     const totalAssigned = trainingStats?.totalAssigned || 0
     const completedTraining = trainingStats?.completed || 0
-    const trainingProgress = totalAssigned > 0 ? (completedTraining / totalAssigned) * 100 : 0
+    const trainingProgress = totalAssigned > 0 ? Math.round((completedTraining / totalAssigned) * 100) : 0
 
-    // Get historical data based on time range
-    const dataPoints = timeRange === 'week' ? 7 : timeRange === 'month' ? 4 : 3
-
-    // Generate trend data from actual stats (in a real app, this would come from API)
-    const taskTrend = Array.from({ length: dataPoints }, (_, i) =>
-      Math.max(0, Math.min(100, taskCompletion + (Math.random() - 0.5) * 20))
-    )
-    const trainingTrend = Array.from({ length: dataPoints }, (_, i) =>
-      Math.max(0, Math.min(100, trainingProgress + (Math.random() - 0.5) * 15))
-    )
-
+    // Real data only - no fake trends, no random numbers
     return [
       {
-        label: 'Task Completion',
+        label: t('metrics.task_completion', 'Task Completion'),
         value: `${taskCompletion}%`,
         rawValue: taskCompletion,
-        change: taskCompletion > 50 ? '+5.2%' : '+2.1%',
-        positive: true,
-        sparkline: taskTrend,
-        color: '#3b82f6'
+        color: '#3b82f6',
+        icon: TrendingUp
       },
       {
-        label: 'Training Progress',
-        value: `${Math.round(trainingProgress)}%`,
+        label: t('metrics.training_progress', 'Training Progress'),
+        value: `${trainingProgress}%`,
         rawValue: trainingProgress,
-        change: trainingProgress > 30 ? '+12%' : '+5%',
-        positive: true,
-        sparkline: trainingTrend,
-        color: '#10b981'
+        color: '#10b981',
+        icon: BarChart3
       },
       {
-        label: 'Quality Score',
-        value: '4.8',
-        rawValue: 4.8,
-        change: '+0.3',
-        positive: true,
-        sparkline: [4.5, 4.5, 4.6, 4.6, 4.7, 4.7, 4.8],
-        color: '#f59e0b'
+        label: t('metrics.total_tasks', 'Total Tasks'),
+        value: `${totalTasks}`,
+        rawValue: totalTasks,
+        color: '#f59e0b',
+        icon: TrendingUp
       },
       {
-        label: 'Attendance',
-        value: '98%',
-        rawValue: 98,
-        change: '+2%',
-        positive: true,
-        sparkline: [95, 96, 96, 97, 97, 98, 98],
-        color: '#8b5cf6'
-      },
-    ]
-  }, [taskStats, trainingStats, timeRange])
-
-  // Chart data based on actual metrics
-  const chartData = useMemo(() => {
-    return metrics.map(m => m.rawValue)
-  }, [metrics])
+        label: t('metrics.completed_training', 'Completed Training'),
+        value: `${completedTraining}`,
+        rawValue: completedTraining,
+        color: '#8b5cf6',
+        icon: BarChart3
+      }
+    ].filter(m => m.rawValue > 0 || m.label.includes('Tasks'))
+  }, [taskStats, trainingStats, t])
 
   const handleExport = () => {
-    toast.info('Preparing export...')
+    toast.info(t('export.preparing', 'Preparing export...'))
     setTimeout(() => {
-      toast.success('Performance report exported successfully')
+      toast.success(t('export.success', 'Performance report exported successfully'))
     }, 1000)
   }
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
+      <Card className={cn("overflow-hidden", fullWidth ? "col-span-full" : "")}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-slate-500" />
+              <Skeleton className="h-6 w-48" />
+            </div>
+            <Skeleton className="h-9 w-32" />
+          </div>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-40 mb-4" />
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => (
-              <Skeleton key={i} className="h-24" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-16" />
+              </div>
             ))}
           </div>
         </CardContent>
@@ -185,93 +139,60 @@ export function PerformanceChart({ fullWidth = false }: PerformanceChartProps) {
   }
 
   return (
-    <Card className={cn(
-      "border-0 shadow-lg bg-gradient-to-b from-white to-slate-50/50",
-      fullWidth && "col-span-full"
-    )}>
-      <CardHeader className="pb-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-indigo-500" />
-              Performance Analytics
-            </CardTitle>
-            <CardDescription>Track your progress over time</CardDescription>
-          </div>
-
+    <Card className={cn("overflow-hidden", fullWidth ? "col-span-full" : "")}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-2">
-            <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as any)}>
+            <BarChart3 className="h-5 w-5 text-slate-500" />
+            <CardTitle className="text-lg font-semibold">
+              {t('performance.title', 'Performance Overview')}
+            </CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as 'week' | 'month' | 'quarter')}>
               <TabsList className="h-8">
-                <TabsTrigger value="week" className="text-xs">Week</TabsTrigger>
-                <TabsTrigger value="month" className="text-xs">Month</TabsTrigger>
-                <TabsTrigger value="quarter" className="text-xs">Quarter</TabsTrigger>
+                <TabsTrigger value="week" className="text-xs px-3">{t('time.week', 'Week')}</TabsTrigger>
+                <TabsTrigger value="month" className="text-xs px-3">{t('time.month', 'Month')}</TabsTrigger>
+                <TabsTrigger value="quarter" className="text-xs px-3">{t('time.quarter', 'Quarter')}</TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleExport}>
-              <Download className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={handleExport} className="h-8">
+              <Download className="h-4 w-4 mr-1" />
+              {t('actions.export', 'Export')}
             </Button>
           </div>
         </div>
+        <CardDescription>
+          {t('performance.description', 'Real-time metrics based on actual data')}
+        </CardDescription>
       </CardHeader>
-
-      <CardContent className="space-y-6">
-        {/* Main Chart */}
-        <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h4 className="font-semibold">Overall Performance</h4>
-              <p className="text-sm text-muted-foreground">
-                Average: {Math.round(chartData.reduce((a, b) => a + b, 0) / chartData.length)}%
-              </p>
-            </div>
-            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              +12.5%
-            </Badge>
-          </div>
-          <SimpleBarChart
-            data={chartData}
-            color="bg-gradient-to-t from-blue-500 to-blue-400"
-          />
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            {timeRange === 'week' && ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].slice(0, chartData.length).map(d => (
-              <span key={d}>{d}</span>
-            ))}
-            {timeRange === 'month' && ['Week 1', 'Week 2', 'Week 3', 'Week 4'].slice(0, chartData.length).map(d => (
-              <span key={d}>{d}</span>
-            ))}
-            {timeRange === 'quarter' && ['Month 1', 'Month 2', 'Month 3'].slice(0, chartData.length).map(d => (
-              <span key={d}>{d}</span>
-            ))}
-          </div>
-        </div>
-
-        {/* Metrics Grid */}
-        <div className={cn(
-          "grid gap-4",
-          fullWidth ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2"
-        )}>
-          {metrics.map((m, idx) => (
-            <motion.div
-              key={m.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="p-4 rounded-xl bg-white border border-slate-100 hover:border-primary/20 hover:shadow-md transition-all"
-            >
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">{m.label}</p>
-              <div className="flex items-end gap-2 mt-1">
-                <span className="text-2xl font-bold">{m.value}</span>
-                <span className={cn(
-                  "text-xs font-medium mb-1",
-                  m.positive ? "text-emerald-600" : "text-red-600"
-                )}>
-                  {m.change}
-                </span>
-              </div>
-              <Sparkline data={m.sparkline} color={m.color} />
-            </motion.div>
-          ))}
+      <CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {metrics.map((metric, idx) => {
+            const Icon = metric.icon
+            return (
+              <motion.div
+                key={metric.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className="p-1.5 rounded-lg"
+                    style={{ backgroundColor: `${metric.color}20`, color: metric.color }}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm text-slate-600 font-medium">{metric.label}</span>
+                </div>
+                <div className="text-2xl font-bold text-slate-900">
+                  {metric.value}
+                </div>
+              </motion.div>
+            )
+          })}
         </div>
       </CardContent>
     </Card>

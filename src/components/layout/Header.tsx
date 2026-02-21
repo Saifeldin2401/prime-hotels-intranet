@@ -302,7 +302,7 @@ export function Header({
                     aria-label={t('nav.user_menu', "User menu")}
                   >
                     <div className="hidden md:flex flex-col items-end">
-                      <span className="text-sm font-medium text-white leading-none mb-1 group-hover:text-hotel-gold transition-colors">
+                      <span className="text-sm font-medium text-white leading-none mb-1 group-hover:text-hotel-gold transition-colors capitalize">
                         {profile?.full_name || user?.email?.split('@')[0]}
                       </span>
                       <span className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-semibold opacity-80 group-hover:opacity-100 transition-opacity">
@@ -333,11 +333,19 @@ export function Header({
                   sideOffset={12}
                 >
                   <DropdownMenuLabel className="font-normal p-4">
-                    <div className="flex flex-col space-y-2">
-                      <p className="text-sm font-semibold text-hotel-gold font-serif tracking-wide">{profile?.full_name || 'User'}</p>
-                      <p className="text-xs text-white/60 truncate font-mono">
-                        {user?.email}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border border-hotel-gold/40 flex-shrink-0">
+                        <AvatarImage src={profile?.avatar_url || ''} className="object-cover" />
+                        <AvatarFallback className="bg-hotel-gold/20 text-hotel-gold font-bold">
+                          {(profile?.full_name || user?.email || '?').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-semibold text-hotel-gold font-serif tracking-wide capitalize">{profile?.full_name || 'User'}</p>
+                        <p className="text-xs text-white/60 truncate font-mono">
+                          {user?.email}
+                        </p>
+                      </div>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-white/10 mx-2" />

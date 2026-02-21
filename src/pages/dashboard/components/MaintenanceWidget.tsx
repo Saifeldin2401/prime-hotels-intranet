@@ -43,8 +43,10 @@ export function MaintenanceWidget() {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Wrench className="w-5 h-5 text-red-500" />
-            Maintenance
+            <Link to="/maintenance" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <Wrench className="w-5 h-5 text-red-500" />
+              Maintenance
+            </Link>
           </CardTitle>
           <CardDescription>Open tickets requiring attention</CardDescription>
         </div>

@@ -151,6 +151,7 @@
         "not_found_desc": "The document you are looking for does not exist or you do not have permission to access it.",
         "back_to_home": "Back to Knowledge Base",
         "updated_at": "Updated on {{date}}",
+        "updated_since_view": "Updated since you last viewed",
         "preview_doc": "Preview Document",
         "download_attachment": "Download / View Attachment",
         "no_content": "No content available.",
@@ -164,6 +165,7 @@
         "leave_comment": "Leave a comment...",
         "post": "Post",
         "no_comments": "No comments yet.",
+        "unknown_author": "System admin",
         "on_this_page": "On This Page",
         "tags": "Tags",
         "linked_learning": "Linked Learning",
@@ -197,7 +199,7 @@
         },
         "match": "Match",
         "submit_feedback": "Submit Feedback",
-        "unknown_author": "Unknown Author",
+        "unknown_author": "System admin",
         "translate": "Translate",
         "feedback_placeholder_neg": "Feedback Placeholder Neg",
         "translate_ai": "Translate AI",
@@ -307,6 +309,11 @@
         "publishing": "Publishing...",
         "saving": "Saving...",
         "submit_for_review": "Submit for Review",
+        "duplicate_warning": "Similar articles already exist",
+        "dismiss_warning": "Dismiss",
+        "suggest_tags": "AI: Suggest tags",
+        "generating_tags": "Generating tag suggestions...",
+        "suggested_tags": "Suggested tags:",
         "title_label": "Document Title",
         "title_placeholder": "Enter document title...",
         "type_label": "Document Type",
@@ -338,12 +345,9 @@
         "select_department": "Select owning department...",
         "general_department": "General / All Departments",
         "department_hint": "Select which department owns or is primarily related to this document.",
-        "category_label": "Category",
-        "general_category": "General / Uncategorized",
         "access_title": "Access & Visibility",
         "visibility_label": "Visibility Level",
         "target_property": "Applies to Property",
-        "current_property": "Current Property",
         "visibility": {
             "all_properties": "All Properties",
             "all_properties_desc": "Visible to all employees across organization",
@@ -363,12 +367,31 @@
             "specific_departments": "Specific Departments (Custom)",
             "specific_departments_desc": "Visible to selected departments across different properties/hotels",
             "specific_departments_label": "Select Target Departments",
-            "select_depts": "Select departments..."
+            "select_depts": "Select departments...",
+            "simple_all_hotels": "All Hotels",
+            "simple_all_hotels_desc": "Visible to all employees across all properties",
+            "simple_one_hotel": "This Hotel Only",
+            "simple_one_hotel_desc": "Visible only to employees at this property",
+            "simple_team_one_hotel": "This Team (Current Hotel)",
+            "simple_team_one_hotel_desc": "Visible only to members of this team at this property",
+            "simple_team_all_hotels": "This Team (All Hotels)",
+            "simple_team_all_hotels_desc": "Visible to this team across all properties",
+            "simple_custom": "Custom",
+            "simple_custom_desc": "Configure specific visibility rules",
+            "simple_role_advanced": "Advanced Role-Based",
+            "simple_role_advanced_desc": "Configure complex role-based access rules",
+            "summary_all_hotels": "All properties and departments",
+            "summary_property": "This property only",
+            "summary_department": "This department only (current property)",
+            "summary_group_department": "This department across all properties",
+            "summary_specific_departments": "Selected departments across properties",
+            "summary_role": "Users with specific role"
         },
         "alerts": {
             "title_required": "Title is required",
             "file_uploading": "Please wait for file upload to complete",
             "dept_required": "Please select a department for department-based visibility",
+            "property_required": "Please select a property",
             "ai_success": "AI generation complete!",
             "ai_failed": "AI generation failed",
             "upload_success": "PDF uploaded successfully",
@@ -380,8 +403,9 @@
             "save_error": "Failed to save: ",
             "submitted_for_review": "Document submitted for review! Reviewers have been notified."
         },
-        "target_property": "Target Property",
+        "selected_property": "Selected Property",
         "current_property": "Current Property",
+        "selected_team": "Selected Team",
         "requires_ack": "Requires Acknowledgment"
     },
     "browse": {
@@ -422,7 +446,22 @@
         },
         "results_count": "{{count}} articles found",
         "no_results": "No results found",
-        "no_results_hint": "Try adjusting your search or filters"
+        "no_results_hint": "Try adjusting your search or filters",
+        "request_content": "Request this documentation",
+        "unknown_author": "System admin",
+        "unknown_editor": "System admin"
+    },
+    "request_content": {
+        "title": "Request Missing Documentation",
+        "description": "Can't find what you're looking for? Let us know and we'll create it.",
+        "topic_label": "What topic do you need documentation for?",
+        "topic_placeholder": "e.g., Late Checkout Procedure for VIP Guests",
+        "details_label": "Additional details (optional)",
+        "details_placeholder": "Describe what information you need or why this would be helpful...",
+        "submit": "Submit Request",
+        "submitting": "Submitting...",
+        "success": "Content request submitted! Admin team will review.",
+        "error": "Failed to submit request. Please try again."
     },
     "review_queue": {
         "title": "Content Review Queue",
@@ -458,7 +497,7 @@
             "changes_requested": "Changes requested",
             "failed": "Review action failed:",
             "no_desc": "No description available",
-            "unknown_author": "Unknown author"
+            "unknown_author": "System admin"
         },
         "dialog": {
             "title": "Review Article",
@@ -480,6 +519,10 @@
         "published": "Published",
         "rejected": "Rejected"
     },
+    "home": {
+        "unknown_author": "System admin",
+        "unknown_editor": "System admin"
+    },
     "library": {
         "title": "Knowledge Library",
         "description": "Access the complete repository of Prime Hotels standards and SOPs.",
@@ -500,6 +543,8 @@
         "master_library": "Master Knowledge Library",
         "create_new": "New Article",
         "no_description": "No description provided",
+        "unknown_author": "System admin",
+        "unknown_editor": "System admin",
         "view": "View",
         "no_bookmarks": "No bookmarks yet",
         "no_bookmarks_desc": "Save articles you use frequently for quick access.",

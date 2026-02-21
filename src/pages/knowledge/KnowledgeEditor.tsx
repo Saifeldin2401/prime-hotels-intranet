@@ -25,7 +25,11 @@ import {
     List,
     ShieldCheck,
     Building2,
-    Palette
+    Palette,
+    AlertTriangle,
+    Tag,
+    Check,
+    X
 } from 'lucide-react'
 import { marked } from 'marked'
 import { Input } from '@/components/ui/input'
@@ -74,6 +78,8 @@ import { useRelatedArticles, useCategories } from '@/hooks/useKnowledge'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProperties } from '@/hooks/useProperties'
 import { scanFile } from '@/hooks/useVirusScan'
+import { useDuplicateDetection } from '@/hooks/useDuplicateDetection'
+import { useTagSuggestions } from '@/hooks/useTagSuggestions'
 
 interface ArticleFormData {
     title: string
@@ -147,6 +153,40 @@ export default function KnowledgeEditor() {
     const { departments } = useDepartments(currentProperty?.id)
     const { data: categories } = useCategories(formData.department_id || undefined)
     const { data: properties } = useProperties()
+
+    // Duplicate detection and tag suggestions
+    const { checkForDuplicates, clearCheck, isReady, result: duplicateResult } = useDuplicateDetection()
+    const { suggestions: tagSuggestions, isGenerating: isGeneratingTags, generateSuggestions, clearSuggestions } = useTagSuggestions()
+    const [duplicateCheckResult, setDuplicateCheckResult] = useState<{ duplicates: Array<{ id: string; title: string; similarity: number; content_type: string }>; hasDuplicates: boolean } | null>(null)
+    const [showDuplicateWarning, setShowDuplicateWarning] = useState(false)
+    const [dismissedDuplicateTitle, setDismissedDuplicateTitle] = useState<string | null>(null)
+
+    // Check for duplicates when title changes (debounced)
+    useEffect(() => {
+        if (!isReady || formData.title.length < 5 || isEditing) {
+            setDuplicateCheckResult(null)
+            setShowDuplicateWarning(false)
+            return
+        }
+
+        const timer = setTimeout(() => {
+            checkForDuplicates(formData.title)
+        }, 500)
+
+        return () => clearTimeout(timer)
+    }, [formData.title, isReady, isEditing, checkForDuplicates])
+
+    useEffect(() => {
+        setDuplicateCheckResult(duplicateResult)
+
+        if (duplicateResult?.hasDuplicates) {
+            if (formData.title !== dismissedDuplicateTitle) {
+                setShowDuplicateWarning(true)
+            }
+        } else {
+            setShowDuplicateWarning(false)
+        }
+    }, [duplicateResult, formData.title, dismissedDuplicateTitle])
 
     // Extract unique department names for group selection
     const uniqueDepartmentNames = useMemo(() => {
@@ -529,6 +569,13 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
         }
     }
 
+    const calculateEstimatedReadTime = useCallback((value: string): number | null => {
+        if (!value) return null
+        const plainText = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        if (!plainText) return null
+        return Math.max(1, Math.round(plainText.split(' ').length / 200))
+    }, [])
+
     const saveArticle = async (status: 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED') => {
         if (!formData.title.trim()) {
             toast.error(t('editor.alerts.title_required'))
@@ -599,6 +646,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 formData.visibility === 'specific_departments'
                 ? null
                 : (isUuid(rawPropertyId) ? rawPropertyId : null)
+
+            const estimatedReadTime = calculateEstimatedReadTime(formData.content)
             let savedArticleId: string | null = null
             let savedArticleData: any = null
             let redirectToArticleId: string | null = null
@@ -618,8 +667,9 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 property_id: normalizedPropertyId,
                 department_id: isUuid(formData.department_id) ? formData.department_id : null,
                 category_id: isUuid(formData.category_id) ? formData.category_id : null,
-                created_by: user?.id,
+                updated_by: user?.id,
                 updated_at: new Date().toISOString(),
+                estimated_read_time: estimatedReadTime,
                 checklist_items: formData.checklist_items || [],
                 faq_items: formData.faq_items || [],
                 video_url: formData.video_url || null,
@@ -661,9 +711,13 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     ? t('editor.alerts.submitted_for_review')
                     : t('editor.alerts.update_success', { type: typeLabel }))
             } else {
+                const insertPayload = {
+                    ...articleData,
+                    created_by: user?.id
+                }
                 const { data, error } = await supabase
                     .from('documents')
-                    .insert(articleData)
+                    .insert(insertPayload)
                     .select()
                     .single()
                 if (error) throw error
@@ -849,6 +903,89 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             <div>
                                 <Label>{t('editor.title_label')} *</Label>
                                 <Input value={formData.title} onChange={e => updateField('title', e.target.value)} placeholder={t('editor.title_placeholder')} className="mt-1 text-lg" />
+                                
+                                {/* Duplicate Detection Warning */}
+                                {showDuplicateWarning && duplicateCheckResult?.hasDuplicates && (
+                                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <div className="flex items-start gap-2">
+                                            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-amber-800">
+                                                    {t('editor.duplicate_warning', 'Similar articles already exist')}
+                                                </p>
+                                                <ul className="mt-2 space-y-1">
+                                                    {duplicateCheckResult.duplicates.slice(0, 3).map(dup => (
+                                                        <li key={dup.id} className="text-xs text-amber-700 flex items-center justify-between">
+                                                            <span className="truncate flex-1">• {dup.title}</span>
+                                                            <Badge variant="outline" className="ml-2 text-[10px]">{dup.similarity}% match</Badge>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="mt-2 h-7 text-xs text-amber-700 hover:text-amber-900"
+                                                    onClick={() => {
+                                                        setShowDuplicateWarning(false)
+                                                        setDismissedDuplicateTitle(formData.title)
+                                                    }}
+                                                    >
+                                                        {t('editor.dismiss_warning', 'Dismiss')}
+                                                    </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* AI Tag Suggestions */}
+                                {!isEditing && formData.title.length > 10 && tagSuggestions.length === 0 && !isGeneratingTags && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 text-xs text-indigo-600 hover:text-indigo-700"
+                                            onClick={() => generateSuggestions(formData.title, formData.content, formData.description)}
+                                        >
+                                            <Tag className="w-3 h-3 mr-1" />
+                                            {t('editor.suggest_tags', 'AI: Suggest tags')}
+                                        </Button>
+                                    </div>
+                                )}
+                                
+                                {isGeneratingTags && (
+                                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        {t('editor.generating_tags', 'Generating tag suggestions...')}
+                                    </div>
+                                )}
+                                
+                                {tagSuggestions.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                        <span className="text-xs text-slate-500">{t('editor.suggested_tags', 'Suggested tags:')}</span>
+                                        {tagSuggestions.map((suggestion, idx) => (
+                                            <Badge
+                                                key={idx}
+                                                variant="outline"
+                                                className={`text-[10px] cursor-pointer hover:bg-indigo-50 ${
+                                                    suggestion.confidence === 'high' ? 'border-green-300 text-green-700' :
+                                                    suggestion.confidence === 'medium' ? 'border-blue-300 text-blue-700' :
+                                                    'border-slate-300 text-slate-600'
+                                                }`}
+                                                title={suggestion.reason}
+                                            >
+                                                {suggestion.tag}
+                                            </Badge>
+                                        ))}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-5 w-5 p-0"
+                                            onClick={clearSuggestions}
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <Label>{t('editor.type_label')}</Label>

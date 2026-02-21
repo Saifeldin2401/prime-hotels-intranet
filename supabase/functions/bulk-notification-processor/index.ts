@@ -33,6 +33,7 @@ interface NotificationData {
   amount?: string | number;
   stage?: string;
   period?: string;
+  variables?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -483,7 +484,7 @@ async function processNotifications(
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("email, full_name")
+        .select("email, full_name, language")
         .eq("id", item.user_id)
         .single();
 
@@ -531,6 +532,7 @@ async function processNotifications(
             profile?.full_name as string | null,
             recipientEmail,
             runtimeConfig.appBaseUrl,
+            profile?.language as string | null || "en"
           );
 
           const subject = renderTemplate(item.email_subject || template.subject_template, context);
@@ -942,42 +944,116 @@ function resolveRelativeLink(dataPayload: NotificationData): string {
 
 function buildTemplateContext(
   item: NotificationQueueRow,
-  dataPayload: NotificationData,
+  payload: NotificationData,
   recipientName: string | null,
   recipientEmail: string,
   appBaseUrl: string,
+  language = "en"
 ): Record<string, string> {
-  const link = resolveRelativeLink(dataPayload);
+  const isAr = language === "ar";
+  const domain = normalizeDomain(item.business_domain || (payload.businessDomain as string), item.notification_type);
+  const branding = resolveBranding(domain);
+  const link = resolveRelativeLink(payload);
   const actionUrl = resolveAbsoluteUrlWithBase(link, appBaseUrl);
 
-  const context: Record<string, string> = {
-    title: asText(dataPayload.title, "Notification"),
-    message: asText(dataPayload.message, "You have a new update in PHG Connect."),
-    recipient_name: asText(recipientName, recipientEmail),
-    recipient_email: recipientEmail,
+  const baseContext: Record<string, string> = {
+    title: asText(payload.title, "PHG Connect Notification"),
+    message: asText(payload.message, isAr ? "لديك تحديث جديد في برايم كونكت." : "You have a new update in PHG Connect."),
     action_url: actionUrl,
+    action_label: asText(payload.actionLabel, isAr ? "فتح المنصة" : "Open PHG Connect"),
     app_url: appBaseUrl,
-    business_domain: normalizeDomain(item.business_domain, item.notification_type),
-    notification_type: normalizeNotificationType(item.notification_type),
-    priority: normalizePriority(item.priority || asText(dataPayload.priority, "normal")),
-    amount: asText(dataPayload.amount, "N/A"),
-    stage: asText(dataPayload.stage, "N/A"),
-    period: asText(dataPayload.period, "Current"),
+    logo_url: `${appBaseUrl}/prime-logo-white-full.png`, // Corrected high-contrast logo
+    recipient_name: recipientName || recipientEmail,
+    lang: language,
+    dir: isAr ? "rtl" : "ltr",
+    align: isAr ? "right" : "left",
+    align_opposite: isAr ? "left" : "right",
+    year: new Date().getFullYear().toString(),
+    brand_color: branding.color,
+    brand_gradient: branding.gradient,
+    business_unit_label: isAr ? branding.labelAr : branding.labelEn,
+    footer_text: isAr
+      ? "إشعار تلقائي من برايم كونكت. تم الإرسال بناءً على إجراء في قسمك أو تعيين مهمة لك."
+      : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
+    has_data_box: (payload.data_box || payload.variables?.data_box) ? "true" : "false",
+    data_box_content: asText(payload.data_box || payload.variables?.data_box, "")
   };
 
-  for (const [key, value] of Object.entries(dataPayload)) {
-    if (value === null || value === undefined) continue;
-    context[key] = asText(value, "");
+  // Merge remaining variables
+  const customVariables = payload.variables && typeof payload.variables === 'object' ? payload.variables : payload;
+  for (const [key, value] of Object.entries(customVariables)) {
+    if (key !== "data_box" && key !== "variables") {
+      baseContext[key] = asText(value, "");
+    }
   }
 
-  return context;
+  return baseContext;
+}
+
+function resolveBranding(domain: string) {
+  const map: Record<string, { color: string; gradient: string; labelEn: string; labelAr: string }> = {
+    hr: {
+      color: "#0D9488",
+      gradient: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
+      labelEn: "HR & Workplace Excellence",
+      labelAr: "الموارد البشرية والتميز"
+    },
+    learning: {
+      color: "#D97706",
+      gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
+      labelEn: "Learning & Academy",
+      labelAr: "التعلم والأكاديمية"
+    },
+    finance: {
+      color: "#2563EB",
+      gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+      labelEn: "Finance & Approvals",
+      labelAr: "المالية والاعتمادات"
+    },
+    operations: {
+      color: "#DC2626",
+      gradient: "linear-gradient(135deg, #DC2626 0%, #991B1B 100%)",
+      labelEn: "Operations & Safety",
+      labelAr: "العمليات والسلامة"
+    },
+    management: {
+      color: "#1E293B",
+      gradient: "linear-gradient(135deg, #334155 0%, #0F172A 100%)",
+      labelEn: "Corporate Management",
+      labelAr: "الإدارة العامة"
+    },
+    sales: {
+      color: "#4F46E5",
+      gradient: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)",
+      labelEn: "Sales & Pipelines",
+      labelAr: "المبيعات والنمو"
+    },
+    system: {
+      color: "#0F172A",
+      gradient: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+      labelEn: "System Administration",
+      labelAr: "إدارة النظام"
+    }
+  };
+
+  return map[domain] || map.system;
 }
 
 function renderTemplate(template: string, context: Record<string, string>): string {
-  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, rawKey: string) => {
+  // Simple variable replacement
+  let rendered = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, rawKey: string) => {
     const key = rawKey.trim();
     return context[key] ?? "";
   });
+
+  // Handle conditional logic for Data Box
+  if (context.has_data_box === "true") {
+    rendered = rendered.replace(/\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
+  } else {
+    rendered = rendered.replace(/\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g, "");
+  }
+
+  return rendered;
 }
 
 function resolveAbsoluteUrlWithBase(pathOrUrl: string, appBaseUrl: string): string {

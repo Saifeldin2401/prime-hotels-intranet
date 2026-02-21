@@ -68,6 +68,7 @@
     "createAssignmentDescription": "Assign training modules to users, departments, or roles.",
     "createFirstModule": "Get started by creating your first training module.",
     "createModule": "Create Module",
+    "startFromScratch": "Start from Scratch",
     "createModuleDescription": "Fill in the details to create a new training module",
     "createPath": "Create Path",
     "created": "Created Date",
@@ -159,7 +160,7 @@
     "noItemsFound": "No items found",
     "noModulesFound": "No training modules found",
     "noModules": "No Modules Yet",
-    "noModulesDesc": "Get started by creating your first training module. Use the wizard for guided creation or choose a template.",
+    "noModulesDesc": "Get started by creating your first training module. Use the wizard, choose a template, or start from scratch.",
     "moduleCreated": "Module Created",
     "moduleCreatedDesc": "Your module has been created successfully",
     "moduleUpdated": "Module Updated",
@@ -676,6 +677,8 @@
         "recommendationTwo": "Choose a template to prefill sections and rules.",
         "recommendationThree": "Assign audience to enable smart defaults.",
         "noTemplates": "No templates available",
+        "templatesLoading": "Loading templates...",
+        "templatesError": "Failed to load templates",
         "templateApplied": "Template applied",
         "templateAppliedDesc": "Sections and starter content were added.",
         "templateEmpty": "Template has no sections",
@@ -949,7 +952,8 @@
             "custom": "Custom",
             "sections": "sections",
             "useTemplate": "Use Template",
-            "noTemplates": "No templates available"
+            "noTemplates": "No templates available",
+            "error": "Failed to load templates"
         },
         "wizard": {
             "title": "Module Creation Wizard",

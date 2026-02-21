@@ -12,9 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useNotifications } from '@/hooks/useNotifications'
-
 // Dynamic Registry and Permissions
 import { WIDGET_REGISTRY, type WidgetId } from './components/WidgetRegistry'
 import { useWidgetPermissions } from '@/hooks/useWidgetPermissions'
@@ -29,18 +27,15 @@ import { useTranslation } from "react-i18next";
 
 
 export function IntegratedDashboard() {
-  const { t } = useTranslation('dashboard');
+  const { t, ready } = useTranslation('dashboard');
   const { user, profile, primaryRole } = useAuth()
   const { currentProperty } = useProperty()
   const { data: stats, isLoading: statsLoading, refetch } = useDashboardStats()
   const { notifications } = useNotifications()
-  const [activeTab, setActiveTab] = useState('overview')
   const [showNotifications, setShowNotifications] = useState(false)
   const [showCustomize, setShowCustomize] = useState(false)
-  const validTabs = ['overview', 'tasks', 'team', 'analytics'] as const
-  const resolvedTab = validTabs.includes(activeTab as any) ? activeTab : 'overview'
 
-  const shouldLoadFeed = resolvedTab === 'overview' || resolvedTab === 'team'
+  const shouldLoadFeed = true
   const {
     currentUser,
     feedItems,
@@ -106,37 +101,39 @@ export function IntegratedDashboard() {
 
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0
 
-  // Dynamic stats based on role
-  const getStats = () => {
+  // Dynamic stats based on role - memoized to prevent translation key flashing
+  const statsList = useMemo(() => {
+    if (!ready) return []
+    
     const baseStats = [
       {
-        title: t('widgets.my_tasks'),
+        title: t('widgets.tasks') || 'My Tasks',
         value: stats?.pendingTasks || 0,
-        subtitle: (stats?.pendingTasks === 1) ? t('staff.your_tasks') : t('widgets.my_tasks'),
+        subtitle: t('widgets.my_tasks_desc') || 'Your pending tasks',
         icon: CheckCircle,
         href: '/tasks',
         color: 'primary'
       },
       {
-        title: t('widgets.training'),
+        title: t('widgets.training') || 'Training Progress',
         value: `${stats?.completedTraining || 0}/${(stats?.completedTraining || 0) + (stats?.inProgressTraining || 0)}`,
-        subtitle: t('staff.stats.training_progress'),
+        subtitle: t('staff.stats.training_progress') || 'Training progress',
         icon: GraduationCap,
         href: '/training',
         color: 'emerald'
       },
       {
-        title: t('widgets.documents'),
+        title: t('widgets.documents') || 'Recent Documents',
         value: stats?.documentsCount || 0,
-        subtitle: t('widgets.documents_desc'),
+        subtitle: t('widgets.documents_desc') || 'Published documents',
         icon: FileText,
         href: '/documents',
         color: 'gold'
       },
       {
-        title: t('widgets.announcements'),
+        title: t('widgets.announcements') || 'Announcements',
         value: unreadCount,
-        subtitle: unreadCount === 1 ? t('widgets.announcements_desc') : t('widgets.announcements_desc'),
+        subtitle: t('widgets.announcements_desc') || 'Unread announcements',
         icon: Bell,
         href: '/notifications',
         color: unreadCount > 0 ? 'red' : 'navy'
@@ -144,9 +141,7 @@ export function IntegratedDashboard() {
     ]
 
     return baseStats.slice(0, 4)
-  }
-
-  const statsList = getStats()
+  }, [t, ready, stats?.pendingTasks, stats?.completedTraining, stats?.inProgressTraining, stats?.documentsCount, unreadCount])
 
   if (!user || !profile) {
     return (
@@ -249,163 +244,52 @@ export function IntegratedDashboard() {
             </motion.div>
           )}
 
-          <Tabs value={resolvedTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:w-[500px] bg-white shadow-sm border border-slate-100 p-1 rounded-xl">
-              <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                {t('staff.tabs.activity_feed')}
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                {t('widgets.my_tasks')}
-              </TabsTrigger>
-              <TabsTrigger value="team" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                {t('cards.team')}
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                {t('tabs.analytics')}
-              </TabsTrigger>
-            </TabsList>
-
-              {resolvedTab === 'overview' && (
-              <div className="mt-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Social Feed */}
-                  <motion.div variants={itemVariants} className="md:col-span-2">
-                    <Card className="h-full">
-                      <CardHeader>
-                        <CardTitle>{t('widgets.activity_feed')}</CardTitle>
-                        <CardDescription>{t('widgets.activity_desc')}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {feedLoading ? (
-                          <div className="space-y-4">
-                            <Skeleton className="h-32 w-full" />
-                            <Skeleton className="h-32 w-full" />
-                            <Skeleton className="h-32 w-full" />
-                          </div>
-                        ) : (
-                          <ScrollArea className="h-[600px] pr-4">
-                            {currentUser && (
-                              <SocialFeed
-                                user={currentUser}
-                                feedItems={feedItems}
-                                onReact={onReact}
-                                onComment={onComment}
-                                onShare={onShare}
-                              />
-                            )}
-                          </ScrollArea>
+          <div className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Social Feed */}
+              <motion.div variants={itemVariants} className="md:col-span-2">
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle>{t('widgets.activity_feed') || 'Activity Feed'}</CardTitle>
+                    <CardDescription>{t('widgets.activity_desc') || 'Latest updates and assignments'}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {feedLoading ? (
+                      <div className="space-y-4">
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-32 w-full" />
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-[600px] pr-4">
+                        {currentUser && (
+                          <SocialFeed
+                            user={currentUser}
+                            feedItems={feedItems}
+                            onReact={onReact}
+                            onComment={onComment}
+                            onShare={onShare}
+                          />
                         )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                </div>
+                      </ScrollArea>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {renderRegistryWidget('tasks')}
-                  {renderRegistryWidget('calendar')}
-                </div>
-              </div>
-              )}
-
-              {resolvedTab === 'tasks' && (
-              <div className="mt-6 space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {renderRegistryWidget('tasks')}
-                  {renderRegistryWidget('maintenance')}
-                </div>
-                {renderRegistryWidget('training')}
-                {!isWidgetEnabled('tasks') && !isWidgetEnabled('maintenance') && !isWidgetEnabled('training') && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t('widgets.my_tasks')}</CardTitle>
-                      <CardDescription>{t('widgets.pending_desc')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">{t('widgets.pending_widget.all_caught_up')}</p>
-                      <Button variant="outline" size="sm" onClick={resetWidgets}>
-                        {t('actions.refresh')}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-              )}
-
-              {resolvedTab === 'team' && (
-              <div className="mt-6 space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {renderRegistryWidget('teamActivity')}
-                  <motion.div variants={itemVariants}>
-                    <Card className="h-full">
-                      <CardHeader>
-                        <CardTitle>{t('my_team.title')}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {feedLoading ? (
-                          <Skeleton className="h-[400px] w-full" />
-                        ) : (
-                          <ScrollArea className="h-[400px] pr-4">
-                            {currentUser && (
-                              <SocialFeed
-                                user={currentUser}
-                                feedItems={feedItems.filter(i => i.type === 'recognition' || i.type === 'birthday' || i.type === 'achievement')}
-                                onReact={onReact}
-                                onComment={onComment}
-                                onShare={onShare}
-                              />
-                            )}
-                          </ScrollArea>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                </div>
-                {renderRegistryWidget('employeeOfMonth')}
-                {!isWidgetEnabled('teamActivity') && !isWidgetEnabled('employeeOfMonth') && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t('cards.team')}</CardTitle>
-                      <CardDescription>{t('staff.recent_activity')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">{t('widgets.pending_widget.all_caught_up')}</p>
-                      <Button variant="outline" size="sm" onClick={resetWidgets}>
-                        {t('actions.refresh')}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-              )}
-
-              {resolvedTab === 'analytics' && (
-              <div className="mt-6 space-y-6">
-                {renderRegistryWidget('performanceChart', { fullWidth: true })}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {renderRegistryWidget('knowledgeBase')}
-                  <PropertyOverviewCard />
-                </div>
-                {!isWidgetEnabled('performanceChart') && !isWidgetEnabled('knowledgeBase') && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t('tabs.analytics')}</CardTitle>
-                      <CardDescription>{t('analytics.subtitle')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Button variant="outline" size="sm" onClick={resetWidgets}>
-                        {t('actions.refresh')}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-              )}
-          </Tabs>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {renderRegistryWidget('tasks')}
+              {renderRegistryWidget('calendar')}
+            </div>
+          </div>
         </div>
 
         {/* Right Column - Sidebar Widgets */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
+          {renderRegistryWidget('onlineUsers')}
           {renderRegistryWidget('announcements')}
+          {renderRegistryWidget('todaysBirthdays')}
           {renderRegistryWidget('employeeOfMonth')}
           {renderRegistryWidget('knowledgeBase')}
           {renderRegistryWidget('training')}

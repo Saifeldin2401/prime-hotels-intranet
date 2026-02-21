@@ -45,8 +45,10 @@ export function TrainingProgress() {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <CardTitle className="text-lg flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-emerald-500" />
-            {t('widgets.training_progress', 'Training Progress')}
+            <Link to="/training" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <GraduationCap className="w-5 h-5 text-emerald-500" />
+              {t('widgets.training_progress', 'Training Progress')}
+            </Link>
           </CardTitle>
           <CardDescription>{t('widgets.training_progress_desc', 'Continue your learning journey')}</CardDescription>
         </div>

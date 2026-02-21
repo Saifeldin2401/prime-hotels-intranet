@@ -25,16 +25,6 @@ export function getDisplayJobTitle(profile: Profile | null | undefined): string 
 }
 
 /**
- * Gets the system role for permission checks
- * This should NEVER be displayed to regular staff - only used for backend logic
- * Note: Actual role fetching is handled by usePermissions hook
- */
-export function getRoleForPermissions(): AppRole | null {
-    // This is a placeholder - actual role comes from usePermissions hook
-    return null
-}
-
-/**
  * Determines if the current user can view system roles (admin/debug view)
  * Only corporate admin and regional HR should see system role information
  */

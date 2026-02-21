@@ -205,6 +205,7 @@ export default function TrainingPlayerEnhanced() {
 
     const activeBlock = moduleData?.blocks[activeBlockIndex]
     const totalBlocks = moduleData?.blocks.length || 1
+    const hasQuizBlock = (moduleData?.blocks || []).some(block => block.type === 'quiz')
     const progressPercentage = Math.min(100, Math.round(((activeBlockIndex + 1) / totalBlocks) * 100))
 
     // Calculate reading time for text blocks
@@ -312,19 +313,6 @@ export default function TrainingPlayerEnhanced() {
 
         try {
             const timeSpent = timeSpentSeconds + totalTimeRef.current
-            
-            await learningService.submitQuizProgress({
-                assignment_id: assignmentId || undefined,
-                content_id: moduleData.module.id,
-                content_type: 'module',
-                user_id: user.id,
-                status: 'completed',
-                progress_percentage: 100,
-                passed: true,
-                score_percentage: quizScore !== null ? quizScore : undefined,
-                completed_at: new Date().toISOString(),
-                time_spent_seconds: timeSpent,
-            })
 
             let linkedTrainingProgressId: string | undefined
             let linkedTrainingQuizScore: number | undefined
@@ -352,10 +340,32 @@ export default function TrainingPlayerEnhanced() {
                 await skillsService.awardModuleSkills(user.id, moduleData.module.id)
             } catch {}
 
-            // Certificate
             const passingScore = moduleData.module.passing_score_percentage || 80
             const effectiveScore = quizScore ?? linkedTrainingQuizScore
-            const isPassed = effectiveScore === undefined || effectiveScore >= passingScore
+
+            if (hasQuizBlock && typeof effectiveScore !== 'number') {
+                toast({
+                    title: t('quizNotPassed'),
+                    description: t('completeQuizBeforeFinish', 'Please complete the quiz before finishing this module.'),
+                    variant: 'destructive'
+                })
+                return
+            }
+
+            const isPassed = !hasQuizBlock || (typeof effectiveScore === 'number' && effectiveScore >= passingScore)
+
+            await learningService.submitQuizProgress({
+                assignment_id: assignmentId || undefined,
+                content_id: moduleData.module.id,
+                content_type: 'module',
+                user_id: user.id,
+                status: 'completed',
+                progress_percentage: 100,
+                passed: isPassed,
+                score_percentage: typeof effectiveScore === 'number' ? effectiveScore : undefined,
+                completed_at: new Date().toISOString(),
+                time_spent_seconds: timeSpent,
+            })
 
             if (isPassed && moduleData.module.certificate_enabled) {
                 try {

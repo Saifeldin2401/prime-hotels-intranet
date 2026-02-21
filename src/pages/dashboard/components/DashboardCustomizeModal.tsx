@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import {
     BarChart3,
     Bell,
+    Cake,
     Calendar,
     CheckCircle,
     GraduationCap,
@@ -21,7 +22,6 @@ import {
     Book,
     Quote
 } from 'lucide-react'
-import { useTranslation } from "react-i18next";
 
 interface DashboardCustomizeModalProps {
     open: boolean
@@ -39,18 +39,21 @@ export function DashboardCustomizeModal({
     onReset
 }: DashboardCustomizeModalProps) {
     const widgetConfig = [
-        { key: 'stats', label: 'Statistics Overview', icon: BarChart3 },
+        { key: 'quickInsights', label: 'Quick Insights', icon: LayoutDashboard },
+        { key: 'motivation', label: 'Motivation', icon: Quote },
+        { key: 'statsGrid', label: 'Statistics Overview', icon: BarChart3 },
         { key: 'quickActions', label: 'Quick Actions', icon: LayoutDashboard },
-        { key: 'socialFeed', label: 'Social Feed', icon: Users },
         { key: 'announcements', label: 'Announcements', icon: Bell },
-        { key: 'employeeOfMonth', label: 'Employee of the Month', icon: Star },
         { key: 'tasks', label: 'My Tasks', icon: CheckCircle },
         { key: 'calendar', label: 'Calendar', icon: Calendar },
-        { key: 'knowledgeBase', label: 'Knowledge Base', icon: Book },
         { key: 'training', label: 'Training Progress', icon: GraduationCap },
+        { key: 'knowledgeBase', label: 'Knowledge Base', icon: Book },
+        { key: 'todaysBirthdays', label: "Today's Birthdays", icon: Cake },
+        { key: 'employeeOfMonth', label: 'Employee of the Month', icon: Star },
+        { key: 'teamActivity', label: 'Team Activity', icon: Users },
+        { key: 'performanceChart', label: 'Performance Analytics', icon: BarChart3 },
         { key: 'maintenance', label: 'Maintenance Requests', icon: Wrench },
         { key: 'hospitalityNews', label: 'Hospitality News', icon: Newspaper },
-        { key: 'motivation', label: 'Motivational Quotes', icon: Quote },
     ]
 
     // Filter out any widgets that might not be relevant for specific roles if needed

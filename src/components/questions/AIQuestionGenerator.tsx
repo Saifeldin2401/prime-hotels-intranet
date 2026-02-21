@@ -136,6 +136,65 @@ export function AIQuestionGenerator({
         sop.title.toLowerCase().includes(sopSearch.toLowerCase())
     )
 
+    const coerceQuestionType = (question: GeneratedQuestion, targetType: QuestionType): GeneratedQuestion => {
+        if (question.question_type === targetType) return question
+
+        if (targetType === 'fill_blank') {
+            const derivedAnswer =
+                question.correct_answer ||
+                question.options?.find(opt => opt.is_correct)?.text ||
+                ''
+            return {
+                ...question,
+                question_type: 'fill_blank',
+                correct_answer: derivedAnswer,
+                options: undefined
+            }
+        }
+
+        if (targetType === 'true_false') {
+            const normalized = (question.correct_answer || '').toString().trim().toLowerCase()
+            const boolAnswer = normalized === 'false' ? 'false' : 'true'
+            return {
+                ...question,
+                question_type: 'true_false',
+                correct_answer: boolAnswer,
+                options: undefined
+            }
+        }
+
+        if (targetType === 'mcq' || targetType === 'mcq_multi' || targetType === 'scenario') {
+            const fallbackAnswer = question.correct_answer || 'Correct answer'
+            const options = question.options && question.options.length > 0
+                ? question.options
+                : [
+                    { text: fallbackAnswer, is_correct: true },
+                    { text: 'None of the above', is_correct: false }
+                ]
+            return {
+                ...question,
+                question_type: targetType,
+                correct_answer: fallbackAnswer,
+                options
+            }
+        }
+
+        return question
+    }
+
+    const enforceSelectedTypes = (questions: GeneratedQuestion[]): GeneratedQuestion[] => {
+        if (selectedTypes.length === 0) return questions
+
+        return questions.map((question, index) => {
+            if (selectedTypes.includes(question.question_type)) {
+                return question
+            }
+
+            const fallbackType = selectedTypes[index % selectedTypes.length]
+            return coerceQuestionType(question, fallbackType)
+        })
+    }
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
@@ -260,8 +319,9 @@ export function AIQuestionGenerator({
             source_title: currentSopTitle
         })
 
-        setGeneratedQuestions(result)
-        setSelectedQuestions(new Set(result.map((_, i) => i)))
+        const normalizedResult = enforceSelectedTypes(result)
+        setGeneratedQuestions(normalizedResult)
+        setSelectedQuestions(new Set(normalizedResult.map((_, i) => i)))
     }
 
     const handleToggleType = (type: QuestionType) => {

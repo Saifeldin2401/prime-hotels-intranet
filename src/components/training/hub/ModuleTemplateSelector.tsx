@@ -48,7 +48,7 @@ export function ModuleTemplateSelector({
   const isRTL = i18n.dir() === 'rtl'
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
-  const { data: templates, isLoading } = useQuery({
+  const { data: templates, isLoading, isError } = useQuery({
     queryKey: ['training-templates', selectedCategory],
     queryFn: async () => {
       let query = supabase
@@ -64,7 +64,10 @@ export function ModuleTemplateSelector({
       if (error) throw error
       return data as Template[]
     },
-    enabled: open
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true
   })
 
   const categories = [
@@ -110,6 +113,10 @@ export function ModuleTemplateSelector({
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+          </div>
+        ) : isError ? (
+          <div className="flex justify-center py-12 text-sm text-red-500">
+            {t('hub.templates.error', 'Failed to load templates')}
           </div>
         ) : templates && templates.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

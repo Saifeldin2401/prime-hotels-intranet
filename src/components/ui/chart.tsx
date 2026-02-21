@@ -141,12 +141,10 @@ const ChartTooltipContent = React.forwardRef<
 })
 ChartTooltipContent.displayName = "ChartTooltipContent"
 
-// Helper to safely get config (since config isn't passed here in this lightweight version, we fallback safely)
-// Actually, 'config' is usually passed via context in shadcn charts, but here we don't see the context provider.
-// We will stick to using item.name and item.color directly for simplicity as per the current setup.
+// Helper to safely get config - returns undefined as this is a lightweight implementation
+// Config should be passed via props or context by the consuming component
 function getPayloadConfigFromPayload(config: any, payload: unknown, key: string) {
   return undefined
 }
-const config = {} // Mock config for standalone safety
 
 export { Chart, ChartContainer, ChartTooltip, ChartTooltipContent }

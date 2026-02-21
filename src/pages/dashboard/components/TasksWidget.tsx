@@ -56,8 +56,10 @@ export function TasksWidget() {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <CardTitle className="text-lg flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-emerald-500" />
-            {t('widgets.my_tasks_title', 'My Tasks')}
+            <Link to="/tasks" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              {t('widgets.my_tasks_title', 'My Tasks')}
+            </Link>
           </CardTitle>
           <CardDescription>{t('widgets.my_tasks_desc', 'Your pending assignments')}</CardDescription>
         </div>

@@ -26,7 +26,6 @@
         "departments": "أقسام",
         "documents_desc": "مستندات منشورة",
         "training_desc": "{{count}} قيد التنفيذ",
-        "announcements_desc": "إعلانات غير مقروءة",
         "pending_widget": {
             "title": "العناصر المعلقة",
             "subtitle": "عناصر تتطلب انتباهك",
@@ -58,12 +57,38 @@
             "schedule": "الجدول",
             "schedule_desc": "منوباتي",
             "messages": "الرسائل",
-            "messages_desc": "محادثة الفريق"
+            "messages_desc": "محادثة الفريق",
+            "maintenance": "الصيانة",
+            "maintenance_desc": "تتبع طلبات الصيانة",
+            "analytics": "التحليلات",
+            "analytics_desc": "عرض بيانات الأداء"
         },
         "active_users": {
             "title": "أعضاء الفريق النشطون",
             "online": "نشط الآن",
             "no_active": "لا يوجد مستخدمون نشطون آخرون حالياً."
+        },
+        "online_users": {
+            "title": "متصل الآن",
+            "online": "متصل",
+            "no_active": "لا يوجد أعضاء فريق متصلين حالياً",
+            "check_back": "تحقق لاحقاً",
+            "search_placeholder": "البحث عن أعضاء الفريق...",
+            "just_now": "الآن",
+            "minutes": "{{count}} د",
+            "hours": "{{count}} س",
+            "days": "{{count}} ي",
+            "team_member": "عضو الفريق"
+        },
+        "notifications": {
+            "title": "الإشعارات",
+            "unread_count": "{{count}} غير مقروء",
+            "unread_count_other": "{{count}} غير مقروءة",
+            "all_caught_up": "أنت متابع لكل شيء!",
+            "no_notifications": "لا توجد إشعارات بعد",
+            "mark_all_read": "تحديد الكل كمقروء",
+            "clear_all": "مسح الكل",
+            "view_details": "عرض التفاصيل"
         },
         "dept_kpi": {
             "title": "أداء الأقسام",
@@ -117,10 +142,6 @@
             "manage": "إدارة موظف الشهر",
             "no_employee_found": "لم يتم العثور على موظف"
         },
-        "employeeOfMonth": {
-            "title": "موظف الشهر",
-            "empty": "لم يتم الإعلان عن فائز بعد"
-        },
         "birthdays": {
             "title": "أعياد الميلاد القادمة",
             "today": "اليوم!",
@@ -133,8 +154,11 @@
         "my_tasks_title": "مهامي",
         "my_tasks_desc": "مهامك المعلقة",
         "activity_feed": "سجل النشاط",
-        "schedule": "الجدول",
+        "activity_desc": "آخر التحديثات والمهام",
+        "schedule_title": "الجدول",
         "schedule_desc": "أحداثك ومنوباتك",
+        "online_users_title": "متصل الآن",
+        "online_users_desc": "{{count}} أعضاء فريق نشطون",
         "announcements_title": "الإعلانات",
         "announcements_desc": "آخر التحديثات من مؤسستك",
         "knowledge_base": "قاعدة المعرفة",
@@ -149,10 +173,32 @@
         "browse_training": "استعرض التدريب المتاح",
         "continue": "متابعة",
         "no_announcements": "لا توجد إعلانات بعد",
-        "no_articles": "لم يتم العثور على مقالات",
+        "no_articles": "لم يتم العثور على مقالات"
+    },
+    "schedule": {
+        "title": "الجدول",
+        "subtitle": "أحداثك ومنوباتك",
+        "no_events": "لا توجد أحداث مجدولة",
         "select_date": "اختر تاريخاً",
-        "shift": "وردية",
-        "work": "عمل"
+        "upcoming": "القادم",
+        "today_events": "{{count}} حدث اليوم",
+        "today_events_other": "{{count}} أحداث اليوم",
+        "no_events_today": "لا توجد أحداث اليوم",
+        "go_to_today": "اليوم",
+        "enjoy_day": "استمتع بيومك!",
+        "add_event": "إضافة",
+        "calendar": {
+            "sun": "الأحد",
+            "mon": "الاثنين",
+            "tue": "الثلاثاء",
+            "wed": "الأربعاء",
+            "thu": "الخميس",
+            "fri": "الجمعة",
+            "sat": "السبت",
+            "shift": "وردية",
+            "work": "عمل",
+            "property": "المنشأة"
+        }
     },
     "analytics": {
         "title": "لوحة التحليلات",
@@ -185,6 +231,11 @@
         "recent_activity": "النشاط الأخير",
         "no_activity": "لا يوجد نشاط حديث",
         "activity_placeholder": "سيظهر النشاط هنا عندما يتفاعل المستخدمون مع النظام"
+    },
+    "common": {
+        "show_more": "عرض {{count}} أكثر",
+        "show_less": "عرض أقل",
+        "user": "مستخدم"
     },
     "stats": {
         "total": "الإجمالي",
@@ -605,26 +656,6 @@
         "birthday_in": "عيد ميلاد {{name}} بعد {{days}} أيام",
         "welcome_team": "مرحباً بـ {{name}} في الفريق!",
         "joined_as": "انضم كـ {{role}}"
-    },
-    "subtitle": "مركزك الموحد للمعرفة التشغيلية",
-    "schedule": {
-        "title": "الجدول",
-        "subtitle": "أحداثك ومنوباتك",
-        "no_events": "لا توجد أحداث مجدولة لهذا اليوم",
-        "select_date": "اختر تاريخاً",
-        "upcoming": "قادم",
-        "calendar": {
-            "sun": "أحد",
-            "mon": "اثنين",
-            "tue": "ثلاثاء",
-            "wed": "أربعاء",
-            "thu": "خميس",
-            "fri": "جمعة",
-            "sat": "سبت",
-            "shift": "وردية",
-            "work": "عمل",
-            "property": "المنشأة"
-        }
     },
     "hospitality_news": {
         "title": "أخبار الضيافة",

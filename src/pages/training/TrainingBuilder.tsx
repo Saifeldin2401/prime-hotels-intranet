@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -206,6 +206,7 @@ function getBlockValidation(block: ContentBlockForm, t: (key: string, options?: 
 export function TrainingBuilder() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { profile } = useAuth()
   const { t, i18n } = useTranslation('training')
   const { toast } = useToast()
@@ -245,7 +246,11 @@ export function TrainingBuilder() {
     }
   })
 
-  const { data: availableTemplates } = useQuery({
+  const {
+    data: availableTemplates,
+    isLoading: isTemplatesLoading,
+    isError: isTemplatesError
+  } = useQuery({
     queryKey: ['training-content-templates'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -255,7 +260,10 @@ export function TrainingBuilder() {
         .order('name')
       if (error) throw error
       return data as TrainingTemplate[]
-    }
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true
   })
 
   // Module state
@@ -772,7 +780,7 @@ export function TrainingBuilder() {
   const skipAutosaveRef = useRef(true)
 
   useEffect(() => {
-    if (!isNewRoute || moduleId || draftRestoreRef.current) {
+    if (!isNewRoute || moduleId || draftRestoreRef.current || templateFromQuery) {
       skipAutosaveRef.current = false
       return
     }
@@ -1344,6 +1352,10 @@ export function TrainingBuilder() {
 
       localStorage.removeItem(draftKey)
 
+      queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+      queryClient.invalidateQueries({ queryKey: ['training-content-blocks', savedModuleId] })
+      queryClient.invalidateQueries({ queryKey: ['training-module-full', savedModuleId] })
+
       toast({
         title: t('modulePublished'),
         description: t('builder.publishSuccess')
@@ -1355,6 +1367,15 @@ export function TrainingBuilder() {
         total_sections: sections.length,
         total_items: totalItems
       })
+
+      // After publishing, move users to assignment flow to avoid editing confusion.
+      const next = new URLSearchParams()
+      next.set('view', 'assignments')
+      if (savedModuleId) {
+        next.set('assignModuleId', savedModuleId)
+      }
+      next.set('openAssign', '1')
+      navigate(`/training/hub?${next.toString()}`)
     } catch (error: unknown) {
       const errorDetails = getUserFriendlyError(error)
       toast({
@@ -1439,10 +1460,11 @@ export function TrainingBuilder() {
       if (!targetId) return
 
       // Delete existing blocks
-      await supabase
+      const { error: deleteError } = await supabase
         .from('training_content_blocks')
         .delete()
         .eq('training_module_id', targetId)
+      if (deleteError) throw deleteError
 
       // Insert new blocks
       // Use sections to build the blocks list to ensure we capture the current UI state
@@ -1454,13 +1476,34 @@ export function TrainingBuilder() {
           blocksToInsert.push({
             training_module_id: targetId,
             type: item.type,
+            title: item.title || null,
             content: item.content || item.title || '',
             content_url: item.content_url || null,
             content_data: item.content_data || {},
+            source_document_id: (item.content_data as Record<string, unknown> | undefined)?.sop_id as string | undefined || null,
             order: orderIndex++,
             is_mandatory: item.is_mandatory ?? true,
             duration_seconds: toDurationSeconds(item.duration),
             points: item.points
+          })
+        }
+      }
+
+      // Fallback for legacy flows that still populate flat contentBlocks.
+      if (blocksToInsert.length === 0) {
+        for (const block of contentBlocks) {
+          blocksToInsert.push({
+            training_module_id: targetId,
+            type: block.type,
+            title: block.title || null,
+            content: block.content || block.title || '',
+            content_url: block.content_url || null,
+            content_data: block.content_data || {},
+            source_document_id: (block.content_data as Record<string, unknown> | undefined)?.sop_id as string | undefined || null,
+            order: orderIndex++,
+            is_mandatory: block.is_mandatory ?? true,
+            duration_seconds: toDurationSeconds(block.duration),
+            points: block.points
           })
         }
       }
@@ -1856,7 +1899,15 @@ export function TrainingBuilder() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none" className={isRTL ? "flex-row-reverse" : ""}>{t('builder.templateNone')}</SelectItem>
-                      {templateOptions.length > 0 ? (
+                      {isTemplatesLoading ? (
+                        <div className="p-2 text-xs text-muted-foreground text-center">
+                          {t('builder.templatesLoading', 'Loading templates...')}
+                        </div>
+                      ) : isTemplatesError ? (
+                        <div className="p-2 text-xs text-red-500 text-center">
+                          {t('builder.templatesError', 'Failed to load templates')}
+                        </div>
+                      ) : templateOptions.length > 0 ? (
                         templateOptions.map((template) => (
                           <SelectItem key={template.id} value={template.id} className={isRTL ? "flex-row-reverse" : ""}>
                             {template.name}

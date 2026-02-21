@@ -411,11 +411,42 @@ export default function TrainingModules() {
         })
       }
 
-      const { error } = await supabase
-        .from('learning_assignments')
-        .insert(assignments)
+      const makeKey = (entry: { target_type: string; target_id: string | null }) =>
+        `${entry.target_type}:${entry.target_id ?? '__everyone__'}`
 
-      if (error) throw error
+      const { data: existingAssignments, error: existingError } = await supabase
+        .from('learning_assignments')
+        .select('target_type, target_id')
+        .eq('content_type', 'module')
+        .eq('content_id', assigningModuleId)
+        .or('is_deleted.is.null,is_deleted.eq.false')
+
+      if (existingError) throw existingError
+
+      const existingKeys = new Set((existingAssignments || []).map(a => makeKey({
+        target_type: a.target_type,
+        target_id: a.target_id
+      })))
+
+      const assignmentsToInsert = assignments.filter(a => !existingKeys.has(makeKey({
+        target_type: a.target_type,
+        target_id: a.target_id ?? null
+      })))
+
+      if (assignmentsToInsert.length > 0) {
+        const { error } = await supabase
+          .from('learning_assignments')
+          .insert(assignmentsToInsert)
+
+        if (error) throw error
+      }
+
+      if (assignmentsToInsert.length === 0) {
+        return {
+          inserted: 0,
+          skipped: assignments.length
+        }
+      }
 
       const notifyUsers = async () => {
         try {
@@ -495,6 +526,10 @@ export default function TrainingModules() {
       }
 
       void notifyUsers()
+      return {
+        inserted: assignmentsToInsert.length,
+        skipped: assignments.length - assignmentsToInsert.length
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })

@@ -87,8 +87,13 @@ export async function getArticles(
           visibility,
           property_id, department_id,
           requires_acknowledgment,
+          created_by, updated_by,
           created_at, updated_at,
+          current_version, published_version_number, last_published_at,
+          estimated_read_time,
           view_count,
+          author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
+          last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
           department:departments(id, name),
           category:categories(id, name)
         `, { count: 'exact' })
@@ -141,8 +146,10 @@ export async function getArticles(
             return { articles: [], total: 0, page, page_size: pageSize }
         }
 
+        const hydrated = await hydratePublishedSnapshotsForList(data || [])
+
         return {
-            articles: (data || []).map(formatArticle),
+            articles: hydrated.map(formatArticle),
             total: count || 0,
             page,
             page_size: pageSize
@@ -158,6 +165,8 @@ export async function getArticleById(id: string, userId?: string): Promise<Knowl
             .from('documents')
             .select(`
                 *,
+                author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
+                last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
                 sop:sop_documents(linked_training_id, linked_quiz_id),
                 document_department_access(department_id)
             `)
@@ -170,7 +179,8 @@ export async function getArticleById(id: string, userId?: string): Promise<Knowl
             return null
         }
 
-        const article = formatArticle(data)
+        const effectiveData = await hydratePublishedSnapshotIfNeeded(data)
+        const article = formatArticle(effectiveData)
 
         // If userId provided, check for acknowledgment 
         if (userId && data.requires_acknowledgment) {
@@ -205,7 +215,18 @@ export async function getFeaturedArticles(limit = 5): Promise<KnowledgeArticle[]
     try {
         const { data, error } = await supabase
             .from('documents')
-            .select(`id, title, description, status, content_type, updated_at, view_count`)
+            .select(`
+                id, title, description,
+                status, content_type,
+                created_by, updated_by,
+                current_version, published_version_number, last_published_at,
+                created_at, updated_at,
+                estimated_read_time, view_count,
+                author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
+                last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
+                department:departments(id, name),
+                category:categories(id, name)
+            `)
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
             .order('updated_at', { ascending: false })
@@ -215,7 +236,8 @@ export async function getFeaturedArticles(limit = 5): Promise<KnowledgeArticle[]
             console.warn('getFeaturedArticles error:', error.message)
             return []
         }
-        return (data || []).map(formatArticle)
+        const hydrated = await hydratePublishedSnapshotsForList(data || [])
+        return hydrated.map(formatArticle)
     } catch (e) {
         console.error('getFeaturedArticles exception:', e)
         return []
@@ -226,7 +248,18 @@ export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]>
     try {
         const { data, error } = await supabase
             .from('documents')
-            .select(`id, title, description, status, content_type, updated_at, view_count`)
+            .select(`
+                id, title, description,
+                status, content_type,
+                created_by, updated_by,
+                current_version, published_version_number, last_published_at,
+                created_at, updated_at,
+                estimated_read_time, view_count,
+                author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
+                last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
+                department:departments(id, name),
+                category:categories(id, name)
+            `)
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
             .order('updated_at', { ascending: false })
@@ -236,7 +269,8 @@ export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]>
             console.warn('getRecentArticles error:', error.message)
             return []
         }
-        return (data || []).map(formatArticle)
+        const hydrated = await hydratePublishedSnapshotsForList(data || [])
+        return hydrated.map(formatArticle)
     } catch (e) {
         console.error('getRecentArticles exception:', e)
         return []
@@ -260,17 +294,19 @@ export async function getRequiredReading(userId: string): Promise<RequiredReadin
 
         if (error || !requiredDocs) return []
 
+        const hydratedDocs = await hydratePublishedSnapshotsForList(requiredDocs)
+
         // 2. Get user's acknowledgments for these documents
         const { data: acks } = await supabase
             .from('document_acknowledgments')
             .select('document_id, acknowledged_at')
             .eq('user_id', userId)
-            .in('document_id', requiredDocs.map(d => d.id))
+            .in('document_id', hydratedDocs.map(d => d.id))
 
         const ackMap = new Map(acks?.map(a => [a.document_id, a]))
 
         // 3. Map to RequiredReading type
-        return requiredDocs.map(d => {
+        return hydratedDocs.map(d => {
             const acknowledgment = ackMap.get(d.id)
             return {
                 id: d.id, // Using document ID as the listing ID
@@ -305,15 +341,46 @@ export async function acknowledgeArticle(documentId: string, userId: string): Pr
 }
 
 // ============================================================================
-// STUBS FOR REMOVED FEATURES (Comments, Bookmarks, Feedback, Contextual Help)
+// CONTEXTUAL HELP - Real Implementation
 // ============================================================================
 
 export async function getContextualHelp(triggerType: string, triggerValue: string): Promise<ContextualHelp[]> {
-    // Contextual help RPC is not present in the current schema.
-    // Keep the API shape and avoid noisy runtime 404/400 logs.
-    void triggerType
-    void triggerValue
-    return []
+    // Map trigger types to relevant content types
+    const contentTypeMap: Record<string, string[]> = {
+        'task': ['sop', 'guide', 'checklist'],
+        'checklist': ['sop', 'checklist'],
+        'training': ['guide', 'video', 'sop'],
+        'page': ['reference', 'guide'],
+        'maintenance': ['sop', 'policy'],
+        'onboarding': ['guide', 'policy', 'checklist']
+    }
+
+    const relevantTypes = contentTypeMap[triggerType] || ['guide', 'reference']
+
+    // Search for relevant documents
+    const { data, error } = await supabase
+        .from('documents')
+        .select('id, title, description, content_type, status, current_version, published_version_number, last_published_at')
+        .in('content_type', relevantTypes)
+        .eq('status', 'PUBLISHED')
+        .eq('is_deleted', false)
+        .or(`title.ilike.%${triggerValue}%,description.ilike.%${triggerValue}%`)
+        .order('view_count', { ascending: false })
+        .limit(5)
+
+    if (error || !data) {
+        return []
+    }
+
+    const hydratedDocs = await hydratePublishedSnapshotsForList(data)
+
+    return hydratedDocs.map(doc => ({
+        document_id: doc.id,
+        title: doc.title,
+        description: doc.description,
+        content_type: doc.content_type,
+        show_as: 'link'
+    }))
 }
 
 export async function getComments(documentId: string): Promise<KnowledgeComment[]> {
@@ -401,10 +468,17 @@ export async function getBookmarks(userId: string): Promise<KnowledgeBookmark[]>
         return []
     }
 
-    return (data || []).map(b => ({
-        ...b,
-        article: formatArticle(b.article)
-    })) as KnowledgeBookmark[]
+    const rawArticles = (data || []).map(b => b.article).filter(Boolean)
+    const articles = await hydratePublishedSnapshotsForList(rawArticles)
+    const articleMap = new Map(articles.map(article => [article.id, article]))
+
+    return (data || []).map(b => {
+        const article = b.article ? (articleMap.get(b.article.id) ?? b.article) : b.article
+        return {
+            ...b,
+            article: article ? formatArticle(article) : undefined
+        }
+    }) as KnowledgeBookmark[]
 }
 
 export async function toggleBookmark(documentId: string, userId: string): Promise<boolean> {
@@ -587,7 +661,16 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
             .select(`
                 relevance_score,
                 related_document_id,
-                related_document:documents!related_document_id(id, title, description, content_type)
+                related_document:documents!related_document_id(
+                    id,
+                    title,
+                    description,
+                    content_type,
+                    status,
+                    current_version,
+                    published_version_number,
+                    last_published_at
+                )
             `)
             .eq('source_document_id', documentId)
             .order('relevance_score', { ascending: false })
@@ -598,11 +681,15 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
             return []
         }
 
+        const relatedDocs = (data || []).map(d => d.related_document).filter(Boolean) as any[]
+        const hydratedDocs = await hydratePublishedSnapshotsForList(relatedDocs)
+        const docMap = new Map(hydratedDocs.map(doc => [doc.id, doc]))
+
         return (data || []).map(d => {
-            const doc = d.related_document as any
+            const doc = docMap.get(d.related_document_id) || (d.related_document as any) || {}
             return {
-                id: doc.id,
-                title: doc.title,
+                id: doc.id || d.related_document_id,
+                title: doc.title || 'Untitled',
                 content_type: (doc.content_type?.toLowerCase() as any) || 'document',
                 relation_type: 'automated',
                 score: d.relevance_score
@@ -650,12 +737,90 @@ export async function trackRelatedImpressions(sourceId: string, relatedIds: stri
 // HELPERS
 // ============================================================================
 
+async function hydratePublishedSnapshotIfNeeded(data: any): Promise<any> {
+    if (!data?.id) return data
+    if (data.status === 'PUBLISHED') return data
+    if (!data.published_version_number) return data
+
+    const { data: snapshot, error } = await supabase
+        .from('document_versions')
+        .select('version_number, title, description, content, file_url, status')
+        .eq('document_id', data.id)
+        .eq('version_number', data.published_version_number)
+        .maybeSingle()
+
+    if (error || !snapshot) {
+        return data
+    }
+
+    return {
+        ...data,
+        title: snapshot.title ?? data.title,
+        description: snapshot.description ?? data.description,
+        content: snapshot.content ?? data.content,
+        file_url: snapshot.file_url ?? data.file_url,
+        status: snapshot.status || 'PUBLISHED',
+        current_version: snapshot.version_number ?? data.current_version,
+        updated_at: data.last_published_at || data.updated_at
+    }
+}
+
+async function hydratePublishedSnapshotsForList(rows: any[]): Promise<any[]> {
+    if (!rows.length) return rows
+    const needsSnapshot = rows.filter(row =>
+        row?.id &&
+        row?.status !== 'PUBLISHED' &&
+        row?.published_version_number
+    )
+    if (!needsSnapshot.length) return rows
+
+    const docIds = Array.from(new Set(needsSnapshot.map(row => row.id)))
+    const versionNumbers = Array.from(new Set(needsSnapshot.map(row => row.published_version_number)))
+
+    const { data: snapshots, error } = await supabase
+        .from('document_versions')
+        .select('document_id, version_number, title, description, content, file_url, status')
+        .in('document_id', docIds)
+        .in('version_number', versionNumbers)
+
+    if (error || !snapshots) return rows
+
+    const snapshotMap = new Map(
+        snapshots.map(snapshot => [`${snapshot.document_id}:${snapshot.version_number}`, snapshot])
+    )
+
+    return rows.map(row => {
+        if (!row?.id || row?.status === 'PUBLISHED' || !row?.published_version_number) return row
+        const snapshot = snapshotMap.get(`${row.id}:${row.published_version_number}`)
+        if (!snapshot) return row
+        return {
+            ...row,
+            title: snapshot.title ?? row.title,
+            description: snapshot.description ?? row.description,
+            content: snapshot.content ?? row.content,
+            file_url: snapshot.file_url ?? row.file_url,
+            status: snapshot.status || row.status || 'PUBLISHED',
+            current_version: snapshot.version_number ?? row.current_version,
+            updated_at: row.last_published_at || row.updated_at
+        }
+    })
+}
+
+function computeReadMinutes(content?: string | null): number | undefined {
+    if (!content) return undefined
+    const stripped = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    if (!stripped) return undefined
+    return Math.max(1, Math.round(stripped.split(' ').length / 200))
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatArticle(data: any): KnowledgeArticle {
     // Handle polymorphic/linked SOP data if present from join
     const sopData = Array.isArray(data.sop) ? data.sop[0] : data.sop
     const department = Array.isArray(data.department) ? data.department[0] : data.department
     const category = Array.isArray(data.category) ? data.category[0] : data.category
+    const author = Array.isArray(data.author) ? data.author[0] : data.author
+    const lastEditor = Array.isArray(data.last_editor) ? data.last_editor[0] : data.last_editor
 
     return {
         ...data,
@@ -665,7 +830,26 @@ function formatArticle(data: any): KnowledgeArticle {
         linked_quiz_id: data.linked_quiz_id || sopData?.linked_quiz_id,
         department: department || (data.department_id ? { id: data.department_id, name: 'Department' } : undefined),
         category: category || (data.category_id ? { id: data.category_id, name: 'Category' } : undefined),
-        author: undefined,
+        version: data.current_version || data.version || 1,
+        current_version: data.current_version || data.version || 1,
+        published_version_number: data.published_version_number ?? null,
+        last_published_at: data.last_published_at ?? null,
+        estimated_read_time: data.estimated_read_time || computeReadMinutes(data.content),
+        updated_by: data.updated_by ?? null,
+        author: author
+            ? {
+                id: author.id,
+                full_name: author.full_name || 'System admin',
+                avatar_url: author.avatar_url || undefined
+            }
+            : undefined,
+        last_editor: lastEditor
+            ? {
+                id: lastEditor.id,
+                full_name: lastEditor.full_name || 'System admin',
+                avatar_url: lastEditor.avatar_url || undefined
+            }
+            : undefined,
         tags: [],
         department_access_ids: Array.isArray(data.document_department_access)
             ? data.document_department_access.map((d: any) => d.department_id)

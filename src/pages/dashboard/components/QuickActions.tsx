@@ -94,8 +94,8 @@ export function QuickActions() {
             )}>
               <action.icon className="w-6 h-6" />
             </div>
-            <span className="font-semibold text-sm">{t(`widgets.quick_actions_items.${action.key}`, action.key)}</span>
-            <span className="text-xs text-muted-foreground text-center mt-1">{t(`widgets.quick_actions_items.${action.key}_desc`, '')}</span>
+            <span className="font-semibold text-sm">{t(`widgets.quick_actions_items.${action.key}`) || action.key}</span>
+            <span className="text-xs text-muted-foreground text-center mt-1">{t(`widgets.quick_actions_items.${action.key}_desc`) || ''}</span>
           </Link>
         </motion.div>
       ))}
