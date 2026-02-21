@@ -18,6 +18,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
     const [query, setQuery] = useState('')
     const [isOpen, setIsOpen] = useState(false)
     const wrapperRef = useRef<HTMLDivElement>(null)
+    const queryRef = useRef('')
 
     // Debounce query for hook
     const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -52,9 +53,13 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
     }, [wrapperRef, onClose])
 
     const handleSelect = (url: string) => {
-        saveSearch(query)
+        const q = queryRef.current
+        if (q.trim()) {
+            saveSearch(q)
+        }
         setIsOpen(false)
         setQuery('')
+        queryRef.current = ''
         navigate(url)
         onClose?.()
     }
@@ -86,18 +91,25 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
         switch (e.key) {
             case 'ArrowDown':
                 e.preventDefault()
-                if (isOpen) setSelectedIndex(prev => (prev + 1) % flatResults.length)
-                else setIsOpen(true)
+                if (isOpen && flatResults.length > 0) {
+                    setSelectedIndex(prev => (prev + 1) % flatResults.length)
+                } else {
+                    setIsOpen(true)
+                }
                 break
             case 'ArrowUp':
                 e.preventDefault()
-                if (isOpen) setSelectedIndex(prev => (prev - 1 + flatResults.length) % flatResults.length)
+                if (isOpen && flatResults.length > 0) {
+                    setSelectedIndex(prev => (prev - 1 + flatResults.length) % flatResults.length)
+                }
                 break
             case 'Enter':
                 e.preventDefault()
-                if (isOpen && flatResults[selectedIndex]) {
+                if (isOpen && flatResults.length > 0 && flatResults[selectedIndex]) {
                     handleSelect(flatResults[selectedIndex].url)
                 } else if (query.trim().length > 0) {
+                    // Save the search even if no results are selected yet
+                    saveSearch(queryRef.current)
                     setIsOpen(true)
                 }
                 break
@@ -138,6 +150,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                     placeholder={t('nav:search_placeholder')}
                     value={query}
                     onChange={(e) => {
+                        queryRef.current = e.target.value
                         setQuery(e.target.value)
                         setSelectedIndex(0)
                         setIsOpen(true)
@@ -151,6 +164,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                         type="button"
                         onClick={() => {
                             setQuery('')
+                            queryRef.current = ''
                             setSelectedIndex(0)
                             setIsOpen(false)
                         }}

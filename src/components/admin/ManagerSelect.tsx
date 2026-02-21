@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { usePotentialManagers } from '@/hooks/useOrganization'
 import { Badge } from '@/components/ui/badge'

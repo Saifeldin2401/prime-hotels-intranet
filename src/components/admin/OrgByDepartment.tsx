@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface Employee {
     id: string
@@ -41,6 +41,17 @@ interface OrgByDepartmentProps {
     onEmployeeClick?: (employee: Employee) => void
     selectedPropertyId?: string
     searchTerm?: string
+}
+
+interface EmployeeRow {
+    id: string
+    full_name: string
+    email: string
+    job_title: string | null
+    reporting_to: string | null
+    is_active: boolean
+    user_departments?: { department_id: string }[]
+    user_properties?: { property_id: string }[]
 }
 
 export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTerm }: OrgByDepartmentProps) {
@@ -96,16 +107,18 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
                 const propertyDepts = (departments || [])
                     .filter(d => d.property_id === prop.id)
                     .map(dept => {
-                        const deptEmployees = (employees || []).filter((emp: any) =>
-                            emp.user_departments?.some((ud: any) => ud.department_id === dept.id)
-                        ).map((emp: any) => ({
-                            id: emp.id,
-                            full_name: emp.full_name,
-                            email: emp.email,
-                            job_title: emp.job_title,
-                            reporting_to: emp.reporting_to,
-                            is_active: emp.is_active
-                        }))
+                        const employeeRows = (employees || []) as EmployeeRow[]
+
+                        const deptEmployees: Employee[] = employeeRows
+                            .filter((emp) => emp.user_departments?.some((ud) => ud.department_id === dept.id))
+                            .map((emp) => ({
+                                id: emp.id,
+                                full_name: emp.full_name,
+                                email: emp.email,
+                                job_title: emp.job_title,
+                                reporting_to: emp.reporting_to,
+                                is_active: emp.is_active
+                            }))
 
                         return {
                             id: dept.id,

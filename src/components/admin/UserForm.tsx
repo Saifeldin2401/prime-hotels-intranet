@@ -17,7 +17,7 @@ import { LoadingButton } from '@/components/loading'
 import { ZodError } from 'zod'
 
 
-import type { Profile, Property, Department } from '@/lib/types'
+import type { Profile, Property } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
 import { ArrowLeft } from 'lucide-react'
 import { useDepartments } from '@/hooks/useDepartments'
@@ -40,6 +40,25 @@ import { cn } from "@/lib/utils"
 interface UserFormProps {
   user?: Profile
   onClose: () => void
+}
+
+interface PotentialManagerRow {
+  id: string
+  full_name: string
+  job_title: string | null
+  staff_id: string | null
+  user_roles?: { role: string }[]
+  user_departments?: { department_id: string }[]
+  user_properties?: { property_id: string }[]
+}
+
+interface PotentialManager {
+  id: string
+  full_name: string
+  job_title: string | null
+  staff_id: string | null
+  roles: string[]
+  isDeptHead: boolean
 }
 
 const isValidUUID = (value: string) =>
@@ -217,31 +236,33 @@ export function UserForm({ user, onClose }: UserFormProps) {
       // Filter to only include people with management roles
       const managerRoles = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
 
-      return (data || [])
-        .filter((p: any) => {
-          const roles = p.user_roles?.map((r: any) => r.role) || []
+      const rows = (data || []) as PotentialManagerRow[]
+
+      return rows
+        .filter((p: PotentialManagerRow) => {
+          const roles = p.user_roles?.map((r) => r.role) || []
           const hasManagerRole = roles.some((r: string) => managerRoles.includes(r))
           if (!hasManagerRole) return false
 
           // Check if they're in the same department or property
-          const deptIds = p.user_departments?.map((d: any) => d.department_id) || []
-          const propIds = p.user_properties?.map((p: any) => p.property_id) || []
+          const deptIds = p.user_departments?.map((d) => d.department_id) || []
+          const propIds = p.user_properties?.map((pp) => pp.property_id) || []
 
           const sameDept = selectedDepartments.some(d => deptIds.includes(d))
           const sameProp = selectedProperties.some(p => propIds.includes(p))
 
           return sameDept || sameProp
         })
-        .map((p: any) => ({
+        .map((p: PotentialManagerRow): PotentialManager => ({
           id: p.id,
           full_name: p.full_name,
           job_title: p.job_title,
           staff_id: p.staff_id,
-          roles: p.user_roles?.map((r: any) => r.role) || [],
-          isDeptHead: (p.user_roles?.map((r: any) => r.role) || []).includes('department_head')
+          roles: p.user_roles?.map((r) => r.role) || [],
+          isDeptHead: (p.user_roles?.map((r) => r.role) || []).includes('department_head')
         }))
         // Sort: department heads first, then by name
-        .sort((a: any, b: any) => {
+        .sort((a: PotentialManager, b: PotentialManager) => {
           if (a.isDeptHead && !b.isDeptHead) return -1
           if (!a.isDeptHead && b.isDeptHead) return 1
           return a.full_name.localeCompare(b.full_name)
@@ -329,20 +350,20 @@ export function UserForm({ user, onClose }: UserFormProps) {
   }, [user, loadUserData, hydrateStateFromUser])
 
   // Auto-suggest manager when department changes (for new users)
-  const maybeAutoSuggestManager = useCallback((managers: any[] | undefined) => {
+  const maybeAutoSuggestManager = useCallback((managers: PotentialManager[] | undefined) => {
     if (user || reportingTo) return
     if (!managers || managers.length === 0) return
-    const deptHead = managers.find((m: any) => m.isDeptHead)
+    const deptHead = managers.find((m) => m.isDeptHead)
     if (!deptHead) return
     setReportingTo(deptHead.id)
     toast({
-      title: t('form.success.manager_suggested'),
-      description: t('form.success.manager_suggested_desc', { name: deptHead.full_name, jobTitle: deptHead.job_title || 'Manager' }),
+      title: t('form.manager_auto_selected'),
+      description: t('form.manager_auto_selected_desc', { name: deptHead.full_name, jobTitle: deptHead.job_title || 'Manager' }),
     })
   }, [reportingTo, t, toast, user])
 
   useEffect(() => {
-    maybeAutoSuggestManager(potentialManagers as any[] | undefined)
+    maybeAutoSuggestManager(potentialManagers as PotentialManager[] | undefined)
   }, [potentialManagers, maybeAutoSuggestManager])
 
   // Handle job title selection from DB
@@ -915,7 +936,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     className="w-full justify-between font-normal text-left"
                   >
                     {reportingTo
-                      ? potentialManagers?.find((m: any) => m.id === reportingTo)?.full_name || t('form.selected_manager')
+                      ? potentialManagers?.find((m) => m.id === reportingTo)?.full_name || t('form.selected_manager')
                       : t('form.select_manager')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -957,7 +978,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                             <span className="text-muted-foreground">{t('form.no_manager_top')}</span>
                           </div>
                         </CommandItem>
-                        {potentialManagers?.map((manager: any) => (
+                        {potentialManagers?.map((manager: PotentialManager) => (
                           <CommandItem
                             key={manager.id}
                             value={manager.full_name}
