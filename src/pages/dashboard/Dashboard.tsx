@@ -191,8 +191,8 @@ export function IntegratedDashboard() {
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950/50 p-6 space-y-8">
       <WelcomeHeader
         config={{
-          title: `Welcome${profile?.full_name ? `, ${profile.full_name}` : ''}`,
-          subtitle: 'Operational dashboard overview',
+          title: `${t('welcome_header.welcome') || 'Welcome'}${profile?.full_name ? `, ${profile.full_name}` : ''}`,
+          subtitle: t('welcome_header.subtitle') || 'Operational dashboard overview',
           theme: 'navy',
           accentColor: 'gold'
         }}

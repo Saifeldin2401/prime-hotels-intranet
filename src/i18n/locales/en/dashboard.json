@@ -52,6 +52,14 @@
             "maintenance_desc": "Track maintenance requests",
             "analytics": "Analytics",
             "analytics_desc": "View performance data"
+        },
+        "employee_of_the_month": {
+            "title": "Employee of the Month",
+            "congratulations": "Congratulations!",
+            "no_winner": "No winner announced yet",
+            "view_previous": "View Previous Winners",
+            "manage": "Manage EOM",
+            "no_employee_found": "No Employee Found"
         }
     },
     "schedule": {
@@ -187,11 +195,13 @@
         "no_employee_found": "No Employee Found"
     },
     "birthdays": {
-        "title": "Upcoming Birthdays",
+        "title": "Today's Birthdays",
+        "desc": "Celebrate team members with birthdays today.",
         "today": "Today!",
         "tomorrow": "Tomorrow",
         "in_days": "In {{count}} days",
-        "no_birthdays": "No birthdays in the next 7 days.",
+        "no_birthdays": "No birthdays today.",
+        "no_birthdays_week": "No birthdays in the next 7 days.",
         "send_wish": "Send Birthday Wish"
     },
     "schedule": {
@@ -685,5 +695,19 @@
         "welcome_team": "Welcome {{name}} to the team!",
         "joined_as": "Joined as {{role}}"
     },
-    "subtitle": "Your centralized hub for operational knowledge"
+    "subtitle": "Your centralized hub for operational knowledge",
+    "welcome_header": {
+        "welcome": "Welcome",
+        "subtitle": "Operational dashboard overview",
+        "good_morning": "Good morning",
+        "good_afternoon": "Good afternoon",
+        "good_evening": "Good evening",
+        "good_night": "Good night",
+        "online": "Online"
+    },
+    "quick_stats": {
+        "tasks": "Tasks",
+        "meetings": "Meetings",
+        "completion": "Completion"
+    }
 }

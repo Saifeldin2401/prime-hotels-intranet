@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazy, createElement } from 'react'
 import type { AppRole } from '@/lib/constants'
 
 // Define the shape of a Widget configuration in the registry
@@ -16,23 +16,41 @@ export interface WidgetConfig {
     defaultVisible?: boolean
 }
 
+const MissingWidget = ({ name }: { name: string }) =>
+    createElement(
+        'div',
+        { className: 'rounded-xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-500' },
+        `${name} failed to load.`
+    )
+
+const lazyWidget = (loader: () => Promise<any>, exportName: string) =>
+    lazy(async () => {
+        const module = await loader()
+        const component = module?.[exportName] ?? module?.default
+        if (!component) {
+            console.error(`Widget export "${exportName}" not found.`)
+            return { default: () => createElement(MissingWidget, { name: exportName }) }
+        }
+        return { default: component }
+    })
+
 // Lazy load the widget components to optimize bundle size
-const QuickInsights = lazy(() => import('./QuickInsights').then(module => ({ default: module.QuickInsights })))
-const MotivationWidget = lazy(() => import('./MotivationWidget').then(module => ({ default: module.MotivationWidget })))
-const StatsGrid = lazy(() => import('./StatsGrid').then(module => ({ default: module.StatsGrid })))
-const QuickActions = lazy(() => import('./QuickActions').then(module => ({ default: module.QuickActions })))
-const KnowledgeBaseWidget = lazy(() => import('./KnowledgeBaseWidget').then(module => ({ default: module.KnowledgeBaseWidget })))
-const MaintenanceWidget = lazy(() => import('./MaintenanceWidget').then(module => ({ default: module.MaintenanceWidget })))
-const TrainingProgress = lazy(() => import('./TrainingProgress').then(module => ({ default: module.TrainingProgress })))
-const AnnouncementsWidget = lazy(() => import('./AnnouncementsWidget').then(module => ({ default: module.AnnouncementsWidget })))
-const TeamWidget = lazy(() => import('./TeamWidget').then(module => ({ default: module.TeamWidget })))
-const PerformanceChart = lazy(() => import('./PerformanceChart').then(module => ({ default: module.PerformanceChart })))
-const EmployeeOfMonthWidget = lazy(() => import('./EmployeeOfMonthWidget').then(module => ({ default: module.EmployeeOfMonthWidget })))
-const TasksWidget = lazy(() => import('./TasksWidget').then(module => ({ default: module.TasksWidget })))
-const CalendarWidget = lazy(() => import('./CalendarWidget').then(module => ({ default: module.CalendarWidget })))
-const HospitalityNewsWidget = lazy(() => import('./HospitalityNewsWidget').then(module => ({ default: module.HospitalityNewsWidget })))
-const TodaysBirthdaysWidget = lazy(() => import('./TodaysBirthdaysWidget').then(module => ({ default: module.TodaysBirthdaysWidget })))
-const OnlineUsersWidget = lazy(() => import('./OnlineUsersWidget').then(module => ({ default: module.OnlineUsersWidget })))
+const QuickInsights = lazyWidget(() => import('./QuickInsights'), 'QuickInsights')
+const MotivationWidget = lazyWidget(() => import('./MotivationWidget'), 'MotivationWidget')
+const StatsGrid = lazyWidget(() => import('./StatsGrid'), 'StatsGrid')
+const QuickActions = lazyWidget(() => import('./QuickActions'), 'QuickActions')
+const KnowledgeBaseWidget = lazyWidget(() => import('./KnowledgeBaseWidget'), 'KnowledgeBaseWidget')
+const MaintenanceWidget = lazyWidget(() => import('./MaintenanceWidget'), 'MaintenanceWidget')
+const TrainingProgress = lazyWidget(() => import('./TrainingProgress'), 'TrainingProgress')
+const AnnouncementsWidget = lazyWidget(() => import('./AnnouncementsWidget'), 'AnnouncementsWidget')
+const TeamWidget = lazyWidget(() => import('./TeamWidget'), 'TeamWidget')
+const PerformanceChart = lazyWidget(() => import('./PerformanceChart'), 'PerformanceChart')
+const EmployeeOfMonthWidget = lazyWidget(() => import('./EmployeeOfMonthWidget'), 'EmployeeOfMonthWidget')
+const TasksWidget = lazyWidget(() => import('./TasksWidget'), 'TasksWidget')
+const CalendarWidget = lazyWidget(() => import('./CalendarWidget'), 'CalendarWidget')
+const HospitalityNewsWidget = lazyWidget(() => import('./HospitalityNewsWidget'), 'HospitalityNewsWidget')
+const TodaysBirthdaysWidget = lazyWidget(() => import('./TodaysBirthdaysWidget'), 'TodaysBirthdaysWidget')
+const OnlineUsersWidget = lazyWidget(() => import('./OnlineUsersWidget'), 'OnlineUsersWidget')
 
 /**
  * WIDGET_REGISTRY

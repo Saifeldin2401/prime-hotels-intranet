@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Cake, Loader2, Gift } from 'lucide-react'
 import { useTodaysBirthdays } from '@/hooks/useEmployeeDirectory'
+import { useTranslation } from 'react-i18next'
 
 function getInitials(name?: string | null) {
   return name
@@ -19,6 +20,7 @@ function getInitials(name?: string | null) {
 }
 
 export function TodaysBirthdaysWidget() {
+  const { t } = useTranslation('dashboard')
   const navigate = useNavigate()
   const { data: birthdays = [], isLoading } = useTodaysBirthdays()
 
@@ -29,11 +31,11 @@ export function TodaysBirthdaysWidget() {
         <CardTitle className="text-lg flex items-center gap-2">
           <Link to="/directory" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Cake className="w-5 h-5 text-rose-500" />
-            Today's Birthdays
+            {t('widgets.birthdays.title') || "Today's Birthdays"}
           </Link>
         </CardTitle>
         <CardDescription>
-          Celebrate team members with birthdays today.
+          {t('widgets.birthdays.desc') || 'Celebrate team members with birthdays today.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -43,7 +45,7 @@ export function TodaysBirthdaysWidget() {
           </div>
         ) : birthdays.length === 0 ? (
           <div className="text-sm text-muted-foreground py-4">
-            No birthdays today.
+            {t('widgets.birthdays.no_birthdays') || 'No birthdays today.'}
           </div>
         ) : (
           birthdays.slice(0, 6).map((person) => (

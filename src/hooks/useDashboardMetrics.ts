@@ -67,9 +67,8 @@ export function useDashboardMetrics(): DashboardMetrics {
       // 1. Task Completion Metrics
       const { data: taskMetrics } = await supabase.rpc('get_task_completion_metrics', {
         p_user_id: user.id,
-        p_property_id: propertyFilter,
-        p_current_week_start: currentWeekStart.toISOString(),
-        p_previous_week_start: previousWeekStart.toISOString()
+        p_start_date: currentWeekStart.toISOString(),
+        p_end_date: new Date().toISOString()
       })
       
       // Fallback if RPC doesn't exist - query directly
@@ -81,7 +80,7 @@ export function useDashboardMetrics(): DashboardMetrics {
           .select('status', { count: 'exact' })
           .gte('created_at', currentWeekStart.toISOString())
           .eq('is_deleted', false)
-          .eq('created_by', user.id)
+          .eq('created_by_id', user.id)
         
         const { data: currentCompleted } = await supabase
           .from('tasks')
@@ -89,7 +88,7 @@ export function useDashboardMetrics(): DashboardMetrics {
           .gte('created_at', currentWeekStart.toISOString())
           .eq('status', 'completed')
           .eq('is_deleted', false)
-          .eq('created_by', user.id)
+          .eq('created_by_id', user.id)
         
         // Previous week tasks
         const { data: prevTasks } = await supabase
@@ -98,7 +97,7 @@ export function useDashboardMetrics(): DashboardMetrics {
           .gte('created_at', previousWeekStart.toISOString())
           .lt('created_at', currentWeekStart.toISOString())
           .eq('is_deleted', false)
-          .eq('created_by', user.id)
+          .eq('created_by_id', user.id)
         
         const { data: prevCompleted } = await supabase
           .from('tasks')
@@ -107,7 +106,7 @@ export function useDashboardMetrics(): DashboardMetrics {
           .lt('created_at', currentWeekStart.toISOString())
           .eq('status', 'completed')
           .eq('is_deleted', false)
-          .eq('created_by', user.id)
+          .eq('created_by_id', user.id)
         
         const currentTotal = currentTasks?.length || 0
         const currentDone = currentCompleted?.length || 0
@@ -127,7 +126,6 @@ export function useDashboardMetrics(): DashboardMetrics {
         .from('training_progress')
         .select('status, completed_at, assigned_at')
         .eq('user_id', user.id)
-        .eq('is_deleted', false)
       
       const currentTraining = trainingData?.filter(t => {
         const assigned = new Date(t.assigned_at)
@@ -156,7 +154,7 @@ export function useDashboardMetrics(): DashboardMetrics {
         .eq('is_deleted', false)
         .not('completed_at', 'is', null)
         .gte('created_at', previousWeekStart.toISOString())
-        .eq('created_by', user.id)
+        .eq('created_by_id', user.id)
       
       const calculateAvgResponseTime = (tasks: any[]) => {
         if (!tasks || tasks.length === 0) return 0
@@ -189,7 +187,7 @@ export function useDashboardMetrics(): DashboardMetrics {
       const { data: attendanceData } = await supabase
         .from('attendance')
         .select('status, date')
-        .eq('user_id', user.id)
+        .eq('employee_id', user.id)
         .gte('date', previousWeekStart.toISOString().split('T')[0])
       
       const currentAttendance = attendanceData?.filter(a => {

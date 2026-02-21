@@ -70,7 +70,7 @@ export function EmployeeOfMonthWidget() {
                 <div className="flex items-center justify-between z-10">
                     <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-500">
                         <Trophy className="w-5 h-5 text-amber-500" />
-                        {t('widgets.employeeOfMonth.title', 'Employee of the Month')}
+                        {t('widgets.employee_of_the_month.title', 'Employee of the Month')}
                     </CardTitle>
                     {winner && (
                         <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-full">
@@ -129,7 +129,7 @@ export function EmployeeOfMonthWidget() {
                         <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-3">
                             <User className="w-8 h-8 text-gray-400" />
                         </div>
-                        <p className="text-sm font-medium">{t('widgets.employeeOfMonth.empty', 'No winner announced yet')}</p>
+                        <p className="text-sm font-medium">{t('widgets.employee_of_the_month.no_winner', 'No winner announced yet')}</p>
                     </div>
                 )}
             </CardContent>

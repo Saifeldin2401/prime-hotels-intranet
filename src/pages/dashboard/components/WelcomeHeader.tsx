@@ -250,7 +250,7 @@ export function WelcomeHeader({
               
               <div className="flex items-center gap-2 text-white/60 text-sm">
                 <Calendar className="w-4 h-4" />
-                <span>{format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+                <span>{format(new Date(), 'EEEE, MMMM d, yyyy', { locale: isRTL ? ar : undefined })}</span>
               </div>
               
               <LiveClock />
