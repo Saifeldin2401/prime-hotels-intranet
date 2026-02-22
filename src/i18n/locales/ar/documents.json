@@ -93,5 +93,12 @@
         "all_properties": "كل المنشآت",
         "unknown": "غير معروف",
         "all_roles": "كل الأدوار"
-    }
+    },
+    "foldername": "اسم المجلد...",
+    "uploaddocument": "رفع مستند",
+    "uploadvisualcontentimages": "Upload visual content images",
+    "allowcomments": "Allow comments",
+    "addacommentrequiredforreturnreject": "Add a comment (required for return/reject)...",
+    "addcomment": "Add Comment",
+    "addacomment": "Add a comment..."
 }

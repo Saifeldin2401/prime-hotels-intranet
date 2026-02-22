@@ -151,6 +151,12 @@ i18n
     },
   });
 
+// Set initial direction based on detected/loaded language
+const initialLng = i18n.language || 'en';
+const initialDirection = initialLng === 'ar' ? 'rtl' : 'ltr';
+document.documentElement.dir = initialDirection;
+document.documentElement.lang = initialLng;
+
 // Handle RTL direction on language change
 i18n.on('languageChanged', (lng) => {
   const direction = lng === 'ar' ? 'rtl' : 'ltr';

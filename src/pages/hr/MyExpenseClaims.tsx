@@ -123,7 +123,7 @@ export default function MyExpenseClaims() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Category</Label>
+                    <Label>{t('common:category')}</Label>
                     <Select value={category} onValueChange={(value) => setCategory(value as ExpenseClaim['category'])}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
@@ -169,7 +169,7 @@ export default function MyExpenseClaims() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <Label>{t('common:description')}</Label>
                   <Textarea
                     rows={3}
                     value={description}

@@ -166,7 +166,7 @@ export default function ChangePassword() {
                     {error && (
                         <Alert variant="destructive" className="mb-6">
                             <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Error</AlertTitle>
+                            <AlertTitle>{t('common:error')}</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}

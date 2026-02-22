@@ -94,6 +94,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         created_by: profile.id,
         current_version: 1,
         file_size: file.size,
+        content_type: 'document', // Mark as file document (not knowledge base article)
       }
 
       if (visibility === 'property') {
@@ -218,7 +219,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t('common:title')}</Label>
             <Input
               id="title"
               value={title}
@@ -229,7 +230,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('common:description')}</Label>
             <Textarea
               id="description"
               value={description}
@@ -275,10 +276,10 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
           {visibility === 'department' && (
             <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
+              <Label htmlFor="department">{t('common:department')}</Label>
               <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
                 <SelectTrigger id="department" disabled={uploading}>
-                  <SelectValue placeholder="Select department" />
+                  <SelectValue placeholder={t("common:select_department")} />
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((department) => (

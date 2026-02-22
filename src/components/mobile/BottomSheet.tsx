@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+import { useTranslation } from 'react-i18next'
+
 interface BottomSheetProps {
     open: boolean
     onClose: () => void
@@ -33,6 +35,7 @@ export function BottomSheet({
     snapPoints = ['content'],
     defaultSnap = 'content'
 }: BottomSheetProps) {
+    const { t } = useTranslation('common')
     const [isVisible, setIsVisible] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
     const [translateY, setTranslateY] = useState(0)
@@ -142,7 +145,7 @@ export function BottomSheet({
                             size="icon"
                             onClick={onClose}
                             className="touch-target"
-                            aria-label="Close"
+                            aria-label={t('actions.close', { defaultValue: 'Close' })}
                         >
                             <X className="h-5 w-5" />
                         </Button>

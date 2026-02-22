@@ -1,4 +1,4 @@
-import { act, render } from '@testing-library/react'
+import { act, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
 
@@ -53,13 +53,17 @@ describe('GlobalSearch', () => {
     it('supports keyboard selection flow and navigates to selected result', async () => {
         const { getByPlaceholderText } = render(<GlobalSearch />)
         const input = getByPlaceholderText('nav:search_placeholder') as HTMLInputElement
-        act(() => {
-            input.value = 'policy'
-            input.dispatchEvent(new Event('input', { bubbles: true }))
-            input.dispatchEvent(new Event('change', { bubbles: true }))
+
+        await act(async () => {
+            fireEvent.focus(input)
+            fireEvent.change(input, { target: { value: 'policy' } })
+
+            // Flush debounce
             vi.advanceTimersByTime(350)
-            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
-            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+
+            fireEvent.keyDown(input, { key: 'ArrowDown' })
+            fireEvent.keyDown(input, { key: 'Enter' })
+
             vi.runOnlyPendingTimers()
         })
 

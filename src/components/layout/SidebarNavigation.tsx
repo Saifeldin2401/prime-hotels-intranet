@@ -150,7 +150,7 @@ export function SidebarNavigation({
         title={collapsed && !isMobile ? t(item.title, { defaultValue: item.title }) : undefined}
       >
         {item.isActive && collapsed && !isMobile && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-hotel-gold rounded-e-full" />
+          <div className="absolute start-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-hotel-gold rounded-e-full" />
         )}
 
         <Icon className={cn(
@@ -310,7 +310,7 @@ export function SidebarNavigation({
             isMobile && "h-14 border-none bg-transparent"
           )}>
             {!isMobile && (
-              <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute left-1/2 transform -translate-x-1/2")}>
+              <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute start-1/2 transform -translate-x-1/2")}>
                 <img
                   src="/prime-logo-light.png"
                   alt="Prime Hotels"
@@ -323,7 +323,7 @@ export function SidebarNavigation({
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="absolute right-6 top-0 text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors"
+                className="absolute end-6 top-0 text-gray-300 hover:bg-hotel-navy-light hover:text-white transition-colors"
                 aria-label={t('common:actions.close', "Close sidebar")}
               >
                 <X className="h-6 w-6" />
@@ -334,7 +334,7 @@ export function SidebarNavigation({
                 variant="ghost"
                 size="icon"
                 onClick={onToggleCollapse}
-                className="absolute right-2 text-gray-400 hover:bg-hotel-navy-light hover:text-white h-8 w-8 transition-colors"
+                className="absolute end-2 text-gray-400 hover:bg-hotel-navy-light hover:text-white h-8 w-8 transition-colors"
                 aria-label={t('nav.collapse', "Collapse sidebar")}
               >
                 <ChevronDown className="h-4 w-4 ltr:rotate-90 rtl:-rotate-90" />
@@ -409,7 +409,7 @@ export function SidebarNavigation({
                       <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
-                          <span>Status</span>
+                          <span>{t('common:status')}</span>
                         </div>
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-2xl">
@@ -431,23 +431,23 @@ export function SidebarNavigation({
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
                       onSelect={() => navigate('/profile')}
                     >
-                      <User className="mr-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
+                      <User className="me-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
                       <span>{t('nav.my_profile', 'My Profile')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
                       onSelect={() => navigate('/settings')}
                     >
-                      <Settings className="mr-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
+                      <Settings className="me-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
                       <span>{t('nav.settings', 'Settings')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
                       onSelect={() => navigate('/notifications')}
                     >
-                      <Bell className="mr-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
+                      <Bell className="me-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
                       <span>{t('notifications', 'Notifications')}</span>
-                      <Badge className="ml-auto h-4 px-1 bg-hotel-gold text-hotel-navy text-[10px]">New</Badge>
+                      <Badge className="ms-auto h-4 px-1 bg-hotel-gold text-hotel-navy text-[10px]">New</Badge>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator className="bg-white/10" />
@@ -456,7 +456,7 @@ export function SidebarNavigation({
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
                       onSelect={() => navigate('/training/certificates')}
                     >
-                      <Sparkles className="mr-2 h-4 w-4 text-hotel-gold" />
+                      <Sparkles className="me-2 h-4 w-4 text-hotel-gold" />
                       <span>{t('my_awards', 'My Awards')}</span>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -467,7 +467,7 @@ export function SidebarNavigation({
                         className="focus:bg-red-900/30 focus:text-red-400 text-red-400 cursor-pointer"
                         onSelect={(e) => e.preventDefault()}
                       >
-                        <LogOut className="mr-2 h-4 w-4" />
+                        <LogOut className="me-2 h-4 w-4" />
                         <span>{t('nav.logout', 'Sign out')}</span>
                       </DropdownMenuItem>
                     </AlertDialogTriggerRoot>

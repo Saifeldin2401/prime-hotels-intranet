@@ -1,634 +1,732 @@
 
+
 import { supabase } from './supabase'
 
+
+
 // 🛡️ PRIMARY MODEL (Confirmed working on HF Router via 'together' provider)
+
 const FALLBACK_MODELS = [
+
   'Qwen/Qwen2.5-7B-Instruct'
+
 ]
 
+
+
 interface SOPAnalysis {
+
   title: string
+
   description: string
+
   department: string
+
   category: string
+
   priority: 'low' | 'medium' | 'high' | 'critical'
+
   contentHtml: string
+
 }
+
+
 
 interface QuizQuestion {
+
   question_text: string
+
   question_type: string
+
   options?: string[]
+
   correct_answer: string
+
   points: number
+
   explanation?: string
+
   hint?: string
+
   difficulty_level?: string
-  source_snippet?: string
-  linked_section?: string
-  confidence_score?: number
+
 }
+
+
 
 const cleanText = (text: string): string => {
+
   return text
+
     .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+
     .replace(/[þÿ]/g, '')
+
     .replace(/\s+/g, ' ')
+
     .trim()
+
 }
+
+
 
 // 🧱 PROXY AI CALLER via Supabase Edge Function
+
 async function callHuggingFace(model: string, prompt: string) {
+
   try {
+
     const { data, error } = await supabase.functions.invoke('process-ai-request', {
+
       body: { model, prompt }
+
     })
 
+
+
     if (error) {
+
       // Hard network error (500/404 from Supabase itself)
+
       console.error("Critical Edge Error:", error)
+
       throw new Error(`Edge Function Connectivity Error: ${error.message}`)
+
     }
+
+
 
     if (data && data.success === false) {
+
       // Check for session expiry
+
       if (data.error && (data.error.includes('Session expired') || data.error.includes('Unauthorized'))) {
+
         throw new Error('Your session has expired. Please refresh the page to continue using AI features.')
+
       }
+
       // Soft failure from Edge Function (e.g. HF API 400/500)
+
       console.warn(`Model ${model} rejected:`, data.error)
+
       throw new Error(data.error)
+
     }
+
+
 
     // Support both 'generated_text' (HF style), 'result' (OpenAI style), and 'response' (Edge Function format)
+
     return (data.response || data.generated_text || data.result) as string
+
   } catch (error: unknown) {
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
     console.warn(`Model ${model} call failed via proxy:`, errorMessage)
+
     throw error // Re-throw to trigger fallback loop
+
   }
+
 }
+
+
 
 // 🛡️ SMART LOCAL INTELLIGENCE (Fallback)
+
 const heuristicAnalysis = (text: string): SOPAnalysis => {
+
   const cleaned = cleanText(text)
+
   const sentences = cleaned.split('. ').filter(s => s.length > 20)
+
   const title = sentences[0] ? sentences[0].substring(0, 80) : 'Extracted Standard Operating Procedure'
 
+
+
   // Format extraction into HTML
+
   let formattedHtml = `<h2>1. Procedure Overview</h2><p>Extracted from uploaded document.</p>`
+
   formattedHtml += `<h2>2. Key Instructions</h2><ul class="list-disc pl-6 space-y-2">`
+
   sentences.slice(1, 15).forEach(s => formattedHtml += `<li>${s}.</li>`)
+
   formattedHtml += `</ul>`
+
   formattedHtml += `<h2>3. Compliance Requirements</h2><p>Staff must adhere to these guidelines at all times.</p>`
 
+
+
   return {
+
     title,
+
     description: "Automatically generated from document content.",
+
     department: 'Operations',
+
     category: 'General',
+
     priority: 'medium',
+
     contentHtml: formattedHtml
+
   }
+
 }
+
+
 
 const heuristicQuiz = (): QuizQuestion[] => {
+
   return [
+
     {
+
       question_text: "What is the primary objective of this SOP?",
+
       question_type: "mcq",
+
       options: ["Ensure Operational Consistency", "Reduce Costs", "Marketing usage", "Staff Scheduling"],
+
       correct_answer: "Ensure Operational Consistency",
-      points: 10,
-      source_snippet: "Extracted from provided SOP content."
+
+      points: 10
+
     }
+
   ]
+
 }
 
+
+
 export const aiService = {
+
   async analyzeSOP(text: string): Promise<SOPAnalysis> {
+
     const cleanedText = cleanText(text)
+
     const context = cleanedText.substring(0, 1500)
 
+
+
     const prompt = `You are a Hotel Operations Specialist. Extract the SOP from the text below.
+
     
+
     Instruction: Format the content for hotel staff. Use clear headings (<h3>) and bullet points (<ul><li>).
+
     Tone: Professional, Clear, and Direct.
+
     
+
     Return VALID JSON ONLY with this structure:
+
     {
+
       "title": "SOP Title",
+
       "description": "Short description",
+
       "department": "Department Name",
+
       "category": "Category Name",
+
       "priority": "medium",
+
       "contentHtml": "<h3>1. Purpose</h3><p>...</p><h3>2. Steps</h3><ul><li>Step 1</li></ul>"
+
     }
+
+
 
     Do not add markdown formatting like \`\`\`json. Just the raw JSON object.
 
+
+
     Document Text:
+
     ${context}`
+
+
 
     // Try each model in the list until one works
+
     for (const model of FALLBACK_MODELS) {
+
       try {
+
         const generatedText = await callHuggingFace(model, prompt)
+
         const cleanJson = generatedText.replace(/```json\n?|\n?```/g, '').trim()
+
         const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
 
+
+
         if (jsonMatch) {
+
           return JSON.parse(jsonMatch[0])
+
         }
+
       } catch (e: unknown) {
+
         console.warn(`⚠️ Model ${model} failed, switch to next...`)
+
       }
+
     }
+
+
 
     // If ALL models fail
+
     console.error('🔥 All AI models failed. Engaging Smart Local Fallback.')
+
     return heuristicAnalysis(text)
+
   },
+
+
 
   async generateQuiz(request: {
+
     sopContent: string,
+
     count?: number,
+
     types?: string[],
+
     difficulty?: string,
+
     language?: string,
+
     includeHints?: boolean,
-    includeExplanations?: boolean,
-    groundedOnly?: boolean,
-    includeCitations?: boolean,
-    sourceTitle?: string
+
+    includeExplanations?: boolean
+
   }): Promise<QuizQuestion[]> {
+
     const context = request.sopContent.replace(/<[^>]*>/g, '').substring(0, 3000)
+
     const count = request.count || 5
+
     const types = request.types?.join(', ') || 'mcq, true_false, fill_blank'
+
     const difficulty = request.difficulty || 'medium'
+
     const language = request.language || 'English'
+
     const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
-    const groundedInstruction = request.groundedOnly
-      ? 'ONLY use facts stated in the provided content. Do not add external knowledge. If a fact is not in the content, skip it.'
-      : 'You may use general knowledge to clarify, but prioritize the provided content.'
-    const citationsInstruction = request.includeCitations
-      ? 'Include a short "source_snippet" (1-2 sentences) quoted or closely paraphrased from the provided content.'
-      : 'Do NOT include any source_snippet field.'
-    const sourceTitle = request.sourceTitle ? `Source Title: ${request.sourceTitle}` : ''
-    const citationField = request.includeCitations
-      ? '\n        "source_snippet": "Short source excerpt from the provided content"'
-      : ''
+
+
 
     const prompt = `You are a Senior Hotel Training Manager. Create EXACTLY ${count} quiz questions based on the SOP content below.
+
     
+
     Target Audience: Hotel Staff.
+
     Tone: Professional, Clear, and Educational.
+
     Target Language: ${language}
-    ${sourceTitle}
+
     
+
     
+
     REQUIREMENTS:
+
     - Number of questions: EXACTLY ${count} (It is CRITICAL that you generate ${count} items)
+
     - Question types: ${types}
+
     - Difficulty level: ${difficulty}
+
     - ${request.includeHints ? 'Include a helpful "hint" for each question' : 'Do NOT include hints'}
+
     - ${request.includeExplanations ? 'Include a clear "explanation" for why the answer is correct' : 'Do NOT include explanations'}
-    - Grounding: ${groundedInstruction}
-    - Citations: ${citationsInstruction}
+
     ${isArabic ? '- OUTPUT ONLY IN ARABIC. Translate content where necessary.' : ''}
+
     
+
     Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTLY ${count} objects.
+
     Structure:
+
     [
+
       {
+
         "question_text": "Question 1 Content in ${language}",
+
         "question_type": "mcq",
+
         "options": ["Opt 1", "Opt 2", "Opt 3", "Opt 4"], 
+
         "correct_answer": "Opt 2",
+
         "points": 10,
+
         "explanation": "Exp 1",
-        "hint": "Hint 1"${citationField}
+
+        "hint": "Hint 1"
+
       },
+
       {
+
         "question_text": "Question 2 Content in ${language}",
+
         "question_type": "true_false",
+
         "options": ["True", "False"], 
+
         "correct_answer": "True",
+
         "points": 10,
+
         "explanation": "Exp 2",
-        "hint": "Hint 2"${citationField}
+
+        "hint": "Hint 2"
+
       }
+
       ... (continue for ${count} items)
+
     ]
 
+
+
     Important: For true_false, options MUST be translated to ${language} equivalents.
+
     
+
     Context Content:
+
     ${context}`
 
+
+
     for (const model of FALLBACK_MODELS) {
+
       try {
+
         const generatedText = await callHuggingFace(model, prompt)
+
         const cleanJson = generatedText.replace(/```json\n?|\n?```/g, '').trim()
+
         const jsonMatch = cleanJson.match(/\[[\s\S]*\]/)
 
+
+
         if (jsonMatch) {
+
           const parsed = JSON.parse(jsonMatch[0])
+
           if (Array.isArray(parsed) && parsed.length > 0) {
+
             return parsed
+
           }
+
         }
+
       } catch (e) {
+
         console.warn(`Quiz generation model ${model} failed:`, e)
+
       }
+
     }
+
+
 
     return heuristicQuiz()
+
   },
 
+
+
   async improveContent(text: string, instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic', language: string = 'English'): Promise<string | null> {
+
     const prompts = {
+
       grammar: "Fix grammar and spelling errors. Maintain the original meaning.",
+
       expand: "Expand this text with necessary operational details. Use a clear, helpful tone suitable for hotel staff.",
+
       shorten: "Summarize this text concisely. Focus on key actions for hotel staff.",
+
       professional: "Rewrite this to sound highly professional, warm, and clear (Hospitality Standard).",
+
       arabic: "Translate this text to professional Arabic (Modern Standard Arabic) suitable for business."
+
     }
+
+
 
     const isArabicOnly = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only';
 
+
+
     // Dynamic Rules Construction
+
     let rules = `1. Your output MUST be in ${language}.\n`;
 
+
+
     if (isArabicOnly) {
+
       rules += `    2. CRITICAL: OUTPUT ONLY IN ARABIC. Translate and EXPAND content. Do NOT summarize.\n`;
+
       rules += `    3. DO NOT output the English input text. Start directly with the Arabic response.\n`;
+
       rules += `    4. NO English text allowed in the output (except proper nouns).\n`;
+
     } else {
+
       rules += `    2. If Target Language is "English and Arabic" or "Bilingual", provide the English text first, followed immediately by the Arabic translation.\n`;
+
     }
+
+
 
     rules += `    5. Ensure the output is comprehensive and detailed. Do not cut corners.\n`;
+
     rules += `    6. Do NOT translate the "System" instructions above. Only process the text inside the <content> tags.\n`;
 
+
+
     const fullPrompt = `System: You are a Senior Hotel Operations Manager.
+
     
+
     Task: Rewrite the text provided inside the <content> tags based on the instructions below.
+
     
+
     Instruction: ${prompts[instruction]}
+
     
+
     CRITICAL OUTPUT RULES:
+
     ${rules}
+
     
+
     Guidelines:
+
     - Use "We" language where appropriate to build team spirit.
+
     - Be direct but polite.
+
     - Return ONLY the improved text. Do not add quotes, preambles, or "Here is the text".
 
+
+
     <content>
+
     ${text}
+
     </content>
+
     
+
     Assistant (Improved Content in ${language}):`
 
+
+
     for (const model of FALLBACK_MODELS) {
+
       try {
+
         // AI improving content with specified model
+
         const generatedText = await callHuggingFace(model, fullPrompt)
 
+
+
         if (generatedText && generatedText.trim().length > 0) {
+
           // Remove any potential quotes or chatty prefixes AI might add
+
           return generatedText.replace(/^"|"$/g, '').trim()
+
         }
+
       } catch (e: unknown) {
+
         const errorMessage = e instanceof Error ? e.message : 'Unknown AI error'
+
         console.warn(`⚠️ AI model ${model} failed:`, errorMessage)
+
       }
+
     }
+
+
 
     const heuristicImprovement = (text: string, instruction: string): string => {
+
       const cleaned = cleanText(text)
 
+
+
       switch (instruction) {
+
         case 'shorten':
+
           return cleaned.split('. ').slice(0, 2).join('. ') + (cleaned.split('. ').length > 2 ? '.' : '')
 
+
+
         case 'expand':
+
           return `${cleaned} Furthermore, strict adherence to these guidelines is essential for maintaining our high standards of service. Please consult your supervisor if you require any clarification.`
 
+
+
         case 'professional':
+
           return `Please note the following procedure: ${cleaned} Thank you for your cooperation in maintaining operational excellence.`
 
+
+
         case 'grammar':
+
           // Basic capitalization and trimming
+
           return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
 
+
+
         case 'arabic':
+
           return `[API Key Required for Arabic Translation] ${cleaned}`
 
+
+
         default:
+
           return cleaned
+
       }
+
     }
+
+
 
     // If ALL models fail
+
     console.warn("🔥 All AI models failed to improve content. Engaging Local Fallback.")
+
     return heuristicImprovement(text, instruction)
+
   },
 
-  async beautifyArticle(
-    content: string,
-    contentType: string = 'document',
-    language: string = 'English',
-    style: string = 'professional'
-  ): Promise<string | null> {
-    if (!content || content.trim().length < 10) {
-      return content
-    }
 
-    const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
-    const targetLanguage = isArabic ? 'Arabic' : language
-
-    const prompt = `You are an expert Hotel Content Architect and Formatting Specialist. Transform this plain text into beautifully structured, professionally formatted HTML with advanced styling.
-
-CONTENT ANALYSIS:
-First analyze the content to determine:
-- Document type (SOP, Policy, Training Guide, Meeting Notes, Report, Manual, Checklist, FAQ)
-- Content structure and complexity
-- Target audience and purpose
-- Existing formatting patterns
-
-ADVANCED FORMATTING REQUIREMENTS:
-1. **Semantic Structure**:
-   - Use proper HTML5 semantic tags (header, nav, main, section, article, h1-h6, p, ul, ol, li, strong, em, blockquote, hr, table, thead, tbody, tr, th, td)
-   - Create logical document hierarchy
-   - Add proper navigation anchors for long documents
-
-2. **Professional Hotel Styling**:
-   - Apply hotel-brand appropriate colors and typography
-   - Use consistent spacing and visual hierarchy
-   - Create clean, modern layouts
-   - Ensure accessibility and readability
-
-3. **Smart Content Detection**:
-   - Automatically detect and format different content types
-   - Apply appropriate templates and structures
-   - Recognize common hotel industry patterns
-
-4. **Advanced Elements**:
-   - **Tables**: Auto-detect tabular data and create responsive tables
-   - **Lists**: Smart numbered and bulleted lists with proper nesting
-   - **Callouts**: Color-coded alert boxes (IMPORTANT, WARNING, NOTE, TIP, REMEMBER)
-   - **Quotes**: Blockquotes for testimonials or important statements
-   - **Sections**: Clear divisions with proper headings
-   - **Emphasis**: Bold and italic for key points
-   - **Links**: Auto-detect URLs and make them clickable
-   - **Media**: Placeholder for images or videos
-
-5. **Content Type Specific Formatting**:
-   - **SOP**: Purpose → Scope → Responsibilities → Procedure → Compliance
-   - **Policy**: Overview → Scope → Policy Statement → Procedures → Enforcement
-   - **Training**: Objectives → Materials → Content → Assessment → Resources
-   - **Meeting**: Date → Attendees → Agenda → Discussion → Action Items → Next Steps
-   - **Report**: Executive Summary → Introduction → Findings → Recommendations → Conclusion
-
-6. **Visual Enhancement**:
-   - **Table of Contents**: Auto-generate for documents > 500 words
-   - **Progress Indicators**: Visual progress bars for multi-step procedures
-   - **Quick Reference**: Summary boxes for key information
-   - **Professional Headers**: Styled section dividers
-   - **Color Coding**: Consistent color scheme for different elements
-
-7. **Language Support**:
-   - **English**: LTR layout, professional business tone
-   - **Arabic**: RTL layout, appropriate typography
-   - **Bilingual**: Both languages where applicable
-
-TECHNICAL SPECIFICATIONS:
-Content Type: ${contentType}
-Language: ${targetLanguage}
-Style: ${style}
-Document Length: ${content.length} characters
-
-CALLOUT BOX SYSTEM:
-- IMPORTANT: <div class="alert-important">🔴 <strong>IMPORTANT:</strong> ...</div>
-- WARNING: <div class="alert-warning">⚠️ <strong>WARNING:</strong> ...</div>
-- NOTE: <div class="alert-note">💡 <strong>NOTE:</strong> ...</div>
-- TIP: <div class="alert-tip">✅ <strong>TIP:</strong> ...</div>
-- REMEMBER: <div class="alert-remember">📝 <strong>REMEMBER:</strong> ...</div>
-
-TABLE STYLING:
-- Use <table class="styled-table responsive-table"> for all tables
-- Add <thead> with <tr><th> for headers
-- Use <tbody> with <tr><td> for data
-- Include hover effects and responsive design
-- Add caption for table title if needed
-
-LIST FORMATTING:
-- Use <ol class="procedure-list"> for numbered procedures
-- Use <ul class="bullet-list"> for bulleted items
-- Add proper indentation and spacing
-- Include checklists for interactive elements
-
-HEADING ARCHITECTURE:
-- <h1 class="main-title"> for document title
-- <h2 class="section-title"> for major sections
-- <h3 class="subsection-title"> for subsections
-- <h4 class="minor-title"> for detailed points
-
-ADVANCED FORMATTING:
-- Use <blockquote class="hotel-quote"> for important statements
-- Use <hr class="section-divider"> for section breaks
-- Use <nav class="table-of-contents"> for document navigation
-- Use <strong class="emphasis-bold"> and <em class="emphasis-italic"> for emphasis
-
-${isArabic ? 'RTL SUPPORT: Use dir="rtl" attribute on main container. Adjust text alignment for Arabic.' : ''}
-
-TRANSFORMATION INSTRUCTIONS:
-1. Analyze content structure and patterns
-2. Apply appropriate template based on content type
-3. Create semantic HTML structure
-4. Add professional hotel styling
-5. Include interactive elements where beneficial
-6. Ensure mobile responsiveness
-7. Optimize for readability and scannability
-
-Return ONLY the complete, formatted HTML. No markdown, no explanations, no code blocks.
-
-CONTENT TO TRANSFORM:
-${content}`
-
-    // Try each model in the list until one works
-    for (const model of FALLBACK_MODELS) {
-      try {
-        const generatedText = await callHuggingFace(model, prompt)
-        
-        if (generatedText && generatedText.trim().length > 0) {
-          // Clean up any potential code blocks or formatting artifacts
-          let cleanHtml = generatedText
-            .replace(/```html\n?|\n?```/g, '')
-            .replace(/```\n?|\n?```/g, '')
-            .trim()
-
-          // Add RTL wrapper for Arabic content
-          if (isArabic && !cleanHtml.includes('dir="rtl"')) {
-            cleanHtml = `<div dir="rtl">${cleanHtml}</div>`
-          }
-
-          return cleanHtml
-        }
-      } catch (e: unknown) {
-        const errorMessage = e instanceof Error ? e.message : 'Unknown AI error'
-        console.warn(`⚠️ AI beautification model ${model} failed:`, errorMessage)
-      }
-    }
-
-    // If ALL models fail, provide basic formatting fallback
-    return fallbackFormatting(content, isArabic)
-  },
 
   async suggestImportMapping(rawRows: string[][], targetHeaders: string[]): Promise<{ mapping: Record<string, string>, headerRowIndex: number }> {
+
     // We take a snapshot of the first 60 rows to find the header and data structure
+
     const snapshot = rawRows.slice(0, 60).map((row, idx) => `[Row ${idx}] ${row.join(' | ')}`).join('\n')
 
+
+
     const prompt = `You are a Senior Hotel Data Architect. Analyze this PMS report snapshot and identify the data structure.
+
     
+
     TARGET HEADERS WE NEED: ${targetHeaders.join(', ')}
 
+
+
     REPORT SNAPSHOT (Rows with | separator):
+
     ${snapshot}
 
+
+
     TASK:
+
     1. Identify the "Header Row Index": This is the 0-indexed row number where the table headers actually start. 
+
        - Ignore report titles, hotel names, or filter descriptions at the top.
+
        - The header row is the one that most closely contains words like "Date", "Rooms", "Revenue", "Occupancy", "ADR", etc.
+
     2. Map the columns in that header row to our Target Headers.
+
        - We need values for: ${targetHeaders.join(', ')}
+
        - If a report column is called "Business Date" or "Date", map it to "business_date".
+
        - If a report column is called "Rooms Available" or "Inventory", map it to "rooms_available".
+
        - Use your best judgment for abbreviations (e.g., "Occ %" -> "occupancy").
+
     
+
     Return VALID JSON ONLY:
+
     {
+
       "headerRowIndex": 12, // Example
+
       "mapping": {
+
         "Column Name in Report": "Target Header Name"
+
       }
+
     }
+
     
+
     Return ONLY the JSON. No Markdown. No explainers.`
 
+
+
     for (const model of FALLBACK_MODELS) {
+
       try {
+
         const generatedText = await callHuggingFace(model, prompt)
+
         const cleanJson = generatedText.replace(/```json\n?|\n?```/g, '').trim()
+
         const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
 
+
+
         if (jsonMatch) {
+
           return JSON.parse(jsonMatch[0])
+
         }
+
       } catch (e) {
+
         console.warn(`Mapping suggestion model ${model} failed:`, e)
+
       }
+
     }
+
+
 
     return { mapping: {}, headerRowIndex: 0 }
+
   }
+
 }
 
-// Fallback formatting function for when AI models fail
-const fallbackFormatting = (content: string, isArabic: boolean = false): string => {
-  const lines = content.split('\n').filter(line => line.trim())
-  let formatted = ''
-  
-  // Add RTL wrapper for Arabic
-  if (isArabic) {
-    formatted += '<div dir="rtl">'
-  }
-
-  let isFirstLine = true
-  let inTable = false
-  let listLevel = 0
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const trimmed = line.trim()
-    if (!trimmed) continue
-
-    // Detect table patterns (simple tabular data)
-    if (trimmed.includes('|') && trimmed.split('|').length > 2) {
-      if (!inTable) {
-        formatted += '<table class="styled-table"><thead><tr><th>' + 
-          trimmed.split('|').map(cell => cell.trim()).join('</th><th>') + 
-          '</th></tr></thead><tbody>'
-        inTable = true
-      } else {
-        formatted += '<tr><td>' + 
-          trimmed.split('|').map(cell => cell.trim()).join('</td><td>') + 
-          '</td></tr>'
-      }
-      continue
-    }
-    
-    // End table
-    if (inTable && (!trimmed.includes('|') || trimmed.split('|').length <= 2)) {
-      formatted += '</tbody></table>'
-      inTable = false
-    }
-
-    // First line as title
-    if (isFirstLine) {
-      formatted += `<h1>${trimmed}</h1>\n`
-      isFirstLine = false
-    }
-    // Lines that look like headings
-    else if (/^[A-Z][A-Za-z\s]+:$/.test(trimmed) || /^(Purpose|Scope|Responsibilities|Procedure|Steps|Overview|Summary|Introduction|Conclusion|Requirements|Guidelines|Policy|SOP)/i.test(trimmed)) {
-      formatted += `<h2>${trimmed}</h2>\n`
-    }
-    // Subheadings (indented)
-    else if (/^\s{2,}[A-Z][A-Za-z\s]+:$/.test(trimmed)) {
-      formatted += `<h3>${trimmed.replace(/^\s{2,}/, '')}</h3>\n`
-    }
-    // Lines that look like numbered lists
-    else if (/^\d+\./.test(trimmed)) {
-      const listItem = trimmed.replace(/^\d+\.\s*/, '')
-      formatted += `<ol><li>${listItem}</li></ol>\n`
-    }
-    // Lines that look like bulleted lists
-    else if (/^[-*•]\s*/.test(trimmed)) {
-      const listItem = trimmed.replace(/^[-*•]\s*/, '')
-      formatted += `<ul><li>${listItem}</li></ul>\n`
-    }
-    // Lines that look like quotes or important notes
-    else if (/^["']|NOTE:|IMPORTANT:|WARNING:|TIP:|REMEMBER:/i.test(trimmed)) {
-      const isQuote = /^["']/.test(trimmed)
-      const isImportant = /IMPORTANT:/i.test(trimmed)
-      const isWarning = /WARNING:/i.test(trimmed)
-      const isNote = /NOTE:/i.test(trimmed)
-      const isTip = /TIP:/i.test(trimmed)
-      
-      let alertClass = 'alert-note'
-      if (isImportant) alertClass = 'alert-important'
-      else if (isWarning) alertClass = 'alert-warning'
-      else if (isNote) alertClass = 'alert-note'
-      else if (isTip) alertClass = 'alert-tip'
-      
-      const content = isQuote ? trimmed : trimmed.replace(/^(NOTE:|IMPORTANT:|WARNING:|TIP:|REMEMBER:)\s*/i, '')
-      formatted += `<div class="${alertClass}">${content}</div>\n`
-    }
-    // Horizontal rules (dashes or underscores)
-    else if (/^[-=]{3,}$/.test(trimmed)) {
-      formatted += '<hr>\n'
-    }
-    // Regular paragraphs
-    else {
-      formatted += `<p>${trimmed}</p>\n`
-    }
-  }
-
-  if (isArabic) {
-    formatted += '</div>'
-  }
-
-  return formatted
-}

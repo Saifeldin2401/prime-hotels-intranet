@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useId } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,15 +17,29 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Building2, Users, Briefcase, Save, ShieldAlert } from 'lucide-react'
+import { Loader2, Building2, Users, Briefcase, Save, ShieldAlert, Check, ChevronsUpDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import type { OrgEmployee } from '@/hooks/useOrgHierarchy'
+import { cn, escapeSearchQuery } from '@/lib/utils'
 
 interface EmployeeAssignmentDialogProps {
     employee: OrgEmployee | null
@@ -35,6 +49,7 @@ interface EmployeeAssignmentDialogProps {
 
 // Role hierarchy - higher number = more power
 const ROLE_HIERARCHY: Record<string, number> = {
+    'corporate_admin': 110,
     'regional_admin': 100,
     'regional_hr': 90,
     'property_manager': 50,
@@ -45,11 +60,14 @@ const ROLE_HIERARCHY: Record<string, number> = {
 
 // Which roles can be assigned by which admin role
 const ASSIGNABLE_ROLES: Record<string, string[]> = {
+    'corporate_admin': ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff'],
     'regional_admin': ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff'],
     'regional_hr': ['property_hr', 'department_head', 'staff'],
     'property_manager': ['property_hr', 'department_head', 'staff'],
     'property_hr': ['department_head', 'staff'],
 }
+
+const MANAGER_ROLES = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
 
 export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: EmployeeAssignmentDialogProps) {
     const { t } = useTranslation('directory')
@@ -59,6 +77,10 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
     const [selectedPropertyId, setSelectedPropertyId] = useState<string>('')
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('none')
     const [selectedRole, setSelectedRole] = useState<string>('')
+    const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null)
+    const [openManagerSelect, setOpenManagerSelect] = useState(false)
+    const [managerSearch, setManagerSearch] = useState('')
+    const managerListId = useId()
 
     // Determine admin's permission level
     const adminRoleLevel = ROLE_HIERARCHY[primaryRole || ''] || 0
@@ -68,18 +90,21 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
     const canEditEmployee = useMemo(() => {
         if (!employee || !primaryRole) return false
 
+        // Corporate admins can edit anyone
+        if (primaryRole === 'corporate_admin') return true
+
         // Regional admins can edit anyone
         if (primaryRole === 'regional_admin') return true
 
         // Regional HR can edit anyone except regional_admin
         if (primaryRole === 'regional_hr') {
-            return !employee.roles.includes('regional_admin')
+            return !employee.roles.includes('regional_admin') && !employee.roles.includes('corporate_admin')
         }
 
         // Property manager/HR can only edit employees at their property
         if (['property_manager', 'property_hr'].includes(primaryRole)) {
             // Cannot edit corporate employees
-            if (employee.roles.some(r => ['regional_admin', 'regional_hr'].includes(r))) {
+            if (employee.roles.some(r => ['corporate_admin', 'regional_admin', 'regional_hr'].includes(r))) {
                 return false
             }
             // Must be at same property
@@ -144,12 +169,83 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
         enabled: !!selectedPropertyId
     })
 
+    const isCorpAdmin = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
+    const allowedPropertyIds = useMemo(() => {
+        if (isCorpAdmin) return null
+        return userProperties?.map(p => p.id) || []
+    }, [isCorpAdmin, userProperties])
+
+    const { data: selectedManagerProfile } = useQuery({
+        queryKey: ['org-selected-manager', selectedManagerId],
+        queryFn: async () => {
+            if (!selectedManagerId) return null
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, job_title, staff_id')
+                .eq('id', selectedManagerId)
+                .single()
+            if (error) throw error
+            return data as { id: string; full_name: string; job_title: string | null; staff_id: string | null }
+        },
+        enabled: !!selectedManagerId
+    })
+
+    const { data: managerResults = [] } = useQuery({
+        queryKey: ['org-manager-search', managerSearch, selectedPropertyId, primaryRole, employee?.id],
+        queryFn: async () => {
+            const trimmed = managerSearch.trim()
+            if (trimmed.length < 2) return []
+            if (!employee) return []
+
+            const escaped = escapeSearchQuery(trimmed)
+            const { data, error } = await supabase
+                .from('profiles')
+                .select(`
+                    id,
+                    full_name,
+                    job_title,
+                    staff_id,
+                    user_roles(role),
+                    user_properties(property_id)
+                `)
+                .eq('is_active', true)
+                .or(`full_name.ilike.%${escaped}%,staff_id.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
+                .limit(25)
+
+            if (error) throw error
+
+            const rows = (data || []) as {
+                id: string
+                full_name: string
+                job_title: string | null
+                staff_id: string | null
+                user_roles?: { role: string }[]
+                user_properties?: { property_id: string }[]
+            }[]
+
+            return rows
+                .filter((p) => p.id !== employee.id)
+                .filter((p) => {
+                    const roles = p.user_roles?.map((r) => r.role) || []
+                    return roles.some((r) => MANAGER_ROLES.includes(r))
+                })
+                .filter((p) => {
+                    if (isCorpAdmin || !allowedPropertyIds?.length) return true
+                    const propIds = p.user_properties?.map((up) => up.property_id) || []
+                    return propIds.some((id) => allowedPropertyIds.includes(id))
+                })
+                .sort((a, b) => a.full_name.localeCompare(b.full_name))
+        },
+        enabled: managerSearch.trim().length >= 2
+    })
+
     // Initialize form when employee changes
     useEffect(() => {
         if (employee) {
             setSelectedPropertyId(employee.propertyId || '')
             setSelectedDepartmentId(employee.departmentId || 'none')
             setSelectedRole(employee.roles?.[0] || 'staff')
+            setSelectedManagerId(employee.reporting_to || null)
         }
     }, [employee])
 
@@ -272,12 +368,25 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                 }
             }
 
+            // 4. Update reporting line (manager)
+            if (selectedManagerId === employee.id) {
+                throw new Error('Employee cannot report to themselves')
+            }
+
+            const { error: reportingError } = await supabase
+                .from('profiles')
+                .update({ reporting_to: selectedManagerId || null })
+                .eq('id', employee.id)
+
+            if (reportingError) throw reportingError
+
             return true
         },
         onSuccess: () => {
             toast.success(t('assignment_updated', 'Employee assignment updated successfully'))
             queryClient.invalidateQueries({ queryKey: ['org-hierarchy-profiles'] })
             queryClient.invalidateQueries({ queryKey: ['profiles'] })
+            queryClient.invalidateQueries({ queryKey: ['employee-directory-rpc'] })
             onClose()
         },
         onError: (error: any) => {
@@ -414,6 +523,118 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                 {t('no_roles_available', 'You cannot change this employee\'s role')}
                             </p>
                         )}
+                    </div>
+
+                    {/* Reporting Line */}
+                    <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            {t('reports_to', 'Reports To (Manager)')}
+                        </Label>
+                        <Popover open={openManagerSelect} onOpenChange={setOpenManagerSelect}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openManagerSelect}
+                                    aria-controls={managerListId}
+                                    className="w-full justify-between font-normal text-left"
+                                    disabled={!canEditEmployee}
+                                >
+                                    {selectedManagerId
+                                        ? (selectedManagerProfile?.full_name || t('selected_manager', 'Selected manager'))
+                                        : t('no_manager', 'No manager')}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[360px] p-0" align="start">
+                                <Command>
+                                    <CommandInput
+                                        placeholder={t('search_managers', 'Search managers')}
+                                        value={managerSearch}
+                                        onValueChange={setManagerSearch}
+                                    />
+                                    <CommandList id={managerListId}>
+                                        <CommandEmpty>
+                                            {managerSearch.trim().length >= 2
+                                                ? t('manager_none_helper', 'No managers found')
+                                                : t('manager_search_helper', 'Type at least 2 characters to search')}
+                                        </CommandEmpty>
+                                        <CommandGroup heading={t('available_managers', 'Available Managers')}>
+                                            <CommandItem
+                                                value="no-manager"
+                                                onSelect={() => {
+                                                    setSelectedManagerId(null)
+                                                    setManagerSearch('')
+                                                    setOpenManagerSelect(false)
+                                                }}
+                                                className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
+                                            >
+                                                <div
+                                                    className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                    onPointerDown={(e) => e.preventDefault()}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setSelectedManagerId(null)
+                                                        setManagerSearch('')
+                                                        setOpenManagerSelect(false)
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            !selectedManagerId ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    <span className="text-muted-foreground">{t('no_manager', 'No manager')}</span>
+                                                </div>
+                                            </CommandItem>
+                                            {managerResults.map((manager: any) => (
+                                                <CommandItem
+                                                    key={manager.id}
+                                                    value={`${manager.full_name} ${manager.staff_id || ''} ${manager.job_title || ''}`}
+                                                    onSelect={() => {
+                                                        setSelectedManagerId(manager.id)
+                                                        setManagerSearch('')
+                                                        setOpenManagerSelect(false)
+                                                    }}
+                                                    className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
+                                                >
+                                                    <div
+                                                        className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                        onPointerDown={(e) => e.preventDefault()}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setSelectedManagerId(manager.id)
+                                                            setManagerSearch('')
+                                                            setOpenManagerSelect(false)
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                selectedManagerId === manager.id ? "opacity-100" : "opacity-0"
+                                                            )}
+                                                        />
+                                                        <span>{manager.full_name}</span>
+                                                        <span className="ml-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">
+                                                            {manager.staff_id || 'no-id'}
+                                                        </span>
+                                                        <span className="ml-auto text-xs text-muted-foreground">
+                                                            {manager.job_title || ''}
+                                                        </span>
+                                                    </div>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        <p className="text-xs text-muted-foreground">
+                            {t('reporting_line_helper', 'Search and assign the reporting line used in the org chart.')}
+                        </p>
                     </div>
                 </div>
 

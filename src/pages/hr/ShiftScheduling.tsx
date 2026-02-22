@@ -421,7 +421,7 @@ export default function ShiftScheduling() {
                         <TableHead>Shift</TableHead>
                         <TableHead>Start</TableHead>
                         <TableHead>End</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>{t('common:status')}</TableHead>
                         <TableHead>Location</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -528,7 +528,7 @@ export default function ShiftScheduling() {
                         <TableHead>Staff</TableHead>
                         <TableHead>Check In</TableHead>
                         <TableHead>Check Out</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>{t('common:status')}</TableHead>
                         <TableHead>Notes</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>

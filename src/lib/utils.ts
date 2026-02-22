@@ -42,6 +42,17 @@ export function formatRelativeTime(date: Date | string | null | undefined): stri
 }
 
 /**
+ * Format file size in bytes to human readable format
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
+}
+
+/**
  * Escape special characters in a search query for safe use in PostgreSQL ILIKE patterns.
  * Characters %, _, and \ have special meaning in ILIKE and need to be escaped.
  * @param query - The raw search query from user input

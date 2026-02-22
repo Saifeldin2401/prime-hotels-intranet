@@ -31,7 +31,7 @@ export function UnsavedChangesDialog({
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel onClick={onCancel}>{t('common:cancel')}</AlertDialogCancel>
                     <AlertDialogAction onClick={onContinue} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
                         Leave Page
                     </AlertDialogAction>

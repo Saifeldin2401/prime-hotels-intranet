@@ -1,249 +1,711 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useDocument, useDocumentVersions } from '@/hooks/useDocuments'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { 
+  useDocument, 
+  useDocumentVersions, 
+  useRecordDocumentView,
+  useRecordDocumentDownload,
+  useDocumentComments,
+  useAddDocumentComment,
+  useDocumentAnalytics,
+  useUpdateDocument,
+  useDocumentFolders
+} from '@/hooks/useDocuments'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
+import { DocumentComments } from '@/components/documents/DocumentComments'
+import { DocumentAnalyticsCard } from '@/components/documents/DocumentAnalyticsCard'
+import { DocumentVersionUpload } from '@/components/documents/DocumentVersionUpload'
+import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
+import { DocumentMetadataForm } from '@/components/documents/DocumentMetadataForm'
+import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, ArrowLeft, Download, Eye, Calendar, User } from 'lucide-react'
-import { format } from 'date-fns'
+import { Separator } from '@/components/ui/separator'
+import { EnhancedBadge } from '@/components/ui/enhanced-badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { 
+  Loader2, 
+  ArrowLeft, 
+  Download, 
+  Eye, 
+  Calendar, 
+  User, 
+  Building2,
+  FolderOpen,
+  Tag,
+  Clock,
+  Shield,
+  FileText,
+  History,
+  MessageSquare,
+  BarChart3,
+  Settings,
+  Share2,
+  Printer,
+  MoreVertical,
+  Edit3,
+  AlertTriangle,
+  CheckCircle,
+  Sparkles
+} from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { openUrlInNewTab, resolveDocumentUrl, resolveDocumentVersionUrl } from '@/lib/secureFileAccess'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { cn, formatFileSize } from '@/lib/utils'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+// import { AIDocumentAssistant } from '@/components/documents/AIDocumentAssistant'
 
 export default function DocumentDetail() {
-    const { id } = useParams<{ id: string }>()
-    const navigate = useNavigate()
-    const { t } = useTranslation('documents')
-    const [viewerOpen, setViewerOpen] = useState(false)
-    const [secureDocumentUrl, setSecureDocumentUrl] = useState<string | null>(null)
-    const [resolvingDocumentUrl, setResolvingDocumentUrl] = useState(false)
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { t } = useTranslation('documents')
+  const { toast } = useToast()
+  const { user, profile } = useAuth()
+  
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [secureDocumentUrl, setSecureDocumentUrl] = useState<string | null>(null)
+  const [resolvingDocumentUrl, setResolvingDocumentUrl] = useState(false)
+  const [activeTab, setActiveTab] = useState('preview')
+  const [editMetadataOpen, setEditMetadataOpen] = useState(false)
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
-    // Hooks
-    const { data: document, isLoading: docLoading, error: docError } = useDocument(id!)
-    const { data: versions = [], isLoading: versionsLoading } = useDocumentVersions(id!)
+  // Data fetching
+  const { data: document, isLoading: docLoading, error: docError } = useDocument(id!)
+  const { data: versions = [], isLoading: versionsLoading } = useDocumentVersions(id!)
+  const { data: comments = [], isLoading: commentsLoading } = useDocumentComments(id!)
+  const { data: analytics } = useDocumentAnalytics(id!)
+  const { data: folders = [] } = useDocumentFolders()
+  
+  const recordView = useRecordDocumentView()
+  const recordDownload = useRecordDocumentDownload()
+  const addComment = useAddDocumentComment()
+  const updateDocument = useUpdateDocument()
 
-    useEffect(() => {
-        let cancelled = false
-        const load = async () => {
-            if (!document?.id) {
-                setSecureDocumentUrl(document?.file_url || null)
-                return
-            }
-            setResolvingDocumentUrl(true)
-            const url = await resolveDocumentUrl(document.id, document.file_url)
-            if (!cancelled) {
-                setSecureDocumentUrl(url || document.file_url)
-                setResolvingDocumentUrl(false)
-            }
-        }
-        load()
-        return () => {
-            cancelled = true
-        }
-    }, [document?.id, document?.file_url])
-
-    if (docLoading) {
-        return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin" /></div>
+  // Record view on mount
+  useEffect(() => {
+    if (id && user) {
+      recordView.mutate(id)
     }
+  }, [id, user, recordView])
 
-    if (docError || !document) {
-        return (
-            <div className="container mx-auto py-6">
-                <Button variant="ghost" onClick={() => navigate('/documents')} className="mb-4">
-                    <ArrowLeft className="w-4 h-4 mr-2" /> {t('detail.back_to_library')}
-                </Button>
-                <div className="text-center py-12 border rounded-lg bg-destructive/10 text-destructive">
-                    <h3 className="text-lg font-medium">{t('detail.error_loading')}</h3>
-                    <p>{t('detail.not_found')}</p>
-                </div>
-            </div>
-        )
+  // Resolve secure URL
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      if (!document?.id) {
+        setSecureDocumentUrl(document?.file_url || null)
+        return
+      }
+
+      const hasFileUrl = typeof document.file_url === 'string' && document.file_url.trim().length > 0
+      if (!hasFileUrl) {
+        setSecureDocumentUrl(null)
+        return
+      }
+
+      setResolvingDocumentUrl(true)
+      const url = await resolveDocumentUrl(document.id, document.file_url)
+      if (!cancelled) {
+        setSecureDocumentUrl(url || document.file_url)
+        setResolvingDocumentUrl(false)
+      }
     }
+    load()
+    return () => { cancelled = true }
+  }, [document?.id, document?.file_url])
 
+  const handleDownload = useCallback(async () => {
+    if (!document?.id || !secureDocumentUrl) return
+    
+    recordDownload.mutate(document.id)
+    openUrlInNewTab(secureDocumentUrl)
+    
+    toast({
+      title: 'Download Started',
+      description: 'Your document is being downloaded.',
+    })
+  }, [document?.id, secureDocumentUrl, recordDownload, toast])
+
+  const handlePrint = useCallback(() => {
+    if (!secureDocumentUrl) return
+    const printWindow = window.open(secureDocumentUrl, '_blank')
+    if (printWindow) {
+      printWindow.addEventListener('load', () => {
+        printWindow.print()
+      })
+    }
+  }, [secureDocumentUrl])
+
+  const handleShare = useCallback(() => {
+    setShareDialogOpen(true)
+  }, [])
+
+  const handleAddComment = useCallback(async (content: string, parentId?: string) => {
+    if (!document?.id || !user) return
+    
+    await addComment.mutateAsync({
+      documentId: document.id,
+      content,
+      parentId
+    })
+  }, [document?.id, user, addComment])
+
+  const handleUpdateMetadata = useCallback(async (updates: any) => {
+    if (!document?.id) return
+    
+    await updateDocument.mutateAsync({
+      id: document.id,
+      ...updates
+    })
+    
+    setEditMetadataOpen(false)
+    toast({
+      title: 'Updated',
+      description: 'Document metadata has been updated.',
+    })
+  }, [document?.id, updateDocument, toast])
+
+  const copyShareLink = useCallback(() => {
+    const link = `${window.location.origin}/documents/${id}`
+    navigator.clipboard.writeText(link)
+    toast({
+      title: 'Link Copied',
+      description: 'Document link copied to clipboard.',
+    })
+  }, [id, toast])
+
+  if (docLoading) {
     return (
-        <div className="container mx-auto py-6 space-y-6">
-            <Button variant="ghost" onClick={() => navigate('/documents')} className="mb-2">
-                <ArrowLeft className="w-4 h-4 mr-2" /> {t('detail.back_to_library')}
-            </Button>
-
-            <div className="grid gap-6 md:grid-cols-3">
-                {/* Main Content */}
-                <div className="md:col-span-2 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <StatusBadge status={document.status} className="mb-2" />
-                                    <CardTitle className="text-2xl">{document.title}</CardTitle>
-                                    <CardDescription className="text-base mt-2">
-                                        {document.description || t('detail.no_description')}
-                                    </CardDescription>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        disabled={resolvingDocumentUrl || !secureDocumentUrl}
-                                        onClick={() => openUrlInNewTab(secureDocumentUrl)}
-                                    >
-                                        <Download className="w-4 h-4 mr-2" />
-                                        {t('actions.download')}
-                                    </Button>
-                                    <Button onClick={() => setViewerOpen(true)}>
-                                        <Eye className="w-4 h-4 mr-2" />
-                                        {t('actions.preview')}
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-                                <div>
-                                    <span className="font-medium text-foreground block mb-1">{t('detail.fields.department')}</span>
-                                    {document.departments?.name || t('common.all_departments')}
-                                </div>
-                                <div>
-                                    <span className="font-medium text-foreground block mb-1">{t('detail.fields.property')}</span>
-                                    {document.properties?.name || t('common.all_properties')}
-                                </div>
-                                <div>
-                                    <span className="font-medium text-foreground block mb-1">{t('detail.fields.created_by')}</span>
-                                    {document.profiles?.full_name || t('common.unknown')}
-                                </div>
-                                <div>
-                                    <span className="font-medium text-foreground block mb-1">{t('detail.fields.last_updated')}</span>
-                                    {format(new Date(document.updated_at), 'PPP')}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Tabs defaultValue="preview">
-                        <TabsList>
-                            <TabsTrigger value="preview">{t('detail.preview')}</TabsTrigger>
-                            <TabsTrigger value="history">{t('detail.version_history_with_count', { count: versions.length })}</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="preview" className="mt-4">
-                            <Card className="overflow-hidden min-h-[500px]">
-                                {secureDocumentUrl ? (
-                                    <iframe
-                                        src={secureDocumentUrl}
-                                        className="w-full h-[600px] border-none"
-                                        title={t('detail.preview')}
-                                    />
-                                ) : (
-                                    <div className="h-[600px] flex items-center justify-center text-muted-foreground">
-                                        {resolvingDocumentUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : t('detail.no_preview', { defaultValue: 'Preview unavailable' })}
-                                    </div>
-                                )}
-                            </Card>
-                        </TabsContent>
-                        <TabsContent value="history" className="mt-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">{t('detail.version_history')}</CardTitle>
-                                    <CardDescription>{t('detail.version_history_desc')}</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {versionsLoading ? (
-                                        <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
-                                    ) : versions.length === 0 ? (
-                                        <p className="text-muted-foreground text-center py-8">{t('detail.no_versions')}</p>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {versions.map((version) => (
-                                                <div key={version.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                                                    <div className="flex gap-4">
-                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                                            v{version.version_number}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium">{t('detail.version')} {version.version_number}</p>
-                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                                                <User className="w-3 h-3" />
-                                                                {/* @ts-ignore */}
-                                                                {version.creator?.full_name || t('common.unknown')}
-                                                                <span className="mx-1">•</span>
-                                                                <Calendar className="w-3 h-3" />
-                                                                {format(new Date(version.created_at), 'PPP p')}
-                                                            </div>
-                                                            {version.change_summary && (
-                                                                <p className="text-sm mt-2 text-muted-foreground bg-muted p-2 rounded">
-                                                                    "{version.change_summary}"
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={async () => {
-                                                            const hasDownloadableVersion = typeof version.file_url === 'string'
-                                                                && /^https?:\/\//i.test(version.file_url)
-                                                            if (!hasDownloadableVersion) return
-                                                            const secureVersionUrl = await resolveDocumentVersionUrl(version.id, version.file_url)
-                                                            openUrlInNewTab(secureVersionUrl)
-                                                        }}
-                                                        disabled={!(typeof version.file_url === 'string' && /^https?:\/\//i.test(version.file_url))}
-                                                    >
-                                                        <Download className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
-                </div>
-
-                {/* Sidebar Info */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">{t('detail.details')}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <h4 className="text-sm font-medium mb-1">{t('detail.fields.status')}</h4>
-                                <StatusBadge status={document.status} />
-                            </div>
-
-                            <div>
-                                <h4 className="text-sm font-medium mb-1">{t('detail.fields.visibility')}</h4>
-                                <Badge variant="outline">{t(`visibility.${document.visibility}`)}</Badge>
-                            </div>
-
-                            <div>
-                                <h4 className="text-sm font-medium mb-1">{t('detail.fields.role_access')}</h4>
-                                <Badge variant="outline">{document.role ? t(`role.${document.role}`) : t('common.all_roles')}</Badge>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Approvals Section if pending */}
-                    {document.status === 'PENDING_REVIEW' && (
-                        <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/10">
-                            <CardHeader>
-                                <CardTitle className="text-lg text-yellow-800 dark:text-yellow-200">{t('detail.pending_approval')}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                    {t('detail.pending_review_msg')}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-            </div>
-
-            <DocumentViewer
-                open={viewerOpen}
-                onOpenChange={setViewerOpen}
-                document={document}
-            />
-        </div>
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-hotel-navy" />
+      </div>
     )
+  }
+
+  if (docError || !document) {
+    return (
+      <div className="container mx-auto py-6">
+        <Button variant="ghost" onClick={() => navigate('/documents')} className="mb-4">
+          <ArrowLeft className="w-4 h-4 mr-2" /> {t('detail.back_to_library')}
+        </Button>
+        <div className="text-center py-12 border rounded-lg bg-destructive/10 text-destructive">
+          <h3 className="text-lg font-medium">{t('detail.error_loading')}</h3>
+          <p>{t('detail.not_found')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const activeVersion = versions.find(v => (v as any).is_current) || versions[0]
+  const folder = folders.find(f => f.id === document.folder_id)
+  const isOwner = user?.id === document.created_by
+  const canEdit = isOwner || profile?.roles?.some(r => ['regional_admin', 'property_manager'].includes(r))
+
+  // Expiry status
+  const isExpired = document.expires_at && new Date(document.expires_at) < new Date()
+  const isExpiringSoon = document.expires_at && !isExpired && 
+    new Date(document.expires_at) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+  return (
+    <div className="container mx-auto py-6 space-y-6 animate-fade-in">
+      {/* Back Button */}
+      <Button variant="ghost" onClick={() => navigate('/documents')} className="mb-2">
+        <ArrowLeft className="w-4 h-4 mr-2" /> {t('detail.back_to_library')}
+      </Button>
+
+      {/* Expiry Banner */}
+      {(isExpired || isExpiringSoon) && (
+        <DocumentExpiryBanner 
+          expiryDate={document.expires_at!}
+          documentId={document.id}
+          className="mb-4"
+        />
+      )}
+
+      {/* Main Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column - Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Document Header Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <StatusBadge status={document.status} />
+                    <DocumentConfidentialityBadge level={document.confidentiality_level} />
+                    {document.featured && (
+                      <EnhancedBadge variant="gold">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Featured
+                      </EnhancedBadge>
+                    )}
+                  </div>
+                  <CardTitle className="text-2xl sm:text-3xl">{document.title}</CardTitle>
+                  <CardDescription className="text-base">
+                    {document.description || t('detail.no_description')}
+                  </CardDescription>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={resolvingDocumentUrl || !secureDocumentUrl}
+                    onClick={handleDownload}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                  <Button onClick={() => setViewerOpen(true)}>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handlePrint}>
+                        <Printer className="w-4 h-4 mr-2" />
+                        Print
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShare}>
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setAiAssistantOpen(true)}>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        AI Assistant
+                      </DropdownMenuItem>
+                      {canEdit && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setEditMetadataOpen(true)}>
+                            <Edit3 className="w-4 h-4 mr-2" />
+                            Edit Metadata
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              {/* Metadata Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm p-4 bg-muted/30 rounded-lg">
+                <div>
+                  <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
+                    <FolderOpen className="w-3 h-3" />
+                    Folder
+                  </span>
+                  <span className="text-muted-foreground">{folder?.name || 'Uncategorized'}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
+                    <Building2 className="w-3 h-3" />
+                    Property
+                  </span>
+                  <span className="text-muted-foreground">{document.properties?.name || t('common.all_properties')}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    Created By
+                  </span>
+                  <span className="text-muted-foreground">{(document as any).author?.full_name || t('common.unknown')}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    Last Updated
+                  </span>
+                  <span className="text-muted-foreground">{format(new Date(document.updated_at), 'PPP')}</span>
+                </div>
+                {document.document_number && (
+                  <div>
+                    <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
+                      <FileText className="w-3 h-3" />
+                      Document Number
+                    </span>
+                    <span className="text-muted-foreground font-mono">{document.document_number}</span>
+                  </div>
+                )}
+                {document.expires_at && (
+                  <div>
+                    <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Expires
+                    </span>
+                    <span className={cn(
+                      "text-muted-foreground",
+                      isExpired && "text-red-600 font-medium",
+                      isExpiringSoon && "text-amber-600 font-medium"
+                    )}>
+                      {format(new Date(document.expires_at), 'PPP')}
+                      {isExpired && ' (Expired)'}
+                      {isExpiringSoon && ' (Soon)'}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
+                    <FileText className="w-3 h-3" />
+                    File Type
+                  </span>
+                  <span className="text-muted-foreground uppercase">{document.file_extension || 'Unknown'}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
+                    <BarChart3 className="w-3 h-3" />
+                    Views
+                  </span>
+                  <span className="text-muted-foreground">{document.view_count || 0}</span>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {document.tags && document.tags.length > 0 && (
+                <div className="mt-4 flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-gray-400" />
+                  <div className="flex flex-wrap gap-2">
+                    {document.tags.map((tag: any) => (
+                      <span
+                        key={tag.id}
+                        className="px-2 py-1 text-xs rounded-full"
+                        style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tabs: Preview, History, Comments */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="preview" className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Preview
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center gap-2">
+                <History className="w-4 h-4" />
+                Version History
+                {versions.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{versions.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="comments" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Comments
+                {comments.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{comments.length}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="preview" className="mt-4">
+              <Card className="overflow-hidden min-h-[500px]">
+                {secureDocumentUrl ? (
+                  <iframe
+                    src={secureDocumentUrl}
+                    className="w-full h-[600px] border-none"
+                    title="Document Preview"
+                  />
+                ) : (
+                  <div className="h-[600px] flex items-center justify-center text-muted-foreground">
+                    {resolvingDocumentUrl ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      'Preview unavailable'
+                    )}
+                  </div>
+                )}
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <DocumentVersionUpload
+                versions={(versions || []).map((v) => ({
+                  id: v.id,
+                  versionNumber: v.version_number,
+                  fileName: `v${v.version_number}`,
+                  fileSize: 0,
+                  fileUrl: v.file_url || '',
+                  fileType: document.file_extension || 'file',
+                  uploadedAt: v.created_at,
+                  uploadedBy: { id: v.created_by || '', name: 'Unknown' },
+                  changeNotes: v.change_summary || undefined,
+                  isCurrent: (v as any).is_current === true,
+                }))}
+                isLoading={versionsLoading}
+                currentVersionId={activeVersion?.id || ''}
+                onDownload={async (version) => {
+                  if (!version.fileUrl) return
+                  const secureVersionUrl = await resolveDocumentVersionUrl(version.id, version.fileUrl)
+                  openUrlInNewTab(secureVersionUrl)
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="comments" className="mt-4">
+              <DocumentComments
+                comments={(comments || []).map((c: any) => ({
+                  id: c.id,
+                  content: c.content,
+                  author: {
+                    id: c.user_id,
+                    name: c.author?.full_name || 'Unknown',
+                    email: '',
+                    avatar: c.author?.avatar_url || undefined,
+                  },
+                  createdAt: c.created_at,
+                  updatedAt: c.updated_at,
+                  parentId: c.parent_id,
+                  isResolved: c.is_resolved,
+                  isPinned: c.is_pinned,
+                  replies: [],
+                }))}
+                currentUser={{
+                  id: user?.id || '',
+                  name: profile?.full_name || 'User',
+                  email: profile?.email || '',
+                  avatar: profile?.avatar_url || undefined,
+                }}
+                users={[]}
+                onAddComment={(content, parentId) => {
+                  void handleAddComment(content, parentId || undefined)
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Right Column - Sidebar */}
+        <div className="space-y-6">
+          {/* Analytics Card */}
+          {analytics && (
+            <DocumentAnalyticsCard
+              analytics={{
+                documentId: document.id,
+                documentTitle: document.title,
+                totalViews: analytics.view_count || 0,
+                totalDownloads: analytics.download_count || 0,
+                uniqueViewers: analytics.unique_viewers || 0,
+                viewsOverTime: (analytics.views_over_time || []).map((v) => ({
+                  date: v.date,
+                  views: v.count,
+                  downloads: 0,
+                })),
+                topUsers: [],
+                departmentBreakdown: (analytics.viewers_by_department || []).map((d) => ({
+                  department: d.department_name,
+                  views: d.count,
+                })),
+              }}
+            />
+          )}
+
+          {/* Document Info Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Document Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium mb-1">Status</h4>
+                <StatusBadge status={document.status} />
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium mb-1">Confidentiality</h4>
+                <DocumentConfidentialityBadge level={document.confidentiality_level} />
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium mb-1">Visibility</h4>
+                <Badge variant="outline">{t(`visibility.${document.visibility}`)}</Badge>
+              </div>
+
+              {document.requires_acknowledgment && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-amber-800">Acknowledgment Required</h4>
+                      <p className="text-xs text-amber-700 mt-1">
+                        This document requires acknowledgment from all staff members.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">File Size</span>
+                  <span>{formatFileSize(document.file_size || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Version</span>
+                  <span>v{document.current_version}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Downloads</span>
+                  <span>{document.download_count || 0}</span>
+                </div>
+                {document.estimated_read_time && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Read Time</span>
+                    <span>{document.estimated_read_time} min</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            {canEdit && (
+              <CardFooter>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setEditMetadataOpen(true)}
+                >
+                  <Edit3 className="w-4 h-4 mr-2" />
+                  Edit Details
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
+
+          {/* Pending Approval Card */}
+          {document.status === 'PENDING_REVIEW' && (
+            <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/10">
+              <CardHeader>
+                <CardTitle className="text-lg text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Pending Approval
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  This document is currently under review and awaiting approval before publication.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* AI Assistant Card */}
+          <Card className="border-hotel-gold/20 bg-gradient-to-br from-hotel-gold/5 to-transparent">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-hotel-gold" />
+                AI Assistant
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Get AI-powered suggestions for tags, summaries, and similar documents.
+              </p>
+              <Button 
+                variant="outline" 
+                className="w-full border-hotel-gold/30 hover:bg-hotel-gold/10"
+                onClick={() => setAiAssistantOpen(true)}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Open AI Assistant
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Document Viewer Modal */}
+      <DocumentViewer
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+        document={document}
+      />
+
+      {/* Edit Metadata Dialog */}
+      <Dialog open={editMetadataOpen} onOpenChange={setEditMetadataOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Document Metadata</DialogTitle>
+          </DialogHeader>
+          <DocumentMetadataForm
+            document={document}
+            folders={folders}
+            onSubmit={handleUpdateMetadata}
+            onCancel={() => setEditMetadataOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Assistant Dialog */}
+      <Dialog open={aiAssistantOpen} onOpenChange={setAiAssistantOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-hotel-gold" />
+              AI Document Assistant
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              AI-powered features for <strong>{document?.title}</strong>
+            </p>
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm">
+                <Sparkles className="w-4 h-4 inline mr-2 text-hotel-gold" />
+                AI-powered features coming soon: auto-tagging, duplicate detection, and smart summaries.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm font-medium mb-1">Document Link</p>
+              <code className="text-xs break-all">{`${window.location.origin}/documents/${id}`}</code>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={copyShareLink} className="flex-1">
+                <Share2 className="w-4 h-4 mr-2" />
+                Copy Link
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Only users with proper permissions will be able to access this document.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }
+

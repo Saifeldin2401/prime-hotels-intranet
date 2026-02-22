@@ -8,6 +8,18 @@ export async function resolveDocumentUrl(documentId: string, fallbackUrl?: strin
   })
 
   if (error || !data) {
+    if (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const e = error as any
+      console.error('resolveDocumentUrl: get_secure_document_url RPC failed', {
+        documentId,
+        code: e?.code,
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        status: e?.status,
+      })
+    }
     return fallbackUrl || null
   }
   return data as string
@@ -21,6 +33,18 @@ export async function resolveDocumentVersionUrl(versionId: string, fallbackUrl?:
   })
 
   if (error || !data) {
+    if (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const e = error as any
+      console.error('resolveDocumentVersionUrl: get_secure_document_version_url RPC failed', {
+        versionId,
+        code: e?.code,
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        status: e?.status,
+      })
+    }
     return fallbackUrl || null
   }
   return data as string

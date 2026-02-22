@@ -142,6 +142,12 @@ serve(async (req) => {
     }
 
     const template = await resolveTemplate(serviceClient, body.templateKey);
+    const sanitizedTemplate = template
+      ? {
+          ...template,
+          html_template: sanitizeHtmlTemplate(template.html_template),
+        }
+      : null;
     const context = buildContext(
       body,
       profileData?.full_name ?? user?.email ?? cleanedRecipients[0] ?? "team@phg-connect.com",
@@ -149,11 +155,11 @@ serve(async (req) => {
       profileData?.language || "en"
     );
 
-    const subject = body.subject || renderTemplate(template?.subject_template || "PHG Connect Notification - {{title}}", context);
-    const html = body.html || renderTemplate(template?.html_template || defaultHtmlTemplate(), context);
-    const text = body.text || renderTemplate(template?.text_template || defaultTextTemplate(), context);
-    const fromName = body.fromName || template?.from_name || runtimeConfig.fromName;
-    const fromEmail = body.fromEmail || template?.from_email || runtimeConfig.fromEmail;
+    const subject = body.subject || renderTemplate(sanitizedTemplate?.subject_template || "PHG Connect Notification - {{title}}", context);
+    const html = body.html || renderTemplate(sanitizedTemplate?.html_template || defaultHtmlTemplate(), context);
+    const text = body.text || renderTemplate(sanitizedTemplate?.text_template || defaultTextTemplate(), context);
+    const fromName = body.fromName || sanitizedTemplate?.from_name || runtimeConfig.fromName;
+    const fromEmail = body.fromEmail || sanitizedTemplate?.from_email || runtimeConfig.fromEmail;
 
     const resendResult = await sendWithResendWithRetry({
       apiKey: runtimeConfig.resendApiKey,
@@ -321,6 +327,26 @@ function renderTemplate(template: string, context: Record<string, string>): stri
   }
 
   return rendered;
+}
+
+function sanitizeHtmlTemplate(html: string): string {
+  let sanitized = html;
+
+  // Fix malformed closing tag seen in stored templates: </media> should be </style>
+  sanitized = sanitized.replace(/<\/media>/gi, "</style>");
+
+  // If a <style> tag exists but never closes, close it before </head>
+  const hasStyleOpen = /<style\b[^>]*>/i.test(sanitized);
+  const hasStyleClose = /<\/style>/i.test(sanitized);
+  if (hasStyleOpen && !hasStyleClose) {
+    if (/<\/head>/i.test(sanitized)) {
+      sanitized = sanitized.replace(/<\/head>/i, "</style>\n</head>");
+    } else {
+      sanitized = `${sanitized}\n</style>`;
+    }
+  }
+
+  return sanitized;
 }
 
 function defaultHtmlTemplate(): string {

@@ -78,5 +78,9 @@
         "users_read_not_ack": "Users who read but haven't acknowledged",
         "users_not_read": "Users who haven't read this announcement",
         "view_analytics": "View Analytics"
-    }
+    },
+    "targetaudience": "Target Audience",
+    "writeyourannouncementcontenthere": "Write your announcement content here...",
+    "scheduleannouncement": "Schedule announcement",
+    "pinannouncement": "Pin announcement"
 }

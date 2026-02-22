@@ -642,7 +642,7 @@ export default function RoutingHealth() {
               <label className="text-xs font-semibold">Select Assignee</label>
               <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Search users..." />
+                  <SelectValue placeholder={t("common:search_users")} />
                 </SelectTrigger>
                 <SelectContent>
                   {candidates.map((c) => (
@@ -655,7 +655,7 @@ export default function RoutingHealth() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setAssignDialogOpen(false)}>{t('common:cancel')}</Button>
             <Button
               disabled={!selectedAssignee || assignMutation.isPending}
               onClick={() => {

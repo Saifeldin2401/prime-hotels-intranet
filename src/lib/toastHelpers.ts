@@ -59,6 +59,14 @@ export const crudToasts = {
     cancel: {
         success: (item: string) => showSuccessToast(`${item} cancelled`, 'The item has been cancelled.'),
         error: (item: string) => showErrorToast(`Failed to cancel ${item}`, 'Please try again.')
+    },
+    restore: {
+        success: (item: string) => showSuccessToast(`${item} restored`, 'The item has been restored from trash.'),
+        error: (item: string) => showErrorToast(`Failed to restore ${item}`, 'Please try again.')
+    },
+    archive: {
+        success: (item: string) => showSuccessToast(`${item} archived`, 'The item has been archived.'),
+        error: (item: string) => showErrorToast(`Failed to archive ${item}`, 'Please try again.')
     }
 }
 

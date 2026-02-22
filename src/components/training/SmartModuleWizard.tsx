@@ -630,7 +630,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label>Title</Label>
+                                        <Label>{t('common:title')}</Label>
                                         <Input
                                             value={outline.title}
                                             onChange={(e) => setOutline({ ...outline, title: e.target.value })}
@@ -646,7 +646,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                 </div>
 
                                 <div>
-                                    <Label>Description</Label>
+                                    <Label>{t('common:description')}</Label>
                                     <Textarea
                                         value={outline.description}
                                         onChange={(e) => setOutline({ ...outline, description: e.target.value })}

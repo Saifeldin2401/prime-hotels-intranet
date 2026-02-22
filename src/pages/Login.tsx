@@ -33,14 +33,14 @@ function Particle({ delay, x, y, size }: { delay: number; x: string; y: string; 
 }
 
 // Feature item component with enhanced hover effects
-function FeatureItem({ 
-  icon: Icon, 
-  text, 
+function FeatureItem({
+  icon: Icon,
+  text,
   delay,
-  subtitle 
-}: { 
-  icon: React.ElementType; 
-  text: string; 
+  subtitle
+}: {
+  icon: React.ElementType;
+  text: string;
   delay: number;
   subtitle?: string;
 }) {
@@ -79,12 +79,12 @@ function GlassCard({ children, className = '' }: { children: React.ReactNode; cl
     <div className={`relative ${className}`}>
       {/* Glow effect behind card */}
       <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-[2rem] blur-2xl opacity-60" />
-      
+
       {/* Main card */}
       <div className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/50 overflow-hidden">
         {/* Inner gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-gray-50/50 dark:from-gray-800/50 dark:to-gray-900/50 pointer-events-none" />
-        
+
         {/* Content */}
         <div className="relative z-10">
           {children}
@@ -127,7 +127,7 @@ export default function Login() {
       <div className="hidden lg:flex flex-col justify-between relative overflow-hidden">
         {/* Layered Background */}
         <div className="absolute inset-0 bg-hotel-navy" />
-        
+
         {/* Animated Background Image with Ken Burns effect */}
         <motion.div
           initial={{ scale: 1.1 }}
@@ -138,15 +138,15 @@ export default function Login() {
             backgroundImage: "url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')",
           }}
         />
-        
+
         {/* Gradient Overlays */}
         <div className="absolute inset-0 bg-gradient-to-br from-hotel-navy/95 via-hotel-navy/85 to-hotel-navy/90 backdrop-blur-[2px]" />
         <div className="absolute inset-0 bg-gradient-to-t from-hotel-navy via-transparent to-hotel-navy/30" />
         <div className="absolute inset-0 bg-gradient-to-r from-hotel-navy/50 to-transparent" />
-        
+
         {/* Animated Orbs */}
         <motion.div
-          animate={{ 
+          animate={{
             x: mousePosition.x * 2,
             y: mousePosition.y * 2,
           }}
@@ -154,7 +154,7 @@ export default function Login() {
           className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px]"
         />
         <motion.div
-          animate={{ 
+          animate={{
             x: -mousePosition.x * 1.5,
             y: -mousePosition.y * 1.5,
           }}
@@ -170,7 +170,7 @@ export default function Login() {
         </div>
 
         {/* Grid Pattern Overlay */}
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
@@ -207,9 +207,9 @@ export default function Login() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
-              <LanguageSwitcher 
-                variant="ghost" 
-                className="text-white/90 hover:text-white hover:bg-white/10 border border-white/20 backdrop-blur-md rounded-full px-4 py-2 transition-all duration-300" 
+              <LanguageSwitcher
+                variant="ghost"
+                className="text-white/90 hover:text-white hover:bg-white/10 border border-white/20 backdrop-blur-md rounded-full px-4 py-2 transition-all duration-300"
               />
             </motion.div>
           </motion.div>
@@ -262,26 +262,26 @@ export default function Login() {
             transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className="grid grid-cols-1 gap-5 pt-4"
           >
-            <FeatureItem 
-              icon={Shield} 
+            <FeatureItem
+              icon={Shield}
               text={isRTL ? "وصول آمن ومحمي" : "Secure & Protected Access"}
               subtitle={isRTL ? "تشفير على مستوى المؤسسات" : "Enterprise-grade encryption"}
               delay={0.6}
             />
-            <FeatureItem 
-              icon={Clock} 
+            <FeatureItem
+              icon={Clock}
               text={isRTL ? "متوفر على مدار الساعة" : "Available 24/7"}
               subtitle={isRTL ? "وصول فوري في أي وقت" : "Instant access anytime"}
               delay={0.7}
             />
-            <FeatureItem 
-              icon={Users} 
+            <FeatureItem
+              icon={Users}
               text={isRTL ? "تواصل مع فريقك" : "Connect with Your Team"}
               subtitle={isRTL ? "تعاون سلس" : "Seamless collaboration"}
               delay={0.8}
             />
-            <FeatureItem 
-              icon={Fingerprint} 
+            <FeatureItem
+              icon={Fingerprint}
               text={isRTL ? "تجربة سلسة" : "Seamless Experience"}
               subtitle={isRTL ? "واجهة بديهية" : "Intuitive interface"}
               delay={0.9}
@@ -313,25 +313,25 @@ export default function Login() {
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Gradient orbs */}
-          <motion.div 
-            animate={{ 
+          <motion.div
+            animate={{
               scale: [1, 1.2, 1],
               opacity: [0.3, 0.5, 0.3],
             }}
             transition={{ duration: 8, repeat: Infinity }}
-            className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" 
+            className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
           />
-          <motion.div 
-            animate={{ 
+          <motion.div
+            animate={{
               scale: [1.2, 1, 1.2],
               opacity: [0.2, 0.4, 0.2],
             }}
             transition={{ duration: 10, repeat: Infinity }}
-            className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" 
+            className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"
           />
-          
+
           {/* Subtle grid */}
-          <div 
+          <div
             className="absolute inset-0 opacity-[0.015]"
             style={{
               backgroundImage: `linear-gradient(gray 1px, transparent 1px),
@@ -342,7 +342,7 @@ export default function Login() {
         </div>
 
         {/* Mobile Header */}
-        <div className="absolute top-0 left-0 right-0 p-4 lg:hidden z-30">
+        <div className="absolute top-0 inset-x-0 p-4 lg:hidden z-30">
           <div className="flex items-center justify-between">
             <img
               src="/prime-logo-dark.png"
@@ -398,7 +398,7 @@ export default function Login() {
         </motion.div>
 
         {/* Bottom decoration for mobile */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-100/50 to-transparent lg:hidden pointer-events-none" />
+        <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-gray-100/50 to-transparent lg:hidden pointer-events-none" />
       </div>
     </div>
   )

@@ -315,7 +315,7 @@ function EditPMSDialog({ pms, open, onClose, onSave }: EditPMSDialogProps) {
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Cancel</Button>
+                    <Button variant="outline" onClick={onClose}>{t('common:cancel')}</Button>
                     <Button onClick={handleSave} disabled={saving}>
                         {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                         Save Changes

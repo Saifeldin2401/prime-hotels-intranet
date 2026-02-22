@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useId } from 'react'
+import { useState, useEffect, useCallback, useId, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -35,7 +35,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Check, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, escapeSearchQuery } from "@/lib/utils"
 
 interface UserFormProps {
   user?: Profile
@@ -64,6 +64,8 @@ interface PotentialManager {
 const isValidUUID = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 
+const MANAGER_ROLES = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
+
 export function UserForm({ user, onClose }: UserFormProps) {
   const { t } = useTranslation('users')
   const { t: tCommon } = useTranslation('common')
@@ -87,6 +89,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [iqamaExpiry, setIqamaExpiry] = useState('')
 
   const [openReportingTo, setOpenReportingTo] = useState(false)
+  const [managerSearch, setManagerSearch] = useState('')
 
   // ... (rest of invalidation)
 
@@ -120,7 +123,21 @@ export function UserForm({ user, onClose }: UserFormProps) {
       })
 
       if (fnError) {
-        throw new Error(fnError.message || JSON.stringify(fnError))
+        const maybeContext = fnError as unknown as { context?: { response?: Response } }
+        const response = maybeContext?.context?.response
+        if (response) {
+          try {
+            const text = await response.text()
+            const parsed = text ? (JSON.parse(text) as { error?: string; details?: unknown }) : null
+            const message = parsed?.error || fnError.message
+            throw new Error(message)
+          } catch {
+            // If parsing fails, fall back to the generic error message
+            throw new Error(fnError.message || 'Failed to create user')
+          }
+        }
+
+        throw new Error(fnError.message || 'Failed to create user')
       }
 
       if (data?.error) {
@@ -234,14 +251,12 @@ export function UserForm({ user, onClose }: UserFormProps) {
       if (error) throw error
 
       // Filter to only include people with management roles
-      const managerRoles = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
-
       const rows = (data || []) as PotentialManagerRow[]
 
       return rows
         .filter((p: PotentialManagerRow) => {
           const roles = p.user_roles?.map((r) => r.role) || []
-          const hasManagerRole = roles.some((r: string) => managerRoles.includes(r))
+          const hasManagerRole = roles.some((r: string) => MANAGER_ROLES.includes(r))
           if (!hasManagerRole) return false
 
           // Check if they're in the same department or property
@@ -270,6 +285,86 @@ export function UserForm({ user, onClose }: UserFormProps) {
     },
     enabled: selectedDepartments.length > 0 || selectedProperties.length > 0
   })
+
+  const { data: reportingToProfile } = useQuery({
+    queryKey: ['manager-profile', reportingTo],
+    queryFn: async () => {
+      if (!reportingTo) return null
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, job_title, staff_id')
+        .eq('id', reportingTo)
+        .single()
+      if (error) throw error
+      return data as { id: string; full_name: string; job_title: string | null; staff_id: string | null }
+    },
+    enabled: !!reportingTo
+  })
+
+  const { data: searchedManagers } = useQuery({
+    queryKey: ['manager-search', managerSearch],
+    queryFn: async () => {
+      const trimmed = managerSearch.trim()
+      if (trimmed.length < 2) return []
+
+      const escaped = escapeSearchQuery(trimmed)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          job_title,
+          staff_id,
+          user_roles(role),
+          user_departments(department_id),
+          user_properties(property_id)
+        `)
+        .eq('is_active', true)
+        .or(`full_name.ilike.%${escaped}%,staff_id.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
+        .limit(20)
+
+      if (error) throw error
+
+      const rows = (data || []) as PotentialManagerRow[]
+
+      return rows
+        .filter((p: PotentialManagerRow) => {
+          const roles = p.user_roles?.map((r) => r.role) || []
+          return roles.some((r: string) => MANAGER_ROLES.includes(r))
+        })
+        .map((p: PotentialManagerRow): PotentialManager => ({
+          id: p.id,
+          full_name: p.full_name,
+          job_title: p.job_title,
+          staff_id: p.staff_id,
+          roles: p.user_roles?.map((r) => r.role) || [],
+          isDeptHead: (p.user_roles?.map((r) => r.role) || []).includes('department_head')
+        }))
+        .sort((a: PotentialManager, b: PotentialManager) => a.full_name.localeCompare(b.full_name))
+    },
+    enabled: managerSearch.trim().length >= 2
+  })
+
+  const combinedManagers = useMemo(() => {
+    const byId = new Map<string, PotentialManager>()
+    ;(potentialManagers || []).forEach((m: PotentialManager) => byId.set(m.id, m))
+    ;(searchedManagers || []).forEach((m: PotentialManager) => byId.set(m.id, m))
+    if (reportingToProfile && !byId.has(reportingToProfile.id)) {
+      byId.set(reportingToProfile.id, {
+        id: reportingToProfile.id,
+        full_name: reportingToProfile.full_name,
+        job_title: reportingToProfile.job_title,
+        staff_id: reportingToProfile.staff_id,
+        roles: [],
+        isDeptHead: false
+      })
+    }
+    return Array.from(byId.values())
+  }, [potentialManagers, reportingToProfile, searchedManagers])
+
+  const selectedManager = reportingTo
+    ? combinedManagers.find((m) => m.id === reportingTo) || null
+    : null
 
   const loadUserData = useCallback(async () => {
     if (!user) return
@@ -936,19 +1031,25 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     className="w-full justify-between font-normal text-left"
                   >
                     {reportingTo
-                      ? potentialManagers?.find((m) => m.id === reportingTo)?.full_name || t('form.selected_manager')
+                      ? selectedManager?.full_name || reportingToProfile?.full_name || t('form.selected_manager')
                       : t('form.select_manager')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder={t('form.search_managers')} />
+                    <CommandInput
+                      placeholder={t('form.search_managers')}
+                      value={managerSearch}
+                      onValueChange={setManagerSearch}
+                    />
                     <CommandList id={managerListId}>
                       <CommandEmpty>
-                        {selectedDepartments.length === 0 && selectedProperties.length === 0
-                          ? t('form.manager_dept_helper')
-                          : t('form.manager_none_helper')
+                        {managerSearch.trim().length >= 2
+                          ? t('form.manager_none_helper')
+                          : selectedDepartments.length === 0 && selectedProperties.length === 0
+                            ? t('form.manager_dept_helper')
+                            : t('form.manager_none_helper')
                         }
                       </CommandEmpty>
                       <CommandGroup heading={t('form.available_managers')}>
@@ -956,6 +1057,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                           value="no-manager"
                           onSelect={() => {
                             setReportingTo(null)
+                            setManagerSearch('')
                             setOpenReportingTo(false)
                           }}
                           className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
@@ -966,6 +1068,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                             onClick={(e) => {
                               e.stopPropagation()
                               setReportingTo(null)
+                              setManagerSearch('')
                               setOpenReportingTo(false)
                             }}
                           >
@@ -981,9 +1084,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
                         {potentialManagers?.map((manager: PotentialManager) => (
                           <CommandItem
                             key={manager.id}
-                            value={manager.full_name}
+                            value={`${manager.full_name} ${manager.staff_id || ''} ${manager.job_title || ''}`}
                             onSelect={() => {
                               setReportingTo(manager.id)
+                              setManagerSearch('')
                               setOpenReportingTo(false)
                             }}
                             className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
@@ -994,6 +1098,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setReportingTo(manager.id)
+                                setManagerSearch('')
                                 setOpenReportingTo(false)
                               }}
                             >
@@ -1019,6 +1124,49 @@ export function UserForm({ user, onClose }: UserFormProps) {
                           </CommandItem>
                         ))}
                       </CommandGroup>
+                      {managerSearch.trim().length >= 2 && (searchedManagers?.length || 0) > 0 && (
+                        <CommandGroup heading={t('form.search_results', 'Search Results')}>
+                          {searchedManagers
+                            ?.filter((manager: PotentialManager) => !potentialManagers?.some((m) => m.id === manager.id))
+                            .map((manager: PotentialManager) => (
+                              <CommandItem
+                                key={manager.id}
+                                value={`${manager.full_name} ${manager.staff_id || ''} ${manager.job_title || ''}`}
+                                onSelect={() => {
+                                  setReportingTo(manager.id)
+                                  setManagerSearch('')
+                                  setOpenReportingTo(false)
+                                }}
+                                className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
+                              >
+                                <div
+                                  className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                  onPointerDown={(e) => e.preventDefault()}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setReportingTo(manager.id)
+                                    setManagerSearch('')
+                                    setOpenReportingTo(false)
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      reportingTo === manager.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <span>{manager.full_name}</span>
+                                  <span className="ml-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">
+                                    {manager.staff_id || 'no-id'}
+                                  </span>
+                                  <span className="ml-auto text-xs text-muted-foreground">
+                                    {manager.job_title || manager.roles?.join(', ')}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      )}
                     </CommandList>
                   </Command>
                 </PopoverContent>

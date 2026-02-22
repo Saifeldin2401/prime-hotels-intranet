@@ -38,6 +38,9 @@ import { useTranslation } from 'react-i18next'
 interface OrgPyramidProps {
     hierarchy: OrgHierarchy
     isRTL?: boolean
+    adminMode?: boolean
+    onAdminModeChange?: (value: boolean) => void
+    showAdminToggle?: boolean
 }
 
 const containerVariants = {
@@ -60,7 +63,13 @@ const roleLevelConfig = {
     staff: { icon: User, color: 'text-gray-600', bg: 'bg-gray-50' }
 }
 
-export function OrgPyramid({ hierarchy, isRTL = false }: OrgPyramidProps) {
+export function OrgPyramid({
+    hierarchy,
+    isRTL = false,
+    adminMode: adminModeProp,
+    onAdminModeChange,
+    showAdminToggle: showAdminToggleProp
+}: OrgPyramidProps) {
     const { t } = useTranslation('directory')
     const { primaryRole } = useAuth()
     const navigate = useNavigate()
@@ -70,10 +79,34 @@ export function OrgPyramid({ hierarchy, isRTL = false }: OrgPyramidProps) {
     const [expandAll, setExpandAll] = useState(false)
 
     // Admin mode state
-    const isAdmin = ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '')
-    const [adminMode, setAdminMode] = useState(false)
+    const isAdmin = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '')
+    const [adminModeInternal, setAdminModeInternal] = useState(false)
+    const adminMode = adminModeProp ?? adminModeInternal
+    const setAdminMode = onAdminModeChange ?? setAdminModeInternal
+    const showAdminToggle = showAdminToggleProp ?? isAdmin
     const [selectedEmployee, setSelectedEmployee] = useState<OrgEmployee | null>(null)
     const [dialogOpen, setDialogOpen] = useState(false)
+
+    const corporateExecutives = hierarchy.corporate.executives
+    const ceo = useMemo(() => {
+        if (!corporateExecutives.length) return null
+        const isCeoTitle = (title?: string | null) => {
+            const normalized = title?.toLowerCase() || ''
+            return normalized.includes('chief executive officer') || normalized.includes('ceo')
+        }
+        return corporateExecutives.find(e => isCeoTitle(e.job_title)) || corporateExecutives[0]
+    }, [corporateExecutives])
+
+    const directReports = useMemo(() => {
+        if (!ceo) return []
+        return corporateExecutives.filter(e => e.reporting_to === ceo.id)
+    }, [ceo, corporateExecutives])
+
+    const otherExecutives = useMemo(() => {
+        if (!ceo) return corporateExecutives
+        const directIds = new Set(directReports.map(r => r.id))
+        return corporateExecutives.filter(e => e.id !== ceo.id && !directIds.has(e.id))
+    }, [ceo, corporateExecutives, directReports])
 
     const toggleProperty = (id: string) => {
         setExpandedProperties(prev => {
@@ -172,16 +205,16 @@ export function OrgPyramid({ hierarchy, isRTL = false }: OrgPyramidProps) {
                     </Badge>
 
                     {/* Admin Mode Toggle */}
-                    {isAdmin && (
+                    {showAdminToggle && (
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
                             <Settings className="h-4 w-4 text-amber-600" />
                             <Label htmlFor="admin-mode" className="text-sm font-medium text-amber-800 cursor-pointer">
-                                {t('manage_mode', 'Manage')}
+                                {t('edit_map', 'Edit Map')}
                             </Label>
                             <Switch
                                 id="admin-mode"
                                 checked={adminMode}
-                                onCheckedChange={setAdminMode}
+                                onCheckedChange={(val) => setAdminMode(val)}
                                 className="data-[state=checked]:bg-amber-500"
                             />
                         </div>
@@ -202,7 +235,7 @@ export function OrgPyramid({ hierarchy, isRTL = false }: OrgPyramidProps) {
             {/* Admin Mode Indicator */}
             {adminMode && (
                 <div className="bg-amber-100 border border-amber-300 rounded-lg px-4 py-2 text-amber-800 text-sm">
-                    <strong>{t('admin_mode_active', 'Manage Mode Active')}:</strong> {t('click_employee_to_edit', 'Click any employee to edit their assignment')}
+                    <strong>{t('map_edit_mode_active', 'Map Edit Mode Active')}:</strong> {t('click_employee_to_edit', 'Click any employee to edit their assignment or reporting line')}
                 </div>
             )}
 
@@ -235,7 +268,7 @@ export function OrgPyramid({ hierarchy, isRTL = false }: OrgPyramidProps) {
                     </div>
 
                     {/* Corporate Executives */}
-                    {hierarchy.corporate.executives.length > 0 && (
+                    {corporateExecutives.length > 0 && (
                         <div className="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
                             <div className="flex items-center gap-2 mb-4">
                                 <Crown className="h-5 w-5 text-indigo-600" />
@@ -243,22 +276,80 @@ export function OrgPyramid({ hierarchy, isRTL = false }: OrgPyramidProps) {
                                     {t('corporate_executives', 'Corporate Executives')}
                                 </h3>
                                 <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200">
-                                    {hierarchy.corporate.executives.length}
+                                    {corporateExecutives.length}
                                 </Badge>
                             </div>
 
-                            <div className="flex flex-wrap gap-4 justify-center">
-                                {hierarchy.corporate.executives.map(emp => (
-                                    <motion.div key={emp.id} variants={itemVariants}>
+                            {ceo ? (
+                                <div className="space-y-6">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <Badge className="bg-indigo-600 text-white">
+                                            {t('ceo', 'CEO')}
+                                        </Badge>
                                         <OrgNode
-                                            employee={emp}
+                                            employee={ceo}
                                             variant="corporate"
                                             isRTL={isRTL}
-                                            onClick={() => handleEmployeeClick(emp.id)}
+                                            onClick={() => handleEmployeeClick(ceo.id)}
                                         />
-                                    </motion.div>
-                                ))}
-                            </div>
+                                    </div>
+
+                                    {directReports.length > 0 && (
+                                        <div className="pt-4 border-t border-indigo-200">
+                                            <div className="flex items-center gap-2 mb-3 text-sm text-indigo-800">
+                                                <Users className="h-4 w-4" />
+                                                {t('direct_reports', 'Direct Reports')}
+                                            </div>
+                                            <div className="flex flex-wrap gap-4 justify-center">
+                                                {directReports.map(emp => (
+                                                    <motion.div key={emp.id} variants={itemVariants}>
+                                                        <OrgNode
+                                                            employee={emp}
+                                                            variant="corporate"
+                                                            isRTL={isRTL}
+                                                            onClick={() => handleEmployeeClick(emp.id)}
+                                                        />
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {otherExecutives.length > 0 && (
+                                        <div className="pt-4 border-t border-indigo-200">
+                                            <div className="flex items-center gap-2 mb-3 text-sm text-indigo-800">
+                                                <Users className="h-4 w-4" />
+                                                {t('other_executives', 'Other Executives')}
+                                            </div>
+                                            <div className="flex flex-wrap gap-4 justify-center">
+                                                {otherExecutives.map(emp => (
+                                                    <motion.div key={emp.id} variants={itemVariants}>
+                                                        <OrgNode
+                                                            employee={emp}
+                                                            variant="corporate"
+                                                            isRTL={isRTL}
+                                                            onClick={() => handleEmployeeClick(emp.id)}
+                                                        />
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap gap-4 justify-center">
+                                    {corporateExecutives.map(emp => (
+                                        <motion.div key={emp.id} variants={itemVariants}>
+                                            <OrgNode
+                                                employee={emp}
+                                                variant="corporate"
+                                                isRTL={isRTL}
+                                                onClick={() => handleEmployeeClick(emp.id)}
+                                            />
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 

@@ -535,5 +535,6 @@
             "shifts": "No shifts found for the selected period.",
             "attendance": "No attendance records found for this date."
         }
-    }
+    },
+    "searchjobtitle": "Search job title..."
 }

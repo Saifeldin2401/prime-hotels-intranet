@@ -5,11 +5,12 @@
  * Uses 'documents' table.
  */
 
-import { useState, useCallback, useEffect, lazy, Suspense, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { extractTextFromAiResponse } from '@/lib/aiResponse'
 import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import {
     Save,
@@ -34,8 +35,7 @@ import {
 import { marked } from 'marked'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-// Lazy load heavy RichTextEditor
-const RichTextEditor = lazy(() => import('@/components/ui/RichTextEditor'))
+import RichTextEditor from '@/components/ui/RichTextEditor'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -301,6 +301,303 @@ export default function KnowledgeEditor() {
     const [isGenerating, setIsGenerating] = useState(false)
     const [aiLanguage, setAiLanguage] = useState('English')
     const [isForbidden, setIsForbidden] = useState(false)
+    const [beautifyOptions, setBeautifyOptions] = useState({
+        includeTables: true,
+        includeMermaid: false,
+        includeCallouts: true,
+        includeTOC: true
+    })
+
+    const toPlainText = useCallback((value: string) => {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(value, 'text/html')
+        return (doc.body.textContent || '').replace(/\s+/g, ' ').trim()
+    }, [])
+
+    const toHtmlContent = useCallback((value: string) => {
+        const trimmed = value.trim()
+        if (!trimmed) return ''
+        return trimmed.startsWith('<')
+            ? trimmed
+            : (marked.parse(trimmed, { async: false }) as string)
+    }, [])
+
+    const ensureBeautifyFeatures = useCallback((html: string, opts: typeof beautifyOptions) => {
+        if (!html) return html
+
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(html, 'text/html')
+        const body = doc.body
+
+        const slugify = (value: string) =>
+            value
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+
+        const ensureHeadingIds = () => {
+            const used = new Set<string>()
+            const headings = Array.from(body.querySelectorAll('h1, h2, h3, h4'))
+            headings.forEach((h) => {
+                const base = slugify(h.textContent || 'section') || 'section'
+                let id = base
+                let i = 2
+                while (used.has(id)) {
+                    id = `${base}-${i}`
+                    i += 1
+                }
+                h.id = h.id || id
+                used.add(h.id)
+            })
+            return headings
+        }
+
+        const headings = ensureHeadingIds()
+        const nonTitleHeadings = headings.filter((h) => h.tagName !== 'H1')
+        const generatedTOCs = Array.from(body.querySelectorAll('.ai-generated-toc'))
+        const generatedSummaryTables = Array.from(body.querySelectorAll('table.ai-generated-summary-table'))
+        const generatedCallouts = Array.from(body.querySelectorAll('.ai-generated-callout'))
+        const generatedMermaidBlocks = Array.from(body.querySelectorAll('pre.ai-generated-mermaid'))
+        const hasAnyTable = Array.from(body.querySelectorAll('table')).some(
+            (table) => !table.classList.contains('summary-table') && !table.classList.contains('ai-generated-summary-table')
+        )
+        const hasTOC = !!body.querySelector('.table-of-contents, .ai-generated-toc, .ai-content .ai-section-title')
+        const hasCallout = !!body.querySelector(
+            '.ai-highlight-box, .ai-warning-box, .ai-info-box, .ai-tip-box, [class^="alert-"], [class*=" alert-"]'
+        )
+        const hasMermaid = !!body.querySelector('pre.mermaid, .mermaid')
+        const hasHeader = !!body.querySelector('.ai-header')
+        const hasPremiumLayout = !!body.querySelector('.ai-content')
+
+        if (!opts.includeTOC || hasTOC) {
+            generatedTOCs.forEach((node) => node.remove())
+        }
+        if (!opts.includeTables) {
+            generatedSummaryTables.forEach((node) => node.remove())
+        }
+        if (!opts.includeCallouts) {
+            generatedCallouts.forEach((node) => node.remove())
+        }
+        if (!opts.includeMermaid) {
+            generatedMermaidBlocks.forEach((node) => node.remove())
+        }
+
+        const existingTOCs = Array.from(body.querySelectorAll('.table-of-contents'))
+        if (existingTOCs.length > 1) {
+            existingTOCs.slice(1).forEach((node) => node.remove())
+        }
+        const existingSummaryTables = Array.from(body.querySelectorAll('table.summary-table, table.ai-generated-summary-table'))
+        if (existingSummaryTables.length > 1) {
+            existingSummaryTables.slice(1).forEach((node) => node.remove())
+        }
+
+        const insertAtTop = (node: HTMLElement) => {
+            if (body.firstChild) {
+                body.insertBefore(node, body.firstChild)
+            } else {
+                body.appendChild(node)
+            }
+        }
+        const insertAfter = (ref: Element | null, node: HTMLElement) => {
+            if (!ref || !ref.parentNode) {
+                insertAtTop(node)
+                return
+            }
+            const parent = ref.parentNode
+            if (ref.nextSibling) parent.insertBefore(node, ref.nextSibling)
+            else parent.appendChild(node)
+        }
+
+        const titleNode = body.querySelector('h1')
+        if (opts.includeTOC && !hasTOC && nonTitleHeadings.length > 0) {
+            const toc = doc.createElement('section')
+            toc.className = 'ai-section table-of-contents ai-generated-toc'
+            const title = doc.createElement('h2')
+            title.className = 'ai-section-title'
+            title.textContent = t('editor.table_of_contents', 'Table of Contents')
+            const list = doc.createElement('ol')
+            list.className = 'ai-ordered-list'
+            nonTitleHeadings.forEach((h) => {
+                const li = doc.createElement('li')
+                const a = doc.createElement('a')
+                a.setAttribute('href', `#${h.id}`)
+                a.textContent = h.textContent || 'Section'
+                li.appendChild(a)
+                list.appendChild(li)
+            })
+            toc.appendChild(title)
+            toc.appendChild(list)
+
+            const insertionPoint = body.querySelector('.ai-content') || body
+            if (insertionPoint === body) {
+                insertAfter(titleNode, toc)
+            } else {
+                if (insertionPoint.firstChild) insertionPoint.insertBefore(toc, insertionPoint.firstChild)
+                else insertionPoint.appendChild(toc)
+            }
+        }
+
+        if (opts.includeTables && !existingSummaryTables.length && !hasAnyTable) {
+            const table = doc.createElement('table')
+            table.className = 'ai-table summary-table ai-generated-summary-table'
+            const thead = doc.createElement('thead')
+            const headRow = doc.createElement('tr')
+            const th1 = doc.createElement('th')
+            th1.textContent = t('editor.section', 'Section')
+            const th2 = doc.createElement('th')
+            th2.textContent = t('editor.summary', 'Summary')
+            headRow.appendChild(th1)
+            headRow.appendChild(th2)
+            thead.appendChild(headRow)
+            table.appendChild(thead)
+
+            const tbody = doc.createElement('tbody')
+            const getSummary = (heading: Element) => {
+                let sibling = heading.nextElementSibling
+                while (sibling) {
+                    if (/^H[1-4]$/.test(sibling.tagName)) break
+                    if (sibling.tagName === 'P' && sibling.textContent?.trim()) {
+                        return sibling.textContent.trim().slice(0, 180)
+                    }
+                    sibling = sibling.nextElementSibling
+                }
+                return ''
+            }
+
+            if (nonTitleHeadings.length > 0) {
+                nonTitleHeadings.forEach((h) => {
+                    const row = doc.createElement('tr')
+                    const td1 = doc.createElement('td')
+                    td1.textContent = h.textContent || ''
+                    const td2 = doc.createElement('td')
+                    td2.textContent = getSummary(h)
+                    row.appendChild(td1)
+                    row.appendChild(td2)
+                    tbody.appendChild(row)
+                })
+            } else {
+                const row = doc.createElement('tr')
+                const td1 = doc.createElement('td')
+                td1.textContent = t('editor.overview', 'Overview')
+                const td2 = doc.createElement('td')
+                const firstParagraph = body.querySelector('p')?.textContent?.trim() || ''
+                td2.textContent = firstParagraph.slice(0, 180)
+                row.appendChild(td1)
+                row.appendChild(td2)
+                tbody.appendChild(row)
+            }
+
+            table.appendChild(tbody)
+            const tocNode = body.querySelector('.table-of-contents')
+            insertAfter(tocNode || titleNode, table)
+        }
+
+        if (opts.includeCallouts && !hasCallout) {
+            let replaced = false
+            const calloutMap: Record<string, string> = {
+                IMPORTANT: 'ai-warning-box',
+                WARNING: 'ai-warning-box',
+                NOTE: 'ai-info-box',
+                TIP: 'ai-tip-box',
+                REMEMBER: 'ai-highlight-box'
+            }
+
+            Array.from(body.querySelectorAll('p')).forEach((p) => {
+                const text = p.textContent?.trim() || ''
+                const match = text.match(/^(IMPORTANT|WARNING|NOTE|TIP|REMEMBER)\s*[:\-]\s*(.+)$/i)
+                if (!match) return
+                const label = match[1].toUpperCase()
+                const content = match[2]
+                const div = doc.createElement('div')
+                div.className = `${calloutMap[label] || 'ai-info-box'} ai-generated-callout`
+                const strong = doc.createElement('strong')
+                strong.textContent = `${label}: `
+                div.appendChild(strong)
+                div.appendChild(doc.createTextNode(content))
+                p.replaceWith(div)
+                replaced = true
+            })
+
+            if (!replaced) {
+                const fallback = doc.createElement('div')
+                fallback.className = 'ai-info-box ai-generated-callout'
+                const strong = doc.createElement('strong')
+                strong.textContent = `${t('editor.note', 'NOTE')}: `
+                fallback.appendChild(strong)
+                fallback.appendChild(
+                    doc.createTextNode(
+                        t('editor.callout_fallback', 'Review the table of contents for quick navigation and key steps.')
+                    )
+                )
+                const tocNode = body.querySelector('.table-of-contents')
+                const summaryTable = body.querySelector('table.summary-table, table.ai-generated-summary-table')
+                insertAfter(summaryTable || tocNode || titleNode, fallback)
+            }
+        }
+
+        if (opts.includeMermaid && !hasMermaid && nonTitleHeadings.length > 1) {
+            const labels = [
+                (titleNode?.textContent || t('editor.overview', 'Overview')).trim(),
+                ...nonTitleHeadings.slice(0, 4).map((h) => (h.textContent || t('editor.section', 'Section')).trim()),
+            ].filter(Boolean)
+
+            if (labels.length > 1) {
+                const normalizeMermaidLabel = (value: string) => value.replace(/"/g, '\\"')
+                const nodeId = (index: number) => `N${index + 1}`
+                const lines = ['flowchart TD']
+
+                labels.forEach((label, index) => {
+                    lines.push(`${nodeId(index)}["${normalizeMermaidLabel(label)}"]`)
+                    if (index > 0) {
+                        lines.push(`${nodeId(index - 1)} --> ${nodeId(index)}`)
+                    }
+                })
+
+                const mermaidBlock = doc.createElement('pre')
+                mermaidBlock.className = 'mermaid ai-generated-mermaid'
+                mermaidBlock.textContent = lines.join('\n')
+
+                const summaryTable = body.querySelector('table.summary-table, table.ai-generated-summary-table')
+                const tocNode = body.querySelector('.table-of-contents')
+                insertAfter(summaryTable || tocNode || titleNode, mermaidBlock)
+            }
+        }
+
+        return body.innerHTML
+    }, [t])
+
+    const finalizeAiHtmlForEditor = useCallback((
+        rawResult: string,
+        fallbackSource?: string,
+        minRetentionRatio = 0
+    ) => {
+        const extracted = extractTextFromAiResponse(rawResult).trim()
+        if (!extracted) return ''
+
+        const resultHtml = toHtmlContent(extracted)
+        const fallbackHtml = fallbackSource ? toHtmlContent(fallbackSource) : ''
+        const resultPlain = toPlainText(resultHtml)
+        const fallbackPlain = toPlainText(fallbackHtml)
+        const shouldUseFallback =
+            minRetentionRatio > 0 &&
+            !!fallbackPlain &&
+            resultPlain.length < fallbackPlain.length * minRetentionRatio
+
+        let html = shouldUseFallback ? fallbackHtml : resultHtml
+
+        if (beautifyOptions.includeMermaid) {
+            html = transformMermaidCodeBlocks(html)
+        } else {
+            html = html
+                .replace(/<pre[^>]*class=["'][^"']*\bmermaid\b[^"']*["'][^>]*>[\s\S]*?<\/pre>/gi, '')
+                .replace(/```mermaid[\s\S]*?```/gi, '')
+        }
+
+        const enhanced = ensureBeautifyFeatures(html, beautifyOptions)
+        return sanitizeHtml(enhanced)
+    }, [beautifyOptions, ensureBeautifyFeatures, toHtmlContent, toPlainText])
 
     const previewHtml = useMemo(() => {
         const raw = formData.content || ''
@@ -448,11 +745,11 @@ export default function KnowledgeEditor() {
 
     // AI
     const generateWithAI = async (action: 'outline' | 'expand' | 'improve' | 'summarize') => {
-        if (!formData.title && action !== 'improve' && action !== 'summarize') {
+        if (action === 'outline' && !formData.title && !formData.content) {
             toast.error(t('editor.alerts.title_required'))
             return
         }
-        if (action === 'summarize' && !formData.content) {
+        if ((action === 'expand' || action === 'improve' || action === 'summarize') && !formData.content) {
             toast.error(t('editor.write_placeholder'))
             return
         }
@@ -463,11 +760,14 @@ export default function KnowledgeEditor() {
 
             // Content generation actions (outline, expand, improve)
             if (action === 'outline') {
-                result = await aiService.improveContent(`Outline for: ${formData.title}`, 'expand', aiLanguage)
+                const outlineSeed = formData.content?.trim()
+                    ? `Create a structured outline from this content with clear sections, numbered steps, and callout-worthy highlights:\n\n${formData.content}`
+                    : `Create a detailed outline for this article topic: ${formData.title}`
+                result = await aiService.improveContent(outlineSeed, 'expand', aiLanguage, 'html', beautifyOptions)
             } else if (action === 'expand') {
-                result = await aiService.improveContent(formData.content, 'expand', aiLanguage)
+                result = await aiService.improveContent(formData.content, 'expand', aiLanguage, 'html', beautifyOptions)
             } else if (action === 'improve') {
-                result = await aiService.improveContent(formData.content, 'professional', aiLanguage)
+                result = await aiService.improveContent(formData.content, 'professional', aiLanguage, 'html', beautifyOptions)
             } else if (action === 'summarize') {
                 // Build language instruction based on selection
                 const langInstruction = aiLanguage === 'Arabic'
@@ -491,7 +791,7 @@ Write ONLY the summary, no labels or prefixes.`,
                     aiLanguage
                 )
                 if (summaryResult) {
-                    updateField('summary', summaryResult)
+                    updateField('summary', extractTextFromAiResponse(summaryResult))
                 }
 
                 // Description: Short tagline/subtitle style (max 15 words)
@@ -511,7 +811,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 )
                 if (descResult) {
                     // Clean up any quotes the AI might add
-                    let cleanDesc = descResult.replace(/^["']|["']$/g, '').trim()
+                    let cleanDesc = extractTextFromAiResponse(descResult).replace(/^["']|["']$/g, '').trim()
 
                     // Only filter non-ASCII if English-only mode (to remove Chinese mistakes)
                     if (aiLanguage === 'English') {
@@ -527,9 +827,12 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
             // For content actions only - just update content
             if (result) {
-                // Parse AI markdown response to HTML
-                const htmlContent = await marked(result)
-                updateField('content', sanitizeHtml(htmlContent))
+                const sourceForRetention = action === 'outline' ? undefined : formData.content
+                const minRetentionRatio = action === 'outline' ? 0 : 0.4
+                const preparedHtml = finalizeAiHtmlForEditor(result, sourceForRetention, minRetentionRatio)
+                if (preparedHtml) {
+                    updateField('content', preparedHtml)
+                }
             }
             toast.success(t('editor.alerts.ai_success'))
         } catch (error) {
@@ -552,12 +855,19 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 formData.content,
                 formData.content_type,
                 aiLanguage,
-                'professional'
+                'professional',
+                beautifyOptions
             )
-            
+
             if (result) {
-                updateField('content', result)
-                toast.success('Content beautified with AI! Your article now has professional formatting.')
+                const preparedHtml = finalizeAiHtmlForEditor(result, formData.content, 0.6)
+                if (!preparedHtml) {
+                    toast.error('AI beautification returned empty content. Please try again.')
+                    return
+                }
+
+                updateField('content', preparedHtml)
+                toast.success('Content beautified with AI. Existing options were applied.')
             } else {
                 toast.error('AI beautification failed. Please try again.')
             }
@@ -618,8 +928,9 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             'English'
                         )
                         if (summaryResult) {
-                            finalSummary = summaryResult
-                            updateField('summary', summaryResult)
+                            const normalizedSummary = extractTextFromAiResponse(summaryResult)
+                            finalSummary = normalizedSummary
+                            updateField('summary', normalizedSummary)
                         }
                     }
                     if (needsDescription) {
@@ -629,7 +940,10 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             'English'
                         )
                         if (descResult) {
-                            const cleanDesc = descResult.replace(/^["']|["']$/g, '').replace(/[^\x00-\x7F]/g, '').trim()
+                            const cleanDesc = extractTextFromAiResponse(descResult)
+                                .replace(/^["']|["']$/g, '')
+                                .replace(/[^\x00-\x7F]/g, '')
+                                .trim()
                             finalDescription = cleanDesc
                             updateField('description', cleanDesc)
                         }
@@ -903,7 +1217,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             <div>
                                 <Label>{t('editor.title_label')} *</Label>
                                 <Input value={formData.title} onChange={e => updateField('title', e.target.value)} placeholder={t('editor.title_placeholder')} className="mt-1 text-lg" />
-                                
+
                                 {/* Duplicate Detection Warning */}
                                 {showDuplicateWarning && duplicateCheckResult?.hasDuplicates && (
                                     <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -921,17 +1235,17 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                                         </li>
                                                     ))}
                                                 </ul>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        className="mt-2 h-7 text-xs text-amber-700 hover:text-amber-900"
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="mt-2 h-7 text-xs text-amber-700 hover:text-amber-900"
                                                     onClick={() => {
                                                         setShowDuplicateWarning(false)
                                                         setDismissedDuplicateTitle(formData.title)
                                                     }}
-                                                    >
-                                                        {t('editor.dismiss_warning', 'Dismiss')}
-                                                    </Button>
+                                                >
+                                                    {t('editor.dismiss_warning', 'Dismiss')}
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
@@ -951,14 +1265,14 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         </Button>
                                     </div>
                                 )}
-                                
+
                                 {isGeneratingTags && (
                                     <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
                                         <Loader2 className="w-3 h-3 animate-spin" />
                                         {t('editor.generating_tags', 'Generating tag suggestions...')}
                                     </div>
                                 )}
-                                
+
                                 {tagSuggestions.length > 0 && (
                                     <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <span className="text-xs text-slate-500">{t('editor.suggested_tags', 'Suggested tags:')}</span>
@@ -966,11 +1280,10 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                             <Badge
                                                 key={idx}
                                                 variant="outline"
-                                                className={`text-[10px] cursor-pointer hover:bg-indigo-50 ${
-                                                    suggestion.confidence === 'high' ? 'border-green-300 text-green-700' :
-                                                    suggestion.confidence === 'medium' ? 'border-blue-300 text-blue-700' :
-                                                    'border-slate-300 text-slate-600'
-                                                }`}
+                                                className={`text-[10px] cursor-pointer hover:bg-indigo-50 ${suggestion.confidence === 'high' ? 'border-green-300 text-green-700' :
+                                                        suggestion.confidence === 'medium' ? 'border-blue-300 text-blue-700' :
+                                                            'border-slate-300 text-slate-600'
+                                                    }`}
                                                 title={suggestion.reason}
                                             >
                                                 {suggestion.tag}
@@ -1149,6 +1462,47 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     <Palette className="h-4 w-4" /> AI Beautify
                                 </Button>
                             </div>
+
+                            <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+                                <div className="text-xs font-medium text-slate-600 mb-2">
+                                    {t('editor.beautify_options', 'Beautify Options')}
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    <label className="flex items-center justify-between text-xs text-slate-700">
+                                        <span>{t('editor.include_tables', 'Include Tables')}</span>
+                                        <Switch
+                                            checked={beautifyOptions.includeTables}
+                                            onCheckedChange={(val) => setBeautifyOptions(prev => ({ ...prev, includeTables: val }))}
+                                        />
+                                    </label>
+                                    <label className="flex items-center justify-between text-xs text-slate-700">
+                                        <span>{t('editor.include_mermaid', 'Include Mermaid Diagrams')}</span>
+                                        <Switch
+                                            checked={beautifyOptions.includeMermaid}
+                                            onCheckedChange={(val) => setBeautifyOptions(prev => ({ ...prev, includeMermaid: val }))}
+                                        />
+                                    </label>
+                                    <label className="flex items-center justify-between text-xs text-slate-700">
+                                        <span>{t('editor.include_callouts', 'Include Callouts')}</span>
+                                        <Switch
+                                            checked={beautifyOptions.includeCallouts}
+                                            onCheckedChange={(val) => setBeautifyOptions(prev => ({ ...prev, includeCallouts: val }))}
+                                        />
+                                    </label>
+                                    <label className="flex items-center justify-between text-xs text-slate-700">
+                                        <span>{t('editor.include_toc', 'Include Table of Contents')}</span>
+                                        <Switch
+                                            checked={beautifyOptions.includeTOC}
+                                            onCheckedChange={(val) => setBeautifyOptions(prev => ({ ...prev, includeTOC: val }))}
+                                        />
+                                    </label>
+                                </div>
+                                {beautifyOptions.includeMermaid && (
+                                    <p className="mt-2 text-[11px] text-slate-500">
+                                        {t('editor.mermaid_preview_note', 'Mermaid diagrams render in Preview mode.')}
+                                    </p>
+                                )}
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -1164,15 +1518,13 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         <CardContent>
                             {activeTab === 'edit' ? (
                                 <div className="space-y-6">
-                                    <Suspense fallback={<div className="h-[200px] w-full bg-gray-100 animate-pulse rounded-md" />}>
-                                        <RichTextEditor
-                                            value={formData.content}
-                                            onChange={v => updateField('content', v)}
-                                            placeholder={t('editor.write_placeholder')}
-                                            minHeight={200}
-                                            direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
-                                        />
-                                    </Suspense>
+                                    <RichTextEditor
+                                        value={formData.content}
+                                        onChange={v => updateField('content', v)}
+                                        placeholder={t('editor.write_placeholder')}
+                                        minHeight={200}
+                                        direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
+                                    />
 
                                     {/* Content Type Specific Builders */}
                                     {formData.content_type === 'video' && (

@@ -4,7 +4,13 @@ import { exportRowsToXlsx } from '@/lib/excel'
 import type { AppRole } from '@/lib/constants'
 
 export type ManagementLevelFilter = 'all' | 'executive' | 'management' | 'staff'
-export type DirectorySort = 'name_asc' | 'name_desc' | 'joining_date_asc' | 'joining_date_desc'
+export type DirectorySort =
+  | 'name_asc'
+  | 'name_desc'
+  | 'joining_date_asc'
+  | 'joining_date_desc'
+  | 'job_title_asc'
+  | 'job_title_desc'
 
 export interface EmployeeDirectoryFilters {
   search?: string
@@ -114,4 +120,3 @@ export async function exportMonthlyBirthdays(params: {
   const fileName = `birthdays_${params.year}_${String(params.month).padStart(2, '0')}_${now.getTime()}.xlsx`
   await exportRowsToXlsx(rows, fileName, 'Birthdays')
 }
-

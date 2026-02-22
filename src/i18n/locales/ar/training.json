@@ -994,8 +994,8 @@
             "avgScore": "متوسط النقاط"
         }
     },
-    "allDepartments": "???? ???????",
-    "allProperties": "???? ???????",
+    "allDepartments": "جميع الأقسام",
+    "allProperties": "جميع الفنادق",
     "attachedDocument": "Attached Document",
     "averageScore": "Average Score",
     "certificateGenerationFailed": "Certificate Generation Failed",
@@ -1073,9 +1073,8 @@
     "filterByDept": "تصفية حسب القسم",
     "filterByProp": "تصفية حسب الفندق",
     "filterByStatus": "تصفية حسب الحالة",
-    "allDepartments": "جميع الأقسام",
-    "allProperties": "جميع الفنادق",
     "allStatuses": "جميع الحالات",
     "clearFilters": "مسح التصفيات",
-    "export": "تصدير"
+    "export": "تصدير",
+    "trainingmodule": "وحدة تدريب"
 }

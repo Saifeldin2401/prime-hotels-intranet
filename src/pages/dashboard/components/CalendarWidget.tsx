@@ -58,7 +58,7 @@ interface ExternalHoliday {
 }
 
 export function CalendarWidget() {
-  const { user } = useAuth()
+  const { user, primaryRole } = useAuth()
   const { t, i18n } = useTranslation('dashboard');
   const isRTL = i18n.dir() === 'rtl';
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -66,6 +66,11 @@ export function CalendarWidget() {
   const [fetchedHolidays, setFetchedHolidays] = useState<any[]>([])
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+
+  // Roles that can access the full scheduling/shift management tool
+  const schedulingRoles = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
+  const hasSchedulingPrivileges = schedulingRoles.includes(primaryRole || '')
+  const schedulePath = hasSchedulingPrivileges ? '/hr/scheduling' : '/hr/attendance'
 
   // Fetch KSA Holidays automatically
   useEffect(() => {
@@ -169,7 +174,7 @@ export function CalendarWidget() {
   }
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : []
-  
+
   // Today's events summary
   const todayEvents = getEventsForDate(new Date())
   const todayEventCount = todayEvents.length
@@ -213,7 +218,7 @@ export function CalendarWidget() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-xl font-bold flex items-center gap-2 text-hotel-navy">
-              <Link to="/calendar" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <Link to={schedulePath} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <Calendar className="w-5 h-5 text-hotel-gold" />
                 {t('widgets.schedule_title', 'Schedule')}
               </Link>
@@ -262,7 +267,7 @@ export function CalendarWidget() {
               </div>
             ))}
           </div>
-          
+
           {/* Calendar Days */}
           <div className="grid grid-cols-7 gap-1">
             {days.map((date, idx) => {
@@ -293,14 +298,14 @@ export function CalendarWidget() {
                   {isToday && !isSelected && (
                     <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-hotel-gold rounded-full" />
                   )}
-                  
+
                   <span className={cn(
                     "text-sm font-medium",
                     isSelected && "font-bold"
                   )}>
                     {format(date, 'd')}
                   </span>
-                  
+
                   {/* Event dots */}
                   {hasEvents && (
                     <div className="flex gap-0.5 mt-0.5">
@@ -324,14 +329,14 @@ export function CalendarWidget() {
         {/* Today's Summary - Compact & Clean */}
         <div className={cn(
           "flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all",
-          hasEventsToday 
-            ? "bg-gradient-to-r from-amber-50/80 to-orange-50/60 border-amber-200/60 shadow-sm" 
+          hasEventsToday
+            ? "bg-gradient-to-r from-amber-50/80 to-orange-50/60 border-amber-200/60 shadow-sm"
             : "bg-gradient-to-r from-emerald-50/80 to-teal-50/60 border-emerald-200/60 shadow-sm"
         )}>
           <div className={cn(
             "flex items-center justify-center w-10 h-10 rounded-xl shrink-0",
-            hasEventsToday 
-              ? "bg-amber-100 text-amber-600" 
+            hasEventsToday
+              ? "bg-amber-100 text-amber-600"
               : "bg-emerald-100 text-emerald-600"
           )}>
             {hasEventsToday ? (
@@ -340,10 +345,10 @@ export function CalendarWidget() {
               <CheckCircle2 className="w-5 h-5" />
             )}
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-slate-800 leading-tight">
-              {hasEventsToday 
+              {hasEventsToday
                 ? t('schedule.today_events', { count: todayEventCount })
                 : t('schedule.no_events_today', 'No events today')
               }
@@ -352,7 +357,7 @@ export function CalendarWidget() {
               {format(new Date(), 'EEEE, MMMM d', { locale: isRTL ? ar : undefined })}
             </p>
           </div>
-          
+
           {!isSameDay(selectedDate || new Date(), new Date()) && (
             <Button
               variant="ghost"
@@ -415,21 +420,21 @@ export function CalendarWidget() {
                         "w-2 h-2 mt-2 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm",
                         eventTypeColors[event.type] || eventTypeColors.default
                       )} />
-                      
+
                       <div className="flex-1 min-w-0">
                         {/* Title Row */}
                         <div className="flex items-start justify-between gap-2">
                           <p className="font-semibold text-slate-800 group-hover:text-hotel-navy transition-colors truncate text-sm leading-tight">
                             {event.title}
                           </p>
-                          <Badge 
-                            variant="secondary" 
+                          <Badge
+                            variant="secondary"
                             className="text-[10px] bg-slate-100 text-slate-600 border-0 font-medium flex-shrink-0 px-2 py-0.5"
                           >
                             {event.type}
                           </Badge>
                         </div>
-                        
+
                         {/* Meta Row */}
                         <div className="flex flex-wrap items-center gap-3 mt-1.5">
                           {(event.start_time || event.start_date) && (
@@ -470,7 +475,7 @@ export function CalendarWidget() {
               {(upcomingEvents || []).slice(0, 2).map((event: any) => (
                 <Link
                   key={event.id}
-                  to={`/calendar?event=${event.id}`}
+                  to={schedulePath}
                   className="flex items-center gap-3 text-sm hover:translate-x-1 transition-transform group"
                 >
                   <div className={cn(

@@ -11,6 +11,64 @@ if (typeof globalThis.t_ext !== 'function') {
   globalThis.t_ext = (_key: string, fallback?: string) => fallback ?? _key
 }
 
+const STALE_MODULE_RELOAD_KEY = '__stale_module_reload_done__'
+
+function extractErrorMessage(reason: unknown): string {
+  if (typeof reason === 'string') return reason
+  if (reason && typeof reason === 'object') {
+    const maybeMessage = (reason as { message?: unknown }).message
+    if (typeof maybeMessage === 'string') return maybeMessage
+  }
+  return ''
+}
+
+function isRecoverableModuleLoadError(reason: unknown): boolean {
+  const message = extractErrorMessage(reason)
+  if (!message) return false
+
+  return /Outdated Optimize Dep|Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk \d+ failed/i.test(message)
+}
+
+function recoverFromStaleModuleLoad(reason: unknown): boolean {
+  if (!isRecoverableModuleLoadError(reason)) return false
+
+  try {
+    if (sessionStorage.getItem(STALE_MODULE_RELOAD_KEY) === '1') {
+      return false
+    }
+    sessionStorage.setItem(STALE_MODULE_RELOAD_KEY, '1')
+  } catch {
+    // Continue even if sessionStorage is unavailable.
+  }
+
+  const url = new URL(window.location.href)
+  url.searchParams.set('__reload', Date.now().toString())
+  window.location.replace(url.toString())
+  return true
+}
+
+window.addEventListener('error', (event) => {
+  const errorLike = (event as ErrorEvent).error ?? event.message
+  if (recoverFromStaleModuleLoad(errorLike)) {
+    event.preventDefault()
+  }
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  if (recoverFromStaleModuleLoad(event.reason)) {
+    event.preventDefault()
+  }
+})
+
+// Vite emits this event when a preloaded chunk/dependency fails to load.
+window.addEventListener('vite:preloadError', (event) => {
+  const detail = (event as CustomEvent<{ payload?: unknown; message?: unknown }>).detail
+  const candidate = detail?.payload ?? detail?.message ?? event
+  if (recoverFromStaleModuleLoad(candidate)) {
+    event.preventDefault()
+  }
+})
+
 const redirectParam = new URLSearchParams(window.location.search).get('__redirect')
 let redirectPath: string | null = null
 if (redirectParam) {
@@ -69,6 +127,15 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// If the app stays up, allow future one-time recoveries in this tab.
+window.setTimeout(() => {
+  try {
+    sessionStorage.removeItem(STALE_MODULE_RELOAD_KEY)
+  } catch {
+    // Ignore storage errors.
+  }
+}, 30_000)
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

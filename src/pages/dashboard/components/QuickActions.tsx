@@ -14,53 +14,53 @@ interface QuickAction {
 }
 
 const allActions: QuickAction[] = [
-  { 
+  {
     key: 'documents',
-    icon: FileText, 
-    href: '/documents', 
+    icon: FileText,
+    href: '/documents',
     color: 'bg-blue-500'
   },
-  { 
+  {
     key: 'training',
-    icon: GraduationCap, 
-    href: '/training', 
+    icon: GraduationCap,
+    href: '/learning/my',
     color: 'bg-emerald-500'
   },
-  { 
+  {
     key: 'tasks',
-    icon: CheckCircle, 
-    href: '/tasks', 
+    icon: CheckCircle,
+    href: '/tasks',
     color: 'bg-violet-500'
   },
-  { 
+  {
     key: 'directory',
-    icon: Users, 
-    href: '/directory', 
+    icon: Users,
+    href: '/directory',
     color: 'bg-amber-500'
   },
-  { 
+  {
     key: 'maintenance',
-    icon: Wrench, 
-    href: '/maintenance', 
+    icon: Wrench,
+    href: '/maintenance',
     color: 'bg-red-500',
     roles: ['property_manager', 'regional_admin', 'department_head', 'maintenance_staff']
   },
-  { 
+  {
     key: 'schedule',
-    icon: Calendar, 
-    href: '/schedule', 
+    icon: Calendar,
+    href: '/hr/scheduling',
     color: 'bg-cyan-500'
   },
-  { 
+  {
     key: 'messages',
-    icon: MessageSquare, 
-    href: '/messages', 
+    icon: MessageSquare,
+    href: '/messaging',
     color: 'bg-pink-500'
   },
-  { 
+  {
     key: 'analytics',
-    icon: BarChart3, 
-    href: '/analytics', 
+    icon: BarChart3,
+    href: '/analytics',
     color: 'bg-indigo-500',
     roles: ['property_manager', 'regional_admin', 'regional_hr']
   },
@@ -70,7 +70,19 @@ export function QuickActions() {
   const { primaryRole } = useAuth()
   const { t } = useTranslation('dashboard');
 
-  const actions = allActions.filter(action => 
+  const actions = allActions.map(action => {
+    if (action.key === 'schedule') {
+      // Roles that can access the full scheduling/shift management tool
+      const schedulingRoles = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'];
+      const hasSchedulingPrivileges = schedulingRoles.includes(primaryRole || '');
+
+      return {
+        ...action,
+        href: hasSchedulingPrivileges ? '/hr/scheduling' : '/hr/attendance'
+      };
+    }
+    return action;
+  }).filter(action =>
     !action.roles || action.roles.includes(primaryRole || '')
   )
 

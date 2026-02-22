@@ -30,11 +30,12 @@
         "departments": "departments",
         "documents_desc": "Published documents",
         "training_desc": "{{count}} in progress",
-        "announcements_desc": "Unread announcements",
         "my_tasks_title": "My Tasks",
         "my_tasks_desc": "Your pending tasks",
         "activity_feed": "Activity Feed",
-        "activity_desc": "Latest updates and assignments",
+        "announcements_title": "Announcements",
+        "announcements_desc": "Unread announcements",
+        "no_announcements": "No announcements yet",
         "quick_actions_items": {
             "documents": "Documents",
             "documents_desc": "Access procedures and policies",
@@ -53,13 +54,10 @@
             "analytics": "Analytics",
             "analytics_desc": "View performance data"
         },
-        "employee_of_the_month": {
-            "title": "Employee of the Month",
-            "congratulations": "Congratulations!",
-            "no_winner": "No winner announced yet",
-            "view_previous": "View Previous Winners",
-            "manage": "Manage EOM",
-            "no_employee_found": "No Employee Found"
+        "birthdays": {
+            "title": "Today's Birthdays",
+            "desc": "Celebrate team members with birthdays today.",
+            "no_birthdays": "No birthdays today."
         }
     },
     "schedule": {
@@ -193,50 +191,6 @@
         "view_previous": "View Previous Winners",
         "manage": "Manage EOM",
         "no_employee_found": "No Employee Found"
-    },
-    "birthdays": {
-        "title": "Today's Birthdays",
-        "desc": "Celebrate team members with birthdays today.",
-        "today": "Today!",
-        "tomorrow": "Tomorrow",
-        "in_days": "In {{count}} days",
-        "no_birthdays": "No birthdays today.",
-        "no_birthdays_week": "No birthdays in the next 7 days.",
-        "send_wish": "Send Birthday Wish"
-    },
-    "schedule": {
-        "title": "Schedule",
-        "subtitle": "Your events and shifts",
-        "no_events": "No events scheduled",
-        "select_date": "Select a date",
-        "upcoming": "Next Up",
-        "today_events": "{{count}} event today",
-        "today_events_other": "{{count}} events today",
-        "no_events_today": "No events today",
-        "go_to_today": "Today",
-        "enjoy_day": "Enjoy your day!",
-        "add_event": "Add",
-        "event_created": "Event created successfully",
-        "event_deleted": "Event deleted successfully",
-        "event_title_placeholder": "e.g., Team Briefing",
-        "location_placeholder": "e.g., Conference Room A",
-        "desc_placeholder": "Add more details...",
-        "calendar": {
-            "sun": "Sun",
-            "mon": "Mon",
-            "tue": "Tue",
-            "wed": "Wed",
-            "thu": "Thu",
-            "fri": "Fri",
-            "sat": "Sat",
-            "shift": "Shift",
-            "work": "Work",
-            "property": "Property",
-            "meeting": "Meeting",
-            "training": "Training",
-            "deadline": "Deadline",
-            "general": "General"
-        }
     },
     "analytics": {
         "title": "Analytics Dashboard",
@@ -709,5 +663,12 @@
         "tasks": "Tasks",
         "meetings": "Meetings",
         "completion": "Completion"
-    }
+    },
+    "dismissnotification": "Dismiss notification",
+    "activedelegations": "Active Delegations",
+    "activepolicies": "Active Policies",
+    "activeintegrations": "Active Integrations",
+    "pendingreview": "Pending Review",
+    "sendpushnotification": "Send push notification",
+    "sendemailnotification": "Send email notification"
 }

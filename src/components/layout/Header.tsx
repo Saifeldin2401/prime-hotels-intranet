@@ -126,7 +126,7 @@ export function Header({
                           {currentProperty?.name || 'Select Property'}
                         </span>
                       </div>
-                      <ChevronDown className="h-4 w-4 text-hotel-gold/60 ml-auto shrink-0" />
+                      <ChevronDown className="h-4 w-4 text-hotel-gold/60 ms-auto shrink-0" />
                     </div>
                   </SelectTrigger>
                   <SelectContent className="w-[340px] max-h-[450px] border-hotel-navy/20 bg-white dark:bg-hotel-navy shadow-2xl rounded-xl p-0">
@@ -171,7 +171,7 @@ export function Header({
                               </span>
                             </div>
                             {currentProperty?.id === prop.id && (
-                              <div className="ml-auto shrink-0">
+                              <div className="ms-auto shrink-0">
                                 <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center">
                                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -264,7 +264,7 @@ export function Header({
                                     )}
                                   </div>
                                   {currentProperty?.id === prop.id && (
-                                    <div className="ml-auto shrink-0">
+                                    <div className="ms-auto shrink-0">
                                       <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center">
                                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -320,7 +320,7 @@ export function Header({
                             : (user?.email?.[0]?.toUpperCase() || 'U')}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+                      <span className="absolute bottom-0 end-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
                     </div>
                     <ChevronDown className="h-4 w-4 text-hotel-gold-light transition-transform duration-300 group-data-[state=open]:rotate-180" />
                   </Button>
@@ -355,7 +355,7 @@ export function Header({
                       <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
-                          <span>Status</span>
+                          <span>{t('common:status')}</span>
                         </div>
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-2xl min-w-[150px]">
@@ -378,23 +378,23 @@ export function Header({
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
                       onSelect={() => navigate('/profile')}
                     >
-                      <User className="mr-3 h-4 w-4 text-hotel-gold transition-transform group-hover:scale-110" />
+                      <User className="me-3 h-4 w-4 text-hotel-gold transition-transform group-hover:scale-110" />
                       <span>{t('nav.my_profile', 'My Profile')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
                       onSelect={() => navigate('/settings')}
                     >
-                      <Settings className="mr-3 h-4 w-4 text-hotel-gold transition-transform group-hover:rotate-90" />
+                      <Settings className="me-3 h-4 w-4 text-hotel-gold transition-transform group-hover:rotate-90" />
                       <span>{t('nav.settings', 'Settings')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
                       onSelect={() => navigate('/notifications')}
                     >
-                      <Bell className="mr-3 h-4 w-4 text-hotel-gold transition-transform group-hover:rotate-12" />
+                      <Bell className="me-3 h-4 w-4 text-hotel-gold transition-transform group-hover:rotate-12" />
                       <span>{t('notifications', 'Notifications')}</span>
-                      <Badge className="ml-auto h-4 px-1 bg-hotel-gold text-hotel-navy text-[10px]">99+</Badge>
+                      <Badge className="ms-auto h-4 px-1 bg-hotel-gold text-hotel-navy text-[10px]">99+</Badge>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
 
@@ -405,7 +405,7 @@ export function Header({
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
                       onSelect={() => navigate('/training/certificates')}
                     >
-                      <Sparkles className="mr-3 h-4 w-4 text-hotel-gold" />
+                      <Sparkles className="me-3 h-4 w-4 text-hotel-gold" />
                       <span>{t('my_awards', 'My Awards')}</span>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -418,7 +418,7 @@ export function Header({
                         className="focus:bg-red-900/30 focus:text-red-400 text-red-400 cursor-pointer group m-1"
                         onSelect={(e) => e.preventDefault()}
                       >
-                        <LogOut className="mr-3 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        <LogOut className="me-3 h-4 w-4 transition-transform group-hover:translate-x-1" />
                         <span>{t('nav.logout', 'Sign out')}</span>
                       </DropdownMenuItem>
                     </AlertDialogTriggerRoot>

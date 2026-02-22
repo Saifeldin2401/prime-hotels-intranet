@@ -26,6 +26,30 @@
         "departments": "أقسام",
         "documents_desc": "مستندات منشورة",
         "training_desc": "{{count}} قيد التنفيذ",
+        "my_tasks": "مهامي",
+        "my_tasks_title": "مهامي",
+        "my_tasks_desc": "مهامك المعلقة",
+        "activity_feed": "سجل النشاط",
+        "announcements_title": "الإعلانات",
+        "announcements_desc": "إعلانات غير مقروءة",
+        "no_announcements": "لا توجد إعلانات بعد",
+        "schedule_title": "الجدول",
+        "schedule_desc": "أحداثك ومنوباتك",
+        "online_users_title": "متصل الآن",
+        "online_users_desc": "{{count}} أعضاء فريق نشطون",
+        "announcements_subtitle": "الإعلانات",
+        "knowledge_base": "قاعدة المعرفة",
+        "knowledge_base_desc": "المقالات والإجراءات القياسية الحديثة",
+        "training_progress": "تقدم التدريب",
+        "training_progress_desc": "واصل رحلة تعلمك",
+        "all_courses": "جميع الدورات",
+        "new": "جديد",
+        "start": "ابدأ",
+        "training_module_desc": "وحدة تدريب شاملة تغطي {{topic}} لموظفي الفندق.",
+        "no_active_courses": "لا توجد دورات نشطة",
+        "browse_training": "استعرض التدريب المتاح",
+        "continue": "متابعة",
+        "no_articles": "لم يتم العثور على مقالات",
         "pending_widget": {
             "title": "العناصر المعلقة",
             "subtitle": "عناصر تتطلب انتباهك",
@@ -144,38 +168,14 @@
         },
         "birthdays": {
             "title": "أعياد الميلاد اليوم",
-            "desc": "احتفل بأعضاء الفريق الذين يحتفلون بأعياد ميلادهم اليوم.",
+            "desc": "احتفل بأعضاء الفريق الذين لديهم أعياد ميلاد اليوم.",
             "today": "اليوم!",
             "tomorrow": "غداً",
             "in_days": "خلال {{count}} أيام",
             "no_birthdays": "لا توجد أعياد ميلاد اليوم.",
             "no_birthdays_week": "لا توجد أعياد ميلاد في الأيام السبعة القادمة.",
             "send_wish": "إرسال تهنئة"
-        },
-        "my_tasks": "مهامي",
-        "my_tasks_title": "مهامي",
-        "my_tasks_desc": "مهامك المعلقة",
-        "activity_feed": "سجل النشاط",
-        "activity_desc": "آخر التحديثات والمهام",
-        "schedule_title": "الجدول",
-        "schedule_desc": "أحداثك ومنوباتك",
-        "online_users_title": "متصل الآن",
-        "online_users_desc": "{{count}} أعضاء فريق نشطون",
-        "announcements_title": "الإعلانات",
-        "announcements_desc": "آخر التحديثات من مؤسستك",
-        "knowledge_base": "قاعدة المعرفة",
-        "knowledge_base_desc": "المقالات والإجراءات القياسية الحديثة",
-        "training_progress": "تقدم التدريب",
-        "training_progress_desc": "واصل رحلة تعلمك",
-        "all_courses": "جميع الدورات",
-        "new": "جديد",
-        "start": "ابدأ",
-        "training_module_desc": "وحدة تدريب شاملة تغطي {{topic}} لموظفي الفندق.",
-        "no_active_courses": "لا توجد دورات نشطة",
-        "browse_training": "استعرض التدريب المتاح",
-        "continue": "متابعة",
-        "no_announcements": "لا توجد إعلانات بعد",
-        "no_articles": "لم يتم العثور على مقالات"
+        }
     },
     "schedule": {
         "title": "الجدول",
@@ -199,8 +199,17 @@
             "sat": "السبت",
             "shift": "وردية",
             "work": "عمل",
-            "property": "المنشأة"
-        }
+            "property": "المنشأة",
+            "meeting": "اجتماع",
+            "training": "تدريب",
+            "deadline": "موعد نهائي",
+            "general": "عام"
+        },
+        "event_created": "تم إنشاء الحدث بنجاح",
+        "event_deleted": "تم حذف الحدث بنجاح",
+        "event_title_placeholder": "مثال: اجتماع الفريق",
+        "location_placeholder": "مثال: قاعة الاجتماعات أ",
+        "desc_placeholder": "أضف المزيد من التفاصيل..."
     },
     "analytics": {
         "title": "لوحة التحليلات",
@@ -685,5 +694,111 @@
         "task_completion": "إكمال المهام",
         "training_progress": "تقدم التدريب",
         "response_time": "وقت الاستجابة"
-    }
+    },
+    "pending_widget": {
+        "title": "العناصر المعلقة",
+        "subtitle": "عناصر تتطلب انتباهك",
+        "approvals": "موافقات معلقة",
+        "notifications": "إشعارات غير مقروءة",
+        "announcements": "إعلانات غير مقروءة",
+        "items_waiting": "{{count}} عنصر بانتظار",
+        "items_waiting_other": "{{count}} عناصر بانتظار",
+        "notifications_count": "{{count}} إشعار جديد",
+        "notifications_count_other": "{{count}} إشعارات جديدة",
+        "announcements_count": "{{count}} إعلان جديد",
+        "announcements_count_other": "{{count}} إعلانات جديدة",
+        "all_caught_up": "أنت متابع لكل شيء! لا توجد عناصر معلقة."
+    },
+    "activity_widget": {
+        "assigned": "تم التعيين {{date}}",
+        "due": "مستحق {{date}}",
+        "default_training_title": "تعيين تدريب"
+    },
+    "active_users": {
+        "title": "أعضاء الفريق النشطون",
+        "online": "نشط الآن",
+        "no_active": "لا يوجد مستخدمون نشطون آخرون حالياً."
+    },
+    "online_users": {
+        "title": "متصل الآن",
+        "online": "متصل",
+        "no_active": "لا يوجد أعضاء فريق متصلين حالياً",
+        "check_back": "تحقق لاحقاً",
+        "search_placeholder": "البحث عن أعضاء الفريق...",
+        "just_now": "الآن",
+        "minutes": "{{count}} د",
+        "hours": "{{count}} س",
+        "days": "{{count}} ي",
+        "team_member": "عضو الفريق"
+    },
+    "notifications": {
+        "title": "الإشعارات",
+        "unread_count": "{{count}} غير مقروء",
+        "unread_count_other": "{{count}} غير مقروءة",
+        "all_caught_up": "أنت متابع لكل شيء!",
+        "no_notifications": "لا توجد إشعارات بعد",
+        "mark_all_read": "تحديد الكل كمقروء",
+        "clear_all": "مسح الكل",
+        "view_details": "عرض التفاصيل"
+    },
+    "dept_kpi": {
+        "title": "أداء الأقسام",
+        "no_data": "لا توجد بيانات متاحة للقسم",
+        "top_depts": "أعلى الأقسام",
+        "rankings": "تصنيفات أداء الأقسام",
+        "tasks": "المهام",
+        "training": "التدريب",
+        "sops": "إجراءات التشغيل"
+    },
+    "knowledge": {
+        "title": "قاعدة المعرفة",
+        "view_all": "عرض الكل",
+        "progress": "تقدم القراءة المطلوبة",
+        "required": "قراءة مطلوبة",
+        "recently_updated": "تم تحديثه مؤخراً",
+        "updated_at": "تم التحديث {{time}}",
+        "all_caught_up": "لقد انتهيت من كل شيء!",
+        "explore": "استكشاف قاعدة المعرفة"
+    },
+    "team_list": {
+        "title": "فريق القسم",
+        "search_team_members": "بحث عن أعضاء الفريق...",
+        "loading_team": "جاري تحميل الفريق...",
+        "no_team_found": "لم يتم العثور على أعضاء في فريقك.",
+        "no_job_title": "لا يوجد مسمى وظيفي",
+        "unknown": "غير معروف",
+        "view": "عرض"
+    },
+    "maintenance_labels": {
+        "critical": "حرج",
+        "urgent": "عاجل"
+    },
+    "role_widget": {
+        "properties": "منشأة",
+        "departments": "قسم"
+    },
+    "quick_actions_widget": {
+        "view": "عرض",
+        "search": "بحث",
+        "go_back": "العودة"
+    },
+    "motivation": {
+        "refresh": "تحديث"
+    },
+    "employee_of_the_month": {
+        "title": "موظف الشهر",
+        "congratulations": "تهانينا!",
+        "no_winner": "لم يتم الإعلان عن فائز لهذا الشهر بعد.",
+        "view_previous": "عرض الفائزين السابقين",
+        "manage": "إدارة موظف الشهر",
+        "no_employee_found": "لم يتم العثور على موظف"
+    },
+    "subtitle": "مركزك الموحد للمعرفة التشغيلية",
+    "dismissnotification": "Dismiss notification",
+    "activedelegations": "Active Delegations",
+    "activepolicies": "Active Policies",
+    "activeintegrations": "Active Integrations",
+    "pendingreview": "Pending Review",
+    "sendpushnotification": "Send push notification",
+    "sendemailnotification": "Send email notification"
 }

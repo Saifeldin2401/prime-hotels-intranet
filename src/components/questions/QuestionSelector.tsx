@@ -91,8 +91,8 @@ export function QuestionSelector({
                             <TableRow>
                                 <TableHead className="w-[50px]"></TableHead>
                                 <TableHead>Question</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Type</TableHead>
+                                <TableHead>{t('common:status')}</TableHead>
+                                <TableHead>{t('common:type')}</TableHead>
                                 <TableHead>Difficulty</TableHead>
                                 <TableHead className="text-right">Points</TableHead>
                             </TableRow>

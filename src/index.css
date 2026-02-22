@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import './editor/styles/ai-content.css';
 
 @tailwind base;
 @tailwind components;
@@ -371,7 +372,7 @@ select:focus-visible {
   opacity: 1 !important;
 }
 
-/* CKEditor content styling */
+/* Rich text content styling */
 .ck-content,
 .ck-editor__editable {
   color: #111827 !important;

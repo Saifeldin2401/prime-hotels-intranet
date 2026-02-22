@@ -93,5 +93,12 @@
         "all_properties": "All Properties",
         "unknown": "Unknown",
         "all_roles": "All Roles"
-    }
+    },
+    "foldername": "Folder name...",
+    "uploaddocument": "Upload Document",
+    "uploadvisualcontentimages": "Upload visual content images",
+    "allowcomments": "Allow comments",
+    "addacommentrequiredforreturnreject": "Add a comment (required for return/reject)...",
+    "addcomment": "Add Comment",
+    "addacomment": "Add a comment..."
 }

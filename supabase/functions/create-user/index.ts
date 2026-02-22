@@ -21,6 +21,15 @@ function isISODate(value: string): boolean {
     return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function normalizeDateOnly(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    // Accept full ISO strings and take the date portion.
+    const datePart = trimmed.includes("T") ? trimmed.split("T")[0] : trimmed;
+    return datePart;
+}
+
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -38,17 +47,20 @@ Deno.serve(async (req: Request) => {
             propertyIds = [],
             departmentIds = [],
             reportingTo,
-            dateOfBirth
+            dateOfBirth,
+            date_of_birth
         } = body;
 
-        if (!email || !fullName || !dateOfBirth) {
+        const normalizedDob = normalizeDateOnly(dateOfBirth ?? date_of_birth);
+
+        if (!email || !fullName || !normalizedDob) {
             return new Response(JSON.stringify({ error: "Missing email, fullName, or dateOfBirth" }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
-        if (!isISODate(dateOfBirth)) {
+        if (!isISODate(normalizedDob)) {
             return new Response(JSON.stringify({ error: "Invalid dateOfBirth format. Expected YYYY-MM-DD" }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -101,6 +113,7 @@ Deno.serve(async (req: Request) => {
         console.log(`Creating user: ${email}, jobTitle: ${jobTitle}, role: ${role}, reportingTo: ${reportingTo}, by: ${user.email}`);
 
         // Validate job title against FK target to avoid opaque profile FK errors.
+        // If the provided title can't be matched, fall back to NULL instead of failing user creation.
         let normalizedJobTitle: string | null = null;
         if (typeof jobTitle === "string" && jobTitle.trim().length > 0) {
             const trimmedJobTitle = jobTitle.trim();
@@ -113,22 +126,12 @@ Deno.serve(async (req: Request) => {
 
             if (titleLookupError) {
                 console.error("Job title lookup failed:", titleLookupError);
-                return new Response(JSON.stringify({ error: "Failed to validate job title" }), {
-                    status: 500,
-                    headers: { ...corsHeaders, "Content-Type": "application/json" },
-                });
+                // Continue without job title rather than failing user creation.
+            } else if (!titleRow?.title) {
+                console.warn(`Job title not found for "${trimmedJobTitle}", continuing with null job_title`);
+            } else {
+                normalizedJobTitle = titleRow.title;
             }
-
-            if (!titleRow?.title) {
-                return new Response(JSON.stringify({
-                    error: `Invalid jobTitle: "${trimmedJobTitle}". Please choose a title from Job Titles.`
-                }), {
-                    status: 400,
-                    headers: { ...corsHeaders, "Content-Type": "application/json" },
-                });
-            }
-
-            normalizedJobTitle = titleRow.title;
         }
 
         // 1. Create Auth User
@@ -140,7 +143,7 @@ Deno.serve(async (req: Request) => {
                 email_confirm: true,
                 user_metadata: {
                     full_name: fullName,
-                    date_of_birth: dateOfBirth,
+                    date_of_birth: normalizedDob,
                 },
             });
             authData = result.data;
@@ -175,7 +178,7 @@ Deno.serve(async (req: Request) => {
                 is_active: true,
                 is_temp_password: true, // FORCE PASSWORD CHANGE ON FIRST LOGIN
                 reporting_to: reportingTo || null,
-                date_of_birth: dateOfBirth
+                date_of_birth: normalizedDob
             })
             .eq('id', userId);
 

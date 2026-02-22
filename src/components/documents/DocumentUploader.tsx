@@ -117,10 +117,10 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
+                        <Label htmlFor="category">{t('common:category')}</Label>
                         <Select value={category} onValueChange={setCategory}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select type" />
+                                <SelectValue placeholder={t("common:select_type")} />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="other">Other</SelectItem>

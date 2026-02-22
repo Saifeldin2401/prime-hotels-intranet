@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 export interface Property {
     id: string
     name: string
+    is_headquarters?: boolean
 }
 
 export function useProperties() {
@@ -12,7 +13,7 @@ export function useProperties() {
         queryFn: async (): Promise<Property[]> => {
             const { data, error } = await supabase
                 .from('properties')
-                .select('id, name')
+                .select('id, name, is_headquarters')
                 .order('name')
 
             if (error) throw error

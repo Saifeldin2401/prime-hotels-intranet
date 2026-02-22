@@ -251,11 +251,11 @@ export function QuestionEditor() {
                                     name="question_type"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Type</FormLabel>
+                                            <FormLabel>{t('common:type')}</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select type" />
+                                                        <SelectValue placeholder={t("common:select_type")} />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
@@ -310,7 +310,7 @@ export function QuestionEditor() {
                                     name="status"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Status</FormLabel>
+                                            <FormLabel>{t('common:status')}</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>

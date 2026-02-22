@@ -18,7 +18,9 @@ export interface OrgEmployee {
     staff_id: string | null
     roles: string[]
     propertyId: string | null
+    propertyIds?: string[]
     departmentId: string | null
+    departmentIds?: string[]
     reporting_to: string | null
 }
 
@@ -62,7 +64,7 @@ export interface OrgHierarchy {
 }
 
 // Role classifications
-const EXECUTIVE_ROLES = ['regional_admin', 'regional_hr']
+const EXECUTIVE_ROLES = ['corporate_admin', 'regional_admin', 'regional_hr']
 const MANAGEMENT_ROLES = ['property_manager', 'property_hr', 'department_head']
 const SUPERVISOR_JOB_TITLES = ['supervisor', 'lead', 'senior', 'chief', 'head waiter', 'captain']
 
@@ -183,6 +185,10 @@ function getJobTitleRank(jobTitle: string | null): number {
     }
 
     return 500 // Unknown titles go to middle
+}
+
+function isExecutiveTitle(jobTitle: string | null): boolean {
+    return getJobTitleRank(jobTitle) <= 9
 }
 
 /**
@@ -337,7 +343,15 @@ export function useOrgHierarchy(searchTerm?: string) {
         }
 
         // Transform profiles to OrgEmployee
-        const employees: OrgEmployee[] = profiles.map((p: any) => ({
+        const employees: OrgEmployee[] = profiles.map((p: any) => {
+            const propertyIds = (p.user_properties || [])
+                .map((up: any) => up.property?.id)
+                .filter((id: any): id is string => !!id)
+            const departmentIds = (p.user_departments || [])
+                .map((ud: any) => ud.department?.id)
+                .filter((id: any): id is string => !!id)
+
+            return ({
             id: p.id,
             full_name: p.full_name || 'Unknown',
             job_title: p.job_title,
@@ -346,10 +360,12 @@ export function useOrgHierarchy(searchTerm?: string) {
             avatar_url: p.avatar_url,
             staff_id: p.staff_id,
             roles: p.user_roles?.map((r: any) => r.role) || [],
-            propertyId: p.user_properties?.[0]?.property?.id || null,
-            departmentId: p.user_departments?.[0]?.department?.id || null,
+            propertyId: propertyIds[0] || null,
+            propertyIds,
+            departmentId: departmentIds[0] || null,
+            departmentIds,
             reporting_to: p.reporting_to
-        }))
+        })})
 
         // Find HQ property
         const hqProperty = properties.find((p: any) => p.is_headquarters)
@@ -359,7 +375,7 @@ export function useOrgHierarchy(searchTerm?: string) {
         // Sort by job title hierarchy (CEO/Founder first)
         const executives = sortByJobTitleHierarchy(
             employees.filter(e =>
-                e.roles.some(r => EXECUTIVE_ROLES.includes(r))
+                e.roles.some(r => EXECUTIVE_ROLES.includes(r)) || isExecutiveTitle(e.job_title)
             )
         )
         const executiveIds = new Set(executives.map(e => e.id))
@@ -371,7 +387,7 @@ export function useOrgHierarchy(searchTerm?: string) {
 
         const sharedServices: OrgDepartment[] = hqDepts.map((dept: any) => {
             const deptEmployees = employees.filter(e =>
-                e.departmentId === dept.id && !executiveIds.has(e.id)
+                (e.departmentIds || (e.departmentId ? [e.departmentId] : [])).includes(dept.id) && !executiveIds.has(e.id)
             )
             return {
                 id: dept.id,
@@ -385,9 +401,9 @@ export function useOrgHierarchy(searchTerm?: string) {
         const nonHQProperties = properties.filter((p: any) => !p.is_headquarters)
 
         const orgProperties: OrgProperty[] = nonHQProperties.map((prop: any) => {
-            // Get all employees assigned to this property via user_properties
+            // Get all employees assigned to this property (supports multi-property)
             const propertyEmployees = employees.filter(e =>
-                e.propertyId === prop.id && !executiveIds.has(e.id)
+                (e.propertyIds || (e.propertyId ? [e.propertyId] : [])).includes(prop.id) && !executiveIds.has(e.id)
             )
 
             // Find General Manager (property_manager role at this property)
@@ -395,17 +411,35 @@ export function useOrgHierarchy(searchTerm?: string) {
                 e.roles.includes('property_manager')
             )
 
-            // Group remaining employees by their department
-            const employeesWithDept = propertyEmployees.filter(e => e.departmentId && e.id !== generalManager?.id)
-            const employeesWithoutDept = propertyEmployees.filter(e => !e.departmentId && e.id !== generalManager?.id)
+            // Group remaining employees by their department (per property)
+            const deptIdsForProperty = new Set(
+                departments.filter((d: any) => d.property_id === prop.id).map((d: any) => d.id)
+            )
+
+            const employeesWithDept = propertyEmployees.filter(e => {
+                if (e.id === generalManager?.id) return false
+                const deptIds = e.departmentIds || (e.departmentId ? [e.departmentId] : [])
+                return deptIds.some((id) => deptIdsForProperty.has(id))
+            })
+
+            const employeesWithoutDept = propertyEmployees.filter(e => {
+                if (e.id === generalManager?.id) return false
+                const deptIds = e.departmentIds || (e.departmentId ? [e.departmentId] : [])
+                return !deptIds.some((id) => deptIdsForProperty.has(id))
+            })
 
             // Get unique department IDs for this property's employees
-            const deptIds = [...new Set(employeesWithDept.map(e => e.departmentId).filter(Boolean))]
+            const deptIds = [...new Set(
+                employeesWithDept.flatMap(e => (e.departmentIds || (e.departmentId ? [e.departmentId] : [])))
+                    .filter((id) => deptIdsForProperty.has(id))
+            )]
 
             // Build department structure from actual employee assignments
             const orgDepts: OrgDepartment[] = deptIds.map(deptId => {
                 const dept = departments.find((d: any) => d.id === deptId)
-                const deptEmployees = employeesWithDept.filter(e => e.departmentId === deptId)
+                const deptEmployees = employeesWithDept.filter(e =>
+                    (e.departmentIds || (e.departmentId ? [e.departmentId] : [])).includes(deptId)
+                )
 
                 return {
                     id: deptId as string,

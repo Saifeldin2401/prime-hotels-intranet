@@ -527,7 +527,7 @@ export default function OperationsDashboard() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="bg-slate-50/50">
-                                                <TableHead className="w-[180px]">Date</TableHead>
+                                                <TableHead className="w-[180px]">{t('common:date')}</TableHead>
                                                 <TableHead className="text-right">Available</TableHead>
                                                 <TableHead className="text-right">Sold</TableHead>
                                                 <TableHead className="text-right">OOO</TableHead>
@@ -724,7 +724,7 @@ export default function OperationsDashboard() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="bg-emerald-50/30">
-                                                <TableHead className="w-[180px]">Date</TableHead>
+                                                <TableHead className="w-[180px]">{t('common:date')}</TableHead>
                                                 <TableHead className="text-right">Room Rev</TableHead>
                                                 <TableHead className="text-right">F&B Rev</TableHead>
                                                 <TableHead className="text-right">ADR</TableHead>

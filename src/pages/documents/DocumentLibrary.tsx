@@ -1,9 +1,27 @@
-import { useState } from 'react'
+import { useState, useCallback, useMemo, type MouseEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
-import { useDocuments, useDocumentStats, useFavorites, useToggleFavorite, useSubmitForApproval, useUpdateDocument, useDeleteDocument } from '@/hooks/useDocuments'
+import { 
+  useDocuments, 
+  useDocumentStats, 
+  useFavorites, 
+  useToggleFavorite, 
+  useSubmitForApproval, 
+  useUpdateDocument, 
+  useDeleteDocument,
+  useRestoreDocument,
+  usePermanentDeleteDocument,
+  useDocumentFolders,
+  useDocumentTags,
+  useDocumentBulkDelete,
+  useDocumentBulkRestore,
+  useDocumentBulkMove,
+  useDocumentBulkAddTags,
+  useDocumentBulkArchive,
+  useRecordDocumentView,
+  useDocumentTrash
+} from '@/hooks/useDocuments'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
@@ -11,12 +29,30 @@ import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
+import { DocumentFolderTree } from '@/components/documents/DocumentFolderTree'
+import { DocumentTagManager } from '@/components/documents/DocumentTagManager'
+import { DocumentTrashBin } from '@/components/documents/DocumentTrashBin'
+import { DocumentBulkActionsBar } from '@/components/documents/DocumentBulkActionsBar'
+import { DocumentSearchAdvanced } from '@/components/documents/DocumentSearchAdvanced'
+import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
+// import { AIDocumentAssistant } from '@/components/documents/AIDocumentAssistant'
+import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EnhancedBadge } from '@/components/ui/enhanced-badge'
 import { Progress } from '@/components/ui/progress'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn, formatRelativeTime, formatFileSize } from '@/lib/utils'
+import type { Document } from '@/lib/types'
+import { LoadingTransition, TableSkeleton } from '@/components/ui/loading-system'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { useTranslation } from 'react-i18next'
+import { useToast } from '@/components/ui/use-toast'
+import { crudToasts } from '@/lib/toastHelpers'
 import {
   Plus,
   Search,
@@ -31,64 +67,130 @@ import {
   Heart,
   Eye,
   Pencil,
-  Trash2
+  Trash2,
+  FolderOpen,
+  Tag,
+  MoreVertical,
+  Calendar as CalendarIcon,
+  AlertTriangle,
+  Archive,
+  RotateCcw,
+  X,
+  ChevronDown,
+  Sparkles,
+  BarChart3,
+  CheckSquare,
+  Clock,
+  Shield
 } from 'lucide-react'
-import { formatRelativeTime } from '@/lib/utils'
-import { cn } from '@/lib/utils'
-import type { Document } from '@/lib/types'
-import { LoadingTransition, TableSkeleton, ListSkeleton } from '@/components/ui/loading-system'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { useTranslation } from 'react-i18next'
+import { format } from 'date-fns'
+
+type ViewMode = 'grid' | 'list'
+type DocumentTab = 'documents' | 'folders' | 'shared' | 'recent' | 'favorites' | 'trash' | 'expiring' | 'analytics'
+
+interface DocumentFilters {
+  search: string
+  folderId: string | null
+  tags: string[]
+  fileType: string | null
+  dateFrom: Date | null
+  dateTo: Date | null
+  confidentiality: string | null
+  status: string | null
+  authorId: string | null
+}
 
 export default function DocumentLibrary() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { t } = useTranslation('documents')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [searchTerm, setSearchTerm] = useState('')
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const { toast } = useToast()
 
+  // View state
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [activeTab, setActiveTab] = useState<DocumentTab>('documents')
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+
+  // Filters
+  const [filters, setFilters] = useState<DocumentFilters>({
+    search: '',
+    folderId: null,
+    tags: [],
+    fileType: null,
+    dateFrom: null,
+    dateTo: null,
+    confidentiality: null,
+    status: null,
+    authorId: null
+  })
+
+  // Selection state for bulk operations
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set())
+  const [bulkActionLoading, setBulkActionLoading] = useState(false)
+
+  // Dialog states
   const [viewerOpen, setViewerOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<{ id: string; title: string; file_url: string } | null>(null)
-
-  const submitForApproval = useSubmitForApproval()
-  const updateDocument = useUpdateDocument()
-  const deleteDocument = useDeleteDocument()
-  const { data: favorites = new Set() } = useFavorites()
-  const favoritesSet = favorites instanceof Set ? favorites : Array.isArray(favorites) ? new Set(favorites) : new Set()
-  const toggleFavorite = useToggleFavorite()
-
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingDocument, setEditingDocument] = useState<Document | null>(null)
   const [editForm, setEditForm] = useState({ title: '', description: '' })
-
   const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [aiPanelOpen, setAiPanelOpen] = useState(false)
+  const [selectedForAI, setSelectedForAI] = useState<Document | null>(null)
 
-  // Real document data from Supabase
+  // Data fetching
   const { data: documents = [], isLoading } = useDocuments({
-    search: searchTerm || undefined,
-    status: selectedStatus !== 'all' ? selectedStatus : undefined,
+    search: filters.search || undefined,
+    folder_id: filters.folderId,
+    tags: filters.tags.length > 0 ? filters.tags : undefined,
+    file_type: filters.fileType || undefined,
+    date_from: filters.dateFrom?.toISOString(),
+    date_to: filters.dateTo?.toISOString(),
+    confidentiality_level: (filters.confidentiality as any) || undefined,
+    status: filters.status || undefined,
+    include_deleted: activeTab === 'trash',
+    include_archived: activeTab !== 'documents',
+    contentType: 'document'
   })
 
-  const handleSubmitForApproval = (documentId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!documentId) return
-    submitForApproval.mutate(documentId)
-  }
+  const { data: stats } = useDocumentStats()
+  const { data: folders = [] } = useDocumentFolders()
+  const { data: tags = [] } = useDocumentTags()
+  const { data: favorites = new Set() } = useFavorites()
+  const favoritesSet = favorites instanceof Set ? favorites : new Set(favorites)
 
-  const handleViewDocument = (doc: any, e: React.MouseEvent) => {
-    e.stopPropagation()
+  // Mutations
+  const submitForApproval = useSubmitForApproval()
+  const updateDocument = useUpdateDocument()
+  const deleteDocument = useDeleteDocument()
+  const restoreDocument = useRestoreDocument()
+  const permanentDelete = usePermanentDeleteDocument()
+  const toggleFavorite = useToggleFavorite()
+  const recordView = useRecordDocumentView()
+  const { data: trashedDocuments = [] } = useDocumentTrash()
+
+  // Bulk mutations
+  const bulkDelete = useDocumentBulkDelete()
+  const bulkRestore = useDocumentBulkRestore()
+  const bulkMove = useDocumentBulkMove()
+  const bulkAddTags = useDocumentBulkAddTags()
+  const bulkArchive = useDocumentBulkArchive()
+
+  // Handlers
+  const handleViewDocument = useCallback((doc: Document, e?: MouseEvent) => {
+    e?.stopPropagation()
     setSelectedDocument({
       id: doc.id,
       title: doc.title,
       file_url: doc.file_url
     })
     setViewerOpen(true)
-  }
+    recordView.mutate(doc.id)
+  }, [recordView])
 
-  const handleOpenEdit = (doc: Document, e: React.MouseEvent) => {
+  const handleOpenEdit = useCallback((doc: Document, e: MouseEvent) => {
     e.stopPropagation()
     setEditingDocument(doc)
     setEditForm({
@@ -96,9 +198,9 @@ export default function DocumentLibrary() {
       description: doc.description || ''
     })
     setEditDialogOpen(true)
-  }
+  }, [])
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = useCallback(async () => {
     if (!editingDocument) return
     await updateDocument.mutateAsync({
       id: editingDocument.id,
@@ -107,228 +209,436 @@ export default function DocumentLibrary() {
     })
     setEditDialogOpen(false)
     setEditingDocument(null)
-  }
+    crudToasts.update.success('Document')
+  }, [editingDocument, editForm, updateDocument])
 
-  const handleRequestDelete = (docId: string, e: React.MouseEvent) => {
+  const handleDelete = useCallback(async (docId: string, e: MouseEvent) => {
     e.stopPropagation()
     setDeleteDocumentId(docId)
-  }
+  }, [])
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!deleteDocumentId) return
     await deleteDocument.mutateAsync(deleteDocumentId)
     setDeleteDocumentId(null)
-  }
+    crudToasts.delete.success('Document')
+  }, [deleteDocumentId, deleteDocument])
 
-  const { data: stats } = useDocumentStats()
+  const handleRestore = useCallback(async (docId: string) => {
+    await restoreDocument.mutateAsync(docId)
+    crudToasts.restore.success('Document')
+  }, [restoreDocument])
 
-  // Folder categories based on document types
-  const folders = [
-    { id: 'all', name: t('folders.all'), count: stats?.total || 0, icon: FileText, color: 'from-gray-400 to-gray-600', bgColor: 'bg-gray-50 dark:bg-gray-950' },
-    { id: 'draft', name: t('folders.drafts'), count: stats?.draft || 0, icon: FileText, color: 'from-blue-400 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
-    { id: 'pending', name: t('folders.pending'), count: stats?.pending || 0, icon: Star, color: 'from-orange-400 to-orange-600', bgColor: 'bg-orange-50 dark:bg-orange-950' },
-    { id: 'approved', name: 'Approved', count: stats?.approved || 0, icon: FileCheck, color: 'from-purple-400 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' },
-    { id: 'published', name: t('folders.published'), count: stats?.published || 0, icon: FileCheck, color: 'from-green-400 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
-  ]
+  const handlePermanentDelete = useCallback(async (docId: string) => {
+    await permanentDelete.mutateAsync(docId)
+    crudToasts.delete.success('Document permanently')
+  }, [permanentDelete])
 
-  // Storage stats - calculated from actual document count & size
-  const storageUsedGB = (stats?.totalBytes || 0) / (1024 * 1024 * 1024);
+  const handleSubmitForApproval = useCallback((documentId: string, e: MouseEvent) => {
+    e.stopPropagation()
+    submitForApproval.mutate(documentId)
+  }, [submitForApproval])
+
+  // Bulk operation handlers
+  const handleBulkDelete = useCallback(async () => {
+    setBulkActionLoading(true)
+    try {
+      await bulkDelete.mutateAsync(Array.from(selectedDocuments))
+      setSelectedDocuments(new Set())
+      crudToasts.delete.success(`${selectedDocuments.size} documents`)
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [bulkDelete, selectedDocuments])
+
+  const handleBulkRestore = useCallback(async () => {
+    setBulkActionLoading(true)
+    try {
+      await bulkRestore.mutateAsync(Array.from(selectedDocuments))
+      setSelectedDocuments(new Set())
+      crudToasts.restore.success(`${selectedDocuments.size} documents`)
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [bulkRestore, selectedDocuments])
+
+  const handleBulkMove = useCallback(async (folderId: string) => {
+    setBulkActionLoading(true)
+    try {
+      await bulkMove.mutateAsync({ ids: Array.from(selectedDocuments), folderId })
+      setSelectedDocuments(new Set())
+      crudToasts.update.success('Documents moved')
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [bulkMove, selectedDocuments])
+
+  const handleBulkAddTags = useCallback(async (tagIds: string[]) => {
+    setBulkActionLoading(true)
+    try {
+      await bulkAddTags.mutateAsync({ ids: Array.from(selectedDocuments), tagIds })
+      setSelectedDocuments(new Set())
+      crudToasts.update.success('Tags added')
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [bulkAddTags, selectedDocuments])
+
+  const handleBulkArchive = useCallback(async () => {
+    setBulkActionLoading(true)
+    try {
+      await bulkArchive.mutateAsync(Array.from(selectedDocuments))
+      setSelectedDocuments(new Set())
+      crudToasts.update.success('Documents archived')
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [bulkArchive, selectedDocuments])
+
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked) {
+      setSelectedDocuments(new Set(documents.map(d => d.id)))
+    } else {
+      setSelectedDocuments(new Set())
+    }
+  }, [documents])
+
+  const handleSelectDocument = useCallback((docId: string, checked: boolean) => {
+    setSelectedDocuments(prev => {
+      const next = new Set(prev)
+      if (checked) {
+        next.add(docId)
+      } else {
+        next.delete(docId)
+      }
+      return next
+    })
+  }, [])
+
+  const handleOpenAIAssistant = useCallback((doc: Document, e: MouseEvent) => {
+    e.stopPropagation()
+    setSelectedForAI(doc)
+    setAiPanelOpen(true)
+  }, [])
+
+  // Storage stats
+  const storageUsedGB = (stats?.totalBytes || 0) / (1024 * 1024 * 1024)
   const storageStats = {
-    used: Math.max(0.01, Math.round(storageUsedGB * 100) / 100), // Show at least 0.01 if there are files but small
-    total: 10, // GB quota
+    used: Math.max(0.01, Math.round(storageUsedGB * 100) / 100),
+    total: 10,
     documents: stats?.total || 0,
-    shared: stats?.published || 0 // Published documents are shared
+    shared: stats?.published || 0
   }
 
-  // Filter documents based on search and status
-  const filteredDocuments = documents.filter((doc) =>
-    doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Folder stats for sidebar
+  const folderStats = useMemo(() => {
+    const stats: Record<string, number> = {}
+    documents.forEach(doc => {
+      const folderId = doc.folder_id || 'root'
+      stats[folderId] = (stats[folderId] || 0) + 1
+    })
+    return stats
+  }, [documents])
 
-  // Get acknowledgments for current user
-  const { data: acknowledgments } = useQuery({
-    queryKey: ['document-acknowledgments', user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('document_acknowledgments')
-        .select('document_id, acknowledged_at')
-        .eq('user_id', user!.id)
+  // Render document card (grid view)
+  const renderDocumentCard = (doc: Document) => {
+    const isFavorite = favoritesSet.has(doc.id)
+    const isSelected = selectedDocuments.has(doc.id)
+    const isExpiringSoon = doc.expires_at && new Date(doc.expires_at) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const isExpired = doc.expires_at && new Date(doc.expires_at) < new Date()
 
-      if (error) throw error
-      return data as { document_id: string; acknowledged_at: string }[]
-    },
-  })
-
-  const acknowledgedDocumentIds = new Set(
-    acknowledgments?.map((ack) => ack.document_id) ?? [],
-  )
-
-  const acknowledgeMutation = useMutation({
-    mutationFn: async (documentId: string) => {
-      if (!user) throw new Error('User must be signed in to acknowledge documents')
-
-      const { error } = await supabase.from('document_acknowledgments').insert({
-        document_id: documentId,
-        user_id: user.id,
-      })
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['document-acknowledgments'] })
-    },
-  })
-
-  const handleFolderClick = (folderId: string) => {
-    setSelectedStatus(folderId === 'all' ? 'all' : folderId)
-  }
-
-  const renderDocumentList = (docs: Document[]) => {
     return (
-      <LoadingTransition
-        isLoading={isLoading}
-        skeleton={<TableSkeleton rows={5} cols={4} />}
+      <div
+        key={doc.id}
+        onClick={() => navigate(`/documents/${doc.id}`)}
+        className={cn(
+          "group relative bg-white rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-lg",
+          isSelected ? "border-hotel-gold ring-2 ring-hotel-gold/20" : "border-gray-200 hover:border-hotel-navy/30"
+        )}
       >
-        {docs.length === 0 ? (
-          <EmptyState
-            icon={FileText}
-            title={t('empty.title')}
-            description={t('empty.description')}
-            action={{
-              label: t('upload_document'),
-              onClick: () => setUploadDialogOpen(true),
-              icon: Plus
-            }}
+        {/* Selection checkbox */}
+        <div className="absolute top-3 left-3 z-10">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 rounded border-gray-300 text-hotel-navy focus:ring-hotel-navy"
           />
-        ) : (
-          <div className="space-y-2 sm:space-y-3">
-            {docs.map((doc, index) => {
-              const isFavorite = favoritesSet.has(doc.id)
-              return (
-                <div
-                  key={doc.id}
-                  onClick={() => navigate('/documents/' + doc.id)}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50/50 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md animate-slide-up border border-transparent hover:border-hotel-navy/10 gap-3 group cursor-pointer"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10 flex-shrink-0">
-                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-hotel-navy" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/documents/${doc.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="font-semibold text-hotel-navy text-sm sm:text-base truncate hover:underline focus:outline-none"
-                        >
-                          {doc.title}
-                        </Link>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleFavorite.mutate({ documentId: doc.id, isFavorite })
-                          }}
-                          className={cn(
-                            "opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100",
-                            isFavorite && "opacity-100"
-                          )}
-                        >
-                          <Heart className={cn("w-4 h-4 transition-colors", isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-red-500")} />
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <EnhancedBadge variant="outline" className="text-xs">
-                          {doc.visibility === 'all_properties' && t('document.all_properties')}
-                          {doc.visibility === 'property' && t('document.property_specific')}
-                          {doc.visibility === 'department' && t('document.department_specific')}
-                          {doc.visibility === 'role' && t('document.role_specific')}
-                        </EnhancedBadge>
-                        <span className="text-xs text-gray-500">
-                          {formatRelativeTime(doc.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusBadge status={doc.status} />
-                    {user?.id === doc.created_by && (doc.status === 'DRAFT' || doc.status === 'REJECTED') && (
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs"
-                        disabled={submitForApproval.isPending}
-                        onClick={(e) => handleSubmitForApproval(doc.id, e)}
-                      >
-                        Submit for Approval
-                      </Button>
-                    )}
-                    {user?.id === doc.created_by && (doc.status === 'DRAFT' || doc.status === 'REJECTED') && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => handleOpenEdit(doc, e)}
-                          className="text-gray-500 hover:text-hotel-navy h-8 w-8 p-0"
-                          title={t('edit_document', { defaultValue: 'Edit' })}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => handleRequestDelete(doc.id, e)}
-                          className="text-gray-500 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
-                          title={t('delete_document', { defaultValue: 'Delete' })}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )}
-                    {doc.requires_acknowledgment && (
-                      acknowledgedDocumentIds.has(doc.id) ? (
-                        <EnhancedBadge variant="success" className="text-xs">
-                          {t('document.acknowledged')}
-                        </EnhancedBadge>
-                      ) : (
-                        <Button
-                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-8 text-xs"
-                          size="sm"
-                          disabled={acknowledgeMutation.isPending}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            acknowledgeMutation.mutate(doc.id)
-                          }}
-                        >
-                          {t('document.acknowledge')}
-                        </Button>
-                      )
-                    )}
-                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate('/documents/' + doc.id); }} className="text-gray-500 hover:text-hotel-navy h-8 w-8 p-0">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
+        </div>
+
+        {/* Expiry warning */}
+        {(isExpiringSoon || isExpired) && (
+          <div className={cn(
+            "absolute top-3 right-3 z-10 p-1.5 rounded-full",
+            isExpired ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+          )}>
+            <AlertTriangle className="w-4 h-4" />
           </div>
         )}
-      </LoadingTransition>
+
+        <div className="p-5">
+          {/* File icon */}
+          <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-gradient-to-br from-hotel-navy/10 to-hotel-navy/5 flex items-center justify-center">
+            <FileText className="w-6 h-6 text-hotel-navy" />
+          </div>
+
+          {/* Title */}
+          <h3 className="font-semibold text-hotel-navy text-sm text-center line-clamp-2 mb-2">
+            {doc.title}
+          </h3>
+
+          {/* Meta info */}
+          <div className="space-y-2 text-xs text-gray-500 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <DocumentConfidentialityBadge level={doc.confidentiality_level} size="sm" />
+              <StatusBadge status={doc.status} size="sm" />
+            </div>
+            <p>{formatFileSize(doc.file_size || 0)}</p>
+            <p>{formatRelativeTime(doc.created_at)}</p>
+            {doc.expires_at && (
+              <p className={cn(
+                isExpired ? "text-red-600" : isExpiringSoon ? "text-amber-600" : "text-gray-400"
+              )}>
+                <Clock className="w-3 h-3 inline mr-1" />
+                {isExpired ? 'Expired' : `Expires ${formatRelativeTime(doc.expires_at)}`}
+              </p>
+            )}
+          </div>
+
+          {/* Tags */}
+          {doc.tags && doc.tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1 justify-center">
+              {doc.tags.slice(0, 3).map((tag: any) => (
+                <span
+                  key={tag.id}
+                  className="px-2 py-0.5 text-xs rounded-full"
+                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+              {doc.tags.length > 3 && (
+                <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500">
+                  +{doc.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleFavorite.mutate({ documentId: doc.id, isFavorite })
+              }}
+              className="text-gray-400 hover:text-red-500 transition-colors"
+            >
+              <Heart className={cn("w-4 h-4", isFavorite && "fill-red-500 text-red-500")} />
+            </button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => handleViewDocument(doc, e)}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleOpenEdit(doc, e)}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleOpenAIAssistant(doc, e)}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  AI Assistant
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={(e) => handleDelete(doc.id, e)}
+                  className="text-red-600"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Render document row (list view)
+  const renderDocumentRow = (doc: Document) => {
+    const isFavorite = favoritesSet.has(doc.id)
+    const isSelected = selectedDocuments.has(doc.id)
+    const isExpiringSoon = doc.expires_at && new Date(doc.expires_at) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const isExpired = doc.expires_at && new Date(doc.expires_at) < new Date()
+
+    return (
+      <div
+        key={doc.id}
+        onClick={() => navigate(`/documents/${doc.id}`)}
+        className={cn(
+          "flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg transition-all duration-200 border gap-3 group cursor-pointer",
+          isSelected 
+            ? "bg-hotel-gold/5 border-hotel-gold" 
+            : "bg-gray-50/50 hover:bg-white border-transparent hover:border-hotel-navy/10 hover:shadow-md"
+        )}
+      >
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 rounded border-gray-300 text-hotel-navy focus:ring-hotel-navy"
+          />
+
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10 flex-shrink-0">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-hotel-navy" />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link
+                to={`/documents/${doc.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="font-semibold text-hotel-navy text-sm sm:text-base truncate hover:underline"
+              >
+                {doc.title}
+              </Link>
+              {(isExpired || isExpiringSoon) && (
+                <AlertTriangle className={cn("w-4 h-4", isExpired ? "text-red-500" : "text-amber-500")} />
+              )}
+              <DocumentConfidentialityBadge level={doc.confidentiality_level} size="sm" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <EnhancedBadge variant="outline" className="text-xs">
+                {doc.file_extension?.toUpperCase() || 'FILE'}
+              </EnhancedBadge>
+              <span className="text-xs text-gray-500">{formatFileSize(doc.file_size || 0)}</span>
+              <span className="text-xs text-gray-500">{formatRelativeTime(doc.created_at)}</span>
+              {doc.expires_at && (
+                <span className={cn(
+                  "text-xs",
+                  isExpired ? "text-red-600" : isExpiringSoon ? "text-amber-600" : "text-gray-400"
+                )}>
+                  <Clock className="w-3 h-3 inline mr-1" />
+                  {isExpired ? 'Expired' : `Expires ${format(new Date(doc.expires_at), 'MMM d')}`}
+                </span>
+              )}
+              {doc.view_count !== undefined && (
+                <span className="text-xs text-gray-400">
+                  <Eye className="w-3 h-3 inline mr-1" />
+                  {doc.view_count}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={doc.status} />
+
+          {doc.tags && doc.tags.length > 0 && (
+            <div className="hidden md:flex items-center gap-1">
+              {doc.tags.slice(0, 2).map((tag: any) => (
+                <span
+                  key={tag.id}
+                  className="px-2 py-0.5 text-xs rounded-full"
+                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {user?.id === doc.created_by && (doc.status === 'DRAFT' || doc.status === 'REJECTED') && (
+            <Button
+              size="sm"
+              className="h-8 text-xs"
+              disabled={submitForApproval.isPending}
+              onClick={(e) => handleSubmitForApproval(doc.id, e)}
+            >
+              Submit for Approval
+            </Button>
+          )}
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleFavorite.mutate({ documentId: doc.id, isFavorite })
+            }}
+            className={cn(
+              "opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 p-2",
+              isFavorite && "opacity-100"
+            )}
+          >
+            <Heart className={cn("w-4 h-4", isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-red-500")} />
+          </button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => handleViewDocument(doc, e)}>
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => handleOpenEdit(doc, e)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => handleOpenAIAssistant(doc, e)}>
+                <Sparkles className="w-4 h-4 mr-2" />
+                AI Assistant
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={(e) => handleDelete(doc.id, e)}
+                className="text-red-600"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
+      {/* Page Header */}
       <PageHeader
         title={t('title')}
         description={t('description')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors hover-lift h-9" size="sm">
-              <Filter className="w-4 h-4 sm:me-2" />
-              <span className="hidden sm:inline">{t('filter')}</span>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className={cn(showFilters && "bg-hotel-navy/5")}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              {Object.values(filters).some(v => v && (Array.isArray(v) ? v.length > 0 : true)) && (
+                <span className="ml-1.5 w-2 h-2 rounded-full bg-hotel-gold" />
+              )}
             </Button>
+
             <div className="flex border border-border rounded-lg overflow-hidden shadow-sm">
               <Button
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -347,10 +657,10 @@ export default function DocumentLibrary() {
                 <Grid className="w-4 h-4" />
               </Button>
             </div>
-            <Button onClick={() => setUploadDialogOpen(true)} className="shadow-md hover:shadow-lg transition-all duration-200 h-9 text-xs sm:text-sm">
-              <Plus className="w-4 h-4 sm:me-2" />
-              <span className="hidden sm:inline">{t('upload_document')}</span>
-              <span className="sm:hidden">Upload</span>
+
+            <Button onClick={() => setUploadDialogOpen(true)} className="shadow-md hover:shadow-lg transition-all">
+              <Plus className="w-4 h-4 mr-2" />
+              Upload Document
             </Button>
           </div>
         }
@@ -365,143 +675,322 @@ export default function DocumentLibrary() {
                 <Cloud className="h-4 w-4 sm:h-5 sm:w-5 text-hotel-gold-dark" />
               </div>
               <div>
-                <h3 className="font-semibold text-hotel-navy text-sm sm:text-base">{t('storage.title')}</h3>
-                <p className="text-xs sm:text-sm text-gray-600">{t('storage.usage')}</p>
+                <h3 className="font-semibold text-hotel-navy text-sm sm:text-base">Storage Overview</h3>
+                <p className="text-xs sm:text-sm text-gray-600">{storageStats.documents} files stored</p>
               </div>
             </div>
-            <EnhancedBadge variant="gold" className="self-start sm:self-auto text-xs">
-              {t('storage.files', { count: storageStats.documents })}
-            </EnhancedBadge>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs sm:text-sm">
-              <span className="text-hotel-navy">{t('storage.used', { value: storageStats.used })}</span>
-              <span className="text-gray-500">{t('storage.total', { value: storageStats.total })}</span>
+            <div className="flex items-center gap-2">
+              {stats?.expiringSoon ? (
+                <EnhancedBadge variant="warning" className="text-xs">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  {stats.expiringSoon} expiring soon
+                </EnhancedBadge>
+              ) : null}
+              <EnhancedBadge variant="gold" className="text-xs">
+                {storageStats.used} GB / {storageStats.total} GB
+              </EnhancedBadge>
             </div>
-            <Progress value={(storageStats.used / storageStats.total) * 100} className="h-2 bg-hotel-gold/20" />
           </div>
+          <Progress value={(storageStats.used / storageStats.total) * 100} className="h-2 bg-hotel-gold/20" />
         </div>
       </EnhancedCard>
 
-      {/* Enhanced Search Bar */}
-      <div className="relative">
-        <div className="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none">
-          <Search className="h-4 w-4 text-gray-400" />
-        </div>
-        <Input
-          placeholder={t('search_placeholder')}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="ps-12 pe-4 h-12 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+      {/* Advanced Filters */}
+      {showFilters && (
+        <DocumentSearchAdvanced
+          filters={filters}
+          onFiltersChange={setFilters}
+          onSearch={() => {}}
+          availableTags={tags}
+          resultCount={documents.length}
         />
-      </div>
+      )}
 
-      {/* Enhanced Document Tabs */}
-      <Tabs defaultValue="documents" className="space-y-4 sm:space-y-6">
-        <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5 bg-muted p-1 rounded-lg h-auto">
-            <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.documents')}</TabsTrigger>
-            <TabsTrigger value="folders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.folders')}</TabsTrigger>
-            <TabsTrigger value="shared" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.shared')}</TabsTrigger>
-            <TabsTrigger value="recent" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.recent')}</TabsTrigger>
-            <TabsTrigger value="favorites" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm whitespace-nowrap">{t('tabs.favorites')}</TabsTrigger>
-          </TabsList>
-        </div>
+      {/* Bulk Actions Bar */}
+      {selectedDocuments.size > 0 && (
+        <DocumentBulkActionsBar
+          selectedIds={Array.from(selectedDocuments)}
+          totalCount={documents.length}
+          documents={documents.map(d => ({ id: d.id, title: d.title }))}
+          folders={folders}
+          tags={tags}
+          onSelectNone={() => setSelectedDocuments(new Set())}
+          onDelete={handleBulkDelete}
+          onMove={handleBulkMove}
+          onTag={handleBulkAddTags}
+          onArchive={handleBulkArchive}
+          isProcessing={bulkActionLoading}
+        />
+      )}
 
-        <TabsContent value="documents" className="space-y-4 animate-fade-in">
-          <EnhancedCard className="border-0 shadow-lg" padding="none">
-            <div className="p-6">
-              {renderDocumentList(filteredDocuments)}
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Folder Tree */}
+          <EnhancedCard className="border-0 shadow-sm">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-hotel-navy flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4" />
+                  Folders
+                </h3>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <DocumentFolderTree
+                folders={folders}
+                selectedFolderId={filters.folderId}
+                onSelectFolder={(id) => setFilters(prev => ({ ...prev, folderId: id }))}
+                folderStats={folderStats}
+              />
             </div>
           </EnhancedCard>
-        </TabsContent>
 
-        <TabsContent value="folders" className="space-y-8 animate-fade-in">
-          {/* Enhanced Folders Grid - Moved inside tab */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-            {folders.map((folder, index) => {
-              const Icon = folder.icon
-              return (
-                <EnhancedCard
-                  key={folder.id}
-                  className="card-hover transition-all duration-300 cursor-pointer animate-slide-up hover:-translate-y-1"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                  onClick={() => handleFolderClick(folder.id)}
-                >
-                  <div className="p-3 sm:p-6 text-center">
-                    <div className={cn(
-                      "w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-4 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm bg-gray-50 group-hover:bg-white transition-colors",
-                      folder.id === 'all' ? 'bg-hotel-navy/5' : folder.id === 'draft' ? 'bg-blue-50' : folder.id === 'pending' ? 'bg-hotel-gold/10' : 'bg-green-50'
-                    )}>
-                      <div className={cn(
-                        "w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center",
-                      )}>
-                        <Icon className={cn("w-4 h-4 sm:w-6 sm:h-6",
-                          folder.id === 'all' ? "text-hotel-navy" :
-                            folder.id === 'draft' ? "text-blue-600" :
-                              folder.id === 'pending' ? "text-hotel-gold-dark" :
-                                "text-green-600"
-                        )} />
-                      </div>
+          {/* Tags Cloud */}
+          <EnhancedCard className="border-0 shadow-sm">
+            <div className="p-4">
+              <h3 className="font-semibold text-hotel-navy flex items-center gap-2 mb-4">
+                <Tag className="w-4 h-4" />
+                Popular Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {tags.slice(0, 10).map(tag => (
+                  <button
+                    key={tag.id}
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      tags: prev.tags.includes(tag.id) 
+                        ? prev.tags.filter(t => t !== tag.id)
+                        : [...prev.tags, tag.id]
+                    }))}
+                    className={cn(
+                      "px-2 py-1 text-xs rounded-full transition-all",
+                      filters.tags.includes(tag.id)
+                        ? "ring-2 ring-offset-1"
+                        : "hover:opacity-80"
+                    )}
+                    style={{ 
+                      backgroundColor: `${tag.color}20`, 
+                      color: tag.color,
+                      ringColor: filters.tags.includes(tag.id) ? tag.color : undefined
+                    }}
+                  >
+                    {tag.name}
+                    <span className="ml-1 opacity-60">({tag.document_count || 0})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </EnhancedCard>
+
+          {/* Quick Stats */}
+          <EnhancedCard className="border-0 shadow-sm">
+            <div className="p-4">
+              <h3 className="font-semibold text-hotel-navy flex items-center gap-2 mb-4">
+                <BarChart3 className="w-4 h-4" />
+                Quick Stats
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Total Documents</span>
+                  <span className="font-medium">{stats?.total || 0}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Published</span>
+                  <span className="font-medium text-green-600">{stats?.published || 0}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Pending Review</span>
+                  <span className="font-medium text-amber-600">{stats?.pending || 0}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Expiring Soon</span>
+                  <span className="font-medium text-red-600">{stats?.expiringSoon || 0}</span>
+                </div>
+              </div>
+            </div>
+          </EnhancedCard>
+        </div>
+
+        {/* Main Document List */}
+        <div className="lg:col-span-3">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocumentTab)}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="documents">All Documents</TabsTrigger>
+              <TabsTrigger value="folders">By Folder</TabsTrigger>
+              <TabsTrigger value="recent">Recent</TabsTrigger>
+              <TabsTrigger value="favorites">Favorites</TabsTrigger>
+              <TabsTrigger value="expiring">Expiring</TabsTrigger>
+              <TabsTrigger value="trash">Trash</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="documents" className="space-y-4">
+              <EnhancedCard className="border-0 shadow-lg" padding="none">
+                  <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedDocuments.size === documents.length && documents.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-hotel-navy focus:ring-hotel-navy"
+                      />
+                      <span className="text-sm text-gray-500">
+                        {selectedDocuments.size > 0 
+                          ? `${selectedDocuments.size} selected` 
+                          : `${documents.length} documents`
+                        }
+                      </span>
                     </div>
-                    <h3 className="font-semibold text-hotel-navy text-sm sm:text-base mb-1 sm:mb-2">{folder.name}</h3>
-                    <EnhancedBadge variant="secondary" className="text-xs">
-                      {folder.count} {t('unit_files')}
-                    </EnhancedBadge>
+                    {documents.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">Sort by:</span>
+                        <select className="text-xs border-none bg-transparent focus:ring-0 cursor-pointer">
+                          <option>Recently Added</option>
+                          <option>Name</option>
+                          <option>Size</option>
+                          <option>Expiry Date</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-6">
+                    <LoadingTransition
+                      isLoading={isLoading}
+                      skeleton={viewMode === 'list' ? <TableSkeleton rows={5} cols={4} /> : undefined}
+                    >
+                      {documents.length === 0 ? (
+                        <EmptyState
+                          icon={FileText}
+                          title="No documents found"
+                          description="Start by uploading your first document or adjust your filters."
+                          action={{
+                            label: 'Upload Document',
+                            onClick: () => setUploadDialogOpen(true),
+                            icon: Plus
+                          }}
+                        />
+                      ) : viewMode === 'grid' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {documents.map(renderDocumentCard)}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {documents.map(renderDocumentRow)}
+                        </div>
+                      )}
+                    </LoadingTransition>
                   </div>
                 </EnhancedCard>
-              )
-            })}
-          </div>
-          {/* Also show filtered list below folders */}
-          <EnhancedCard className="border-0 shadow-lg" padding="none">
-            <div className="p-6">
-              {renderDocumentList(filteredDocuments)}
-            </div>
-          </EnhancedCard>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="shared" className="space-y-4 animate-fade-in">
-          <EnhancedCard className="border-0 shadow-lg" padding="none">
-            <div className="p-6">
-              {renderDocumentList(documents.filter(d =>
-                // Assuming 'shared' means broadly accessible documentation, not private role-specific drafts
-                d.status === 'PUBLISHED' && d.visibility !== 'role'
-              ))}
-            </div>
-          </EnhancedCard>
-        </TabsContent>
+            <TabsContent value="folders">
+              <EnhancedCard className="border-0 shadow-lg" padding="none">
+                <div className="p-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {folders.map(folder => (
+                      <div
+                        key={folder.id}
+                        onClick={() => setFilters(prev => ({ ...prev, folderId: folder.id }))}
+                        className="p-4 rounded-xl border border-gray-200 hover:border-hotel-navy/30 hover:shadow-md transition-all cursor-pointer bg-white"
+                      >
+                        <div className="w-12 h-12 rounded-xl bg-hotel-navy/5 flex items-center justify-center mb-3">
+                          <FolderOpen className="w-6 h-6 text-hotel-navy" />
+                        </div>
+                        <h3 className="font-medium text-hotel-navy truncate">{folder.name}</h3>
+                        <p className="text-sm text-gray-500">{folderStats[folder.id] || 0} documents</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </EnhancedCard>
+            </TabsContent>
 
-        <TabsContent value="recent" className="space-y-4 animate-fade-in">
-          <EnhancedCard className="border-0 shadow-lg" padding="none">
-            <div className="p-6">
-              {/* Already sorted by created_at desc in useDocuments, just take top 20 */}
-              {renderDocumentList(documents.slice(0, 20))}
-            </div>
-          </EnhancedCard>
-        </TabsContent>
+            <TabsContent value="recent">
+              <EnhancedCard className="border-0 shadow-lg" padding="none">
+                <div className="p-6">
+                  <div className="space-y-2">
+                    {documents.slice(0, 20).map(renderDocumentRow)}
+                  </div>
+                </div>
+              </EnhancedCard>
+            </TabsContent>
 
-        <TabsContent value="favorites" className="space-y-4 animate-fade-in">
-          <EnhancedCard className="border-0 shadow-lg" padding="none">
-            <div className="p-6">
-              {renderDocumentList(documents.filter(d => favoritesSet.has(d.id)))}
-            </div>
-          </EnhancedCard>
-        </TabsContent>
+            <TabsContent value="favorites">
+              <EnhancedCard className="border-0 shadow-lg" padding="none">
+                <div className="p-6">
+                  <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-2"}>
+                    {documents.filter(d => favoritesSet.has(d.id)).map(viewMode === 'grid' ? renderDocumentCard : renderDocumentRow)}
+                  </div>
+                </div>
+              </EnhancedCard>
+            </TabsContent>
 
-      </Tabs>
+            <TabsContent value="expiring">
+              <EnhancedCard className="border-0 shadow-lg" padding="none">
+                <div className="p-6">
+                  <DocumentExpiryBanner 
+                    documents={documents
+                      .filter(d => d.expires_at && new Date(d.expires_at) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+                      .map(d => ({ id: d.id, title: d.title, expiryDate: d.expires_at! }))}
+                    className="mb-6"
+                  />
+                  <div className="space-y-2">
+                    {documents
+                      .filter(d => d.expires_at && new Date(d.expires_at) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+                      .sort((a, b) => new Date(a.expires_at!).getTime() - new Date(b.expires_at!).getTime())
+                      .map(renderDocumentRow)}
+                  </div>
+                </div>
+              </EnhancedCard>
+            </TabsContent>
 
+            <TabsContent value="trash">
+              <DocumentTrashBin 
+                documents={trashedDocuments.map(d => ({
+                  id: d.id,
+                  title: d.title,
+                  fileType: (d.file_extension as any) || 'unknown',
+                  fileSize: d.file_size || 0,
+                  deletedAt: d.deleted_at || d.updated_at,
+                  deletedBy: d.profiles?.full_name || 'Unknown',
+                  daysRemaining: 30 // Default retention period
+                }))}
+                onRestore={(ids) => {
+                  ids.forEach(id => restoreDocument.mutate(id))
+                }}
+                onDeletePermanently={(ids) => {
+                  ids.forEach(id => permanentDelete.mutate(id))
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Upload Dialog */}
       <DocumentUploadDialog
         open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
+        onOpenChange={(open) => {
+          setUploadDialogOpen(open)
+          if (!open) {
+            // Refresh data when dialog closes
+            queryClient.invalidateQueries({ queryKey: ['documents'] })
+            queryClient.invalidateQueries({ queryKey: ['document-stats'] })
+          }
+        }}
       />
 
+      {/* Document Viewer */}
       <DocumentViewer
         open={viewerOpen}
         onOpenChange={setViewerOpen}
         document={selectedDocument || { id: '', title: '', file_url: '' }}
       />
 
+      {/* Edit Dialog */}
       <Dialog
         open={editDialogOpen}
         onOpenChange={(open) => {
@@ -514,45 +1003,71 @@ export default function DocumentLibrary() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('edit_document', { defaultValue: 'Edit Document' })}</DialogTitle>
+            <DialogTitle>Edit Document</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="doc-title">{t('document.title', { defaultValue: 'Title' })}</Label>
+              <Label htmlFor="doc-title">Title</Label>
               <Input
                 id="doc-title"
                 value={editForm.title}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="doc-description">{t('document.description', { defaultValue: 'Description' })}</Label>
+              <Label htmlFor="doc-description">Description</Label>
               <Input
                 id="doc-description"
                 value={editForm.description}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
               />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-              {t('cancel', { defaultValue: 'Cancel' })}
+              Cancel
             </Button>
             <Button
               type="button"
               onClick={handleSaveEdit}
               disabled={!editForm.title.trim() || updateDocument.isPending}
             >
-              {t('save', { defaultValue: 'Save' })}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* AI Assistant Panel */}
+      <Dialog open={aiPanelOpen} onOpenChange={setAiPanelOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-hotel-gold" />
+              AI Document Assistant
+            </DialogTitle>
+          </DialogHeader>
+          {selectedForAI && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                AI suggestions for <strong>{selectedForAI.title}</strong>
+              </p>
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm">
+                  <Sparkles className="w-4 h-4 inline mr-2 text-hotel-gold" />
+                  AI-powered features coming soon: auto-tagging, duplicate detection, and smart summaries.
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
       <DeleteConfirmationDialog
         open={!!deleteDocumentId}
         onOpenChange={(open) => !open && setDeleteDocumentId(null)}
-        itemName={t('document.label', { defaultValue: 'document' })}
+        itemName="document"
         onConfirm={handleConfirmDelete}
         isLoading={deleteDocument.isPending}
       />

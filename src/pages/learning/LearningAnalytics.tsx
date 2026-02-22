@@ -647,9 +647,9 @@ export default function LearningAnalytics() {
                                     <thead className="bg-gray-50 border-b">
                                         <tr>
                                             <th className="px-4 py-3 font-medium text-gray-500">Employee</th>
-                                            <th className="px-4 py-3 font-medium text-gray-500">Department</th>
+                                            <th className="px-4 py-3 font-medium text-gray-500">{t('common:department')}</th>
                                             <th className="px-4 py-3 font-medium text-gray-500">Module</th>
-                                            <th className="px-4 py-3 font-medium text-gray-500">Status</th>
+                                            <th className="px-4 py-3 font-medium text-gray-500">{t('common:status')}</th>
                                             <th className="px-4 py-3 font-medium text-gray-500">Date/Score</th>
                                         </tr>
                                     </thead>
@@ -763,7 +763,7 @@ export default function LearningAnalytics() {
                                         <tr>
                                             <th className="px-4 py-3 font-medium text-gray-500">Module</th>
                                             <th className="px-4 py-3 font-medium text-gray-500">Block</th>
-                                            <th className="px-4 py-3 font-medium text-gray-500">Type</th>
+                                            <th className="px-4 py-3 font-medium text-gray-500">{t('common:type')}</th>
                                             <th className="px-4 py-3 font-medium text-gray-500">Avg Time</th>
                                             <th className="px-4 py-3 font-medium text-gray-500">Completions</th>
                                         </tr>

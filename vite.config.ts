@@ -82,6 +82,7 @@ export default defineConfig({
     // Security: Rate limiting middleware
     middlewareMode: false,
   },
+  optimizeDeps: {},
   build: {
     // Security: Build optimizations
     minify: 'terser',

@@ -14,7 +14,8 @@ import {
   Network,
   Download,
   Calendar,
-  Filter
+  Filter,
+  Settings
 } from 'lucide-react'
 import { EmployeeCard } from '@/components/directory/EmployeeCard'
 import { OrgPyramid } from '@/components/directory/OrgPyramid'
@@ -36,6 +37,26 @@ type StatusFilter = 'all' | 'active' | 'inactive'
 
 const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr']
 
+const EXECUTIVE_TITLE_RANK: Record<string, number> = {
+  'founder': 1,
+  'co-founder': 1,
+  'chief executive officer': 2,
+  'ceo': 2,
+  'president': 3,
+  'chief financial officer': 4,
+  'cfo': 4,
+  'chief operating officer': 5,
+  'coo': 5,
+  'chief technology officer': 6,
+  'cto': 6,
+  'chief marketing officer': 7,
+  'cmo': 7,
+  'chief information officer': 8,
+  'cio': 8,
+  'chief human resources officer': 9,
+  'chro': 9
+}
+
 export default function EmployeeDirectory() {
   const { t, i18n } = useTranslation('directory')
   const isRTL = i18n.dir() === 'rtl'
@@ -48,12 +69,14 @@ export default function EmployeeDirectory() {
   const [roleFilter, setRoleFilter] = useState<'all' | AppRole>('all')
   const [managementLevel, setManagementLevel] = useState<ManagementLevelFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
-  const [sortBy, setSortBy] = useState<DirectorySort>('name_asc')
+  const [sortBy, setSortBy] = useState<DirectorySort>('job_title_asc')
   const [exportMonth, setExportMonth] = useState<number>(new Date().getMonth() + 1)
   const [exportYear, setExportYear] = useState<number>(new Date().getFullYear())
   const [exportingBirthdays, setExportingBirthdays] = useState(false)
+  const [orgEditMode, setOrgEditMode] = useState(false)
 
   const canExportBirthdays = HR_ADMIN_ROLES.includes((primaryRole || 'staff') as AppRole)
+  const canEditOrgMap = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '')
 
   const { data: properties = [] } = useProperties()
   const { departments = [] } = useDepartments(propertyFilter !== 'all' ? propertyFilter : undefined)
@@ -75,16 +98,161 @@ export default function EmployeeDirectory() {
     return employees.filter((e) => e.is_active)
   }, [employees, statusFilter])
 
-  const groupedByProperty = useMemo(() => {
-    const groups = new Map<string, typeof filteredEmployees>()
-    filteredEmployees.forEach((employee) => {
-      const key = employee.primary_property_name || t('unassigned', 'Unassigned')
-      const existing = groups.get(key) || []
-      existing.push(employee)
-      groups.set(key, existing)
+  const ceoEmployee = useMemo(() => {
+    const normalize = (value?: string | null) => (value || '').toLowerCase().trim()
+    const isCeoTitle = (title?: string | null) => {
+      const normalized = normalize(title)
+      return normalized.includes('chief executive officer') || normalized.includes('ceo')
+    }
+    const getTitleRank = (title?: string | null) => {
+      const normalized = normalize(title)
+      if (!normalized) return 999
+      if (EXECUTIVE_TITLE_RANK[normalized]) return EXECUTIVE_TITLE_RANK[normalized]
+      const entries = Object.entries(EXECUTIVE_TITLE_RANK).sort((a, b) => a[1] - b[1])
+      for (const [key, rank] of entries) {
+        if (normalized.includes(key)) return rank
+      }
+      return 500
+    }
+
+    const execCandidates = filteredEmployees.filter((e) =>
+      e.management_level === 'executive' ||
+      e.roles?.includes('corporate_admin') ||
+      e.roles?.includes('regional_admin') ||
+      e.roles?.includes('regional_hr')
+    )
+
+    if (execCandidates.length === 0) return null
+
+    const topLevelExecs = execCandidates.filter((e) => !e.manager_id)
+    const pool = topLevelExecs.length > 0 ? topLevelExecs : execCandidates
+
+    const ceos = pool.filter((e) => isCeoTitle(e.job_title))
+    if (ceos.length > 0) {
+      return ceos.sort((a, b) => a.full_name.localeCompare(b.full_name))[0]
+    }
+
+    const ranked = pool.map((e) => ({ e, rank: getTitleRank(e.job_title) }))
+    const minRank = Math.min(...ranked.map((r) => r.rank))
+    const topRanked = ranked.filter((r) => r.rank === minRank).map((r) => r.e)
+    if (topRanked.length === 1) return topRanked[0]
+
+    const reportCounts = new Map<string, number>()
+    filteredEmployees.forEach((e) => {
+      if (!e.manager_id) return
+      reportCounts.set(e.manager_id, (reportCounts.get(e.manager_id) || 0) + 1)
     })
-    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-  }, [filteredEmployees, t])
+
+    return topRanked.sort((a, b) => {
+      const aReports = reportCounts.get(a.id) || 0
+      const bReports = reportCounts.get(b.id) || 0
+      if (aReports !== bReports) return bReports - aReports
+      return a.full_name.localeCompare(b.full_name)
+    })[0]
+  }, [filteredEmployees])
+
+  const employeesForGrouping = useMemo(() => {
+    if (!ceoEmployee) return filteredEmployees
+    return filteredEmployees.filter((e) => e.id !== ceoEmployee.id)
+  }, [filteredEmployees, ceoEmployee])
+
+  const groupedByProperty = useMemo(() => {
+    const normalize = (value?: string | null) => (value || '').toLowerCase().trim()
+    const compareByName = (a: typeof employeesForGrouping[number], b: typeof employeesForGrouping[number]) =>
+      a.full_name.localeCompare(b.full_name)
+    const compareByJoiningDate = (a: typeof employeesForGrouping[number], b: typeof employeesForGrouping[number]) => {
+      const aDate = a.joining_date ? new Date(a.joining_date).getTime() : 0
+      const bDate = b.joining_date ? new Date(b.joining_date).getTime() : 0
+      return aDate - bDate
+    }
+    const compareByJobTitle = (a: typeof employeesForGrouping[number], b: typeof employeesForGrouping[number]) => {
+      const aTitle = normalize(a.job_title)
+      const bTitle = normalize(b.job_title)
+      if (aTitle && bTitle && aTitle !== bTitle) return aTitle.localeCompare(bTitle)
+      if (aTitle && !bTitle) return -1
+      if (!aTitle && bTitle) return 1
+      return compareByName(a, b)
+    }
+
+    const getEmployeeComparator = () => {
+      switch (sortBy) {
+        case 'name_desc':
+          return (a: typeof employeesForGrouping[number], b: typeof employeesForGrouping[number]) => compareByName(b, a)
+        case 'joining_date_asc':
+          return compareByJoiningDate
+        case 'joining_date_desc':
+          return (a: typeof employeesForGrouping[number], b: typeof employeesForGrouping[number]) => compareByJoiningDate(b, a)
+        case 'job_title_asc':
+          return compareByJobTitle
+        case 'job_title_desc':
+          return (a: typeof employeesForGrouping[number], b: typeof employeesForGrouping[number]) => compareByJobTitle(b, a)
+        case 'name_asc':
+        default:
+          return compareByName
+      }
+    }
+
+    const employeeComparator = getEmployeeComparator()
+    const groups = new Map<string, { id: string; name: string; isHeadquarters: boolean; employees: typeof employeesForGrouping }>()
+    const unassignedKey = 'unassigned'
+
+    employeesForGrouping.forEach((employee) => {
+      const propertyIds = employee.property_ids?.length
+        ? employee.property_ids
+        : (employee.primary_property_id ? [employee.primary_property_id] : [])
+      const propertyNames = employee.property_names?.length
+        ? employee.property_names
+        : (employee.primary_property_name ? [employee.primary_property_name] : [])
+      const propertyNameById = new Map(propertyIds.map((id, idx) => [id, propertyNames[idx]]))
+
+      const idsToShow = propertyFilter !== 'all'
+        ? propertyIds.filter((id) => id === propertyFilter)
+        : propertyIds
+
+      if (idsToShow.length === 0) {
+        const existing = groups.get(unassignedKey) || {
+          id: unassignedKey,
+          name: t('unassigned', 'Unassigned'),
+          isHeadquarters: false,
+          employees: []
+        }
+        existing.employees.push(employee)
+        groups.set(unassignedKey, existing)
+        return
+      }
+
+      idsToShow.forEach((propertyId) => {
+        const propertyMeta = properties.find((p) => p.id === propertyId)
+        const name = propertyMeta?.name || propertyNameById.get(propertyId) || employee.primary_property_name || t('unassigned', 'Unassigned')
+        const isHeadquarters = !!propertyMeta?.is_headquarters
+
+        const existing = groups.get(propertyId) || {
+          id: propertyId,
+          name,
+          isHeadquarters,
+          employees: []
+        }
+
+        existing.employees.push(employee)
+        groups.set(propertyId, existing)
+      })
+    })
+
+    return Array.from(groups.values()).map((group) => ({
+      ...group,
+      employees: [...group.employees].sort(employeeComparator)
+    })).sort((a, b) => {
+      if (a.id === unassignedKey && b.id !== unassignedKey) return 1
+      if (b.id === unassignedKey && a.id !== unassignedKey) return -1
+      if (a.isHeadquarters !== b.isHeadquarters) return a.isHeadquarters ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+  }, [employeesForGrouping, properties, propertyFilter, sortBy, t])
+
+  const gridDisplayCount = useMemo(() => {
+    const groupCount = groupedByProperty.reduce((sum, group) => sum + group.employees.length, 0)
+    return groupCount + (ceoEmployee ? 1 : 0)
+  }, [groupedByProperty, ceoEmployee])
 
   const handleExportBirthdays = async () => {
     try {
@@ -129,6 +297,22 @@ export default function EmployeeDirectory() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {canEditOrgMap && (
+            <Button
+              variant={orgEditMode ? 'default' : 'outline'}
+              onClick={() => {
+                if (!orgEditMode && viewMode !== 'org') {
+                  setViewMode('org')
+                }
+                setOrgEditMode((prev) => !prev)
+              }}
+              className="gap-1.5"
+            >
+              <Settings className="h-4 w-4" />
+              {orgEditMode ? t('editing_map', 'Editing Map') : t('edit_map', 'Edit Map')}
+            </Button>
+          )}
 
           <div className="relative w-full md:w-72">
             <Search className={`absolute top-2.5 h-4 w-4 text-gray-500 ${isRTL ? 'right-2.5' : 'left-2.5'}`} />
@@ -227,6 +411,8 @@ export default function EmployeeDirectory() {
               <SelectContent>
                 <SelectItem value="name_asc">A-Z</SelectItem>
                 <SelectItem value="name_desc">Z-A</SelectItem>
+                <SelectItem value="job_title_asc">{t('job_title_asc', 'Job Title (A-Z)')}</SelectItem>
+                <SelectItem value="job_title_desc">{t('job_title_desc', 'Job Title (Z-A)')}</SelectItem>
                 <SelectItem value="joining_date_desc">Joining Date (Newest)</SelectItem>
                 <SelectItem value="joining_date_asc">Joining Date (Oldest)</SelectItem>
               </SelectContent>
@@ -282,7 +468,13 @@ export default function EmployeeDirectory() {
         </div>
       ) : viewMode === 'org' ? (
         <div className="overflow-x-auto">
-          <OrgPyramid hierarchy={hierarchy} isRTL={isRTL} />
+          <OrgPyramid
+            hierarchy={hierarchy}
+            isRTL={isRTL}
+            adminMode={orgEditMode}
+            onAdminModeChange={setOrgEditMode}
+            showAdminToggle={false}
+          />
         </div>
       ) : filteredEmployees.length === 0 ? (
         <div className="text-center py-12 border rounded-lg bg-muted/20">
@@ -292,20 +484,63 @@ export default function EmployeeDirectory() {
       ) : (
         <div className="space-y-6">
           <Badge variant="secondary" className="text-sm">
-            {filteredEmployees.length} {t('employees', 'Employees')}
+            {gridDisplayCount} {t('employees', 'Employees')}
           </Badge>
 
-          {groupedByProperty.map(([propertyName, group]) => (
-            <Card key={propertyName} className="border-slate-200">
+          {ceoEmployee && (
+            <Card className="border-indigo-200">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center justify-between">
-                  <span>{propertyName}</span>
-                  <Badge variant="outline">{group.length}</Badge>
+                  <span className="flex items-center gap-2">
+                    {t('ceo', 'CEO')}
+                    <Badge variant="secondary" className="text-xs">
+                      {t('executive', 'Executive')}
+                    </Badge>
+                  </span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {group.map((employee) => (
+                  <EmployeeCard
+                    key={ceoEmployee.id}
+                    isRTL={isRTL}
+                    profile={{
+                      id: ceoEmployee.id,
+                      full_name: ceoEmployee.full_name,
+                      avatar_url: ceoEmployee.avatar_url,
+                      job_title: ceoEmployee.job_title,
+                      email: ceoEmployee.work_email,
+                      phone: ceoEmployee.phone_extension ? `Ext. ${ceoEmployee.phone_extension}` : null,
+                      staff_id: ceoEmployee.staff_id,
+                      manager_name: ceoEmployee.manager_name,
+                      properties: ceoEmployee.primary_property_name ? [{ name: ceoEmployee.primary_property_name }] : [],
+                      departments: ceoEmployee.primary_department_name ? [{ name: ceoEmployee.primary_department_name }] : [],
+                      is_active: ceoEmployee.is_active
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {groupedByProperty.map((group) => (
+            <Card key={group.id} className="border-slate-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    {group.name}
+                    {group.isHeadquarters && (
+                      <Badge variant="secondary" className="text-xs">
+                        {t('head_office', 'Head Office')}
+                      </Badge>
+                    )}
+                  </span>
+                  <Badge variant="outline">{group.employees.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {group.employees.map((employee) => (
                     <EmployeeCard
                       key={employee.id}
                       isRTL={isRTL}
@@ -333,4 +568,3 @@ export default function EmployeeDirectory() {
     </div>
   )
 }
-

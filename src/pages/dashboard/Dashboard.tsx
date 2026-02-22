@@ -119,7 +119,7 @@ export function IntegratedDashboard() {
         value: `${stats?.completedTraining || 0}/${(stats?.completedTraining || 0) + (stats?.inProgressTraining || 0)}`,
         subtitle: t('staff.stats.training_progress') || 'Training progress',
         icon: GraduationCap,
-        href: '/training',
+        href: '/learning/my',
         color: 'emerald'
       },
       {
@@ -135,7 +135,7 @@ export function IntegratedDashboard() {
         value: unreadCount,
         subtitle: t('widgets.announcements_desc') || 'Unread announcements',
         icon: Bell,
-        href: '/notifications',
+        href: '/announcements',
         color: unreadCount > 0 ? 'red' : 'navy'
       },
     ]

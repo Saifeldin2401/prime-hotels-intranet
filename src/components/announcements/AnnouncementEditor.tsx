@@ -446,7 +446,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category">{t('common:category')}</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -652,7 +652,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
               </div>
 
               <div className="space-y-2">
-                <Label>Priority</Label>
+                <Label>{t('common:priority')}</Label>
                 <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
                   <SelectTrigger>
                     <SelectValue />

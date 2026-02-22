@@ -38,12 +38,12 @@ export function LanguageSwitcher({ className, variant = "outline", showLabel = t
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={variant} size="sm" className={className}>
-          <Globe className={cn("h-4 w-4", showLabel && "mr-2")} />
+          <Globe className={cn("h-4 w-4", showLabel && "me-2")} />
           {showLabel && (
             <>
-              <span className="mr-2">{currentLanguage.flag}</span>
+              <span className="me-2">{currentLanguage.flag}</span>
               {currentLanguage.name}
-              <ChevronDown className="h-4 w-4 ml-2" />
+              <ChevronDown className="h-4 w-4 ms-2" />
             </>
           )}
         </Button>

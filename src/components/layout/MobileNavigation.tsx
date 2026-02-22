@@ -36,7 +36,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
   }, [])
 
   return (
-    <div className={cn("fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 max-w-full mx-auto print:hidden", className)}>
+    <div className={cn("fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] inset-x-4 z-30 max-w-full mx-auto print:hidden", className)}>
       <nav
         className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl px-2 py-2 flex items-center justify-between relative"
         aria-label={t('mobileNav', { defaultValue: 'Mobile navigation' })}

@@ -442,7 +442,7 @@ export default function RequestDetail() {
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <div className="text-xs text-gray-500">Type</div>
+                            <div className="text-xs text-gray-500">{t('common:type')}</div>
                             <div className="font-medium capitalize">{leaveQuery.data.type}</div>
                           </div>
                           <div>
@@ -470,7 +470,7 @@ export default function RequestDetail() {
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
-                            <div className="text-xs text-gray-500">Category</div>
+                            <div className="text-xs text-gray-500">{t('common:category')}</div>
                             <div className="font-medium capitalize">{expenseQuery.data.category}</div>
                           </div>
                           <div>
@@ -493,7 +493,7 @@ export default function RequestDetail() {
 
                         {expenseQuery.data.description && (
                           <div>
-                            <div className="text-xs text-gray-500">Description</div>
+                            <div className="text-xs text-gray-500">{t('common:description')}</div>
                             <div className="text-sm">{expenseQuery.data.description}</div>
                           </div>
                         )}
@@ -714,16 +714,16 @@ export default function RequestDetail() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <div className="text-xs text-gray-500">Name</div>
+                <div className="text-xs text-gray-500">{t('common:name')}</div>
                 <div className="font-medium">{requester?.full_name || requester?.email || '—'}</div>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 <div>
-                  <div className="text-xs text-gray-500">Email</div>
+                  <div className="text-xs text-gray-500">{t('common:email')}</div>
                   <div className="text-sm">{requester?.email || '—'}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">Phone</div>
+                  <div className="text-xs text-gray-500">{t('common:phone')}</div>
                   <div className="text-sm">{(requester as any)?.phone || '—'}</div>
                 </div>
                 <div>
@@ -750,7 +750,7 @@ export default function RequestDetail() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-gray-500">Priority</div>
+                <div className="text-xs text-gray-500">{t('common:priority')}</div>
                 {request.priority ? (
                   <Badge className={priorityClass[request.priority]}>
                     {priorityLabel[request.priority]}
@@ -915,7 +915,7 @@ export default function RequestDetail() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('common:priority')}</label>
               <Select value={managePriority} onValueChange={(value) => setManagePriority(value as 'low' | 'normal' | 'high' | 'urgent')}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select priority" />

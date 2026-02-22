@@ -1231,7 +1231,7 @@ function QuizResultsScreen({
                         <StatCard
                             icon={<Clock className="h-5 w-5 text-purple-600" />}
                             value={formatTime(result.timeSpentSeconds)}
-                            label="Time"
+                            label={t("common:time")}
                             color="purple"
                         />
                     </div>

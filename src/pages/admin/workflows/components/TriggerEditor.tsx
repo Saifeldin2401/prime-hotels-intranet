@@ -336,7 +336,7 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
             </div>
 
             <div className="flex justify-end gap-3 pt-6 border-t">
-                <Button variant="outline" onClick={onClose} disabled={isPending}>Cancel</Button>
+                <Button variant="outline" onClick={onClose} disabled={isPending}>{t('common:cancel')}</Button>
                 <Button onClick={handleSave} disabled={isPending}>
                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Save Rule

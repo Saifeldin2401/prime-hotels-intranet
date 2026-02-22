@@ -45,16 +45,16 @@ export function TrainingProgress() {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Link to="/training" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Link to="/learning/my" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <GraduationCap className="w-5 h-5 text-emerald-500" />
               {t('widgets.training_progress', 'Training Progress')}
             </Link>
           </CardTitle>
           <CardDescription>{t('widgets.training_progress_desc', 'Continue your learning journey')}</CardDescription>
         </div>
-        <Link to="/training">
+        <Link to="/learning/my">
           <Button variant="ghost" size="sm" className="gap-1">
-            {t('widgets.all_courses', 'All Courses')} <ArrowRight className="w-4 h-4" />
+            {t('widgets.all_courses', 'My Learning')} <ArrowRight className="w-4 h-4" />
           </Button>
         </Link>
       </CardHeader>
@@ -106,7 +106,7 @@ export function TrainingProgress() {
                         <span className="text-xs font-medium w-8 text-right">{module.progress || 0}%</span>
                       </div>
                     </div>
-                    <Link to={`/training/${module.id}`}>
+                    <Link to={`/learning/training/${module.id}`}>
                       <Button 
                         size="sm" 
                         variant={module.progress > 0 ? "outline" : "default"}

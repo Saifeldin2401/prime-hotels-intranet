@@ -340,6 +340,19 @@ export interface Document {
   view_count: number
   estimated_read_time?: number | null
   content_type: string
+  expires_at?: string | null
+  review_reminder_date?: string | null
+  document_number?: string | null
+  confidentiality_level?: 'public' | 'internal' | 'confidential' | 'restricted' | null
+  owner_id?: string | null
+  folder_id?: string | null
+  file_extension?: string | null
+  download_count?: number | null
+  last_downloaded_at?: string | null
+  watermark_text?: string | null
+  is_archived?: boolean | null
+  deleted_at?: string | null
+  tags?: Array<{ id: string; name: string; color?: string | null }> | null
   departments?: { id: string; name: string } | null
   properties?: { id: string; name: string } | null
   profiles?: { id: string; full_name: string | null } | null

@@ -78,8 +78,8 @@ function AssignmentProgressDialog({
                             <table className="w-full text-sm">
                                 <thead className="bg-slate-50 border-b">
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-medium">User</th>
-                                        <th className="px-4 py-3 text-left font-medium">Status</th>
+                                        <th className="px-4 py-3 text-left font-medium">{t('common:user')}</th>
+                                        <th className="px-4 py-3 text-left font-medium">{t('common:status')}</th>
                                         <th className="px-4 py-3 text-left font-medium">Score</th>
                                         <th className="px-4 py-3 text-left font-medium">Last Active</th>
                                     </tr>
@@ -513,7 +513,7 @@ export default function AssignmentManager() {
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="role">Role</SelectItem>
-                                        <SelectItem value="department">Department</SelectItem>
+                                        <SelectItem value="department">{t('common:department')}</SelectItem>
                                         <SelectItem value="user">Specific User</SelectItem>
                                         <SelectItem value="everyone">All Staff</SelectItem>
                                     </SelectContent>
@@ -680,7 +680,7 @@ export default function AssignmentManager() {
                                     <p className="font-medium">{formData.due_date ? format(new Date(formData.due_date), 'PPP') : 'Not set'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Priority</p>
+                                    <p className="text-muted-foreground">{t('common:priority')}</p>
                                     <p className="font-medium capitalize">{formData.priority}</p>
                                 </div>
                             </div>

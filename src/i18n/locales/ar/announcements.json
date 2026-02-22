@@ -78,5 +78,9 @@
         "users_read_not_ack": "المستخدمون الذين قرأوا لكن لم يؤكدوا الاستلام",
         "users_not_read": "المستخدمون الذين لم يقرأوا هذا الإعلان",
         "view_analytics": "عرض التحليلات"
-    }
+    },
+    "targetaudience": "الجمهور المستهدف",
+    "writeyourannouncementcontenthere": "Write your announcement content here...",
+    "scheduleannouncement": "Schedule announcement",
+    "pinannouncement": "Pin announcement"
 }

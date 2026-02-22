@@ -141,7 +141,7 @@ export function AITriageSuggestions({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
                     {/* Category */}
                     <div className="space-y-1">
-                        <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Category</p>
+                        <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">{t('common:category')}</p>
                         <Badge variant="outline" className="bg-white font-medium">
                             {suggestion.category}
                         </Badge>
@@ -149,7 +149,7 @@ export function AITriageSuggestions({
 
                     {/* Priority */}
                     <div className="space-y-1">
-                        <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Priority</p>
+                        <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">{t('common:priority')}</p>
                         <Badge className={cn("gap-1 capitalize", priorityConfig[suggestion.priority].color)}>
                             <PriorityIcon className="h-3 w-3" />
                             {suggestion.priority}

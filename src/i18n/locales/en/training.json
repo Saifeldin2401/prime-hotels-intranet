@@ -1073,9 +1073,8 @@
     "filterByDept": "Filter by Department",
     "filterByProp": "Filter by Property",
     "filterByStatus": "Filter by Status",
-    "allDepartments": "All Departments",
-    "allProperties": "All Properties",
     "allStatuses": "All Statuses",
     "clearFilters": "Clear Filters",
-    "export": "Export"
+    "export": "Export",
+    "trainingmodule": "Training Module"
 }

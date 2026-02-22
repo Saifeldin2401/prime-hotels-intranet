@@ -28,6 +28,8 @@ export function ActionSheet({
     onOpenChange,
     footer
 }: ActionSheetProps) {
+    const { t } = useTranslation('common');
+
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
             {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
@@ -47,7 +49,7 @@ export function ActionSheet({
                     <DrawerFooter>
                         {footer}
                         <DrawerClose asChild>
-                            <Button variant="outline">Close</Button>
+                            <Button variant="outline">{t('actions.close', 'Close')}</Button>
                         </DrawerClose>
                     </DrawerFooter>
                 </div>

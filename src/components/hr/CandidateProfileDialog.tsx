@@ -375,7 +375,7 @@ export function CandidateProfileDialog({
                             </h4>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Date</Label>
+                                    <Label>{t('common:date')}</Label>
                                     <Input
                                         type="date"
                                         value={interviewDate}
@@ -384,7 +384,7 @@ export function CandidateProfileDialog({
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Time</Label>
+                                    <Label>{t('common:time')}</Label>
                                     <Input
                                         type="time"
                                         value={interviewTime}

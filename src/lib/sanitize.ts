@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify';
+import { isAllowedDirection, sanitizeClassNameList } from '@/lib/aiHtml'
 
 let hooksInitialized = false
 
@@ -16,6 +17,15 @@ function ensureHooksInitialized() {
 
     // Secure anchor tags opened in new tabs
     DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+        if (node instanceof Element) {
+            const sanitizedClassName = sanitizeClassNameList(node.getAttribute('class'))
+            if (sanitizedClassName) node.setAttribute('class', sanitizedClassName)
+            else node.removeAttribute('class')
+
+            const dir = node.getAttribute('dir')
+            if (!isAllowedDirection(dir)) node.removeAttribute('dir')
+        }
+
         if (node instanceof HTMLAnchorElement) {
             const target = node.getAttribute('target')
             if (target === '_blank') {
@@ -64,6 +74,7 @@ export const sanitizeHtml = (html: string | null | undefined): string => {
             'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
             'p', 'blockquote', 'pre', 'code', 'hr', 'br',
             'div', 'span', 'details', 'summary', 'nl',
+            'nav', 'section', 'article', 'header', 'footer', 'main', 'aside',
             // Inline formatting
             'b', 'i', 'strong', 'em', 'strike', 'u', 'mark', 'sub', 'sup',
             // Lists
@@ -79,11 +90,12 @@ export const sanitizeHtml = (html: string | null | undefined): string => {
         ],
         ALLOWED_ATTR: [
             // Universal
-            'id', 'class', 'style', 'dir', 'lang', 'title',
+            'id', 'class', 'dir', 'lang', 'title',
             // Links & images
             'href', 'src', 'alt', 'name', 'target', 'rel',
             // Images
             'width', 'height', 'loading',
+            'data-width', 'data-align',
             // Iframes
             'allow', 'allowfullscreen', 'frameborder', 'scrolling',
             // Tables
@@ -95,4 +107,3 @@ export const sanitizeHtml = (html: string | null | undefined): string => {
         ADD_ATTR: ['allowfullscreen', 'allow', 'loading'],
     });
 };
-

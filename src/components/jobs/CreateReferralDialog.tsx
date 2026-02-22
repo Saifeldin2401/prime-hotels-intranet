@@ -286,11 +286,11 @@ export function CreateReferralDialog({
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                             <div>
-                                <span className="block text-[11px] uppercase tracking-wide">Name</span>
+                                <span className="block text-[11px] uppercase tracking-wide">{t('common:name')}</span>
                                 <span className="text-foreground">{profile?.full_name || user?.email || 'Unknown'}</span>
                             </div>
                             <div>
-                                <span className="block text-[11px] uppercase tracking-wide">Email</span>
+                                <span className="block text-[11px] uppercase tracking-wide">{t('common:email')}</span>
                                 <span className="text-foreground">{profile?.email || user?.email || 'Unknown'}</span>
                             </div>
                         </div>

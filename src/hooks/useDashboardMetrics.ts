@@ -64,77 +64,65 @@ export function useDashboardMetrics(): DashboardMetrics {
       const currentWeekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       const previousWeekStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
       
-      // 1. Task Completion Metrics
-      const { data: taskMetrics } = await supabase.rpc('get_task_completion_metrics', {
-        p_user_id: user.id,
-        p_start_date: currentWeekStart.toISOString(),
-        p_end_date: new Date().toISOString()
-      })
-      
-      // Fallback if RPC doesn't exist - query directly
+      // 1. Task Completion Metrics (RPC removed - compute directly to avoid 400)
       let taskCompletion = { current: 0, previous: 0 }
-      if (!taskMetrics) {
-        // Current week tasks
-        const { data: currentTasks } = await supabase
-          .from('tasks')
-          .select('status', { count: 'exact' })
-          .gte('created_at', currentWeekStart.toISOString())
-          .eq('is_deleted', false)
-          .eq('created_by_id', user.id)
-        
-        const { data: currentCompleted } = await supabase
-          .from('tasks')
-          .select('*', { count: 'exact' })
-          .gte('created_at', currentWeekStart.toISOString())
-          .eq('status', 'completed')
-          .eq('is_deleted', false)
-          .eq('created_by_id', user.id)
-        
-        // Previous week tasks
-        const { data: prevTasks } = await supabase
-          .from('tasks')
-          .select('status', { count: 'exact' })
-          .gte('created_at', previousWeekStart.toISOString())
-          .lt('created_at', currentWeekStart.toISOString())
-          .eq('is_deleted', false)
-          .eq('created_by_id', user.id)
-        
-        const { data: prevCompleted } = await supabase
-          .from('tasks')
-          .select('*', { count: 'exact' })
-          .gte('created_at', previousWeekStart.toISOString())
-          .lt('created_at', currentWeekStart.toISOString())
-          .eq('status', 'completed')
-          .eq('is_deleted', false)
-          .eq('created_by_id', user.id)
-        
-        const currentTotal = currentTasks?.length || 0
-        const currentDone = currentCompleted?.length || 0
-        const prevTotal = prevTasks?.length || 0
-        const prevDone = prevCompleted?.length || 0
-        
-        taskCompletion = {
-          current: currentTotal > 0 ? Math.round((currentDone / currentTotal) * 100) : 0,
-          previous: prevTotal > 0 ? Math.round((prevDone / prevTotal) * 100) : 0
-        }
-      } else {
-        taskCompletion = taskMetrics
+
+      const { count: currentTotal } = await supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', currentWeekStart.toISOString())
+        .eq('is_deleted', false)
+        .eq('created_by_id', user.id)
+
+      const { count: currentDone } = await supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', currentWeekStart.toISOString())
+        .eq('status', 'completed')
+        .eq('is_deleted', false)
+        .eq('created_by_id', user.id)
+
+      const { count: prevTotal } = await supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', previousWeekStart.toISOString())
+        .lt('created_at', currentWeekStart.toISOString())
+        .eq('is_deleted', false)
+        .eq('created_by_id', user.id)
+
+      const { count: prevDone } = await supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', previousWeekStart.toISOString())
+        .lt('created_at', currentWeekStart.toISOString())
+        .eq('status', 'completed')
+        .eq('is_deleted', false)
+        .eq('created_by_id', user.id)
+
+      const safeCurrentTotal = currentTotal ?? 0
+      const safeCurrentDone = currentDone ?? 0
+      const safePrevTotal = prevTotal ?? 0
+      const safePrevDone = prevDone ?? 0
+
+      taskCompletion = {
+        current: safeCurrentTotal > 0 ? Math.round((safeCurrentDone / safeCurrentTotal) * 100) : 0,
+        previous: safePrevTotal > 0 ? Math.round((safePrevDone / safePrevTotal) * 100) : 0
       }
       
       // 2. Training Progress
       const { data: trainingData } = await supabase
         .from('training_progress')
-        .select('status, completed_at, assigned_at')
+        .select('status, completed_at, created_at')
         .eq('user_id', user.id)
       
       const currentTraining = trainingData?.filter(t => {
-        const assigned = new Date(t.assigned_at)
-        return assigned >= currentWeekStart
+        const createdAt = new Date(t.created_at)
+        return createdAt >= currentWeekStart
       }) || []
       
       const previousTraining = trainingData?.filter(t => {
-        const assigned = new Date(t.assigned_at)
-        return assigned >= previousWeekStart && assigned < currentWeekStart
+        const createdAt = new Date(t.created_at)
+        return createdAt >= previousWeekStart && createdAt < currentWeekStart
       }) || []
       
       const trainingProgress = {

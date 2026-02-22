@@ -136,7 +136,7 @@ export default function AnnouncementFeed() {
     markAsReadMutation.mutate(announcementId)
   }
 
-  const isAdmin = primaryRole && ['regional_admin', 'regional_hr'].includes(primaryRole)
+  const isAdmin = primaryRole && ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole)
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['announcements'] })

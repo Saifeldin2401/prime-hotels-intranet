@@ -40,9 +40,9 @@ export function PublicNavbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-          ? 'bg-hotel-navy/95 backdrop-blur-md shadow-lg'
-          : 'bg-transparent'
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled
+        ? 'bg-hotel-navy/95 backdrop-blur-md shadow-lg'
+        : 'bg-transparent'
         }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -108,7 +108,7 @@ export function PublicNavbar() {
                 <button
                   key={item.href}
                   onClick={() => handleNavClick(item.href)}
-                  className={`block w-full py-3 text-white/80 hover:text-white hover:bg-white/5 text-sm font-medium border-b border-white/5 last:border-0 ${isRTL ? 'text-right' : 'text-left'}`}
+                  className={`block w-full py-3 text-white/80 hover:text-white hover:bg-white/5 text-sm font-medium border-b border-white/5 last:border-0 text-start`}
                 >
                   {item.label}
                 </button>
