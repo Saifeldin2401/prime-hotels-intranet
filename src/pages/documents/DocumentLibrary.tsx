@@ -159,7 +159,7 @@ export default function DocumentLibrary() {
   const { data: folders = [] } = useDocumentFolders()
   const { data: tags = [] } = useDocumentTags()
   const { data: favorites = new Set() } = useFavorites()
-  const favoritesSet = favorites instanceof Set ? favorites : new Set(favorites)
+  const favoritesSet = favorites
 
   // Mutations
   const submitForApproval = useSubmitForApproval()

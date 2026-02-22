@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import { getUserFriendlyError } from '@/lib/errorMessages'
 import { useToast } from '@/components/ui/use-toast'
 import { LoadingButton } from '@/components/loading'
 import { scanFile } from '@/hooks/useVirusScan'
+import { useDepartments } from '@/hooks/useDepartments'
 import { useTranslation } from "react-i18next";
 
 interface DocumentUploadDialogProps {
@@ -36,7 +38,9 @@ interface DocumentUploadDialogProps {
 }
 
 export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialogProps) {
-  const { profile, properties, departments } = useAuth()
+  const { t } = useTranslation()
+  const { profile } = useAuth()
+  const { currentProperty, availableProperties } = useProperty()
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [file, setFile] = useState<File | null>(null)
@@ -47,6 +51,21 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
   const [selectedDepartment, setSelectedDepartment] = useState<string>('')
   const [requiresAcknowledgment, setRequiresAcknowledgment] = useState(false)
   const [uploading, setUploading] = useState(false)
+
+  const propertyOptions = useMemo(() => {
+    return availableProperties || []
+  }, [availableProperties])
+
+  const departmentsPropertyId = useMemo(() => {
+    if (visibility === 'department') {
+      const id = currentProperty?.id
+      return id && id !== 'all' ? id : undefined
+    }
+    const id = selectedProperty || currentProperty?.id
+    return id && id !== 'all' ? id : undefined
+  }, [currentProperty?.id, selectedProperty, visibility])
+
+  const { departments: departmentOptions = [] } = useDepartments(departmentsPropertyId)
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -264,11 +283,17 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
                   <SelectValue placeholder="Select property" />
                 </SelectTrigger>
                 <SelectContent>
-                  {properties.map((property) => (
-                    <SelectItem key={property.id} value={property.id}>
-                      {property.name}
+                  {propertyOptions.length === 0 ? (
+                    <SelectItem value="__none__" disabled>
+                      No properties available
                     </SelectItem>
-                  ))}
+                  ) : (
+                    propertyOptions.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -282,11 +307,17 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
                   <SelectValue placeholder={t("common:select_department")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((department) => (
-                    <SelectItem key={department.id} value={department.id}>
-                      {department.name}
+                  {departmentOptions.length === 0 ? (
+                    <SelectItem value="__none__" disabled>
+                      No departments available
                     </SelectItem>
-                  ))}
+                  ) : (
+                    departmentOptions.map((department) => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -312,7 +343,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             </Button>
             <LoadingButton
               type="submit"
-              disabled={!file || !title}
+              disabled={!file || !title || (visibility === 'department' && !selectedDepartment) || (visibility === 'property' && !selectedProperty)}
               loading={uploading}
               loadingText="Uploading..."
             >

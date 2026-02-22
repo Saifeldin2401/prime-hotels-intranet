@@ -168,6 +168,23 @@ export const documentSchema = z.object({
   }, {
     message: 'File type not supported. Please upload PDF, Word, Excel, or image files.'
   })
+}).superRefine((data, ctx) => {
+  // Conditional validation based on visibility
+  if (data.visibility === 'department' && !data.department_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Department is required when visibility is set to Specific Department',
+      path: ['department_id']
+    })
+  }
+  
+  if (data.visibility === 'property' && !data.property_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Property is required when visibility is set to Specific Property',
+      path: ['property_id']
+    })
+  }
 })
 
 export type DocumentFormData = z.infer<typeof documentSchema>

@@ -168,11 +168,11 @@ export function useDocuments(filters?: DocumentFilters) {
         .select(`
           *,
           folder:document_folders(id, name),
-          tags:document_tags(name),
+          tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
           author:profiles!documents_created_by_fkey(id, full_name, avatar_url)
         `)
-        .order(filters?.sort_by || 'created_at', { 
-          ascending: filters?.sort_order === 'asc' 
+        .order(filters?.sort_by || 'created_at', {
+          ascending: filters?.sort_order === 'asc'
         })
 
       // Handle deleted/archived filters
@@ -184,7 +184,7 @@ export function useDocuments(filters?: DocumentFilters) {
       }
 
       if (!filters?.include_archived && !filters?.include_deleted) {
-        query = query.neq('status', 'archived')
+        query = query.eq('is_archived', false)
       }
 
       // Default to showing only file documents (not knowledge base articles)
@@ -280,7 +280,7 @@ export function useDocuments(filters?: DocumentFilters) {
         if (!ftsError && ftsData) {
           return ftsData as Document[]
         }
-        
+
         // Fallback to ILIKE search
         query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%,content.ilike.%${escaped}%`)
       }
@@ -288,7 +288,17 @@ export function useDocuments(filters?: DocumentFilters) {
       const { data, error } = await query
 
       if (error) throw error
-      return data as Document[]
+
+      // Hydrate tags for each document
+      return (data || []).map(doc => {
+        const hydrated: any = doc
+        if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
+          hydrated.tags = hydrated.tag_assignments
+            .map((a: any) => a.tag)
+            .filter(Boolean)
+        }
+        return hydrated as Document
+      })
     },
   })
 }
@@ -320,7 +330,7 @@ export function useDocumentsPaginated(
       }
 
       if (!filters?.include_archived && !filters?.include_deleted) {
-        countQuery = countQuery.neq('status', 'archived')
+        countQuery = countQuery.eq('is_archived', false)
       }
 
       const contentTypeFilter = filters?.contentType === undefined ? 'document' : filters.contentType
@@ -386,10 +396,11 @@ export function useDocumentsPaginated(
         .select(`
           *,
           folder:document_folders(id, name),
+          tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
           author:profiles!documents_created_by_fkey(id, full_name, avatar_url)
         `)
-        .order(filters?.sort_by || 'created_at', { 
-          ascending: filters?.sort_order === 'asc' 
+        .order(filters?.sort_by || 'created_at', {
+          ascending: filters?.sort_order === 'asc'
         })
 
       // Apply same filters
@@ -400,7 +411,7 @@ export function useDocumentsPaginated(
       }
 
       if (!filters?.include_archived && !filters?.include_deleted) {
-        query = query.neq('status', 'archived')
+        query = query.eq('is_archived', false)
       }
 
       if (contentTypeFilter) {
@@ -450,8 +461,18 @@ export function useDocumentsPaginated(
       const { data, error } = await query
       if (error) throw error
 
+      const hydratedDocs = (data || []).map(doc => {
+        const hydrated: any = doc
+        if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
+          hydrated.tags = hydrated.tag_assignments
+            .map((a: any) => a.tag)
+            .filter(Boolean)
+        }
+        return hydrated as Document
+      })
+
       return {
-        documents: data as Document[],
+        documents: hydratedDocs,
         totalCount: count || 0,
         totalPages: Math.ceil((count || 0) / pageSize),
         currentPage: page
@@ -573,7 +594,7 @@ export function useDeleteDocument() {
     mutationFn: async (documentId: string) => {
       const { error } = await supabase
         .from('documents')
-        .update({ 
+        .update({
           is_deleted: true,
           deleted_at: new Date().toISOString()
         })
@@ -606,7 +627,7 @@ export function useDocumentStats() {
       // Basic stats
       const { data: basicData, error: basicError } = await supabase
         .from('documents')
-        .select('status, file_size, file_type, folder_id, view_count, download_count, expires_at')
+        .select('status, file_size, file_extension, folder_id, view_count, download_count, expires_at, is_archived')
         .eq('is_deleted', false)
         .eq('content_type', 'document')
 
@@ -624,7 +645,7 @@ export function useDocumentStats() {
       // Expiring soon count
       const thirtyDaysFromNow = new Date()
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
-      
+
       const { count: expiringSoonCount, error: expiryError } = await supabase
         .from('documents')
         .select('id', { count: 'exact', head: true })
@@ -646,7 +667,7 @@ export function useDocumentStats() {
       // Calculate file type distribution
       const fileTypeStats: Record<string, number> = {}
       basicData?.forEach(doc => {
-        const type = doc.file_type || 'unknown'
+        const type = doc.file_extension || 'unknown'
         fileTypeStats[type] = (fileTypeStats[type] || 0) + 1
       })
 
@@ -665,19 +686,19 @@ export function useDocumentStats() {
         approved: basicData?.filter(d => d.status === 'APPROVED').length || 0,
         published: basicData?.filter(d => d.status === 'PUBLISHED').length || 0,
         rejected: basicData?.filter(d => d.status === 'REJECTED').length || 0,
-        archived: basicData?.filter(d => d.status === 'ARCHIVED').length || 0,
-        
+        archived: basicData?.filter(d => d.is_archived === true).length || 0,
+
         // Storage
         totalBytes: basicData?.reduce((acc, doc) => acc + (doc.file_size || 0), 0) || 0,
         storageByFolder,
-        
+
         // File types
         documentsByFileType: fileTypeStats,
-        
+
         // Engagement
         totalViews: basicData?.reduce((acc, doc) => acc + (doc.view_count || 0), 0) || 0,
         totalDownloads: basicData?.reduce((acc, doc) => acc + (doc.download_count || 0), 0) || 0,
-        
+
         // Expiry
         expiringSoon: expiringSoonCount || 0,
         expired: expiredCount || 0,
@@ -1140,13 +1161,24 @@ export function useDocumentTrash() {
         .select(`
           *,
           folder:document_folders(id, name),
+          tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
           author:profiles!documents_created_by_fkey(id, full_name)
         `)
         .eq('is_deleted', true)
         .order('deleted_at', { ascending: false })
 
       if (error) throw error
-      return data as Document[]
+
+      // Hydrate tags for each document
+      return (data || []).map(doc => {
+        const hydrated: any = doc
+        if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
+          hydrated.tags = hydrated.tag_assignments
+            .map((a: any) => a.tag)
+            .filter(Boolean)
+        }
+        return hydrated as Document
+      })
     },
   })
 }
@@ -1161,7 +1193,7 @@ export function useRestoreDocument() {
     mutationFn: async (documentId: string) => {
       const { data, error } = await supabase
         .from('documents')
-        .update({ 
+        .update({
           is_deleted: false,
           deleted_at: null
         })
@@ -1267,7 +1299,7 @@ export function useDocumentExpiry(status?: 'expiring_soon' | 'expired' | 'all') 
       return (data || []).map((doc: any) => {
         const expiryDate = new Date(doc.expires_at)
         const daysUntilExpiry = Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-        
+
         return {
           ...doc,
           days_until_expiry: daysUntilExpiry,
@@ -1288,7 +1320,7 @@ export function useExtendDocumentExpiry() {
     mutationFn: async ({ documentId, newExpiryDate }: { documentId: string; newExpiryDate: string }) => {
       const { data, error } = await supabase
         .from('documents')
-        .update({ 
+        .update({
           expires_at: newExpiryDate,
           updated_at: new Date().toISOString()
         })
@@ -1332,7 +1364,7 @@ export function useDocumentBulkDelete() {
 
       const { data, error } = await supabase
         .from('documents')
-        .update({ 
+        .update({
           is_deleted: true,
           deleted_at: new Date().toISOString()
         })
@@ -1376,7 +1408,7 @@ export function useDocumentBulkRestore() {
 
       const { data, error } = await supabase
         .from('documents')
-        .update({ 
+        .update({
           is_deleted: false,
           deleted_at: null
         })
@@ -1420,7 +1452,7 @@ export function useDocumentBulkMove() {
       const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString()
       }
-      
+
       if (folderId === null) {
         updateData.folder_id = null
       } else {
@@ -1467,7 +1499,7 @@ export function useDocumentBulkAddTags() {
       }
 
       // Create mappings for all document-tag combinations
-      const mappings = ids.flatMap(docId => 
+      const mappings = ids.flatMap(docId =>
         tagIds.map(tagId => ({
           document_id: docId,
           tag_id: tagId
@@ -1514,8 +1546,8 @@ export function useDocumentBulkArchive() {
 
       const { data, error } = await supabase
         .from('documents')
-        .update({ 
-          status: 'archived',
+        .update({
+          is_archived: true,
           updated_at: new Date().toISOString()
         })
         .in('id', ids)
@@ -1547,12 +1579,12 @@ export function useDocumentBulkChangeConfidentiality() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ 
-      ids, 
-      level 
-    }: { 
-      ids: string[]; 
-      level: 'public' | 'internal' | 'confidential' | 'restricted' 
+    mutationFn: async ({
+      ids,
+      level
+    }: {
+      ids: string[];
+      level: 'public' | 'internal' | 'confidential' | 'restricted'
     }): Promise<BulkOperationResult> => {
       const result: BulkOperationResult = {
         success: [],
@@ -1562,7 +1594,7 @@ export function useDocumentBulkChangeConfidentiality() {
 
       const { data, error } = await supabase
         .from('documents')
-        .update({ 
+        .update({
           confidentiality_level: level,
           updated_at: new Date().toISOString()
         })
@@ -1792,7 +1824,7 @@ Return as JSON array: [{"value": "tag-name", "confidence": "high|medium|low", "r
       if (aiError) throw aiError
 
       let parsedSuggestions: AISuggestion[] = []
-      
+
       if (typeof aiData?.response === 'string') {
         try {
           const jsonMatch = aiData.response.match(/\[[\s\S]*\]/)
@@ -1906,7 +1938,7 @@ export function useAIDetectDuplicates() {
     try {
       // Extract text from file (basic implementation)
       const fileContent = await file.text().catch(() => '')
-      
+
       // Fetch existing documents for comparison
       const { data: existingDocs, error } = await supabase
         .from('documents')
@@ -1918,7 +1950,7 @@ export function useAIDetectDuplicates() {
 
       // Simple hash comparison first
       // Note: In production, you'd compute file hash on upload
-      const potentialDuplicates = existingDocs?.filter(doc => 
+      const potentialDuplicates = existingDocs?.filter(doc =>
         doc.file_type === file.type ||
         calculateSimilarity(file.name, doc.title) > 70
       ) || []
@@ -1963,8 +1995,8 @@ Return IDs of likely duplicates with confidence scores as JSON array:
         title: doc.title,
         similarity: calculateSimilarity(file.name, doc.title)
       })).filter(d => d.similarity > 60)
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 5)
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, 5)
 
       setDuplicates(results)
       return results
@@ -2328,7 +2360,7 @@ export function useToggleFavorite() {
  */
 function calculateSimilarity(str1: string, str2: string): number {
   if (!str1 || !str2) return 0
-  
+
   const longer = str1.length > str2.length ? str1 : str2
   const shorter = str1.length > str2.length ? str2 : str1
 
