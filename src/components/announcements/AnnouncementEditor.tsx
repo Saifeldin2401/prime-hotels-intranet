@@ -9,31 +9,21 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
-  Send,
-  Calendar,
-  Clock,
   Image,
   Video,
   FileText,
   Target,
   Users,
-  Eye,
-  Bell,
-  Settings,
   Save,
   X,
-  Plus,
   Trash2,
   Building,
   MapPin
 } from 'lucide-react'
-import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { announcementSchema } from '@/lib/validationSchemas'
@@ -60,6 +50,7 @@ interface MediaAttachment {
 }
 
 export function AnnouncementEditor({ initialData, onClose, onSave }: AnnouncementEditorProps) {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
