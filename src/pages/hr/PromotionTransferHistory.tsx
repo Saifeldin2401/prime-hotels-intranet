@@ -67,6 +67,7 @@ interface TransferRecord {
     employee_id: string
     from_property_id: string | null
     to_property_id: string
+    to_department_id: string | null
     effective_date: string
     notes: string | null
     status: 'pending' | 'completed' | 'cancelled' | 'approved' | 'rejected'
@@ -337,10 +338,25 @@ export default function PromotionTransferHistory() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            {/* Edit - Pending Implementation via Dialog */}
-                                                            {/* <DropdownMenuItem onClick={() => {}}> 
-                                                                <Edit className="mr-2 h-4 w-4" /> Edit
-                                                            </DropdownMenuItem> */}
+                                                            {record.type === 'promotion' ? (
+                                                                <PromoteEmployeeDialog
+                                                                    editRecord={record as any}
+                                                                    onSuccess={() => { refetchPromos(); refetchTransfers(); }}
+                                                                >
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                        <Edit className="mr-2 h-4 w-4" /> {t('common:common.edit')}
+                                                                    </DropdownMenuItem>
+                                                                </PromoteEmployeeDialog>
+                                                            ) : (
+                                                                <TransferEmployeeDialog
+                                                                    editRecord={record as any}
+                                                                    onSuccess={() => { refetchPromos(); refetchTransfers(); }}
+                                                                >
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                        <Edit className="mr-2 h-4 w-4" /> {t('common:common.edit')}
+                                                                    </DropdownMenuItem>
+                                                                </TransferEmployeeDialog>
+                                                            )}
                                                             <DropdownMenuItem
                                                                 className="text-red-600 focus:text-red-600"
                                                                 onClick={() => setRecordToCancel(record as HistoryRecord)}

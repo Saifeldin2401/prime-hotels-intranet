@@ -85,11 +85,22 @@ interface Department {
 interface PromoteEmployeeDialogProps {
     children?: React.ReactNode;
     onSuccess?: () => void;
+    editRecord?: {
+        id: string;
+        request_id?: string;
+        employee_id: string;
+        new_role: string;
+        new_job_title: string;
+        new_department_id: string | null;
+        effective_date: string;
+        notes: string | null;
+    };
 }
 
 export function PromoteEmployeeDialog({
     children,
     onSuccess,
+    editRecord,
 }: PromoteEmployeeDialogProps) {
     const [open, setOpen] = useState(false);
     const [employees, setEmployees] = useState<Profile[]>([]);
@@ -101,11 +112,37 @@ export function PromoteEmployeeDialog({
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            newJobTitle: "",
-            notes: "",
-            effectiveDate: new Date(),
+            employeeId: editRecord?.employee_id || "",
+            newRole: (editRecord?.new_role as any) || undefined,
+            newJobTitle: editRecord?.new_job_title || "",
+            newDepartmentId: editRecord?.new_department_id || undefined,
+            notes: editRecord?.notes || "",
+            effectiveDate: editRecord?.effective_date ? new Date(editRecord.effective_date) : new Date(),
         },
     });
+
+    // Reset form when editRecord changes or dialog opens
+    useEffect(() => {
+        if (open && editRecord) {
+            form.reset({
+                employeeId: editRecord.employee_id,
+                newRole: editRecord.new_role as any,
+                newJobTitle: editRecord.new_job_title,
+                newDepartmentId: editRecord.new_department_id || undefined,
+                notes: editRecord.notes || "",
+                effectiveDate: new Date(editRecord.effective_date),
+            });
+        } else if (open && !editRecord) {
+            form.reset({
+                employeeId: "",
+                newRole: undefined,
+                newJobTitle: "",
+                newDepartmentId: undefined,
+                notes: "",
+                effectiveDate: new Date(),
+            });
+        }
+    }, [open, editRecord, form]);
 
     const [openJobTitle, setOpenJobTitle] = useState(false);
     const jobTitleListId = useId();
@@ -191,18 +228,39 @@ export function PromoteEmployeeDialog({
         if (!user) return;
 
         try {
-            const { error } = await supabase.rpc("submit_promotion_request", {
-                p_employee_id: values.employeeId,
-                p_new_role: values.newRole,
-                p_new_job_title: values.newJobTitle,
-                p_new_department_id: values.newDepartmentId || null,
-                p_effective_date: format(values.effectiveDate, "yyyy-MM-dd"),
-                p_notes: values.notes || null,
-            });
+            if (editRecord) {
+                if (!editRecord.request_id) throw new Error("Request ID is missing");
 
-            if (error) throw error;
+                const { data, error } = await supabase.rpc("update_request_details", {
+                    p_request_id: editRecord.request_id,
+                    p_updates: {
+                        new_role: values.newRole,
+                        new_job_title: values.newJobTitle,
+                        new_department_id: values.newDepartmentId || null,
+                        effective_date: format(values.effectiveDate, "yyyy-MM-dd"),
+                        notes: values.notes || null,
+                    }
+                });
 
-            toast.success("Promotion request has been submitted for approval");
+                if (error) throw error;
+                if (data && typeof data === 'object' && 'success' in data && !data.success) {
+                    throw new Error((data as any).message || "Failed to update request");
+                }
+                toast.success("Promotion request has been updated");
+            } else {
+                const { error } = await supabase.rpc("submit_promotion_request", {
+                    p_employee_id: values.employeeId,
+                    p_new_role: values.newRole,
+                    p_new_job_title: values.newJobTitle,
+                    p_new_department_id: values.newDepartmentId || null,
+                    p_effective_date: format(values.effectiveDate, "yyyy-MM-dd"),
+                    p_notes: values.notes || null,
+                });
+
+                if (error) throw error;
+                toast.success("Promotion request has been submitted for approval");
+            }
+
             setOpen(false);
             form.reset();
             if (onSuccess) onSuccess();
@@ -220,10 +278,11 @@ export function PromoteEmployeeDialog({
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Promote Employee</DialogTitle>
+                    <DialogTitle>{editRecord ? 'Edit Promotion Request' : 'Promote Employee'}</DialogTitle>
                     <DialogDescription>
-                        Submit a promotion request for approval. Changes will be applied on the effective
-                        date after approval.
+                        {editRecord
+                            ? 'Update the details of this promotion request.'
+                            : 'Submit a promotion request for approval. Changes will be applied on the effective date after approval.'}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -237,10 +296,11 @@ export function PromoteEmployeeDialog({
                                     <FormLabel>Employee *</FormLabel>
                                     <Select
                                         onValueChange={field.onChange}
-                                        defaultValue={field.value}
+                                        value={field.value}
+                                        disabled={!!editRecord || loadingUsers}
                                     >
                                         <FormControl>
-                                            <SelectTrigger disabled={loadingUsers}>
+                                            <SelectTrigger>
                                                 <SelectValue placeholder="Select employee" />
                                             </SelectTrigger>
                                         </FormControl>
@@ -469,7 +529,7 @@ export function PromoteEmployeeDialog({
                                 {form.formState.isSubmitting && (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 )}
-                                Submit Request
+                                {editRecord ? 'Save Changes' : 'Submit Request'}
                             </Button>
                         </DialogFooter>
                     </form>
