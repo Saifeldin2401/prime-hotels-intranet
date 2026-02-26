@@ -243,13 +243,24 @@ export const customValidations = {
   adultAge: (value: string): boolean => {
     const birthDate = new Date(value)
     const now = new Date()
-    const age = now.getFullYear() - birthDate.getFullYear()
+    let age = now.getFullYear() - birthDate.getFullYear()
+    const monthDiff = now.getMonth() - birthDate.getMonth()
+
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
+      age--
+    }
+
     return age >= 18
   },
   
   businessHours: (value: string): boolean => {
-    const hour = parseInt(value.split(':')[0])
-    return hour >= 6 && hour <= 22
+    const parts = value.split(':')
+    const hour = parseInt(parts[0])
+    const minute = parseInt(parts[1] || '0')
+
+    if (hour < 6 || hour > 22) return false
+    if (hour === 22 && minute > 0) return false
+    return true
   },
   
   strongPassword: (value: string): boolean => {
