@@ -38,6 +38,7 @@ export const SUPPORTED_TRANSLATION_LANGUAGES: Array<{
 
 interface TranslationRequest {
     text?: string
+    texts?: string[]
     file_url?: string
     file_type?: 'pdf' | 'docx'
     target_lang: TranslationTargetLanguage
@@ -46,7 +47,8 @@ interface TranslationRequest {
 }
 
 interface TranslationResponse {
-    translated_text: string
+    translated_text?: string
+    translated_texts?: string[]
     extracted_text?: string
     success: boolean
     source_lang: string

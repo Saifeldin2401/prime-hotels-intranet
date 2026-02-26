@@ -577,32 +577,42 @@ export function QuizComponentEnhanced({
         try {
             const questionText = questionItem.question.question_text || ''
             const explanationText = questionItem.question.explanation || ''
-            const optionTexts = questionItem.question.options?.map(o => ({ id: o.id, text: o.option_text })) || []
+            const options = questionItem.question.options || []
 
-            const [translatedQuestion, translatedExplanation] = await Promise.all([
-                translateAI.mutateAsync({ text: questionText, target_lang: translationTarget, source_lang: 'auto' }),
-                explanationText
-                    ? translateAI.mutateAsync({ text: explanationText, target_lang: translationTarget, source_lang: 'auto' })
-                    : Promise.resolve({ translated_text: '' })
-            ])
+            // 1. Collect all texts: [Question, Explanation, Option1, Option2, ...]
+            const textsToTranslate = [
+                questionText,
+                explanationText,
+                ...options.map(o => o.option_text || '')
+            ]
 
-            const translatedOptionsEntries = await Promise.all(
-                optionTexts.map(async (opt) => {
-                    const res = opt.text
-                        ? await translateAI.mutateAsync({ text: opt.text, target_lang: translationTarget, source_lang: 'auto' })
-                        : { translated_text: '' }
-                    return [opt.id, res.translated_text]
-                })
-            )
+            // 2. Batch translation call
+            const res = await translateAI.mutateAsync({
+                texts: textsToTranslate,
+                target_lang: translationTarget,
+                source_lang: 'auto'
+            })
+
+            if (!res.translated_texts) throw new Error('No translations returned')
+
+            // 3. Unpack results
+            const translatedQText = res.translated_texts[0]
+            const translatedExpText = res.translated_texts[1]
+            const translatedOptsList = res.translated_texts.slice(2)
+
+            const translatedOptionsMap: Record<string, string> = {}
+            options.forEach((opt, idx) => {
+                translatedOptionsMap[opt.id] = translatedOptsList[idx] || ''
+            })
 
             setTranslatedQuestions(prev => ({
                 ...prev,
                 [questionItem.question_id]: {
                     ...prev[questionItem.question_id],
                     [translationTarget]: {
-                        text: translatedQuestion.translated_text,
-                        explanation: translatedExplanation.translated_text,
-                        options: Object.fromEntries(translatedOptionsEntries)
+                        text: translatedQText,
+                        explanation: translatedExpText,
+                        options: translatedOptionsMap
                     }
                 }
             }))
@@ -612,6 +622,23 @@ export function QuizComponentEnhanced({
             setIsTranslating(false)
         }
     }
+
+    // Trigger translation when question or language changes
+    useEffect(() => {
+        const currentQ = quiz?.questions?.[currentQuestionIndex]
+        if (translationTarget && currentQ) {
+             // Use translateQuestion which is available in scope (hoisted via closure capture or defined above)
+             // But getTranslatedQuestion is defined below.
+             // To be 100% safe, we can move the check logic or access getTranslatedQuestion if we trust it's initialized.
+             // Given getTranslatedQuestion is const, it is initialized by the time effect runs.
+
+             // However, to avoid any linter warnings about missing deps or scope:
+             const translated = translatedQuestions[currentQ.question_id]?.[translationTarget]
+             if (!translated || !translated.text) {
+                 translateQuestion(currentQ)
+             }
+        }
+    }, [translationTarget, currentQuestionIndex, quiz, translatedQuestions])
 
     const getTranslatedQuestion = (questionItem?: NonNullable<LearningQuiz['questions']>[number]) => {
         if (!questionItem || !translationTarget) return null
