@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { 
-  useDocument, 
-  useDocumentVersions, 
+import {
+  useDocument,
+  useDocumentVersions,
   useRecordDocumentView,
   useRecordDocumentDownload,
   useDocumentComments,
@@ -22,17 +22,18 @@ import { DocumentVersionUpload } from '@/components/documents/DocumentVersionUpl
 import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
 import { DocumentMetadataForm } from '@/components/documents/DocumentMetadataForm'
 import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
+import { ContentCrossLinks } from '@/components/knowledge/ContentCrossLinks'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { EnhancedBadge } from '@/components/ui/enhanced-badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { 
-  Loader2, 
-  ArrowLeft, 
-  Download, 
-  Eye, 
-  Calendar, 
-  User, 
+import {
+  Loader2,
+  ArrowLeft,
+  Download,
+  Eye,
+  Calendar,
+  User,
   Building2,
   FolderOpen,
   Tag,
@@ -68,7 +69,7 @@ export default function DocumentDetail() {
   const { t } = useTranslation('documents')
   const { toast } = useToast()
   const { user, profile } = useAuth()
-  
+
   const [viewerOpen, setViewerOpen] = useState(false)
   const [secureDocumentUrl, setSecureDocumentUrl] = useState<string | null>(null)
   const [resolvingDocumentUrl, setResolvingDocumentUrl] = useState(false)
@@ -83,8 +84,8 @@ export default function DocumentDetail() {
   const { data: comments = [], isLoading: commentsLoading } = useDocumentComments(id!)
   const { data: analytics } = useDocumentAnalytics(id!)
   const { data: folders = [] } = useDocumentFolders()
-  
-  const recordView = useRecordDocumentView()
+
+  const { mutate: recordViewMutate } = useRecordDocumentView()
   const recordDownload = useRecordDocumentDownload()
   const addComment = useAddDocumentComment()
   const updateDocument = useUpdateDocument()
@@ -92,9 +93,9 @@ export default function DocumentDetail() {
   // Record view on mount
   useEffect(() => {
     if (id && user) {
-      recordView.mutate(id)
+      recordViewMutate(id)
     }
-  }, [id, user, recordView])
+  }, [id, user, recordViewMutate])
 
   // Resolve secure URL
   useEffect(() => {
@@ -124,10 +125,10 @@ export default function DocumentDetail() {
 
   const handleDownload = useCallback(async () => {
     if (!document?.id || !secureDocumentUrl) return
-    
+
     recordDownload.mutate(document.id)
     openUrlInNewTab(secureDocumentUrl)
-    
+
     toast({
       title: 'Download Started',
       description: 'Your document is being downloaded.',
@@ -150,7 +151,7 @@ export default function DocumentDetail() {
 
   const handleAddComment = useCallback(async (content: string, parentId?: string) => {
     if (!document?.id || !user) return
-    
+
     await addComment.mutateAsync({
       documentId: document.id,
       content,
@@ -160,12 +161,12 @@ export default function DocumentDetail() {
 
   const handleUpdateMetadata = useCallback(async (updates: any) => {
     if (!document?.id) return
-    
+
     await updateDocument.mutateAsync({
       id: document.id,
       ...updates
     })
-    
+
     setEditMetadataOpen(false)
     toast({
       title: 'Updated',
@@ -211,7 +212,7 @@ export default function DocumentDetail() {
 
   // Expiry status
   const isExpired = document.expires_at && new Date(document.expires_at) < new Date()
-  const isExpiringSoon = document.expires_at && !isExpired && 
+  const isExpiringSoon = document.expires_at && !isExpired &&
     new Date(document.expires_at) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
   return (
@@ -223,7 +224,7 @@ export default function DocumentDetail() {
 
       {/* Expiry Banner */}
       {(isExpired || isExpiringSoon) && (
-        <DocumentExpiryBanner 
+        <DocumentExpiryBanner
           expiryDate={document.expires_at!}
           documentId={document.id}
           className="mb-4"
@@ -254,7 +255,7 @@ export default function DocumentDetail() {
                     {document.description || t('detail.no_description')}
                   </CardDescription>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -583,8 +584,8 @@ export default function DocumentDetail() {
             </CardContent>
             {canEdit && (
               <CardFooter>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={() => setEditMetadataOpen(true)}
                 >
@@ -624,8 +625,8 @@ export default function DocumentDetail() {
               <p className="text-sm text-muted-foreground">
                 Get AI-powered suggestions for tags, summaries, and similar documents.
               </p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full border-hotel-gold/30 hover:bg-hotel-gold/10"
                 onClick={() => setAiAssistantOpen(true)}
               >
@@ -634,6 +635,12 @@ export default function DocumentDetail() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Cross-Link to Knowledge Base */}
+          <ContentCrossLinks
+            documentId={document.id}
+            mode="documents"
+          />
         </div>
       </div>
 

@@ -69,7 +69,7 @@ export function useTrackView(documentId: string | undefined) {
     const { user } = useAuth()
 
     useEffect(() => {
-        if (user?.id && documentId) {
+        if (user?.id && documentId && isValidUUID(documentId)) {
             saveView(user.id, documentId)
             // Increment global view count
             KnowledgeService.incrementViewCount(documentId)

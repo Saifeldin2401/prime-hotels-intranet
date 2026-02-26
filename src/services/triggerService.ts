@@ -83,11 +83,29 @@ export async function processTrigger(context: TriggerContext): Promise<{
         })
 
         if (error) throw error
+        if (!data || typeof data !== 'object') {
+            return {
+                success: false,
+                actionsExecuted: 0,
+                errors: ['No response from trigger processor']
+            }
+        }
+
+        type TriggerExecutionResult = { success?: boolean; error?: string | null }
+        type TriggerProcessorResponse = {
+            success?: boolean
+            results?: TriggerExecutionResult[]
+        }
+
+        const payload = data as TriggerProcessorResponse
+        const results = Array.isArray(payload.results) ? payload.results : []
 
         return {
-            success: data.success,
-            actionsExecuted: data.results?.length || 0,
-            errors: data.results?.filter((r: { success: boolean; error?: string }) => !r.success).map((r: { success: boolean; error?: string }) => r.error) || []
+            success: Boolean(payload.success),
+            actionsExecuted: results.length,
+            errors: results
+                .map((result) => (result.success === false ? result.error : null))
+                .filter((errorMessage): errorMessage is string => typeof errorMessage === 'string' && errorMessage.length > 0)
         }
     } catch (error: unknown) {
         console.error('Trigger service error:', error)
