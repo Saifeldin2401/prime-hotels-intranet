@@ -84,8 +84,6 @@ export default function KnowledgeEditor() {
         setFormData,
         updateField,
         validationWarnings,
-        selectedDepartmentName,
-        selectedPropertyName,
         visibilitySummary,
         uniqueDepartmentNames,
         departments,
@@ -129,8 +127,9 @@ export default function KnowledgeEditor() {
     // Check for duplicates logic
     useEffect(() => {
         if (!isReady || formData.title.length < 5 || isEditing) {
-            setDuplicateCheckResult(null)
-            setShowDuplicateWarning(false)
+            // Avoid setting state synchronously if not needed or check conditions carefully
+             setDuplicateCheckResult(null)
+             setShowDuplicateWarning(false)
             return
         }
 
@@ -142,7 +141,10 @@ export default function KnowledgeEditor() {
     }, [formData.title, isReady, isEditing, checkForDuplicates])
 
     useEffect(() => {
-        setDuplicateCheckResult(duplicateResult)
+        // Use functional update or only update if changed to avoid loop
+        if (duplicateResult !== duplicateCheckResult) {
+             setDuplicateCheckResult(duplicateResult)
+        }
 
         if (duplicateResult?.hasDuplicates) {
             if (formData.title !== dismissedDuplicateTitle) {
@@ -151,7 +153,7 @@ export default function KnowledgeEditor() {
         } else {
             setShowDuplicateWarning(false)
         }
-    }, [duplicateResult, formData.title, dismissedDuplicateTitle])
+    }, [duplicateResult, formData.title, dismissedDuplicateTitle, duplicateCheckResult])
 
     // Preview logic
     const previewHtml = useMemo(() => {
@@ -170,6 +172,10 @@ export default function KnowledgeEditor() {
     // Permission check
     useEffect(() => {
         if (primaryRole === 'staff') {
+             // Redirecting immediately is better than rendering forbidden state if possible,
+             // but here we just set state.
+             // To avoid setState in effect warning if possible, we could check before render,
+             // but primaryRole comes from hook.
             setIsForbidden(true)
             toast.error('You do not have permission to create or edit articles.')
             navigate('/knowledge/search')

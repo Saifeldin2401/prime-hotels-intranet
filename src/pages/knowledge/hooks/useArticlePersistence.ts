@@ -22,7 +22,7 @@ export function useArticlePersistence(
 ) {
     const { t } = useTranslation(['knowledge', 'common'])
     const navigate = useNavigate()
-    const { user, profile } = useAuth()
+    const { user } = useAuth()
     const { currentProperty } = useProperty()
     const queryClient = useQueryClient()
     const isEditing = Boolean(id) && id !== 'new'
@@ -62,7 +62,7 @@ export function useArticlePersistence(
             const notifications = reviewers.map(reviewer => ({
                 user_id: reviewer.id,
                 title: '📋 New Document for Review',
-                message: '\"${documentTitle}\" has been submitted for review by ${profile?.full_name || 'a team member'}.',
+                message: `"${documentTitle}" has been submitted for review by ${profile?.full_name || 'a team member'}.`,
             }))
 
             if (notifications.length > 0) {
@@ -70,7 +70,7 @@ export function useArticlePersistence(
                     userIds: reviewers.map(r => r.id),
                     type: 'document_review_pending',
                     title: '📋 New Document for Review',
-                    message: '\"${documentTitle}\" has been submitted for review by ${profile?.full_name || 'a team member'}.',
+                    message: `"${documentTitle}" has been submitted for review by ${profile?.full_name || 'a team member'}.`,
                     metadata: {
                         link: `/knowledge/review`,
                         document_id: documentId,

@@ -150,8 +150,6 @@ export function useArticleForm(initialData?: Partial<ArticleFormData>) {
         setFormData,
         updateField,
         validationWarnings,
-        selectedDepartmentName,
-        selectedPropertyName,
         visibilitySummary,
         uniqueDepartmentNames,
         departments,
