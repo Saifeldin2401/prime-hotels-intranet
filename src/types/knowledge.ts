@@ -36,6 +36,14 @@ export type KnowledgeStatus =
     | 'PUBLISHED'
     | 'REJECTED'
 
+export const KNOWLEDGE_STATUS = {
+    DRAFT: 'DRAFT',
+    PENDING_REVIEW: 'PENDING_REVIEW',
+    APPROVED: 'APPROVED',
+    PUBLISHED: 'PUBLISHED',
+    REJECTED: 'REJECTED'
+} as const
+
 // ============================================================================
 // CORE TYPES
 // ============================================================================

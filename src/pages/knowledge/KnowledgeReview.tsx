@@ -60,7 +60,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
-import type { KnowledgeArticle } from '@/types/knowledge'
+import { type KnowledgeArticle, KNOWLEDGE_STATUS } from '@/types/knowledge'
 import { createNotification } from '@/lib/notificationService'
 import { useTranslationAI } from '@/hooks/useTranslationAI'
 
@@ -71,7 +71,7 @@ export default function KnowledgeReview() {
     const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null)
     const [reviewComment, setReviewComment] = useState('')
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'changes' | null>(null)
-    const [statusFilter, setStatusFilter] = useState<string>('PENDING_REVIEW')
+    const [statusFilter, setStatusFilter] = useState<string>(KNOWLEDGE_STATUS.PENDING_REVIEW)
     const [translationData, setTranslationData] = useState({
         title_ar: '',
         description_ar: '',
@@ -112,10 +112,16 @@ export default function KnowledgeReview() {
             if (statusFilter !== 'all') {
                 query = query.eq('document.status', statusFilter)
             } else {
-                query = query.in('document.status', ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'PUBLISHED', 'REJECTED'])
+                query = query.in('document.status', [
+                    KNOWLEDGE_STATUS.DRAFT,
+                    KNOWLEDGE_STATUS.PENDING_REVIEW,
+                    KNOWLEDGE_STATUS.APPROVED,
+                    KNOWLEDGE_STATUS.PUBLISHED,
+                    KNOWLEDGE_STATUS.REJECTED
+                ])
             }
 
-            if (statusFilter === 'PENDING_REVIEW') {
+            if (statusFilter === KNOWLEDGE_STATUS.PENDING_REVIEW) {
                 query = query.eq('status', 'pending')
             }
 
@@ -143,9 +149,9 @@ export default function KnowledgeReview() {
             if (!selectedArticle || !user) return
 
             // Determine new status based on action
-            let newStatus = 'DRAFT'
-            if (action === 'approve') newStatus = 'PUBLISHED'
-            else if (action === 'reject') newStatus = 'REJECTED'
+            let newStatus: string = KNOWLEDGE_STATUS.DRAFT
+            if (action === 'approve') newStatus = KNOWLEDGE_STATUS.PUBLISHED
+            else if (action === 'reject') newStatus = KNOWLEDGE_STATUS.REJECTED
             // 'changes' keeps as DRAFT
 
             // Update document content and status
@@ -322,15 +328,15 @@ export default function KnowledgeReview() {
     const getStatusBadge = (status: string) => {
         const s = status.toUpperCase()
         switch (s) {
-            case 'DRAFT':
+            case KNOWLEDGE_STATUS.DRAFT:
                 return <Badge className="bg-gray-100 text-gray-700 border-gray-200"><Edit3 className="h-3 w-3 mr-1" />{t('review_queue.status.draft')}</Badge>
-            case 'PENDING_REVIEW':
+            case KNOWLEDGE_STATUS.PENDING_REVIEW:
                 return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Clock className="h-3 w-3 mr-1" />{t('review_queue.status.pending_review')}</Badge>
-            case 'APPROVED':
+            case KNOWLEDGE_STATUS.APPROVED:
                 return <Badge className="bg-blue-100 text-blue-700 border-blue-200"><CheckCircle2 className="h-3 w-3 mr-1" />{t('review_queue.status.approved')}</Badge>
-            case 'PUBLISHED':
+            case KNOWLEDGE_STATUS.PUBLISHED:
                 return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />{t('review_queue.status.published')}</Badge>
-            case 'REJECTED':
+            case KNOWLEDGE_STATUS.REJECTED:
                 return <Badge className="bg-red-100 text-red-700 border-red-200"><XCircle className="h-3 w-3 mr-1" />{t('review_queue.status.rejected')}</Badge>
             default:
                 return <Badge variant="outline">{status}</Badge>
@@ -338,9 +344,9 @@ export default function KnowledgeReview() {
     }
 
     const stats = {
-        pendingReview: pendingArticles?.filter(a => a.status === 'PENDING_REVIEW').length || 0,
-        published: pendingArticles?.filter(a => a.status === 'PUBLISHED').length || 0,
-        rejected: pendingArticles?.filter(a => a.status === 'REJECTED').length || 0
+        pendingReview: pendingArticles?.filter(a => a.status === KNOWLEDGE_STATUS.PENDING_REVIEW).length || 0,
+        published: pendingArticles?.filter(a => a.status === KNOWLEDGE_STATUS.PUBLISHED).length || 0,
+        rejected: pendingArticles?.filter(a => a.status === KNOWLEDGE_STATUS.REJECTED).length || 0
     }
 
     return (
@@ -405,10 +411,10 @@ export default function KnowledgeReview() {
                         <SelectValue placeholder={t('review_queue.filters.status_placeholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="PENDING_REVIEW">{t('review_queue.filters.pending_review')}</SelectItem>
-                        <SelectItem value="DRAFT">{t('review_queue.filters.drafts')}</SelectItem>
-                        <SelectItem value="PUBLISHED">{t('review_queue.filters.published')}</SelectItem>
-                        <SelectItem value="REJECTED">{t('review_queue.filters.rejected')}</SelectItem>
+                        <SelectItem value={KNOWLEDGE_STATUS.PENDING_REVIEW}>{t('review_queue.filters.pending_review')}</SelectItem>
+                        <SelectItem value={KNOWLEDGE_STATUS.DRAFT}>{t('review_queue.filters.drafts')}</SelectItem>
+                        <SelectItem value={KNOWLEDGE_STATUS.PUBLISHED}>{t('review_queue.filters.published')}</SelectItem>
+                        <SelectItem value={KNOWLEDGE_STATUS.REJECTED}>{t('review_queue.filters.rejected')}</SelectItem>
                         <SelectItem value="all">{t('review_queue.filters.all')}</SelectItem>
                     </SelectContent>
                 </Select>
@@ -599,7 +605,7 @@ export default function KnowledgeReview() {
                             return (
                                 <>
                                     {/* For PENDING_REVIEW: Show Approve, Reject, Request Changes */}
-                                    {status === 'PENDING_REVIEW' && (
+                                    {status === KNOWLEDGE_STATUS.PENDING_REVIEW && (
                                         <>
                                             <Button
                                                 onClick={() => handleReview('approve')}
@@ -642,7 +648,7 @@ export default function KnowledgeReview() {
                                     )}
 
                                     {/* For DRAFT: Can approve directly */}
-                                    {status === 'DRAFT' && (
+                                    {status === KNOWLEDGE_STATUS.DRAFT && (
                                         <Button
                                             onClick={() => handleReview('approve')}
                                             disabled={reviewMutation.isPending}
@@ -658,7 +664,7 @@ export default function KnowledgeReview() {
                                     )}
 
                                     {/* For PUBLISHED: Can unpublish */}
-                                    {status === 'PUBLISHED' && (
+                                    {status === KNOWLEDGE_STATUS.PUBLISHED && (
                                         <Button
                                             onClick={() => handleReview('reject')}
                                             variant="destructive"
@@ -675,7 +681,7 @@ export default function KnowledgeReview() {
                                     )}
 
                                     {/* For REJECTED: Can re-publish */}
-                                    {status === 'REJECTED' && (
+                                    {status === KNOWLEDGE_STATUS.REJECTED && (
                                         <Button
                                             onClick={() => handleReview('approve')}
                                             disabled={reviewMutation.isPending}
