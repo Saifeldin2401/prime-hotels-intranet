@@ -67,7 +67,7 @@ export const securityConfig = {
   csp: {
     directives: {
       'default-src': ["'self'"],
-      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Needed for some libraries
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://va.vercel-scripts.com"], // Needed for some libraries
       'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"], // Needed for Tailwind and Google Fonts
       'img-src': ["'self'", "data:", "https:"],
       'font-src': ["'self'", "data:", "https://fonts.gstatic.com"],
@@ -86,7 +86,8 @@ export const securityConfig = {
         "https://cdn.jsdelivr.net",
         "https://date.nager.at",
         "https://o4508792767840256.ingest.de.sentry.io",
-        "https://*.sentry.io"
+        "https://*.sentry.io",
+        "https://va.vercel-scripts.com"
       ],
       // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
       'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com", "https://*.supabase.co"],

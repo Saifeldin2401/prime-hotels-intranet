@@ -7,10 +7,69 @@ import { supabase } from './supabase'
 // 🛡️ PRIMARY MODEL (Confirmed working on HF Router via 'together' provider)
 
 const FALLBACK_MODELS = [
-
   'Qwen/Qwen2.5-7B-Instruct'
-
 ]
+
+/**
+ * Robust JSON parser for LLM outputs.
+ * Handles trailing commas, unescaped newlines in strings, and truncated arrays.
+ */
+function safeParseJson<T>(raw: string, expectArray: boolean): T | null {
+  // Strip markdown fences
+  let text = raw.replace(/```json\n?|\n?```/g, '').trim()
+
+  // Fix unescaped newlines/tabs inside JSON strings (common LLM mistake)
+  text = text.replace(/"([^"]*)"/g, (_match, inner: string) => {
+    const fixed = inner
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      .replace(/\t/g, '\\t')
+    return `"${fixed}"`
+  })
+
+  // Remove trailing commas before ] or } (another common LLM mistake)
+  text = text.replace(/,\s*([\]}])/g, '$1')
+
+  // Try to extract the target structure
+  const pattern = expectArray ? /\[[\s\S]*\]/ : /\{[\s\S]*\}/
+  const match = text.match(pattern)
+  if (!match) return null
+
+  // First attempt: direct parse
+  try {
+    return JSON.parse(match[0]) as T
+  } catch {
+    // Second attempt: if array is truncated, extract only complete objects
+    if (expectArray) {
+      try {
+        // Find all complete {...} objects within the array
+        const objects: string[] = []
+        let depth = 0, start = -1, inStr = false, escape = false
+        for (let i = 0; i < match[0].length; i++) {
+          const ch = match[0][i]
+          if (escape) { escape = false; continue }
+          if (ch === '\\') { escape = true; continue }
+          if (ch === '"') { inStr = !inStr; continue }
+          if (inStr) continue
+          if (ch === '{') { if (depth === 0) start = i; depth++ }
+          if (ch === '}') {
+            depth--
+            if (depth === 0 && start !== -1) {
+              objects.push(match[0].slice(start, i + 1))
+              start = -1
+            }
+          }
+        }
+        if (objects.length > 0) {
+          return JSON.parse(`[${objects.join(',')}]`) as T
+        }
+      } catch {
+        // Give up
+      }
+    }
+    return null
+  }
+}
 
 
 
@@ -262,16 +321,9 @@ export const aiService = {
 
         const generatedText = await callHuggingFace(model, prompt)
 
-        const cleanJson = generatedText.replace(/```json\n?|\n?```/g, '').trim()
-
-        const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
-
-
-
-        if (jsonMatch) {
-
-          return JSON.parse(jsonMatch[0])
-
+        const parsed = safeParseJson<SOPAnalysis>(generatedText, false)
+        if (parsed && parsed.title && parsed.contentHtml) {
+          return parsed
         }
 
       } catch (e: unknown) {
@@ -420,22 +472,9 @@ export const aiService = {
 
         const generatedText = await callHuggingFace(model, prompt)
 
-        const cleanJson = generatedText.replace(/```json\n?|\n?```/g, '').trim()
-
-        const jsonMatch = cleanJson.match(/\[[\s\S]*\]/)
-
-
-
-        if (jsonMatch) {
-
-          const parsed = JSON.parse(jsonMatch[0])
-
-          if (Array.isArray(parsed) && parsed.length > 0) {
-
-            return parsed
-
-          }
-
+        const parsed = safeParseJson<QuizQuestion[]>(generatedText, true)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
         }
 
       } catch (e) {
@@ -740,16 +779,9 @@ export const aiService = {
 
         const generatedText = await callHuggingFace(model, prompt)
 
-        const cleanJson = generatedText.replace(/```json\n?|\n?```/g, '').trim()
-
-        const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
-
-
-
-        if (jsonMatch) {
-
-          return JSON.parse(jsonMatch[0])
-
+        const parsed = safeParseJson<{ mapping: Record<string, string>, headerRowIndex: number }>(generatedText, false)
+        if (parsed && parsed.mapping) {
+          return parsed
         }
 
       } catch (e) {

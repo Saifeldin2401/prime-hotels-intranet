@@ -8,6 +8,8 @@ interface PropertyContextType {
     availableProperties: Property[]
     isLoading: boolean
     isMultiPropertyUser: boolean
+    /** IDs of real properties the user has access to (excludes the 'all' pseudo-property) */
+    propertyIds: string[]
     switchProperty: (propertyId: string) => void
     refreshProperties: () => Promise<void>
 }
@@ -71,7 +73,21 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                     .map((item: any) => item.property as Property | null | undefined)
                     .filter((p): p is Property => !!p)
 
-                props = mappedProperties
+                // If user is assigned to 2+ properties, add a cluster aggregation option
+                if (mappedProperties.length > 1) {
+                    const clusterNames = mappedProperties.map(p => p.name).join(' & ')
+                    const clusterOption: Property = {
+                        id: 'all',
+                        name: `My Cluster (${mappedProperties.length})`,
+                        address: clusterNames,
+                        phone: '',
+                        is_active: true,
+                        created_at: new Date().toISOString()
+                    }
+                    props = [clusterOption, ...mappedProperties]
+                } else {
+                    props = mappedProperties
+                }
             }
 
             setAvailableProperties(props)
@@ -112,11 +128,17 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
+    // Real property IDs (excludes the 'all' pseudo-property)
+    const propertyIds = availableProperties
+        .filter(p => p.id !== 'all')
+        .map(p => p.id)
+
     const value = {
         currentProperty,
         availableProperties,
         isLoading,
         isMultiPropertyUser: availableProperties.length > 1 || isCorporateRole,
+        propertyIds,
         switchProperty,
         refreshProperties: fetchProperties
     }

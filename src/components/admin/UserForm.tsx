@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useId, useMemo } from 'react'
+import { useState, useEffect, useCallback, useId, useMemo, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -91,6 +91,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [openReportingTo, setOpenReportingTo] = useState(false)
   const [managerSearch, setManagerSearch] = useState('')
 
+  const triggerKeyboardAction = (event: KeyboardEvent<HTMLDivElement>, action: () => void) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      event.stopPropagation()
+      action()
+    }
+  }
+
   // ... (rest of invalidation)
 
   const createUserMutation = useMutation({
@@ -152,10 +160,12 @@ export function UserForm({ user, onClose }: UserFormProps) {
     onSuccess: (response) => {
       // Success - refresh the user list
 
-      const tempPwd = response?.tempPassword || "TempPassword123!"
+      const tempPwd = response?.tempPassword
 
       // Copy password to clipboard automatically
-      navigator.clipboard.writeText(tempPwd).catch(() => console.warn('Clipboard failed'))
+      if (tempPwd) {
+        navigator.clipboard.writeText(tempPwd).catch(() => console.warn('Clipboard failed'))
+      }
 
       // Show credentials in a persistent toast - NO auto-download needed
       toast({
@@ -163,8 +173,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
         description: (
           <div className="mt-2 space-y-2">
             <p><strong>{t('form.email')}:</strong> {email}</p>
-            <p><strong>{tCommon('common.password', 'Password')}:</strong> <code className="bg-gray-100 px-2 py-0.5 rounded">{tempPwd}</code></p>
-            <p className="text-xs text-gray-500">{t('form.success.password_copied')}</p>
+            {tempPwd ? (
+              <>
+                <p><strong>{tCommon('common.password', 'Password')}:</strong> <code className="bg-gray-100 px-2 py-0.5 rounded">{tempPwd}</code></p>
+                <p className="text-xs text-gray-500">{t('form.success.password_copied')}</p>
+              </>
+            ) : (
+              <p className="text-xs text-gray-500">{t('form.success.invite_sent', 'Invitation email sent to the user.')}</p>
+            )}
           </div>
         ),
         duration: 30000,
@@ -885,6 +901,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
                                 e.stopPropagation()
                                 handleJobTitleSelect(item.title)
                               }}
+                              onKeyDown={(e) => triggerKeyboardAction(e, () => handleJobTitleSelect(item.title))}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={t('form.select_job_title')}
                             >
                               <Check
                                 className={cn(
@@ -1071,6 +1091,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
                               setManagerSearch('')
                               setOpenReportingTo(false)
                             }}
+                            onKeyDown={(e) => triggerKeyboardAction(e, () => {
+                              setReportingTo(null)
+                              setManagerSearch('')
+                              setOpenReportingTo(false)
+                            })}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={t('form.no_manager_top')}
                           >
                             <Check
                               className={cn(
@@ -1101,6 +1129,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
                                 setManagerSearch('')
                                 setOpenReportingTo(false)
                               }}
+                              onKeyDown={(e) => triggerKeyboardAction(e, () => {
+                                setReportingTo(manager.id)
+                                setManagerSearch('')
+                                setOpenReportingTo(false)
+                              })}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={t('form.select_manager')}
                             >
                               <Check
                                 className={cn(
@@ -1148,6 +1184,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
                                     setManagerSearch('')
                                     setOpenReportingTo(false)
                                   }}
+                                  onKeyDown={(e) => triggerKeyboardAction(e, () => {
+                                    setReportingTo(manager.id)
+                                    setManagerSearch('')
+                                    setOpenReportingTo(false)
+                                  })}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={t('form.select_manager')}
                                 >
                                   <Check
                                     className={cn(

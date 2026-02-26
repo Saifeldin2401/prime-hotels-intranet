@@ -1,11 +1,11 @@
-import { motion } from 'framer-motion'
-import { 
-  RefreshCw, 
-  Sparkles, 
-  Building2, 
-  MapPin, 
-  Briefcase, 
-  Bell, 
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import {
+  RefreshCw,
+  Sparkles,
+  Building2,
+  MapPin,
+  Briefcase,
+  Bell,
   Settings,
   Sun,
   Moon,
@@ -47,26 +47,35 @@ interface WelcomeHeaderProps {
 
 // Animated background particles
 function FloatingParticles() {
+  const particles = [
+    { id: 'p1', x: '0%', duration: 8, delay: 0 },
+    { id: 'p2', x: '17%', duration: 10, delay: 1.5 },
+    { id: 'p3', x: '34%', duration: 12, delay: 3 },
+    { id: 'p4', x: '51%', duration: 8, delay: 4.5 },
+    { id: 'p5', x: '68%', duration: 10, delay: 6 },
+    { id: 'p6', x: '85%', duration: 12, delay: 7.5 },
+  ] as const
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(6)].map((_, i) => (
-        <motion.div
-          key={i}
+      {particles.map((particle) => (
+        <m.div
+          key={particle.id}
           className="absolute w-2 h-2 bg-white/20 rounded-full"
-          initial={{ 
-            x: `${(i * 17) % 100}%`, 
+          initial={{
+            x: particle.x,
             y: '100%',
-            opacity: 0 
+            opacity: 0
           }}
-          animate={{ 
+          animate={{
             y: '-10%',
             opacity: [0, 1, 0],
             scale: [0.5, 1.5, 0.5]
           }}
-          transition={{ 
-            duration: 8 + (i % 3) * 2,
+          transition={{
+            duration: particle.duration,
             repeat: Infinity,
-            delay: i * 1.5,
+            delay: particle.delay,
             ease: "easeOut"
           }}
         />
@@ -79,7 +88,7 @@ function FloatingParticles() {
 function GreetingBadge({ hour }: { hour: number }) {
   const { t, i18n } = useTranslation('dashboard');
   const isRTL = i18n.dir() === 'rtl';
-  
+
   const getGreeting = () => {
     if (hour < 6) return { text: t('welcome_header.good_night', 'Good night'), icon: Moon, color: 'from-indigo-400 to-purple-400' }
     if (hour < 12) return { text: t('welcome_header.good_morning', 'Good morning'), icon: Sun, color: 'from-amber-400 to-orange-400' }
@@ -91,7 +100,7 @@ function GreetingBadge({ hour }: { hour: number }) {
   const { text, icon: Icon, color } = getGreeting()
 
   return (
-    <motion.div 
+    <m.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
@@ -102,7 +111,7 @@ function GreetingBadge({ hour }: { hour: number }) {
     >
       <Icon className="w-3.5 h-3.5" />
       <span>{text}</span>
-    </motion.div>
+    </m.div>
   )
 }
 
@@ -139,10 +148,10 @@ function QuickStat({ label, value, trend }: { label: string; value: string; tren
   )
 }
 
-export function WelcomeHeader({ 
-  config, 
-  onRefresh, 
-  isLoading: isLoadingParent, 
+export function WelcomeHeader({
+  config,
+  onRefresh,
+  isLoading: isLoadingParent,
   unreadCount,
   onToggleNotifications,
   taskCount: taskCountProp,
@@ -153,23 +162,28 @@ export function WelcomeHeader({
   const isRTL = i18n.dir() === 'rtl'
   const { user, profile } = useAuth()
   const { currentProperty } = useProperty()
-  
-  // Fetch real data
-  const { data: tasks, isLoading: isLoadingTasks } = useTasks({ status: 'pending' })
+
+  // Fetch real data - filter to tasks assigned to current user
+  const { data: tasks, isLoading: isLoadingTasks } = useTasks({
+    statuses: ['open', 'todo', 'in_progress', 'pending'],
+    assignedTo: user?.id,
+    ignorePropertyFilter: true // Regional VP sees across all properties
+  })
   const { events: upcomingEvents, isLoading: isLoadingEvents } = useEvents()
   const { data: dashboardStats, isLoading: isLoadingStats } = useDashboardStats()
-  
+
   const hour = new Date().getHours()
-  
+
   // Calculate real stats
   const realTaskCount = taskCountProp ?? (tasks?.length || 0)
   const realMeetingCount = meetingCountProp ?? (upcomingEvents?.length || 0)
-  
-  // Calculate completion rate from dashboard stats
-  const totalTasks = (dashboardStats?.pendingTasks || 0) + (dashboardStats?.completedTraining || 0)
-  const completedTasks = dashboardStats?.completedTraining || 0
-  const realCompletionRate = completionRateProp ?? (totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0)
-  
+
+  // Completion rate: completed training out of total training modules
+  const totalTraining = (dashboardStats?.completedTraining || 0) + (dashboardStats?.inProgressTraining || 0)
+  const realCompletionRate = completionRateProp ?? (totalTraining > 0
+    ? Math.round((dashboardStats!.completedTraining / totalTraining) * 100)
+    : 0)
+
   const isLoading = isLoadingParent || isLoadingTasks || isLoadingEvents || isLoadingStats
 
   const themeGradients: Record<string, string> = {
@@ -191,7 +205,8 @@ export function WelcomeHeader({
   }
 
   return (
-    <motion.div 
+    <LazyMotion features={domAnimation}>
+    <m.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
@@ -203,29 +218,29 @@ export function WelcomeHeader({
       {/* Animated Background Layers */}
       <div className="absolute inset-0">
         {/* Gradient orbs */}
-        <motion.div 
+        <m.div
           className={cn(
             "absolute -top-20 -right-20 w-96 h-96 rounded-full blur-3xl opacity-40",
             "bg-gradient-to-br",
             accentGradients[config.theme] || accentGradients.navy
           )}
-          animate={{ 
+          animate={{
             scale: [1, 1.2, 1],
             rotate: [0, 90, 0]
           }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
         />
-        <motion.div 
+        <m.div
           className="absolute -bottom-32 -left-32 w-[500px] h-[500px] rounded-full blur-3xl opacity-30 bg-gradient-to-tr from-amber-500/20 to-transparent"
-          animate={{ 
+          animate={{
             scale: [1, 1.1, 1],
             x: [0, 50, 0]
           }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
         />
-        
+
         {/* Grid pattern overlay */}
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
@@ -233,7 +248,7 @@ export function WelcomeHeader({
             backgroundSize: '50px 50px'
           }}
         />
-        
+
         {/* Floating particles */}
         <FloatingParticles />
       </div>
@@ -241,23 +256,23 @@ export function WelcomeHeader({
       {/* Main Content */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-          
+
           {/* Left Section - Main Info */}
           <div className="flex-1 space-y-4">
             {/* Top Row: Greeting & Date */}
             <div className="flex flex-wrap items-center gap-3">
               <GreetingBadge hour={hour} />
-              
+
               <div className="flex items-center gap-2 text-white/60 text-sm">
                 <Calendar className="w-4 h-4" />
                 <span>{format(new Date(), 'EEEE, MMMM d, yyyy', { locale: isRTL ? ar : undefined })}</span>
               </div>
-              
+
               <LiveClock />
             </div>
 
             {/* Title Section */}
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -268,18 +283,18 @@ export function WelcomeHeader({
               <p className="text-lg text-white/70 mt-2 font-light">
                 {config.subtitle}
               </p>
-            </motion.div>
+            </m.div>
 
             {/* Badges Row */}
-            <motion.div 
+            <m.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               className="flex flex-wrap items-center gap-2"
             >
               {currentProperty?.name && (
-                <Badge 
-                  variant="secondary" 
+                <Badge
+                  variant="secondary"
                   className="bg-white/10 text-white border-0 backdrop-blur-sm hover:bg-white/20 transition-all cursor-default"
                 >
                   <Building2 className="w-3.5 h-3.5 mr-1.5" />
@@ -287,18 +302,18 @@ export function WelcomeHeader({
                 </Badge>
               )}
               {profile?.job_title && (
-                <Badge 
-                  variant="secondary" 
+                <Badge
+                  variant="secondary"
                   className="bg-white/10 text-white border-0 backdrop-blur-sm hover:bg-white/20 transition-all cursor-default"
                 >
                   <Briefcase className="w-3.5 h-3.5 mr-1.5" />
                   {profile.job_title}
                 </Badge>
               )}
-            </motion.div>
+            </m.div>
 
             {/* Quick Stats */}
-            <motion.div 
+            <m.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -307,11 +322,11 @@ export function WelcomeHeader({
               <QuickStat label={t('quick_stats.tasks', 'Tasks')} value={realTaskCount.toString()} trend={realTaskCount > 5 ? 'up' : 'down'} />
               <QuickStat label={t('quick_stats.meetings', 'Meetings')} value={realMeetingCount.toString()} />
               <QuickStat label={t('quick_stats.completion', 'Completion')} value={`${realCompletionRate}%`} trend={realCompletionRate > 50 ? 'up' : 'down'} />
-            </motion.div>
+            </m.div>
           </div>
 
           {/* Right Section - Actions & Profile */}
-          <motion.div 
+          <m.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
@@ -327,16 +342,16 @@ export function WelcomeHeader({
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <motion.span 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
+                  <m.span
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
                     className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center font-semibold ring-2 ring-slate-800"
                   >
                     {unreadCount > 9 ? '9+' : unreadCount}
-                  </motion.span>
+                  </m.span>
                 )}
               </Button>
-              
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -346,7 +361,7 @@ export function WelcomeHeader({
               >
                 <RefreshCw className={cn("w-5 h-5", isLoading && 'animate-spin')} />
               </Button>
-              
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -369,17 +384,18 @@ export function WelcomeHeader({
                 </AvatarFallback>
               </Avatar>
             </div>
-          </motion.div>
+          </m.div>
         </div>
 
         {/* Bottom Decorative Line */}
-        <motion.div 
+        <m.div
           className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ delay: 0.5, duration: 1 }}
         />
       </div>
-    </motion.div>
+    </m.div>
+    </LazyMotion>
   )
 }

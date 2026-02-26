@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
 import { Users, CheckCircle, GraduationCap, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -8,12 +8,12 @@ import { useTranslation } from 'react-i18next'
 
 export function QuickInsights() {
   const { t } = useTranslation('dashboard')
-  const { 
-    taskCompletion, 
-    trainingProgress, 
-    responseTime, 
+  const {
+    taskCompletion,
+    trainingProgress,
+    responseTime,
     attendanceRate,
-    isLoading 
+    isLoading
   } = useDashboardMetrics()
 
   const insights = [
@@ -60,10 +60,12 @@ export function QuickInsights() {
   ]
 
   if (isLoading) {
+    const skeletonCards = ['s1', 's2', 's3', 's4']
+
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <Card key={i} className="border-0 shadow-md">
+        {skeletonCards.map((id) => (
+          <Card key={id} className="border-0 shadow-md">
             <CardContent className="p-4">
               <Skeleton className="h-12 w-24 mb-2" />
               <Skeleton className="h-4 w-32" />
@@ -75,13 +77,14 @@ export function QuickInsights() {
   }
 
   return (
+    <LazyMotion features={domAnimation}>
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {insights.map((insight, index) => {
         const Icon = insight.icon
         const TrendIcon = insight.direction === 'flat' ? Minus : insight.positive ? TrendingUp : TrendingDown
-        
+
         return (
-          <motion.div
+          <m.div
             key={insight.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -102,7 +105,7 @@ export function QuickInsights() {
                 </div>
                 <div className="flex items-end gap-2">
                   <span className="text-2xl font-bold">{insight.value}</span>
-                  {insight.showTrend && (
+                  {insight.showTrend && insight.change !== null && insight.change >= 1 && (
                     <div className={cn(
                       "flex items-center gap-0.5 text-xs font-medium mb-1",
                       insight.positive ? "text-emerald-600" : "text-red-600"
@@ -114,9 +117,10 @@ export function QuickInsights() {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </m.div>
         )
       })}
     </div>
+    </LazyMotion>
   )
 }

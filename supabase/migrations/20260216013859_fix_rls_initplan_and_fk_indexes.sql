@@ -74,4 +74,4 @@ create policy sop_comment_votes_delete
 on public.sop_comment_votes
 for delete
 to authenticated
-using (user_id = (select auth.uid()));
+using (user_id = (select auth.uid()));;

@@ -1,0 +1,1 @@
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS entity_type TEXT NULL, ADD COLUMN IF NOT EXISTS entity_id UUID NULL, ADD COLUMN IF NOT EXISTS link TEXT NULL, ADD COLUMN IF NOT EXISTS data JSONB NULL; CREATE INDEX IF NOT EXISTS idx_notifications_user_entity ON public.notifications (user_id, entity_type, entity_id);;

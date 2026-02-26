@@ -6,14 +6,14 @@ import { sentryVitePlugin } from "@sentry/vite-plugin"
 const securityHeaders = {
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Needed for some libraries
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com", // Needed for some libraries and Vercel Analytics
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Needed for Tailwind and Google Fonts
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:;",
-    `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co'} wss://${(process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co').replace('https://', '')} https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://o4508792767840256.ingest.de.sentry.io https://*.sentry.io https://date.nager.at`,
+    `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://*.supabase.co'} wss://*.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.com`,
     // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
-    `frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com ${process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co'}`,
+    `frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com https://*.supabase.co`,
     "frame-ancestors 'none'"
   ].join('; '),
   'X-Content-Type-Options': 'nosniff',
@@ -58,7 +58,9 @@ export default defineConfig({
           env: sentryEnv
         },
         sourcemaps: {
-          assets: "./dist/**"
+          assets: "./dist/**",
+          // Delete sourcemaps after uploading to Sentry so they aren't served to users
+          filesToDeleteAfterUpload: "./dist/**/*.map"
         }
       })
     ] : [])
@@ -86,13 +88,22 @@ export default defineConfig({
   build: {
     // Security: Build optimizations
     minify: 'terser',
-    sourcemap: enableSentryUpload || process.env.NODE_ENV !== 'production',
+    // Generate sourcemaps for Sentry upload but use 'hidden' in production so they aren't
+    // referenced in the bundle (Sentry plugin deletes .map files after upload anyway).
+    sourcemap: enableSentryUpload ? 'hidden' : (process.env.NODE_ENV !== 'production'),
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          supabase: ['@supabase/supabase-js'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-tabs']
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+
+          if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase'
+          if (id.includes('/node_modules/mermaid')) return 'vendor-mermaid'
+          if (id.includes('/node_modules/pdfjs-dist') || id.includes('/node_modules/jspdf') || id.includes('/node_modules/html2pdf.js')) {
+            return 'vendor-pdf'
+          }
+          if (id.includes('/node_modules/exceljs')) return 'vendor-excel'
+          if (id.includes('/node_modules/@tiptap/')) return 'vendor-editor'
+          return undefined
         }
       }
     }

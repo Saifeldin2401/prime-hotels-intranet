@@ -11,11 +11,88 @@ const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     },
 });
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const DEFAULT_ALLOWED_ORIGINS = [
+    "https://phg-connect.com",
+    "https://www.phg-connect.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+] as const;
+
+function getAllowedOrigins(): string[] {
+    const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
+    if (!raw) return [...DEFAULT_ALLOWED_ORIGINS];
+    const parsed = raw.split(",").map((origin) => origin.trim()).filter(Boolean);
+    return parsed.length > 0 ? parsed : [...DEFAULT_ALLOWED_ORIGINS];
+}
+
+function resolveCorsOrigin(req: Request): string {
+    const origin = (req.headers.get("origin") || "").trim();
+    const allowed = getAllowedOrigins();
+    if (origin && allowed.includes(origin)) return origin;
+    return allowed[0] || "https://phg-connect.com";
+}
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+    return {
+        "Access-Control-Allow-Origin": resolveCorsOrigin(req),
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Vary": "Origin",
+    };
+}
+
+const TEMP_PASSWORD_LENGTH = 20;
+const TEMP_PASSWORD_SETS = {
+    lower: "abcdefghijklmnopqrstuvwxyz",
+    upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    digits: "0123456789",
+    symbols: "!@#$%^&*()-_=+[]{}<>?",
+} as const;
+
+function randomInt(maxExclusive: number): number {
+    if (maxExclusive <= 0) throw new Error("randomInt maxExclusive must be positive");
+    const upper = 0xffffffff;
+    const limit = Math.floor(upper / maxExclusive) * maxExclusive;
+    const buffer = new Uint32Array(1);
+
+    let value = upper;
+    while (value >= limit) {
+        crypto.getRandomValues(buffer);
+        value = buffer[0];
+    }
+
+    return value % maxExclusive;
+}
+
+function pickRandomChar(charset: string): string {
+    return charset[randomInt(charset.length)];
+}
+
+function generateSecureTemporaryPassword(length = TEMP_PASSWORD_LENGTH): string {
+    const minLength = 12;
+    const targetLength = Math.max(length, minLength);
+    const requiredChars = [
+        pickRandomChar(TEMP_PASSWORD_SETS.lower),
+        pickRandomChar(TEMP_PASSWORD_SETS.upper),
+        pickRandomChar(TEMP_PASSWORD_SETS.digits),
+        pickRandomChar(TEMP_PASSWORD_SETS.symbols),
+    ];
+
+    const allChars = `${TEMP_PASSWORD_SETS.lower}${TEMP_PASSWORD_SETS.upper}${TEMP_PASSWORD_SETS.digits}${TEMP_PASSWORD_SETS.symbols}`;
+    const passwordChars = [...requiredChars];
+
+    while (passwordChars.length < targetLength) {
+        passwordChars.push(pickRandomChar(allChars));
+    }
+
+    // Fisher-Yates shuffle with CSPRNG-backed randomInt.
+    for (let i = passwordChars.length - 1; i > 0; i -= 1) {
+        const j = randomInt(i + 1);
+        [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
+    }
+
+    return passwordChars.join("");
+}
 
 function isISODate(value: string): boolean {
     return /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -141,6 +218,8 @@ async function generateInviteLink(
 }
 
 Deno.serve(async (req: Request) => {
+    const corsHeaders = buildCorsHeaders(req);
+
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
@@ -171,6 +250,9 @@ Deno.serve(async (req: Request) => {
         }
 
         const provisioningMethod: ProvisioningMethod = rawProvisioningMethod;
+        const temporaryPassword = provisioningMethod === "temporary_password"
+            ? generateSecureTemporaryPassword()
+            : null;
         const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
         const normalizedFullName = typeof fullName === "string" ? fullName.trim() : "";
         const normalizedRoleInput = typeof role === "string" ? role.trim().toLowerCase() : "";
@@ -329,7 +411,7 @@ Deno.serve(async (req: Request) => {
                     })
                     : await adminClient.auth.admin.createUser({
                         email: normalizedEmail,
-                        password: "TempPassword123!",
+                        password: temporaryPassword!,
                         email_confirm: true,
                         user_metadata: authMetadata,
                     });
@@ -439,7 +521,7 @@ Deno.serve(async (req: Request) => {
         if (provisioningMethod === "temporary_password") {
             try {
                 console.log(`Sending welcome email to ${normalizedEmail}...`);
-                const welcomeMsg = "Welcome to PHG Connect. Your account has been created with the following temporary credentials:\n\nEmail: " + normalizedEmail + "\nPassword: TempPassword123!\n\nYou will be required to change your password upon your first login.";
+                const welcomeMsg = "Welcome to PHG Connect. Your account has been created with the following temporary credentials:\n\nEmail: " + normalizedEmail + "\nPassword: " + temporaryPassword + "\n\nYou will be required to change your password upon your first login.";
 
                 const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
                     method: "POST",
@@ -525,7 +607,7 @@ Deno.serve(async (req: Request) => {
                 provisioningMethod,
                 invitationSent: provisioningMethod === "invite",
                 ...(provisioningMethod === "temporary_password"
-                    ? { tempPassword: "TempPassword123!" } // Match the password set above
+                    ? { tempPassword: temporaryPassword }
                     : {})
             }),
             {
@@ -542,3 +624,5 @@ Deno.serve(async (req: Request) => {
         });
     }
 });
+
+

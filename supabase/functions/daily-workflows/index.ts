@@ -1,13 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from '../_shared/auth.ts'
-
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = buildCorsHeaders(req);
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
@@ -378,3 +375,6 @@ async function resolveAssignmentTargets(supabaseClient: any, targetType: string,
 
     return [...new Set(userIds)]
 }
+
+
+

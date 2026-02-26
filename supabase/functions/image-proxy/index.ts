@@ -1,18 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-};
-
-function json(payload: unknown, status = 200): Response {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 function isPrivateHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
@@ -42,6 +30,14 @@ function isAllowedUrl(url: URL): boolean {
 }
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+  const json = (payload: unknown, status = 200): Response => {
+    return new Response(JSON.stringify(payload), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  };
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -127,3 +123,7 @@ serve(async (req) => {
     return json({ error: message }, 500);
   }
 });
+
+
+
+

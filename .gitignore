@@ -22,6 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files
 .env
 .env.*
 !.env.example
@@ -29,3 +31,26 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+# Generated reports and logs (do not commit)
+lint*.txt
+lint*.json
+eslint-report*.txt
+hardcoded-report.txt
+errors*.txt
+tsc-errors*.txt
+build_log.txt
+dev-server.log
+devtmp.log
+ts_errors.txt
+remaining_errors.json
+lint_report*.json
+final-lint*.txt
+
+# Temporary SQL and analysis files
+tmp_*.sql
+tmp_*.json
+analysis_report.md
+content_bundle.json
+injection_plan.json
+research_and_sources.json

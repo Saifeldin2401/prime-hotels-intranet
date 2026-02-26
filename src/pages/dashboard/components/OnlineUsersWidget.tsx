@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import { Users, Circle, MessageSquare, Search, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,13 +36,16 @@ export function OnlineUsersWidget() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
 
-  // Filter out current user and apply search
+  // All users including self for the count badge in header
+  const totalOnline = onlineUsers.length
+
+  // Filter out current user and apply search for the visible list
   const filteredUsers = useMemo(() => {
     const otherUsers = onlineUsers.filter(u => u.user_id !== currentUser?.id)
     if (!searchQuery.trim()) return otherUsers
-    
+
     const query = searchQuery.toLowerCase()
-    return otherUsers.filter(u => 
+    return otherUsers.filter(u =>
       u.full_name?.toLowerCase().includes(query) ||
       u.email?.toLowerCase().includes(query) ||
       u.role?.toLowerCase().includes(query)
@@ -80,6 +83,7 @@ export function OnlineUsersWidget() {
   }
 
   return (
+    <LazyMotion features={domAnimation}>
     <Card className="border-slate-100 shadow-xl overflow-hidden bg-white/70 backdrop-blur-sm border">
       <div className="h-1.5 bg-gradient-to-r from-emerald-500 to-emerald-300" />
       <CardHeader className="pb-3">
@@ -99,15 +103,15 @@ export function OnlineUsersWidget() {
                 {t('widgets.online_users_title', 'Online Now')}
               </CardTitle>
               <CardDescription className="text-slate-500 text-xs">
-                {t('widgets.online_users_desc', '{{count}} team members active', { count: totalCount })}
+                {t('widgets.online_users_desc', '{{count}} team members active', { count: totalOnline })}
               </CardDescription>
             </div>
           </div>
-          
-          {totalCount > 0 && (
+
+          {totalOnline > 0 && (
             <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100">
               <Circle className="w-2 h-2 fill-emerald-500 text-emerald-500 mr-1.5" />
-              {totalCount}
+              {totalOnline}
             </Badge>
           )}
         </div>
@@ -143,7 +147,7 @@ export function OnlineUsersWidget() {
       </CardHeader>
 
       <CardContent>
-        {totalCount === 0 ? (
+        {sortedUsers.length === 0 ? (
           <div className="text-center py-8 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <Users className="w-8 h-8 text-slate-300" />
@@ -161,7 +165,7 @@ export function OnlineUsersWidget() {
               "pr-4",
               showAll ? "h-[320px]" : "h-[240px]"
             )}>
-              <motion.div
+              <m.div
                 variants={ANIMATION_CONFIG.container}
                 initial="hidden"
                 animate="visible"
@@ -169,7 +173,7 @@ export function OnlineUsersWidget() {
               >
                 <AnimatePresence mode="popLayout">
                   {displayedUsers.map((onlineUser) => (
-                    <motion.div
+                    <m.div
                       key={onlineUser.user_id}
                       variants={ANIMATION_CONFIG.item}
                       layout
@@ -206,10 +210,10 @@ export function OnlineUsersWidget() {
                           <MessageSquare className="w-4 h-4 text-slate-400 hover:text-emerald-600" />
                         </Link>
                       </Button>
-                    </motion.div>
+                    </m.div>
                   ))}
                 </AnimatePresence>
-              </motion.div>
+              </m.div>
             </ScrollArea>
 
             {/* Show More/Less */}
@@ -220,7 +224,7 @@ export function OnlineUsersWidget() {
                 className="w-full mt-3 text-xs text-slate-500 hover:text-emerald-700"
                 onClick={() => setShowAll(!showAll)}
               >
-                {showAll 
+                {showAll
                   ? t('common.show_less', 'Show Less')
                   : t('common.show_more', 'Show {{count}} More', { count: sortedUsers.length - 5 })
                 }
@@ -230,11 +234,14 @@ export function OnlineUsersWidget() {
         )}
       </CardContent>
     </Card>
+    </LazyMotion>
   )
 }
 
 // Loading skeleton
 export function OnlineUsersWidgetSkeleton() {
+  const skeletonRows = ['u1', 'u2', 'u3', 'u4']
+
   return (
     <Card className="border-0 shadow-lg overflow-hidden">
       <div className="h-1.5 bg-emerald-100" />
@@ -249,8 +256,8 @@ export function OnlineUsersWidgetSkeleton() {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3">
+          {skeletonRows.map((id) => (
+            <div key={id} className="flex items-center gap-3 p-3">
               <Skeleton className="h-10 w-10 rounded-full" />
               <div className="flex-1">
                 <Skeleton className="h-4 w-32 mb-1" />

@@ -90,6 +90,7 @@ import { useTrackView } from '@/hooks/useRecentlyViewed'
 import { SectionLinkButton } from '@/components/knowledge/SectionLinkButton'
 import { SectionLinkInjector } from '@/components/knowledge/SectionLinkInjector'
 import { useLastViewed } from '@/hooks/useLastViewed'
+import { usePermissions } from '@/hooks/usePermissions'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
@@ -110,6 +111,7 @@ export default function KnowledgeViewer() {
     const navigate = useNavigate()
     const { t } = useTranslation('knowledge')
     const { user, profile } = useAuth()
+    const { hasPermission } = usePermissions()
     const contentRef = useRef<HTMLDivElement>(null)
     const mermaidRef = useRef<HTMLDivElement>(null)
 
@@ -247,10 +249,16 @@ export default function KnowledgeViewer() {
         }
     }, [article?.id, htmlContent, htmlContentAr, translatedData?.content, showBilingual])
 
-    // Check if user can edit
-    const { primaryRole } = useAuth()
-    // Temporarily allow all authenticated users to edit for testing
-    const canEdit = !!user && !!article
+    const canEdit = !!user && !!article && hasPermission(
+        'documents.edit',
+        article.property_id ?? undefined,
+        article.department_id ?? undefined
+    )
+    const canDelete = !!user && !!article && hasPermission(
+        'documents.delete',
+        article.property_id ?? undefined,
+        article.department_id ?? undefined
+    )
 
     // Delete function
     const handleDelete = async () => {
@@ -1010,48 +1018,52 @@ export default function KnowledgeViewer() {
                         </div>
 
                         <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
-                            {canEdit && (
+                            {(canEdit || canDelete) && (
                                 <div className="flex items-center gap-1 sm:gap-2 mr-1 sm:mr-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => navigate(`/knowledge/${id}/edit`)}
-                                        className="h-9 px-2 sm:px-3 border-slate-200 hover:border-indigo-300 hover:text-indigo-600 rounded-lg group transition-all"
-                                    >
-                                        <Pencil className="h-3.5 w-3.5 sm:mr-2 group-hover:scale-110 transition-transform" />
-                                        <span className="hidden sm:inline">{t('viewer.edit')}</span>
-                                    </Button>
+                                    {canEdit && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => navigate(`/knowledge/${id}/edit`)}
+                                            className="h-9 px-2 sm:px-3 border-slate-200 hover:border-indigo-300 hover:text-indigo-600 rounded-lg group transition-all"
+                                        >
+                                            <Pencil className="h-3.5 w-3.5 sm:mr-2 group-hover:scale-110 transition-transform" />
+                                            <span className="hidden sm:inline">{t('viewer.edit')}</span>
+                                        </Button>
+                                    )}
 
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="h-9 px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 rounded-lg group"
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5 sm:mr-2 group-hover:scale-110 transition-transform" />
-                                                <span className="hidden sm:inline">{t('viewer.delete')}</span>
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>{t('viewer.delete_title')}</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    {t('viewer.delete_desc', { title: article.title })}
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>{t('viewer.cancel')}</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                    onClick={handleDelete}
-                                                    disabled={isDeleting}
-                                                    className="bg-red-600 hover:bg-red-700"
+                                    {canDelete && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-9 px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 rounded-lg group"
                                                 >
-                                                    {isDeleting ? t('viewer.deleting') : t('viewer.delete_confirm')}
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
+                                                    <Trash2 className="h-3.5 w-3.5 sm:mr-2 group-hover:scale-110 transition-transform" />
+                                                    <span className="hidden sm:inline">{t('viewer.delete')}</span>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>{t('viewer.delete_title')}</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        {t('viewer.delete_desc', { title: article.title })}
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>{t('viewer.cancel')}</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={handleDelete}
+                                                        disabled={isDeleting}
+                                                        className="bg-red-600 hover:bg-red-700"
+                                                    >
+                                                        {isDeleting ? t('viewer.deleting') : t('viewer.delete_confirm')}
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
 
                                     <Separator orientation="vertical" className="h-6 mx-2 hidden md:block" />
                                 </div>

@@ -86,8 +86,7 @@ export function useDashboardStats() {
                     .from('tasks')
                     .select('id', { count: 'exact', head: true })
                     .eq('assigned_to_id', userId)
-                    .neq('status', 'completed')
-                    .neq('status', 'cancelled')
+                    .in('status', ['open', 'todo', 'in_progress', 'pending'])
             ])
 
             // Process Results

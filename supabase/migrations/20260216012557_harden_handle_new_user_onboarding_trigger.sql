@@ -152,4 +152,4 @@ EXCEPTION
       NEW.user_id, NEW.department_id, SQLERRM;
     RETURN NEW;
 END;
-$function$;
+$function$;;

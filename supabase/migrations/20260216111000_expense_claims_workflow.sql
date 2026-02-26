@@ -2,18 +2,6 @@
 
 BEGIN;
 
-CREATE OR REPLACE FUNCTION public.can_view_request(p_request_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT public.can_view_request(auth.uid(), p_request_id);
-$$;
-
-GRANT EXECUTE ON FUNCTION public.can_view_request(uuid) TO authenticated;
-
 CREATE TABLE IF NOT EXISTS public.expense_claims (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
@@ -782,4 +770,4 @@ $function$;
 GRANT EXECUTE ON FUNCTION public.request_apply_action(uuid, text, text, uuid, text) TO authenticated;
 
 COMMIT;
-NOTIFY pgrst, 'reload schema';
+NOTIFY pgrst, 'reload schema';;

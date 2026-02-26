@@ -246,4 +246,4 @@ SELECT public._reset_edge_http_cron_job_reporting(
 DROP FUNCTION public._reset_edge_http_cron_job_reporting(text, text, text, integer, jsonb);
 
 COMMIT;
-NOTIFY pgrst, 'reload schema';
+NOTIFY pgrst, 'reload schema';;

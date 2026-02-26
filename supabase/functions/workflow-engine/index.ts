@@ -1,12 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
     if (req.method === "OPTIONS") {
         return new Response(null, { headers: corsHeaders });
     }
@@ -177,7 +174,7 @@ async function executeAction(supabase: any, actionType: string, config: any, con
             });
 
             if (error) throw error;
-            console.log(`✅ Sent notification to user ${userId}`);
+            console.log(`âœ… Sent notification to user ${userId}`);
             break;
         }
 
@@ -212,7 +209,7 @@ async function executeAction(supabase: any, actionType: string, config: any, con
                 if (!notifError) remindersSent++;
             }
 
-            console.log(`✅ Sent ${remindersSent} training reminders`);
+            console.log(`âœ… Sent ${remindersSent} training reminders`);
             break;
         }
 
@@ -251,7 +248,7 @@ async function executeAction(supabase: any, actionType: string, config: any, con
                 metadata: { content_id: moduleId, workflow_triggered: true }
             });
 
-            console.log(`✅ Assigned training ${moduleId} to user ${userId}`);
+            console.log(`âœ… Assigned training ${moduleId} to user ${userId}`);
             break;
         }
 
@@ -372,14 +369,17 @@ async function executeAction(supabase: any, actionType: string, config: any, con
             });
 
             if (error) throw error;
-            console.log(`✅ Created task: ${effectiveConfig.title}`);
+            console.log(`âœ… Created task: ${effectiveConfig.title}`);
             break;
         }
 
         default:
-            console.warn(`⚠️ Unknown action type: ${actionType} - skipping`);
+            console.warn(`âš ï¸ Unknown action type: ${actionType} - skipping`);
     }
 
     // Small delay to prevent rate limiting
     await new Promise(resolve => setTimeout(resolve, 50));
 }
+
+
+

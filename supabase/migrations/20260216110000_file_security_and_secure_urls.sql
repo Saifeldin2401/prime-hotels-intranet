@@ -310,4 +310,4 @@ GRANT EXECUTE ON FUNCTION public.get_secure_document_version_url(uuid) TO authen
 GRANT EXECUTE ON FUNCTION public.get_secure_maintenance_attachment_url(uuid) TO authenticated;
 
 COMMIT;
-NOTIFY pgrst, 'reload schema';
+NOTIFY pgrst, 'reload schema';;

@@ -1,15 +1,12 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from '../_shared/auth.ts'
-
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
@@ -165,3 +162,6 @@ Deno.serve(async (req) => {
         });
     }
 });
+
+
+

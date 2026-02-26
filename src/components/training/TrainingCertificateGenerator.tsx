@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -40,6 +40,76 @@ interface TrainingCertificateGeneratorProps {
   className?: string
 }
 
+interface CertificateFormData {
+  recipient_name: string
+  course_name: string
+  completion_date: string
+  score: number
+  instructor_name: string
+  custom_message: string
+  include_signature: boolean
+  include_seal: boolean
+  include_qr_code: boolean
+}
+
+interface UserCompletion {
+  id: string
+  completed_at: string
+  training_module?: {
+    title?: string | null
+  } | null
+}
+
+const SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*(?:0|0?\.\d+|1))?\s*\)|hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%(?:\s*,\s*(?:0|0?\.\d+|1))?\s*\))$/
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function sanitizeCssColor(value: string | undefined, fallback: string): string {
+  if (!value) return fallback
+  const normalized = value.trim()
+  return SAFE_COLOR_RE.test(normalized) ? normalized : fallback
+}
+
+function sanitizeFontFamily(value: string | undefined, fallback: string): string {
+  if (!value) return fallback
+  const normalized = value.trim()
+  if (!normalized) return fallback
+  return normalized.replace(/[^a-zA-Z0-9 ,'-]/g, '')
+}
+
+function sanitizeExternalUrl(value: string | undefined): string | null {
+  if (!value) return null
+  const normalized = value.trim()
+  if (!normalized) return null
+  try {
+    const parsed = new URL(normalized)
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
+function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().split('T')[0]
+}
+
+function safeFormattedDate(value: string, fallback: Date = new Date()): string {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return format(fallback, 'MMMM dd, yyyy')
+  return format(parsed, 'MMMM dd, yyyy')
+}
+
 export function TrainingCertificateGenerator({
   trainingCompletionId,
   userId,
@@ -50,7 +120,7 @@ export function TrainingCertificateGenerator({
   const { user } = useAuth()
 
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
-  const [certificateData, setCertificateData] = useState({
+  const [certificateData, setCertificateData] = useState<CertificateFormData>({
     recipient_name: '',
     course_name: '',
     completion_date: format(new Date(), 'yyyy-MM-dd'),
@@ -127,57 +197,32 @@ export function TrainingCertificateGenerator({
       }
 
       if (error) throw error
-      return data
+      return (data || []) as UserCompletion[]
     },
     enabled: !trainingCompletionId
   })
 
+  const generateCertificateHTML = (template: CertificateTemplate, data: CertificateFormData) => {
+    const safeFontFamily = sanitizeFontFamily(template.font_family, 'serif')
+    const safeFontQuery = encodeURIComponent(safeFontFamily)
+    const safeBackgroundColor = sanitizeCssColor(template.background_color, '#ffffff')
+    const safeTextColor = sanitizeCssColor(template.text_color, '#111827')
+    const safeAccentColor = sanitizeCssColor(template.accent_color, '#1f2937')
+    const safeLogoUrl = sanitizeExternalUrl(template.logo_url)
 
-  const handleDownloadCertificate = async () => {
-    try {
-      const template = templates?.find(t => t.id === selectedTemplate)
-      if (!template) return
+    const safeRecipientName = escapeHtml(data.recipient_name.trim())
+    const safeCourseName = escapeHtml(data.course_name.trim())
+    const safeInstructorName = escapeHtml(data.instructor_name.trim())
+    const safeCustomMessage = escapeHtml(data.custom_message.trim())
+    const safeScore = Number.isFinite(data.score) ? Math.min(100, Math.max(0, Math.round(data.score))) : 0
+    const safeCategory = escapeHtml(trainingCompletion?.training_module?.category || t('categories.general'))
+    const safeCertificateId = escapeHtml(trainingCompletion?.id || 'N/A')
+    const safeDuration = Number.isFinite(trainingCompletion?.training_module?.estimated_duration_minutes)
+      ? String(trainingCompletion?.training_module?.estimated_duration_minutes)
+      : '60'
+    const completionDateLabel = safeFormattedDate(data.completion_date)
+    const issuedOnLabel = format(new Date(), 'MMMM dd, yyyy')
 
-      // Generate HTML certificate
-      const certificateHtml = generateCertificateHTML(template, certificateData)
-
-      // Create a temporary container
-      const container = document.createElement('div')
-      container.innerHTML = certificateHtml
-      container.style.position = 'absolute'
-      container.style.left = '-9999px'
-      container.style.top = '-9999px'
-      document.body.appendChild(container)
-
-      // Use html2pdf to generate and enforce PDF download
-      const element = container.querySelector('.certificate')
-      if (!element) {
-        throw new Error("Invalid certificate HTML structure")
-      }
-
-      // @ts-ignore
-      const html2pdf = (await import('html2pdf.js')).default
-
-      const opt = {
-        margin: 0,
-        filename: `certificate-${certificateData.recipient_name.replace(/\s+/g, '-')}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'px', format: [800, 600] as [number, number], orientation: 'landscape' as const }
-      }
-
-      await html2pdf().set(opt).from(element as HTMLElement).save()
-
-      // Cleanup
-      document.body.removeChild(container)
-      toast.success(t('certificateGenerator.downloadSuccess', 'Certificate downloaded successfully'))
-    } catch (e) {
-      console.error(e)
-      toast.error(t('certificateGenerator.failedDownload', 'Failed to generate PDF download'))
-    }
-  }
-
-  const generateCertificateHTML = (template: CertificateTemplate, data: any) => {
     return `
       <!DOCTYPE html>
       <html>
@@ -186,16 +231,16 @@ export function TrainingCertificateGenerator({
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Certificate of Completion</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=${template.font_family.replace(' ', '+')}&display=swap');
-            
+            @import url('https://fonts.googleapis.com/css2?family=${safeFontQuery}&display=swap');
+
             body {
               margin: 0;
               padding: 0;
-              font-family: '${template.font_family}', serif;
-              background-color: ${template.background_color};
-              color: ${template.text_color};
+              font-family: '${safeFontFamily}', serif;
+              background-color: ${safeBackgroundColor};
+              color: ${safeTextColor};
             }
-            
+
             .certificate {
               width: 100%;
               max-width: 800px;
@@ -203,69 +248,69 @@ export function TrainingCertificateGenerator({
               padding: 40px;
               position: relative;
               min-height: 600px;
-              border: 10px solid ${template.accent_color};
+              border: 10px solid ${safeAccentColor};
               box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             }
-            
+
             .certificate-header {
               text-align: center;
               margin-bottom: 30px;
             }
-            
+
             .certificate-title {
               font-size: 36px;
               font-weight: bold;
-              color: ${template.accent_color};
+              color: ${safeAccentColor};
               margin-bottom: 10px;
               text-transform: uppercase;
               letter-spacing: 2px;
             }
-            
+
             .certificate-subtitle {
               font-size: 18px;
               font-style: italic;
               margin-bottom: 40px;
             }
-            
+
             .certificate-body {
               text-align: center;
               margin-bottom: 40px;
             }
-            
+
             .recipient-name {
               font-size: 28px;
               font-weight: bold;
               margin-bottom: 20px;
-              color: ${template.accent_color};
+              color: ${safeAccentColor};
             }
-            
+
             .certificate-text {
               font-size: 16px;
               line-height: 1.6;
               margin-bottom: 30px;
             }
-            
+
             .course-name {
               font-size: 20px;
               font-weight: bold;
               margin-bottom: 20px;
-              color: ${template.accent_color};
+              color: ${safeAccentColor};
             }
-            
+
             .certificate-details {
               display: flex;
               justify-content: space-between;
               margin-top: 50px;
               font-size: 14px;
             }
-            
+
             .certificate-footer {
               text-align: center;
               margin-top: 40px;
               font-size: 12px;
-              color: ${template.text_color}80;
+              color: ${safeTextColor}80;
             }
-            
+
             .seal {
               position: absolute;
               bottom: 40px;
@@ -273,92 +318,92 @@ export function TrainingCertificateGenerator({
               width: 100px;
               height: 100px;
               border-radius: 50%;
-              border: 3px solid ${template.accent_color};
+              border: 3px solid ${safeAccentColor};
               display: flex;
               align-items: center;
               justify-content: center;
               font-weight: bold;
-              color: ${template.accent_color};
+              color: ${safeAccentColor};
             }
-            
+
             .signature {
               position: absolute;
               bottom: 40px;
               left: 40px;
               text-align: center;
             }
-            
+
             .signature-line {
-              border-bottom: 2px solid ${template.text_color};
+              border-bottom: 2px solid ${safeTextColor};
               width: 200px;
               margin-bottom: 5px;
             }
-            
+
             .signature-text {
               font-size: 12px;
-              color: ${template.text_color}80;
+              color: ${safeTextColor}80;
             }
-            
+
             @media print {
               body { margin: 0; }
-              .certificate { 
+              .certificate {
                 box-shadow: none;
-                border: 5px solid ${template.accent_color};
+                border: 5px solid ${safeAccentColor};
               }
             }
           </style>
         </head>
         <body>
           <div class="certificate">
-            ${template.logo_url ? `<img src="${template.logo_url}" alt="Logo" style="max-width: 150px; margin-bottom: 20px;">` : ''}
-            
+            ${safeLogoUrl ? `<img src="${safeLogoUrl}" alt="Logo" style="max-width: 150px; margin-bottom: 20px;">` : ''}
+
             <div class="certificate-header">
-              <div class="certificate-title">${t('certificateGenerator.certificateOfCompletion')}</div>
-              <div class="certificate-subtitle">${t('certificateGenerator.certifyThat')}</div>
+              <div class="certificate-title">${escapeHtml(t('certificateGenerator.certificateOfCompletion'))}</div>
+              <div class="certificate-subtitle">${escapeHtml(t('certificateGenerator.certifyThat'))}</div>
             </div>
-            
+
             <div class="certificate-body">
-              <div class="recipient-name">${data.recipient_name}</div>
+              <div class="recipient-name">${safeRecipientName}</div>
               <div class="certificate-text">
-                ${t('certificateGenerator.completedCourse')}
+                ${escapeHtml(t('certificateGenerator.completedCourse'))}
               </div>
-              <div class="course-name">${data.course_name}</div>
+              <div class="course-name">${safeCourseName}</div>
               <div class="certificate-text">
-                ${t('certificateGenerator.withScoreOf')} ${data.score}% ${t('certificateGenerator.on')} ${format(new Date(data.completion_date), 'MMMM dd, yyyy')}
+                ${escapeHtml(t('certificateGenerator.withScoreOf'))} ${safeScore}% ${escapeHtml(t('certificateGenerator.on'))} ${completionDateLabel}
               </div>
-              ${data.custom_message ? `<div class="certificate-text" style="font-style: italic;">${data.custom_message}</div>` : ''}
+              ${safeCustomMessage ? `<div class="certificate-text" style="font-style: italic;">${safeCustomMessage}</div>` : ''}
             </div>
-            
+
             <div class="certificate-details">
               <div>
-                <strong>${t('certificateGenerator.courseDuration')}:</strong> ${trainingCompletion?.training_module?.estimated_duration_minutes || 60} ${t('minutes')}
+                <strong>${escapeHtml(t('certificateGenerator.courseDuration'))}:</strong> ${safeDuration} ${escapeHtml(t('minutes'))}
               </div>
               <div>
-                <strong>${t('wizard.category')}:</strong> ${trainingCompletion?.training_module?.category || t('categories.general')}
+                <strong>${escapeHtml(t('wizard.category'))}:</strong> ${safeCategory}
               </div>
               <div>
-                <strong>${t('certificateGenerator.completionDate')}:</strong> ${format(new Date(data.completion_date), 'MMMM dd, yyyy')}
+                <strong>${escapeHtml(t('certificateGenerator.completionDate'))}:</strong> ${completionDateLabel}
               </div>
             </div>
-            
-            ${data.include_signature && data.instructor_name ? `
+
+            ${data.include_signature && safeInstructorName ? `
               <div class="signature">
                 <div class="signature-line"></div>
-                <div class="signature-text">${data.instructor_name}</div>
-                <div class="signature-text">${t('certificateGenerator.instructor')}</div>
+                <div class="signature-text">${safeInstructorName}</div>
+                <div class="signature-text">${escapeHtml(t('certificateGenerator.instructor'))}</div>
               </div>
             ` : ''}
-            
+
             ${data.include_seal ? `
               <div class="seal">
-                <div>${t('certificateGenerator.official')}</div>
-                <div>${t('certificateGenerator.seal')}</div>
+                <div>${escapeHtml(t('certificateGenerator.official'))}</div>
+                <div>${escapeHtml(t('certificateGenerator.seal'))}</div>
               </div>
             ` : ''}
-            
+
             <div class="certificate-footer">
-              ${t('certificateGenerator.certificateNumber')}: ${trainingCompletion?.id || 'N/A'} | 
-              ${t('certificateGenerator.issuedOn')} ${format(new Date(), 'MMMM dd, yyyy')}
+              ${escapeHtml(t('certificateGenerator.certificateNumber'))}: ${safeCertificateId} |
+              ${escapeHtml(t('certificateGenerator.issuedOn'))} ${issuedOnLabel}
             </div>
           </div>
         </body>
@@ -366,24 +411,92 @@ export function TrainingCertificateGenerator({
     `
   }
 
-  // Auto-populate data from training completion
-  if (trainingCompletion && !certificateData.recipient_name) {
-    setCertificateData({
-      ...certificateData,
-      recipient_name: trainingCompletion.user?.full_name || '',
-      course_name: trainingCompletion.training_module?.title || '',
-      completion_date: trainingCompletion.completed_at?.split('T')[0] || format(new Date(), 'yyyy-MM-dd'),
-      score: trainingCompletion.quiz_score || 100
+  const handleDownloadCertificate = async () => {
+    const template = templates?.find(tpl => tpl.id === selectedTemplate)
+    if (!template) return
+
+    let container: HTMLDivElement | null = null
+    try {
+      const certificateHtml = generateCertificateHTML(template, certificateData)
+      const parser = new DOMParser()
+      const parsed = parser.parseFromString(certificateHtml, 'text/html')
+      const parsedCertificate = parsed.querySelector('.certificate')
+      if (!parsedCertificate) {
+        throw new Error('Invalid certificate HTML structure')
+      }
+
+      container = document.createElement('div')
+      container.style.position = 'absolute'
+      container.style.left = '-9999px'
+      container.style.top = '-9999px'
+      container.appendChild(document.importNode(parsedCertificate, true))
+      document.body.appendChild(container)
+
+      const renderElement = container.querySelector('.certificate')
+      if (!renderElement) {
+        throw new Error('Unable to prepare certificate for PDF generation')
+      }
+
+      const html2pdfModule = await import('html2pdf.js')
+      const html2pdf = html2pdfModule.default as unknown as () => {
+        set: (options: unknown) => {
+          from: (element: HTMLElement) => { save: () => Promise<void> }
+        }
+      }
+      const filenameBase = certificateData.recipient_name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'certificate'
+
+      const options = {
+        margin: 0,
+        filename: `certificate-${filenameBase}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'px', format: [800, 600] as [number, number], orientation: 'landscape' as const }
+      }
+
+      await html2pdf().set(options).from(renderElement as HTMLElement).save()
+      toast.success(t('certificateGenerator.downloadSuccess', 'Certificate downloaded successfully'))
+    } catch (error) {
+      console.error(error)
+      toast.error(t('certificateGenerator.failedDownload', 'Failed to generate PDF download'))
+    } finally {
+      if (container && container.parentNode) {
+        container.parentNode.removeChild(container)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!trainingCompletion) return
+
+    setCertificateData((prev) => {
+      const isInitialHydration = !prev.recipient_name.trim() && !prev.course_name.trim()
+      return {
+        ...prev,
+        recipient_name: prev.recipient_name.trim() ? prev.recipient_name : (trainingCompletion.user?.full_name || ''),
+        course_name: prev.course_name.trim() ? prev.course_name : (trainingCompletion.training_module?.title || ''),
+        completion_date: isInitialHydration
+          ? (toDateInputValue(trainingCompletion.completed_at) || format(new Date(), 'yyyy-MM-dd'))
+          : prev.completion_date,
+        score: isInitialHydration
+          ? Math.min(100, Math.max(0, Math.round(trainingCompletion.quiz_score || 100)))
+          : prev.score
+      }
     })
-  }
+  }, [trainingCompletion])
 
-  // Set default template
-  if (templates && templates.length > 0 && !selectedTemplate) {
-    const defaultTemplate = templates.find(t => t.is_default) || templates[0]
+  useEffect(() => {
+    if (!templates?.length || selectedTemplate) return
+    const defaultTemplate = templates.find(tpl => tpl.is_default) || templates[0]
     setSelectedTemplate(defaultTemplate.id)
-  }
+  }, [templates, selectedTemplate])
 
-  const selectedTemplateData = templates?.find(t => t.id === selectedTemplate)
+  const selectedTemplateData = useMemo(
+    () => templates?.find(tpl => tpl.id === selectedTemplate),
+    [selectedTemplate, templates]
+  )
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -407,7 +520,7 @@ export function TrainingCertificateGenerator({
                   <SelectValue placeholder={t('certificateGenerator.selectCompletionPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent className={isRTL ? 'text-right' : 'text-left'}>
-                  {userCompletions.map((completion: any) => (
+                  {userCompletions.map((completion: UserCompletion) => (
                     <SelectItem key={completion.id} value={completion.id} className={isRTL ? 'flex-row-reverse' : ''}>
                       {completion.training_module?.title} - {format(new Date(completion.completed_at), 'MMM dd, yyyy')}
                     </SelectItem>
@@ -501,7 +614,11 @@ export function TrainingCertificateGenerator({
                 min="0"
                 max="100"
                 value={certificateData.score}
-                onChange={(e) => setCertificateData({ ...certificateData, score: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const parsed = Number.parseInt(e.target.value, 10)
+                  const nextScore = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 0
+                  setCertificateData({ ...certificateData, score: nextScore })
+                }}
                 className={isRTL ? 'text-right' : 'text-left'}
               />
             </div>
@@ -585,6 +702,7 @@ export function TrainingCertificateGenerator({
                     srcDoc={generateCertificateHTML(selectedTemplateData, certificateData)}
                     className="w-full h-96"
                     title="Certificate Preview"
+                    sandbox=""
                   />
                 </div>
               )}

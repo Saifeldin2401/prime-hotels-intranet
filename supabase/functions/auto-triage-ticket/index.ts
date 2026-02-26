@@ -7,6 +7,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const HF_TOKEN = Deno.env.get('HUGGINGFACE_TOKEN');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -82,22 +83,12 @@ Return ONLY valid JSON.`;
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = buildCorsHeaders(req);
     if (req.method === 'OPTIONS') {
-        return new Response('ok', {
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST',
-                'Access-Control-Allow-Headers': 'authorization, content-type'
-            }
-        });
+        return new Response('ok', { headers: corsHeaders });
     }
 
-    const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-    };
-
-    try {
+        try {
         // ===================================
         // SECURITY: JWT Authentication Required
         // ===================================
@@ -105,7 +96,7 @@ Deno.serve(async (req: Request) => {
         if (!authHeader) {
             return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
                 status: 401,
-                headers: corsHeaders
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
 
@@ -118,7 +109,7 @@ Deno.serve(async (req: Request) => {
         if (authError || !user) {
             return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
                 status: 401,
-                headers: corsHeaders
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
 
@@ -127,7 +118,7 @@ Deno.serve(async (req: Request) => {
         if (!ticket_id) {
             return new Response(JSON.stringify({ error: 'Missing ticket_id' }), {
                 status: 400,
-                headers: corsHeaders
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
 
@@ -144,7 +135,7 @@ Deno.serve(async (req: Request) => {
             console.error('Failed to fetch ticket:', fetchError);
             return new Response(JSON.stringify({ error: 'Ticket not found' }), {
                 status: 404,
-                headers: { 'Content-Type': 'application/json' }
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
 
@@ -155,7 +146,7 @@ Deno.serve(async (req: Request) => {
                 message: 'Ticket already triaged',
                 skipped: true
             }), {
-                headers: { 'Content-Type': 'application/json' }
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
 
@@ -167,7 +158,7 @@ Deno.serve(async (req: Request) => {
                 success: false,
                 message: 'AI analysis failed'
             }), {
-                headers: { 'Content-Type': 'application/json' }
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
 
@@ -190,24 +181,27 @@ Deno.serve(async (req: Request) => {
                 details: updateError.message
             }), {
                 status: 500,
-                headers: { 'Content-Type': 'application/json' }
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
 
-        console.log(`✅ Auto-triaged ticket ${ticket_id}: ${triage.priority} - ${triage.suggested_category}`);
+        console.log(`âœ… Auto-triaged ticket ${ticket_id}: ${triage.priority} - ${triage.suggested_category}`);
 
         return new Response(JSON.stringify({
             success: true,
             triage
         }), {
-            headers: { 'Content-Type': 'application/json' }
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
 
     } catch (err: any) {
         console.error('Auto-triage error:', err);
         return new Response(JSON.stringify({ error: err.message }), {
             status: 500,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
     }
 });
+
+
+

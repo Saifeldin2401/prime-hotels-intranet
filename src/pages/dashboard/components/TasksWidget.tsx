@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
 import { CheckCircle, Clock, ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth'
 export function TasksWidget() {
   const { user } = useAuth()
   const { data: tasks, isLoading } = useTasks({
-    statuses: ['todo', 'pending', 'in_progress'],
+    statuses: ['open', 'todo', 'in_progress', 'pending'],
     assignedTo: user?.id,
     limit: 6,
     ignorePropertyFilter: true
@@ -41,17 +41,20 @@ export function TasksWidget() {
   }
 
   if (isLoading) {
+    const skeletonRows = ['r1', 'r2', 'r3']
+
     return (
       <Card className="h-full">
         <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
         <CardContent className="space-y-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}
+          {skeletonRows.map((id) => <Skeleton key={id} className="h-16" />)}
         </CardContent>
       </Card>
     )
   }
 
   return (
+    <LazyMotion features={domAnimation}>
     <Card className="h-full border-0 shadow-lg bg-gradient-to-b from-white to-slate-50/50">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
@@ -82,13 +85,13 @@ export function TasksWidget() {
               </div>
             ) : (
               tasks?.map((task: any, index: number) => (
-                <motion.div
+                <m.div
                   key={task.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Link 
+                  <Link
                     to={`/tasks/${task.id}`}
                     className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-primary/30 hover:shadow-md transition-all group bg-white"
                   >
@@ -116,12 +119,13 @@ export function TasksWidget() {
                       </div>
                     </div>
                   </Link>
-                </motion.div>
+                </m.div>
               ))
             )}
           </div>
         </ScrollArea>
       </CardContent>
     </Card>
+    </LazyMotion>
   )
 }

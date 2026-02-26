@@ -12,11 +12,35 @@ const adminClient = createClient(supabaseUrl, serviceRoleKey, {
   },
 });
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://phg-connect.com",
+  "https://www.phg-connect.com",
+  "http://localhost:5173",
+  "http://localhost:3000",
+] as const;
+
+function getAllowedOrigins(): string[] {
+  const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
+  if (!raw) return [...DEFAULT_ALLOWED_ORIGINS];
+  const parsed = raw.split(",").map((origin) => origin.trim()).filter(Boolean);
+  return parsed.length > 0 ? parsed : [...DEFAULT_ALLOWED_ORIGINS];
+}
+
+function resolveCorsOrigin(req: Request): string {
+  const origin = (req.headers.get("origin") || "").trim();
+  const allowed = getAllowedOrigins();
+  if (origin && allowed.includes(origin)) return origin;
+  return allowed[0] || "https://phg-connect.com";
+}
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": resolveCorsOrigin(req),
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -27,6 +51,8 @@ function isISODate(value: string): boolean {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = buildCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -221,3 +247,5 @@ Deno.serve(async (req: Request) => {
     });
   }
 });
+
+

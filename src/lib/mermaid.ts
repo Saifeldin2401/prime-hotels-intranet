@@ -1,3 +1,12 @@
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+}
+
 export function transformMermaidCodeBlocks(html: string): string {
     if (!html) return ''
 
@@ -12,12 +21,14 @@ export function transformMermaidCodeBlocks(html: string): string {
                 .replace(/&gt;/g, '>')
                 .replace(/&quot;/g, '"')
                 .replace(/&#39;/g, "'")
-            return `<pre class="mermaid">${decoded.trim()}</pre>`
+            // Re-escape before interpolation to avoid injecting raw HTML.
+            return `<pre class="mermaid">${escapeHtml(decoded.trim())}</pre>`
         }
     )
 }
 
 const renderLocks = new WeakMap<HTMLElement, Promise<void>>()
+let mermaidInitialized = false
 
 export async function renderMermaidDiagrams(container: HTMLElement | null): Promise<void> {
     if (!container) return
@@ -35,15 +46,18 @@ export async function renderMermaidDiagrams(container: HTMLElement | null): Prom
         const mermaidModule = await import('mermaid')
         const mermaid = mermaidModule.default
 
-        mermaid.initialize({
-            startOnLoad: false,
-            theme: 'default',
-            securityLevel: 'strict',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            // Avoid DOM/foreignObject label measurement issues that can throw getBoundingClientRect null
-            flowchart: { useMaxWidth: true, htmlLabels: false },
-            sequence: { useMaxWidth: true },
-        })
+        if (!mermaidInitialized) {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default',
+                securityLevel: 'strict',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                // Avoid DOM/foreignObject label measurement issues that can throw getBoundingClientRect null
+                flowchart: { useMaxWidth: true, htmlLabels: false },
+                sequence: { useMaxWidth: true },
+            })
+            mermaidInitialized = true
+        }
 
         for (let idx = 0; idx < nodes.length; idx += 1) {
             const el = nodes[idx]
@@ -74,13 +88,11 @@ export async function renderMermaidDiagrams(container: HTMLElement | null): Prom
 
             try {
                 const id = `mermaid-v11-${Date.now()}-${idx}`
-                console.log(`[Mermaid] Hydrating diagram ${idx}. Host: <${host.tagName.toLowerCase()}>, Text length: ${code.length}`)
 
                 // For v11, providing the element as third arg helps with style scoping
                 const { svg } = await mermaid.render(id, code, host)
 
                 if (svg) {
-                    console.log(`[Mermaid] Render success for [${idx}]. Injecting SVG...`)
                     host.innerHTML = svg
                     host.classList.add('mermaid-rendered')
 
@@ -89,10 +101,10 @@ export async function renderMermaidDiagrams(container: HTMLElement | null): Prom
                     host.style.visibility = 'visible'
                     host.style.opacity = '1'
                     host.style.minHeight = '250px' // Ensure it's not collapsed
-                    host.style.width = '100% !important'
-                    host.style.maxWidth = '100% !important'
-                    host.style.height = 'auto !important'
-                    host.style.overflow = 'visible !important'
+                    host.style.setProperty('width', '100%')
+                    host.style.setProperty('max-width', '100%')
+                    host.style.setProperty('height', 'auto')
+                    host.style.setProperty('overflow', 'visible')
                     host.style.backgroundColor = 'transparent'
                     host.style.border = 'none'
                     host.style.padding = '0'
@@ -106,8 +118,6 @@ export async function renderMermaidDiagrams(container: HTMLElement | null): Prom
                         svgEl.style.display = 'block'
                         svgEl.style.margin = '0 auto'
                     }
-
-                    console.log(`[Mermaid] Diagram ${idx} fully visible.`)
                 }
             } catch (err) {
                 console.error(`[Mermaid] Failed to hydrate diagram ${idx}:`, err)

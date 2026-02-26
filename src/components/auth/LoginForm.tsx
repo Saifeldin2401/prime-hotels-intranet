@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useTranslation } from 'react-i18next'
 import {
@@ -16,13 +15,11 @@ import {
   CheckCircle2,
   WifiOff,
   AlertTriangle,
-  LockKeyhole,
-  KeyRound,
-  Sparkles
+  LockKeyhole
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { useToast } from '@/components/ui/use-toast'
+import { showSuccessToast, showErrorToast } from '@/lib/toastHelpers'
 import { supabase } from '@/lib/supabase'
 
 // Password strength calculator
@@ -140,7 +137,7 @@ function FloatingInput({
       {/* Validation Indicator */}
       <AnimatePresence>
         {valid === true && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5 }}
@@ -150,7 +147,7 @@ function FloatingInput({
             )}
           >
             <CheckCircle2 className="w-5 h-5 text-green-500" />
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
@@ -176,7 +173,7 @@ export function LoginForm() {
   const [resetLoading, setResetLoading] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
   const { signIn } = useAuth()
-  const { toast } = useToast()
+  // toasts via toastHelpers (showSuccessToast / showErrorToast)
   const isRTL = i18n.dir() === 'rtl'
 
   const passwordStrength = getPasswordStrength(password)
@@ -274,28 +271,17 @@ export function LoginForm() {
 
         setErrorType(errType)
         setError(errorMessage)
-        toast({
-          variant: 'destructive',
-          title: t('errors.title'),
-          description: errorMessage
-        })
+        showErrorToast(t('errors.title'), errorMessage)
         setLoading(false)
       } else {
         setSuccess(true)
-        toast({
-          title: t('welcome_back'),
-          description: t('welcome_back'),
-        })
+        showSuccessToast(t('welcome_back'), t('redirecting'))
         // Redirect handled by AuthContext/AppRouter
       }
     } catch (err) {
       setErrorType('network')
       setError(t('errors.network_error'))
-      toast({
-        variant: 'destructive',
-        title: t('errors.title'),
-        description: t('errors.network_error')
-      })
+      showErrorToast(t('errors.title'), t('errors.network_error'))
       setLoading(false)
     }
   }
@@ -327,18 +313,11 @@ export function LoginForm() {
       if (resetError) throw resetError
 
       setAuthView('forgot_success')
-      toast({
-        title: t('forgot_password.success_title'),
-        description: t('forgot_password.success_message'),
-      })
+      showSuccessToast(t('forgot_password.success_title'), t('forgot_password.success_message'))
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('forgot_password.error')
       setResetError(message)
-      toast({
-        variant: 'destructive',
-        title: t('errors.title'),
-        description: message,
-      })
+      showErrorToast(t('errors.title'), message)
     } finally {
       setResetLoading(false)
     }
@@ -363,98 +342,103 @@ export function LoginForm() {
 
   if (success) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center py-12 text-center space-y-6"
-      >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-          className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-full flex items-center justify-center shadow-lg"
+      <LazyMotion features={domAnimation}>
+        <m.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center py-12 text-center space-y-6"
         >
-          <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
-        </motion.div>
-        <div className="space-y-2">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            {t('welcome_back')}
-          </h3>
-          <p className="text-gray-500">{t('redirecting')}</p>
-        </div>
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </motion.div>
+          <m.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+            className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-full flex items-center justify-center shadow-lg"
+          >
+            <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+          </m.div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              {t('welcome_back')}
+            </h3>
+            <p className="text-gray-500">{t('redirecting')}</p>
+          </div>
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </m.div>
+      </LazyMotion>
     )
   }
 
   if (authView === 'forgot_success') {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center py-10 text-center space-y-6"
-      >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-          className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-full flex items-center justify-center shadow-lg"
+      <LazyMotion features={domAnimation}>
+        <m.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center py-10 text-center space-y-6"
         >
-          <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
-        </motion.div>
-        <div className="space-y-2">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            {t('forgot_password.success_title')}
-          </h3>
-          <p className="text-gray-500">
-            {t('forgot_password.success_message')}
-          </p>
-        </div>
-        <div className="w-full rounded-xl bg-gray-50 dark:bg-gray-800/40 p-4 text-sm text-gray-600 dark:text-gray-300">
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-gray-400" />
-            <span className="truncate">{resetEmail}</span>
+          <m.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+            className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-full flex items-center justify-center shadow-lg"
+          >
+            <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+          </m.div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              {t('forgot_password.success_title')}
+            </h3>
+            <p className="text-gray-500">
+              {t('forgot_password.success_message')}
+            </p>
           </div>
-        </div>
-        <div className="w-full space-y-3">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              setResetEmail('')
-              setResetEmailValid(null)
-              setAuthView('forgot')
-            }}
-          >
-            {t('forgot_password.try_different')}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            onClick={handleBackToLogin}
-          >
-            <ArrowRight className={cn("h-4 w-4 mr-2 rotate-180", isRTL && 'rotate-0')} />
-            {t('forgot_password.back_to_login')}
-          </Button>
-        </div>
-        <p className="text-xs text-gray-400">
-          {t('forgot_password.check_spam')}
-        </p>
-      </motion.div>
+          <div className="w-full rounded-xl bg-gray-50 dark:bg-gray-800/40 p-4 text-sm text-gray-600 dark:text-gray-300">
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-gray-400" />
+              <span className="truncate">{resetEmail}</span>
+            </div>
+          </div>
+          <div className="w-full space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setResetEmail('')
+                setResetEmailValid(null)
+                setAuthView('forgot')
+              }}
+            >
+              {t('forgot_password.try_different')}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={handleBackToLogin}
+            >
+              <ArrowRight className={cn("h-4 w-4 mr-2 rotate-180", isRTL && 'rotate-0')} />
+              {t('forgot_password.back_to_login')}
+            </Button>
+          </div>
+          <p className="text-xs text-gray-400">
+            {t('forgot_password.check_spam')}
+          </p>
+        </m.div>
+      </LazyMotion>
     )
   }
 
   if (authView === 'forgot') {
     return (
-      <motion.form
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-        onSubmit={handleForgotSubmit}
-        className="space-y-5"
-      >
+      <LazyMotion features={domAnimation}>
+        <m.form
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          onSubmit={handleForgotSubmit}
+          className="space-y-5"
+        >
         <div className="space-y-2 text-center">
           <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
             {t('forgot_password.title')}
@@ -466,7 +450,7 @@ export function LoginForm() {
 
         <AnimatePresence mode="wait">
           {resetError && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, height: 0, scale: 0.95 }}
               animate={{ opacity: 1, height: 'auto', scale: 1 }}
               exit={{ opacity: 0, height: 0, scale: 0.95 }}
@@ -479,7 +463,7 @@ export function LoginForm() {
                 <p className="font-semibold">{t('errors.title')}</p>
                 <p className="text-sm opacity-90 mt-0.5">{resetError}</p>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
@@ -525,21 +509,23 @@ export function LoginForm() {
           <ArrowRight className={cn("h-4 w-4 mr-2 rotate-180", isRTL && 'rotate-0')} />
           {t('forgot_password.back_to_login')}
         </Button>
-      </motion.form>
+        </m.form>
+      </LazyMotion>
     )
   }
 
   return (
-    <motion.form
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4, delay: 0.3 }}
-      onSubmit={handleSubmit}
-      className="space-y-5"
-    >
+    <LazyMotion features={domAnimation}>
+      <m.form
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+        onSubmit={handleSubmit}
+        className="space-y-5"
+      >
       <div className="space-y-5">
         {/* Email Field */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
@@ -557,10 +543,10 @@ export function LoginForm() {
             isRTL={isRTL}
             valid={emailValid}
           />
-        </motion.div>
+        </m.div>
 
         {/* Password Field */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
@@ -598,7 +584,7 @@ export function LoginForm() {
           {/* Password Strength Indicator */}
           <AnimatePresence>
             {password && focusedField === 'password' && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -606,7 +592,7 @@ export function LoginForm() {
               >
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <motion.div
+                    <m.div
                       initial={{ width: 0 }}
                       animate={{ width: `${(passwordStrength.score / 4) * 100}%` }}
                       transition={{ duration: 0.3 }}
@@ -617,14 +603,14 @@ export function LoginForm() {
                     {t(`password_strength.${passwordStrength.label}`)}
                   </span>
                 </div>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
 
           {/* Caps Lock Warning */}
           <AnimatePresence>
             {capsLockOn && focusedField === 'password' && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -634,13 +620,13 @@ export function LoginForm() {
                   <LockKeyhole className="h-3.5 w-3.5" />
                 </div>
                 <span className="font-medium">{t('caps_lock_on')}</span>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
-        </motion.div>
+        </m.div>
 
         {/* Remember Me & Forgot Password */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
@@ -668,13 +654,13 @@ export function LoginForm() {
           >
             {t('forgot_password.title')}
           </button>
-        </motion.div>
+        </m.div>
       </div>
 
       {/* Error Message */}
       <AnimatePresence mode="wait">
         {error && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, height: 0, scale: 0.95 }}
             animate={{ opacity: 1, height: 'auto', scale: 1 }}
             exit={{ opacity: 0, height: 0, scale: 0.95 }}
@@ -697,12 +683,12 @@ export function LoginForm() {
               <p className="font-semibold">{t('errors.title')}</p>
               <p className="text-sm opacity-90 mt-0.5">{error}</p>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
       {/* Submit Button */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6 }}
@@ -727,10 +713,10 @@ export function LoginForm() {
             </div>
           )}
         </Button>
-      </motion.div>
+      </m.div>
 
       {/* Security Tips */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
@@ -752,7 +738,8 @@ export function LoginForm() {
             {t('security_tips.logout')}
           </li>
         </ul>
-      </motion.div>
-    </motion.form>
+      </m.div>
+      </m.form>
+    </LazyMotion>
   )
 }

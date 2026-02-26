@@ -1,11 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const SUPPORTED_LANGUAGES = ['en', 'ar', 'fr', 'es', 'de', 'ru', 'tr', 'ur', 'hi', 'bn', 'id', 'tl'] as const
 
@@ -40,6 +35,7 @@ const sanitizeTranslation = (value: string, targetLang: string) => {
 }
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
@@ -283,3 +279,6 @@ serve(async (req) => {
         })
     }
 })
+
+
+

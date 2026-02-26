@@ -1,10 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com").replace(/\/+$/, "");
@@ -224,6 +220,7 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
 };
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -958,9 +955,9 @@ function buildTemplateContext(
 
   const baseContext: Record<string, string> = {
     title: asText(payload.title, "PHG Connect Notification"),
-    message: asText(payload.message, isAr ? "لديك تحديث جديد في برايم كونكت." : "You have a new update in PHG Connect."),
+    message: asText(payload.message, isAr ? "Ù„Ø¯ÙŠÙƒ ØªØ­Ø¯ÙŠØ« Ø¬Ø¯ÙŠØ¯ ÙÙŠ Ø¨Ø±Ø§ÙŠÙ… ÙƒÙˆÙ†ÙƒØª." : "You have a new update in PHG Connect."),
     action_url: actionUrl,
-    action_label: asText(payload.actionLabel, isAr ? "فتح المنصة" : "Open PHG Connect"),
+    action_label: asText(payload.actionLabel, isAr ? "ÙØªØ­ Ø§Ù„Ù…Ù†ØµØ©" : "Open PHG Connect"),
     app_url: appBaseUrl,
     logo_url: `${appBaseUrl}/prime-logo-white-full.png`, // Corrected high-contrast logo
     recipient_name: recipientName || recipientEmail,
@@ -973,7 +970,7 @@ function buildTemplateContext(
     brand_gradient: branding.gradient,
     business_unit_label: isAr ? branding.labelAr : branding.labelEn,
     footer_text: isAr
-      ? "إشعار تلقائي من برايم كونكت. تم الإرسال بناءً على إجراء في قسمك أو تعيين مهمة لك."
+      ? "Ø¥Ø´Ø¹Ø§Ø± ØªÙ„Ù‚Ø§Ø¦ÙŠ Ù…Ù† Ø¨Ø±Ø§ÙŠÙ… ÙƒÙˆÙ†ÙƒØª. ØªÙ… Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø¥Ø¬Ø±Ø§Ø¡ ÙÙŠ Ù‚Ø³Ù…Ùƒ Ø£Ùˆ ØªØ¹ÙŠÙŠÙ† Ù…Ù‡Ù…Ø© Ù„Ùƒ."
       : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
     has_data_box: (payload.data_box || payload.variables?.data_box) ? "true" : "false",
     data_box_content: asText(payload.data_box || payload.variables?.data_box, "")
@@ -996,43 +993,43 @@ function resolveBranding(domain: string) {
       color: "#0D9488",
       gradient: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
       labelEn: "HR & Workplace Excellence",
-      labelAr: "الموارد البشرية والتميز"
+      labelAr: "Ø§Ù„Ù…ÙˆØ§Ø±Ø¯ Ø§Ù„Ø¨Ø´Ø±ÙŠØ© ÙˆØ§Ù„ØªÙ…ÙŠØ²"
     },
     learning: {
       color: "#D97706",
       gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
       labelEn: "Learning & Academy",
-      labelAr: "التعلم والأكاديمية"
+      labelAr: "Ø§Ù„ØªØ¹Ù„Ù… ÙˆØ§Ù„Ø£ÙƒØ§Ø¯ÙŠÙ…ÙŠØ©"
     },
     finance: {
       color: "#2563EB",
       gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
       labelEn: "Finance & Approvals",
-      labelAr: "المالية والاعتمادات"
+      labelAr: "Ø§Ù„Ù…Ø§Ù„ÙŠØ© ÙˆØ§Ù„Ø§Ø¹ØªÙ…Ø§Ø¯Ø§Øª"
     },
     operations: {
       color: "#DC2626",
       gradient: "linear-gradient(135deg, #DC2626 0%, #991B1B 100%)",
       labelEn: "Operations & Safety",
-      labelAr: "العمليات والسلامة"
+      labelAr: "Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª ÙˆØ§Ù„Ø³Ù„Ø§Ù…Ø©"
     },
     management: {
       color: "#1E293B",
       gradient: "linear-gradient(135deg, #334155 0%, #0F172A 100%)",
       labelEn: "Corporate Management",
-      labelAr: "الإدارة العامة"
+      labelAr: "Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¹Ø§Ù…Ø©"
     },
     sales: {
       color: "#4F46E5",
       gradient: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)",
       labelEn: "Sales & Pipelines",
-      labelAr: "المبيعات والنمو"
+      labelAr: "Ø§Ù„Ù…Ø¨ÙŠØ¹Ø§Øª ÙˆØ§Ù„Ù†Ù…Ùˆ"
     },
     system: {
       color: "#0F172A",
       gradient: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
       labelEn: "System Administration",
-      labelAr: "إدارة النظام"
+      labelAr: "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù†Ø¸Ø§Ù…"
     }
   };
 
@@ -1128,3 +1125,6 @@ function sleep(ms: number): Promise<void> {
   const clamped = Number.isFinite(ms) && ms > 0 ? ms : 0;
   return new Promise((resolve) => setTimeout(resolve, clamped));
 }
+
+
+

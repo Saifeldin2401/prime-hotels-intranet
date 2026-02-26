@@ -74,37 +74,7 @@ export function validateEnvironment(): EnvConfig {
   return config as EnvConfig
 }
 
-// Security headers configuration
-export const securityHeaders = {
-  'Content-Security-Policy': [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Needed for some libraries
-    "style-src 'self' 'unsafe-inline'", // Needed for Tailwind
-    "img-src 'self' data: https:",
-    "font-src 'self'",
-    `connect-src 'self' https://api.supabase.co ${import.meta.env.VITE_SUPABASE_URL || ''}`.trim(),
-    "frame-ancestors 'none'"
-  ].join('; '),
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'geolocation=(), microphone=(), camera=()'
-}
-
-// CORS configuration
-export const corsConfig = {
-  origin: import.meta.env.PROD
-    ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
-    : ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'apikey']
-}
-
-// Rate limiting configuration
-export const rateLimitConfig = {
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
-  message: 'Too many requests from this IP, please try again later.'
-}
+// NOTE: Security headers, CORS, and rate limiting are enforced at infrastructure level:
+// - Security headers: vercel.json (production) + vite.config.ts security-headers plugin (dev)
+// - CORS: Supabase API handles CORS for database requests
+// - Rate limiting: Requires server-side middleware (Supabase handles API rate limits)

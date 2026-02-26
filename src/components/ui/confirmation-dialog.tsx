@@ -1,6 +1,6 @@
+import React from 'react'
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -8,7 +8,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { AlertTriangle, Trash2, CheckCircle, Info, XCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { AlertTriangle, Trash2, CheckCircle, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type ConfirmationVariant = 'danger' | 'warning' | 'info' | 'success'
@@ -68,11 +69,10 @@ export function ConfirmationDialog({
 
     const handleConfirm = async () => {
         await onConfirm()
-        onOpenChange(false)
     }
 
     return (
-        <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialog open={open} onOpenChange={(v) => { if (!isLoading) onOpenChange(v) }}>
             <AlertDialogContent className="sm:max-w-[425px]">
                 <AlertDialogHeader>
                     <div className="flex items-start gap-4">
@@ -89,7 +89,7 @@ export function ConfirmationDialog({
                 </AlertDialogHeader>
                 <AlertDialogFooter className="sm:space-x-2">
                     <AlertDialogCancel disabled={isLoading}>{cancelText}</AlertDialogCancel>
-                    <AlertDialogAction
+                    <Button
                         onClick={handleConfirm}
                         disabled={isLoading}
                         className={cn(config.buttonClass, 'text-white')}
@@ -102,7 +102,7 @@ export function ConfirmationDialog({
                         ) : (
                             confirmText
                         )}
-                    </AlertDialogAction>
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -112,6 +112,7 @@ export function ConfirmationDialog({
 // Convenience hook for using confirmation dialogs
 export function useConfirmation() {
     const [isOpen, setIsOpen] = React.useState(false)
+    const resolveRef = React.useRef<((value: boolean) => void) | null>(null)
     const [config, setConfig] = React.useState<Omit<ConfirmationDialogProps, 'open' | 'onOpenChange'>>({
         onConfirm: () => { },
         title: '',
@@ -120,6 +121,7 @@ export function useConfirmation() {
 
     const confirm = (options: Omit<ConfirmationDialogProps, 'open' | 'onOpenChange'>) => {
         return new Promise<boolean>((resolve) => {
+            resolveRef.current = resolve
             setConfig({
                 ...options,
                 onConfirm: async () => {
@@ -137,8 +139,9 @@ export function useConfirmation() {
             open={isOpen}
             onOpenChange={(open) => {
                 setIsOpen(open)
-                if (!open) {
-                    // User cancelled
+                if (!open && resolveRef.current) {
+                    resolveRef.current(false)
+                    resolveRef.current = null
                 }
             }}
         />
@@ -146,6 +149,3 @@ export function useConfirmation() {
 
     return { confirm, dialog }
 }
-
-// Add React import
-import React from 'react'

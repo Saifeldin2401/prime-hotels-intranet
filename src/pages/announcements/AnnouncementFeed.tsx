@@ -136,6 +136,13 @@ export default function AnnouncementFeed() {
     markAsReadMutation.mutate(announcementId)
   }
 
+  const handleAnnouncementKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, announcementId: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      navigate(`/announcements/${announcementId}`)
+    }
+  }
+
   const isAdmin = primaryRole && ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole)
 
   const handleRefresh = async () => {
@@ -186,6 +193,10 @@ export default function AnnouncementFeed() {
                           key={announcement.id}
                           className={`p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors ${priorityColor}`}
                           onClick={() => navigate(`/announcements/${announcement.id}`)}
+                          onKeyDown={(event) => handleAnnouncementKeyDown(event, announcement.id)}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t('actions.openAnnouncement', { defaultValue: 'Open announcement: {{title}}', title: announcement.title })}
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -202,7 +213,7 @@ export default function AnnouncementFeed() {
                                 <Button
                                   size="sm"
                                   className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                  onClick={() => handleMarkAsRead(announcement.id)}
+                                  onClick={(e) => { e.stopPropagation(); handleMarkAsRead(announcement.id) }}
                                   disabled={markAsReadMutation.isPending}
                                 >
                                   {t('actions.markRead')}
@@ -213,14 +224,14 @@ export default function AnnouncementFeed() {
                                   <Button
                                     size="sm"
                                     className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                    onClick={() => handleEdit(announcement)}
+                                    onClick={(e) => { e.stopPropagation(); handleEdit(announcement) }}
                                   >
                                     {t('actions.edit')}
                                   </Button>
                                   <Button
                                     size="sm"
                                     className="bg-white border border-gray-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 rounded-md transition-colors"
-                                    onClick={() => setDeleteData(announcement)}
+                                    onClick={(e) => { e.stopPropagation(); setDeleteData(announcement) }}
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
