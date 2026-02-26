@@ -82,6 +82,9 @@ export default defineConfig({
     // Security: Rate limiting middleware
     middlewareMode: false,
   },
+  preview: {
+    allowedHosts: ['prime-hotels-intranet.onrender.com']
+  },
   optimizeDeps: {},
   build: {
     // Security: Build optimizations
