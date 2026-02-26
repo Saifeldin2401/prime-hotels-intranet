@@ -358,31 +358,59 @@ export function QuizComponent({
         try {
             const questionText = questionItem.question.question_text || ''
             const explanationText = questionItem.question.explanation || ''
-            const optionTexts = questionItem.question.options?.map(o => ({ id: o.id, text: o.option_text })) || []
+            const optionTexts = questionItem.question.options?.map(o => ({ id: o.id, text: o.option_text || '' })) || []
 
-            const [translatedQuestion, translatedExplanation] = await Promise.all([
-                translateAI.mutateAsync({ text: questionText, target_lang: translationTarget, source_lang: 'auto' }),
-                explanationText
-                    ? translateAI.mutateAsync({ text: explanationText, target_lang: translationTarget, source_lang: 'auto' })
-                    : Promise.resolve({ translated_text: '' })
-            ])
+            // Use a unique delimiter that is unlikely to be part of the text
+            const SEPARATOR = ' ||| '
+            // Placeholder for empty strings to preserve structure during split
+            const EMPTY_PLACEHOLDER = '[[EMPTY]]'
 
-            const translatedOptionsEntries = await Promise.all(
-                optionTexts.map(async (opt) => {
-                    const res = opt.text
-                        ? await translateAI.mutateAsync({ text: opt.text, target_lang: translationTarget, source_lang: 'auto' })
-                        : { translated_text: '' }
-                    return [opt.id, res.translated_text]
-                })
-            )
+            // Prepare parts for batch translation
+            // 0: Question Text
+            // 1: Explanation Text
+            // 2...N: Option Texts
+            const parts = [
+                questionText,
+                explanationText,
+                ...optionTexts.map(o => o.text)
+            ]
+
+            // Replace empty strings with placeholder
+            const partsToTranslate = parts.map(p => p.trim() === '' ? EMPTY_PLACEHOLDER : p)
+            const batchText = partsToTranslate.join(SEPARATOR)
+
+            const result = await translateAI.mutateAsync({
+                text: batchText,
+                target_lang: translationTarget,
+                source_lang: 'auto'
+            })
+
+            // Parse result
+            let translatedParts = result.translated_text.split(/\s*\|\|\|\s*/).map(s => s.trim())
+
+            // Restore empty strings
+            translatedParts = translatedParts.map(p => p === EMPTY_PLACEHOLDER ? '' : p)
+
+            // Ensure we have enough parts (pad with empty if needed, though translation service should be consistent)
+            while (translatedParts.length < parts.length) {
+                translatedParts.push('')
+            }
+
+            const translatedQuestionText = translatedParts[0]
+            const translatedExplanationText = translatedParts[1]
+            const translatedOptionTexts = translatedParts.slice(2)
+
+            const translatedOptionsEntries = optionTexts.map((opt, index) => {
+                return [opt.id, translatedOptionTexts[index] || '']
+            })
 
             setTranslatedQuestions(prev => ({
                 ...prev,
                 [questionItem.question_id]: {
                     ...prev[questionItem.question_id],
                     [translationTarget]: {
-                        text: translatedQuestion.translated_text,
-                        explanation: translatedExplanation.translated_text,
+                        text: translatedQuestionText,
+                        explanation: translatedExplanationText,
                         options: Object.fromEntries(translatedOptionsEntries)
                     }
                 }
