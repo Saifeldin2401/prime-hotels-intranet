@@ -48,6 +48,7 @@ import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
+import { RejectionDialog } from '@/components/approvals/RejectionDialog'
 
 export default function MyApprovals() {
   const { t, i18n } = useTranslation(['approvals', 'common'])
@@ -60,6 +61,7 @@ export default function MyApprovals() {
   const [selectedStaffId, setSelectedStaffId] = useState<string>('')
   const [assignmentDueDate, setAssignmentDueDate] = useState('')
   const [assignmentNote, setAssignmentNote] = useState('')
+  const [rejectionTarget, setRejectionTarget] = useState<{ id: string, type: 'document' | 'leave' } | null>(null)
   const queryClient = useQueryClient()
   const { notifyRequestApproved, notifyRequestRejected, notifyMaintenanceAssigned } = useNotificationTriggers()
   const toValidDate = (value?: string | null) => {
@@ -498,10 +500,7 @@ export default function MyApprovals() {
   }
 
   const handleReject = (approvalId: string) => {
-    const reason = prompt(t('reject_reason_prompt'))
-    if (reason) {
-      rejectMutation.mutate({ approvalId, reason })
-    }
+    setRejectionTarget({ id: approvalId, type: 'document' })
   }
 
   const handleApproveLeave = (leaveRequestId: string) => {
@@ -509,10 +508,7 @@ export default function MyApprovals() {
   }
 
   const handleRejectLeave = (leaveRequestId: string) => {
-    const reason = prompt(t('reject_reason_prompt'))
-    if (reason) {
-      rejectLeaveMutation.mutate({ leaveRequestId, reason })
-    }
+    setRejectionTarget({ id: leaveRequestId, type: 'leave' })
   }
 
   const handleAssignMaintenance = (ticketId: string) => {
@@ -1045,6 +1041,25 @@ export default function MyApprovals() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RejectionDialog
+          open={!!rejectionTarget}
+          onOpenChange={(open) => !open && setRejectionTarget(null)}
+          onConfirm={(reason) => {
+              if (rejectionTarget?.type === 'document') {
+                  rejectMutation.mutate({ approvalId: rejectionTarget.id, reason }, {
+                      onSuccess: () => setRejectionTarget(null)
+                  })
+              } else if (rejectionTarget?.type === 'leave') {
+                  rejectLeaveMutation.mutate({ leaveRequestId: rejectionTarget.id, reason }, {
+                      onSuccess: () => setRejectionTarget(null)
+                  })
+              }
+          }}
+          isPending={rejectMutation.isPending || rejectLeaveMutation.isPending}
+          title={rejectionTarget?.type === 'document' ? t('reject_dialog_title_document') : t('reject_dialog_title_leave')}
+          description={rejectionTarget?.type === 'document' ? t('reject_dialog_desc_document') : t('reject_dialog_desc_leave')}
+      />
     </div >
   )
 }

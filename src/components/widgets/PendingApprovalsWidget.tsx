@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Clock, CheckCircle, XCircle, ArrowRight } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { Link } from 'react-router-dom'
@@ -7,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useApprovalStats, usePendingApprovals } from '@/hooks/useApprovalStats'
 import { useApproveLeaveRequest, useRejectLeaveRequest } from '@/hooks/useLeaveRequests'
+import { RejectionDialog } from '@/components/approvals/RejectionDialog'
 import { cn } from '@/lib/utils'
 import { useTranslation } from "react-i18next";
 
@@ -27,10 +29,12 @@ const leaveTypeLabels: Record<string, string> = {
 }
 
 export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingApprovalsWidgetProps) {
+    const { t } = useTranslation('approvals')
     const { data: stats } = useApprovalStats()
     const { data: pendingItems, isLoading } = usePendingApprovals()
     const approveMutation = useApproveLeaveRequest()
     const rejectMutation = useRejectLeaveRequest()
+    const [rejectionId, setRejectionId] = useState<string | null>(null)
 
     const displayItems = pendingItems?.slice(0, maxItems) || []
     const hasMore = (pendingItems?.length || 0) > maxItems
@@ -137,12 +141,7 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                                 size="icon"
                                 variant="ghost"
                                 className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => {
-                                    const reason = prompt('Please provide a reason for rejection:')
-                                    if (reason) {
-                                        rejectMutation.mutate({ requestId: item.id, reason })
-                                    }
-                                }}
+                                onClick={() => setRejectionId(item.id)}
                                 disabled={rejectMutation.isPending}
                             >
                                 <XCircle className="h-4 w-4" />
@@ -160,6 +159,21 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                     </Link>
                 )}
             </CardContent>
+
+            <RejectionDialog
+                open={!!rejectionId}
+                onOpenChange={(open) => !open && setRejectionId(null)}
+                onConfirm={(reason) => {
+                    if (rejectionId) {
+                        rejectMutation.mutate({ requestId: rejectionId, reason }, {
+                            onSuccess: () => setRejectionId(null)
+                        })
+                    }
+                }}
+                isPending={rejectMutation.isPending}
+                title={t('reject_dialog_title_leave', 'Reject Leave Request')}
+                description={t('reject_dialog_desc_leave', 'Please provide a reason for rejecting this request.')}
+            />
         </Card>
     )
 }

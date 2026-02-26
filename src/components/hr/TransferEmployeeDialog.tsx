@@ -79,11 +79,21 @@ interface Department {
 interface TransferEmployeeDialogProps {
     children?: React.ReactNode;
     onSuccess?: () => void;
+    editRecord?: {
+        id: string;
+        request_id?: string;
+        employee_id: string;
+        to_property_id: string;
+        to_department_id: string | null;
+        effective_date: string;
+        notes: string | null;
+    };
 }
 
 export function TransferEmployeeDialog({
     children,
     onSuccess,
+    editRecord,
 }: TransferEmployeeDialogProps) {
     const [open, setOpen] = useState(false);
     const [employees, setEmployees] = useState<Profile[]>([]);
@@ -96,10 +106,36 @@ export function TransferEmployeeDialog({
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            notes: "",
-            effectiveDate: new Date(),
+            employeeId: editRecord?.employee_id || "",
+            targetPropertyId: editRecord?.to_property_id || "",
+            targetDepartmentId: editRecord?.to_department_id || undefined,
+            notes: editRecord?.notes || "",
+            effectiveDate: editRecord?.effective_date ? new Date(editRecord.effective_date) : new Date(),
         },
     });
+
+    useEffect(() => {
+        if (!open) return;
+
+        if (editRecord) {
+            form.reset({
+                employeeId: editRecord.employee_id,
+                targetPropertyId: editRecord.to_property_id,
+                targetDepartmentId: editRecord.to_department_id || undefined,
+                notes: editRecord.notes || "",
+                effectiveDate: new Date(editRecord.effective_date),
+            });
+            return;
+        }
+
+        form.reset({
+            employeeId: "",
+            targetPropertyId: "",
+            targetDepartmentId: undefined,
+            notes: "",
+            effectiveDate: new Date(),
+        });
+    }, [open, editRecord, form]);
 
     const loadData = useCallback(async () => {
         setLoadingData(true);
@@ -169,17 +205,37 @@ export function TransferEmployeeDialog({
         if (!user) return;
 
         try {
-            const { error } = await supabase.rpc("submit_transfer_request", {
-                p_employee_id: values.employeeId,
-                p_to_property_id: values.targetPropertyId,
-                p_to_department_id: values.targetDepartmentId || null,
-                p_effective_date: format(values.effectiveDate, "yyyy-MM-dd"),
-                p_notes: values.notes || null,
-            });
+            if (editRecord) {
+                if (!editRecord.request_id) throw new Error("Request ID is missing");
 
-            if (error) throw error;
+                const { data, error } = await supabase.rpc("update_request_details", {
+                    p_request_id: editRecord.request_id,
+                    p_updates: {
+                        to_property_id: values.targetPropertyId,
+                        to_department_id: values.targetDepartmentId || null,
+                        effective_date: format(values.effectiveDate, "yyyy-MM-dd"),
+                        notes: values.notes || null,
+                    }
+                });
 
-            toast.success("Transfer request has been submitted for approval");
+                if (error) throw error;
+                if (data && typeof data === 'object' && 'success' in data && !data.success) {
+                    throw new Error((data as { message?: string }).message || "Failed to update request");
+                }
+                toast.success("Transfer request has been updated");
+            } else {
+                const { error } = await supabase.rpc("submit_transfer_request", {
+                    p_employee_id: values.employeeId,
+                    p_to_property_id: values.targetPropertyId,
+                    p_to_department_id: values.targetDepartmentId || null,
+                    p_effective_date: format(values.effectiveDate, "yyyy-MM-dd"),
+                    p_notes: values.notes || null,
+                });
+
+                if (error) throw error;
+                toast.success("Transfer request has been submitted for approval");
+            }
+
             setOpen(false);
             form.reset();
             if (onSuccess) onSuccess();
@@ -211,9 +267,11 @@ export function TransferEmployeeDialog({
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Transfer Employee</DialogTitle>
+                    <DialogTitle>{editRecord ? 'Edit Transfer Request' : 'Transfer Employee'}</DialogTitle>
                     <DialogDescription>
-                        Submit a transfer request. The employee will be moved to the new property/department on the effective date after approval.
+                        {editRecord
+                            ? 'Update the details of this transfer request.'
+                            : 'Submit a transfer request. The employee will be moved to the new property/department on the effective date after approval.'}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -232,10 +290,11 @@ export function TransferEmployeeDialog({
                                         <FormLabel>Employee *</FormLabel>
                                         <Select
                                             onValueChange={field.onChange}
-                                            defaultValue={field.value}
+                                            value={field.value}
+                                            disabled={!!editRecord || loadingData}
                                         >
                                             <FormControl>
-                                                <SelectTrigger disabled={loadingData}>
+                                                <SelectTrigger>
                                                     <SelectValue placeholder="Select employee" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -410,7 +469,7 @@ export function TransferEmployeeDialog({
                                 {form.formState.isSubmitting && (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 )}
-                                Submit Request
+                                {editRecord ? 'Save Changes' : 'Submit Request'}
                             </Button>
                         </DialogFooter>
                     </form>

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider, dehydrate, hydrate, focusManager, onlineManager } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { RouterProvider } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
@@ -49,7 +50,14 @@ const persistQueryCache = () => {
   if (typeof window === 'undefined') return
   try {
     const state = dehydrate(queryClient, {
-      shouldDehydrateQuery: (query) => query.state.status === 'success'
+      shouldDehydrateQuery: (query) => {
+        if (query.state.status !== 'success') return false
+        const data = query.state.data as unknown
+        if (Array.isArray(data) && data.length > 200) {
+          return false
+        }
+        return true
+      }
     })
     window.sessionStorage.setItem(
       QUERY_CACHE_KEY,
@@ -64,22 +72,20 @@ restoreQueryCache()
 
 function App() {
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        persistQueryCache()
-      }
-    }
-
     const handlePageHide = () => {
       persistQueryCache()
     }
 
-    document.addEventListener('visibilitychange', handleVisibility)
+    const handleBeforeUnload = () => {
+      persistQueryCache()
+    }
+
     window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('beforeunload', handleBeforeUnload)
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibility)
       window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   }, [])
 
@@ -128,6 +134,7 @@ function App() {
           {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         </ThemeProvider>
         <Toaster />
+        <Analytics />
       </QueryClientProvider>
     </ErrorBoundary>
   )

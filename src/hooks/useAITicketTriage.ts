@@ -15,15 +15,6 @@ interface TriageSuggestion {
     confidence: number
     suggestedTitle?: string
     roomNumber?: string
-    similarTickets: SimilarTicket[]
-}
-
-interface SimilarTicket {
-    id: string
-    title: string
-    status: string
-    resolved_at?: string
-    resolution_notes?: string
 }
 
 export function useAITicketTriage() {
@@ -46,19 +37,7 @@ export function useAITicketTriage() {
         setLoading(true)
 
         try {
-            // 1. Search for similar past tickets
-            // Strip all non-alphanumeric characters except spaces
-            const keywords = description.toLowerCase()
-                .replace(/[^a-z0-9\s]/g, '')
-                .split(/\s+/)
-                .filter(w => w.length > 3)
-                .slice(0, 5) // Take top 5 keywords
-
-            // Similar tickets search disabled due to Supabase query limitations
-            // The AI classification works without it - can be re-enabled with full-text search later
-            const similarTickets: SimilarTicket[] = []
-
-            // 2. Call AI for classification
+            // Call AI for classification
             const prompt = `You are a hotel maintenance manager. Classify this maintenance request and suggest the appropriate category, priority, department, a concise title, and extract any room number mentioned.
 
 MAINTENANCE REQUEST:
@@ -115,26 +94,19 @@ Do not include any text outside the JSON.`
                     department: parsed.department || 'Engineering',
                     confidence: parsed.confidence || 70,
                     suggestedTitle: parsed.suggestedTitle || undefined,
-                    roomNumber: parsed.roomNumber || undefined,
-                    similarTickets
+                    roomNumber: parsed.roomNumber || undefined
                 })
             } else {
                 // Fallback classification based on keywords
                 const fallbackSuggestion = getFallbackClassification(description)
-                setSuggestion({
-                    ...fallbackSuggestion,
-                    similarTickets
-                })
+                setSuggestion(fallbackSuggestion)
             }
 
         } catch (error: unknown) {
             console.error('Ticket triage error:', error)
             // Don't show error toast - silent fallback
             const fallbackSuggestion = getFallbackClassification(description)
-            setSuggestion({
-                ...fallbackSuggestion,
-                similarTickets: []
-            })
+            setSuggestion(fallbackSuggestion)
         } finally {
             setLoading(false)
         }
@@ -160,7 +132,7 @@ Do not include any text outside the JSON.`
 }
 
 // Fallback classification based on keywords
-function getFallbackClassification(description: string): Omit<TriageSuggestion, 'similarTickets'> {
+function getFallbackClassification(description: string): TriageSuggestion {
     const text = description.toLowerCase()
 
     // Category detection

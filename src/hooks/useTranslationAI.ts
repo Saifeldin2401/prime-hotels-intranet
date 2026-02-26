@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
 export type TranslationTargetLanguage =
@@ -38,6 +38,7 @@ export const SUPPORTED_TRANSLATION_LANGUAGES: Array<{
 
 interface TranslationRequest {
     text?: string
+    texts?: string[]
     file_url?: string
     file_type?: 'pdf' | 'docx'
     target_lang: TranslationTargetLanguage
@@ -46,7 +47,8 @@ interface TranslationRequest {
 }
 
 interface TranslationResponse {
-    translated_text: string
+    translated_text?: string
+    translated_texts?: string[]
     extracted_text?: string
     success: boolean
     source_lang: string
@@ -56,8 +58,6 @@ interface TranslationResponse {
 }
 
 export function useTranslationAI() {
-    const queryClient = useQueryClient()
-
     return useMutation({
         mutationFn: async (request: TranslationRequest): Promise<TranslationResponse> => {
             const { data, error } = await supabase.functions.invoke('ai-translation', {
@@ -114,10 +114,6 @@ export function useTranslationAI() {
             if (data?.success === false) throw new Error(data.error || 'Translation failed')
 
             return data as TranslationResponse
-        },
-        onSuccess: (data, variables) => {
-            // Potentially invalidate or pre-fill other queries if needed
-            // For now, we rely on the database cache handled by the Edge Function
         }
     })
 }

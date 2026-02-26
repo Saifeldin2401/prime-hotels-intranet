@@ -454,7 +454,18 @@ export const aiService = {
 
 
 
-  async improveContent(text: string, instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic', language: string = 'English'): Promise<string | null> {
+  async improveContent(
+    text: string,
+    instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic',
+    language: string = 'English',
+    format: 'text' | 'html' = 'text',
+    options?: {
+      includeTables?: boolean
+      includeMermaid?: boolean
+      includeCallouts?: boolean
+      includeTOC?: boolean
+    }
+  ): Promise<string | null> {
 
     const prompts = {
 
@@ -501,6 +512,14 @@ export const aiService = {
     rules += `    5. Ensure the output is comprehensive and detailed. Do not cut corners.\n`;
 
     rules += `    6. Do NOT translate the "System" instructions above. Only process the text inside the <content> tags.\n`;
+
+    if (format === 'html') {
+      rules += `    7. Return valid semantic HTML only. Do not wrap output in markdown code fences.\n`;
+      if (options?.includeTables === false) rules += `    8. Do not add tables.\n`;
+      if (options?.includeMermaid) rules += `    9. Include at most one Mermaid diagram only when it materially helps understanding.\n`;
+      if (options?.includeCallouts === false) rules += `    10. Avoid decorative callout boxes.\n`;
+      if (options?.includeTOC === false) rules += `    11. Do not include a table of contents section.\n`;
+    }
 
 
 
@@ -633,6 +652,25 @@ export const aiService = {
   },
 
 
+
+  async beautifyArticle(
+    content: string,
+    contentType: string,
+    language: string,
+    style: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic' = 'professional',
+    options?: {
+      includeTables?: boolean
+      includeMermaid?: boolean
+      includeCallouts?: boolean
+      includeTOC?: boolean
+    }
+  ): Promise<string | null> {
+    const contentSeed = contentType
+      ? `Article Type: ${contentType}\n\n${content}`
+      : content
+
+    return this.improveContent(contentSeed, style, language, 'html', options)
+  },
 
   async suggestImportMapping(rawRows: string[][], targetHeaders: string[]): Promise<{ mapping: Record<string, string>, headerRowIndex: number }> {
 

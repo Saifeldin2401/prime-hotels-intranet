@@ -1,8 +1,7 @@
 /**
  * AITriageSuggestions - Display AI classification suggestions for tickets
  * 
- * Shows suggested category, priority, department with confidence level
- * and similar past tickets.
+ * Shows suggested category, priority, department with confidence level.
  */
 
 import { motion, AnimatePresence } from 'framer-motion'
@@ -13,20 +12,10 @@ import {
     CheckCircle2,
     AlertTriangle,
     Clock,
-    Loader2,
-    ChevronRight,
-    Lightbulb,
-    History
+    Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from "react-i18next";
-
-interface SimilarTicket {
-    id: string
-    title: string
-    status: string
-    resolved_at?: string
-}
 
 interface TriageSuggestion {
     category: string
@@ -35,7 +24,6 @@ interface TriageSuggestion {
     confidence: number
     suggestedTitle?: string
     roomNumber?: string
-    similarTickets: SimilarTicket[]
 }
 
 interface AITriageSuggestionsProps {
@@ -59,6 +47,7 @@ export function AITriageSuggestions({
     onApply,
     onDismiss
 }: AITriageSuggestionsProps) {
+    const { t } = useTranslation();
 
     if (loading) {
         return (
@@ -72,7 +61,7 @@ export function AITriageSuggestions({
                 </div>
                 <div>
                     <p className="text-sm font-medium text-violet-900">AI is analyzing your request...</p>
-                    <p className="text-xs text-violet-600">Finding best classification and similar tickets</p>
+                    <p className="text-xs text-violet-600">Finding best classification</p>
                 </div>
             </motion.div>
         )
@@ -174,32 +163,6 @@ export function AITriageSuggestions({
                         </div>
                     )}
                 </div>
-
-                {/* Similar Tickets */}
-                {suggestion.similarTickets.length > 0 && (
-                    <div className="px-4 pb-4">
-                        <div className="flex items-center gap-1.5 mb-2">
-                            <History className="h-3.5 w-3.5 text-amber-600" />
-                            <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Similar Past Tickets</p>
-                        </div>
-                        <div className="space-y-2">
-                            {suggestion.similarTickets.map((ticket) => (
-                                <div
-                                    key={ticket.id}
-                                    className="flex items-center justify-between p-2 rounded-lg bg-amber-50/50 border border-amber-100 text-sm"
-                                >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <Lightbulb className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                                        <span className="truncate text-gray-700">{ticket.title}</span>
-                                    </div>
-                                    <Badge variant="outline" className="ml-2 text-[10px] bg-white flex-shrink-0">
-                                        {ticket.status}
-                                    </Badge>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </motion.div>
         </AnimatePresence>
     )

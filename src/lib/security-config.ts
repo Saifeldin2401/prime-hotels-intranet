@@ -68,13 +68,15 @@ export const securityConfig = {
     directives: {
       'default-src': ["'self'"],
       'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Needed for some libraries
-      'style-src': ["'self'", "'unsafe-inline'"], // Needed for Tailwind
+      'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"], // Needed for Tailwind and Google Fonts
       'img-src': ["'self'", "data:", "https:"],
-      'font-src': ["'self'"],
+      'font-src': ["'self'", "data:", "https://fonts.gstatic.com"],
       'connect-src': [
         "'self'",
+        "https://api.supabase.co",
         "https://*.supabase.co",
         "wss://*.supabase.co",
+        "https://generativelanguage.googleapis.com",
         "https://api-inference.huggingface.co",
         "https://huggingface.co",
         "https://router.huggingface.co",
@@ -86,8 +88,9 @@ export const securityConfig = {
         "https://o4508792767840256.ingest.de.sentry.io",
         "https://*.sentry.io"
       ],
-      // Allow YouTube and Vimeo video embeds in knowledge base articles
-      'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com"],
+      // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
+      'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com", "https://*.supabase.co"],
+      'worker-src': ["'self'", "blob:"],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"]
