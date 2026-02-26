@@ -84,7 +84,7 @@ export default function DocumentDetail() {
   const { data: analytics } = useDocumentAnalytics(id!)
   const { data: folders = [] } = useDocumentFolders()
   
-  const recordView = useRecordDocumentView()
+  const { mutate: recordViewMutate } = useRecordDocumentView()
   const recordDownload = useRecordDocumentDownload()
   const addComment = useAddDocumentComment()
   const updateDocument = useUpdateDocument()
@@ -92,9 +92,9 @@ export default function DocumentDetail() {
   // Record view on mount
   useEffect(() => {
     if (id && user) {
-      recordView.mutate(id)
+      recordViewMutate(id)
     }
-  }, [id, user, recordView])
+  }, [id, user, recordViewMutate])
 
   // Resolve secure URL
   useEffect(() => {

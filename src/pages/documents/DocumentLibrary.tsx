@@ -168,7 +168,7 @@ export default function DocumentLibrary() {
   const restoreDocument = useRestoreDocument()
   const permanentDelete = usePermanentDeleteDocument()
   const toggleFavorite = useToggleFavorite()
-  const recordView = useRecordDocumentView()
+  const { mutate: recordViewMutate } = useRecordDocumentView()
   const { data: trashedDocuments = [] } = useDocumentTrash()
 
   // Bulk mutations
@@ -187,8 +187,8 @@ export default function DocumentLibrary() {
       file_url: doc.file_url
     })
     setViewerOpen(true)
-    recordView.mutate(doc.id)
-  }, [recordView])
+    recordViewMutate(doc.id)
+  }, [recordViewMutate])
 
   const handleOpenEdit = useCallback((doc: Document, e: MouseEvent) => {
     e.stopPropagation()
