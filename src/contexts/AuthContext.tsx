@@ -33,10 +33,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadSeqRef = useRef(0)
   const activeUserIdRef = useRef<string | null>(null)
   const lastUserDataRefreshRef = useRef<number>(0)
+  const profileRef = useRef<Profile | null>(null)
+  const rolesRef = useRef<UserRole[]>([])
+  const authRecoveryInProgressRef = useRef(false)
+  const resumeValidationInFlightRef = useRef(false)
+  const lastResumeValidationAtRef = useRef(0)
+
+  useEffect(() => {
+    profileRef.current = profile
+  }, [profile])
+
+  useEffect(() => {
+    rolesRef.current = roles
+  }, [roles])
+
+  const isAuthError = (error: unknown) => {
+    if (!error || typeof error !== 'object') return false
+    const candidate = error as { code?: string | number; status?: number }
+    const code = String(candidate.code ?? '')
+    const status = Number(candidate.status ?? 0)
+    return (
+      status === 401 ||
+      code === '401' ||
+      code === 'PGRST301' ||
+      code === 'PGRST302' ||
+      code.toUpperCase().includes('JWT')
+    )
+  }
+
+  const resetLocalAuthState = () => {
+    setUser(null)
+    setProfile(null)
+    setRoles([])
+    setProperties([])
+    setDepartments([])
+    setRolesLoading(false)
+    activeUserIdRef.current = null
+    lastUserDataRefreshRef.current = 0
+    loadSeqRef.current += 1
+  }
+
+  const clearLocalSession = async (reason: string) => {
+    if (authRecoveryInProgressRef.current) return
+    authRecoveryInProgressRef.current = true
+    try {
+      console.warn(`[Auth] ${reason}. Clearing local session.`)
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (error) {
+      console.warn('Failed to clear local auth session:', error)
+    } finally {
+      resetLocalAuthState()
+      authRecoveryInProgressRef.current = false
+    }
+  }
 
   const shouldRefreshUserData = (userId: string) => {
     if (activeUserIdRef.current !== userId) return true
-    if (!profile || roles.length === 0) return true
+    if (!profileRef.current || rolesRef.current.length === 0) return true
     if (!lastUserDataRefreshRef.current) return true
     return Date.now() - lastUserDataRefreshRef.current > 5 * 60 * 1000
   }
@@ -67,15 +120,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single()
+        .limit(1)
 
-      const { data: profileData, error: profileError } = await withTimeout(
+      const { data: profileRows, error: profileError } = await withTimeout(
         profilePromise as any,
         10000,
         'Profile load'
       ) as any
+      const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
 
       if (profileError) {
+        if (isAuthError(profileError)) {
+          await clearLocalSession('Profile request returned auth/session error')
+          return
+        }
         console.error('Error loading profile:', profileError)
 
         // Try alternative: use auth.users metadata
@@ -111,6 +169,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         setProfile(profileData)
+      } else {
+        // No profile row yet (e.g. during first-time auth propagation).
+        // Fall back to auth user metadata without logging as an error.
+        const { data: { user } } = await supabase.auth.getUser()
+        if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
+          return
+        }
+        if (user) {
+          const fullProfile: Profile = {
+            id: user.id,
+            email: user.email || '',
+            full_name: user.user_metadata?.full_name || null,
+            phone: user.user_metadata?.phone || null,
+            avatar_url: user.user_metadata?.avatar_url || null,
+            hire_date: null,
+            date_of_birth: null,
+            job_title: null,
+            staff_id: null,
+            reporting_to: null,
+            is_active: true,
+            emergency_contact_name: null,
+            emergency_contact_phone: null,
+            nationality: null,
+            blood_group: null,
+            created_at: user.created_at,
+            updated_at: new Date().toISOString()
+          }
+          setProfile(fullProfile)
+        }
       }
 
       // Load all other data in parallel with individual timeouts
@@ -144,6 +231,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (rolesResult.status === 'fulfilled') {
         const { data: directRoles, error: rolesError } = rolesResult.value
         if (rolesError) {
+          if (isAuthError(rolesError)) {
+            await clearLocalSession('Roles request returned auth/session error')
+            return
+          }
           console.error('Error loading roles:', rolesError)
           console.error('Roles error code:', rolesError.code)
           console.error('Roles error message:', rolesError.message)
@@ -163,6 +254,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (propertiesResult.status === 'fulfilled') {
         const { data: directProps, error: propertiesError } = propertiesResult.value
         if (propertiesError) {
+          if (isAuthError(propertiesError)) {
+            await clearLocalSession('Properties request returned auth/session error')
+            return
+          }
           console.error('Error loading properties:', propertiesError)
           console.error('Properties error code:', propertiesError.code)
           console.error('Properties error message:', propertiesError.message)
@@ -179,6 +274,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (departmentsResult.status === 'fulfilled') {
         const { data: directDepts, error: departmentsError } = departmentsResult.value
         if (departmentsError) {
+          if (isAuthError(departmentsError)) {
+            await clearLocalSession('Departments request returned auth/session error')
+            return
+          }
           console.error('Error loading departments:', departmentsError)
           console.error('Departments error code:', departmentsError.code)
           console.error('Departments error message:', departmentsError.message)
@@ -193,6 +292,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       lastUserDataRefreshRef.current = Date.now()
     } catch (error) {
+      if (isAuthError(error)) {
+        await clearLocalSession('User data load failed due to auth/session error')
+        return
+      }
       console.error('Unexpected error loading user data:', error)
     }
   }
@@ -225,6 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (session?.user) {
+        authRecoveryInProgressRef.current = false
         setUser(session.user)
         setRolesLoading(true)
         // Set loading to false immediately, load data in background
@@ -257,8 +361,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return
 
       if (session?.user) {
+        authRecoveryInProgressRef.current = false
         setUser(session.user)
-        analytics.identify(session.user.id)
+        void analytics.identify(session.user.id).catch((error) => {
+          console.warn('Failed to initialize analytics identity:', error)
+        })
         // Only refresh user data when user changes or cache is stale
         if (_event !== 'TOKEN_REFRESHED' || shouldRefreshUserData(session.user.id)) {
           // Set loading to false immediately, load data in background
@@ -274,24 +381,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clearTimeout(timeoutId)
         }
       } else {
-        setUser(null)
-        setProfile(null)
-        setRoles([])
-        setProperties([])
-        setDepartments([])
-        setRolesLoading(false)
-        activeUserIdRef.current = null
-        loadSeqRef.current += 1
+        resetLocalAuthState()
         loadingState = false
         setLoading(false)
         clearTimeout(timeoutId)
       }
     })
 
+    const verifySessionOnResume = async () => {
+      if (!mounted || document.visibilityState === 'hidden') return
+      if (resumeValidationInFlightRef.current) return
+
+      const now = Date.now()
+      if (now - lastResumeValidationAtRef.current < 2000) return
+
+      resumeValidationInFlightRef.current = true
+      lastResumeValidationAtRef.current = now
+
+      try {
+        const { data: { user: verifiedUser }, error } = await supabase.auth.getUser()
+        if (!mounted) return
+
+        if (error || !verifiedUser) {
+          await clearLocalSession('Session is no longer valid after tab resume')
+          loadingState = false
+          setLoading(false)
+          clearTimeout(timeoutId)
+          return
+        }
+
+        authRecoveryInProgressRef.current = false
+        setUser((current) => (current?.id === verifiedUser.id ? current : verifiedUser))
+        if (shouldRefreshUserData(verifiedUser.id)) {
+          loadUserData(verifiedUser.id).catch((err) => {
+            console.error('Error in loadUserData (resume validation):', err)
+          })
+        }
+      } finally {
+        resumeValidationInFlightRef.current = false
+      }
+    }
+
+    const handleWindowFocus = () => {
+      void verifySessionOnResume()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void verifySessionOnResume()
+      }
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       mounted = false
       clearTimeout(timeoutId)
       subscription.unsubscribe()
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
@@ -334,31 +483,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    try {
-      // Use 'local' scope to avoid 403 errors when session is already invalid
-      // This only clears the local session, not all sessions across devices
-      await supabase.auth.signOut({ scope: 'local' })
-    } catch (error) {
-      // Even if server signout fails, clear local state
-      console.warn('Server signout failed, clearing local state:', error)
-    }
     // Clear local property context to prevent confusion for next user
     localStorage.removeItem('prime_current_property_id')
-
-    // Always clear local state regardless of server response
-    setUser(null)
-    setProfile(null)
-    setRoles([])
-    setProperties([])
-    setDepartments([])
-    setRolesLoading(false)
-    activeUserIdRef.current = null
-    loadSeqRef.current += 1
+    await clearLocalSession('User signed out')
   }
 
   const refreshSession = async () => {
-    const { data: { session } } = await supabase.auth.refreshSession()
+    const { data: { session }, error } = await supabase.auth.refreshSession()
+    if (error || !session?.user) {
+      await clearLocalSession('Session refresh failed')
+      return
+    }
     if (session?.user) {
+      authRecoveryInProgressRef.current = false
       setUser(session.user)
       setRolesLoading(true)
       await loadUserData(session.user.id)

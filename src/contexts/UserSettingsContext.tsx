@@ -48,17 +48,24 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         if (!user) return
 
         try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session || session.user.id !== user.id) {
+                return
+            }
+
             const { data, error } = await supabase
                 .from('user_settings')
                 .select('reduced_motion, high_contrast, large_text, keyboard_shortcuts, timezone, theme')
                 .eq('user_id', user.id)
-                .single()
+                .limit(1)
 
-            if (error && error.code !== 'PGRST116') throw error
+            if (error) throw error
 
-            if (data) {
-                setSettings(data)
-                applyAccessibilityClasses(data)
+            const currentSettings = Array.isArray(data) ? data[0] : null
+
+            if (currentSettings) {
+                setSettings(currentSettings)
+                applyAccessibilityClasses(currentSettings)
             } else {
                 // Create default settings if not exists
                 const defaultSettings = {
@@ -72,16 +79,26 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
                 }
                 const { error: insertError } = await supabase
                     .from('user_settings')
-                    .insert(defaultSettings)
+                    .upsert(defaultSettings, { onConflict: 'user_id' })
 
-                if (insertError) console.error('Error creating default settings:', insertError)
+                if (insertError) {
+                    // During auth transitions, RLS can reject transient unauthenticated writes.
+                    // Keep in-memory defaults and retry naturally on next refresh.
+                    const code = (insertError as { code?: string }).code
+                    if (code !== '42501' && code !== '401') {
+                        console.error('Error creating default settings:', insertError)
+                    }
+                }
                 else {
                     setSettings(defaultSettings)
                     applyAccessibilityClasses(defaultSettings)
                 }
             }
         } catch (err) {
-            console.error('Failed to fetch user settings:', err)
+            const code = (err as { code?: string }).code
+            if (code !== '401' && code !== 'PGRST301') {
+                console.error('Failed to fetch user settings:', err)
+            }
         } finally {
             setLoading(false)
         }
@@ -103,14 +120,24 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         applyAccessibilityClasses(updated)
 
         try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session || session.user.id !== user.id) {
+                return
+            }
+
             const { error } = await supabase
                 .from('user_settings')
-                .update(newSettings)
-                .eq('user_id', user.id)
+                .upsert(
+                    { user_id: user.id, ...newSettings },
+                    { onConflict: 'user_id' }
+                )
 
             if (error) throw error
         } catch (err) {
-            console.error('Failed to update user settings:', err)
+            const code = (err as { code?: string }).code
+            if (code !== '42501' && code !== '401') {
+                console.error('Failed to update user settings:', err)
+            }
         }
     }
 

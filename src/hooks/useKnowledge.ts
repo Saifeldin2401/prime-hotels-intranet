@@ -56,7 +56,7 @@ export function useKnowledgeArticle(id: string | undefined) {
         queryFn: () => KnowledgeService.getArticleById(id!, user?.id),
         enabled: !!id,
         refetchOnMount: 'always',
-        refetchOnWindowFocus: true
+        refetchOnWindowFocus: false
     })
 }
 
@@ -269,9 +269,8 @@ export function useContentTypeCounts() {
     return useQuery({
         queryKey: ['knowledge-type-counts'],
         queryFn: () => KnowledgeService.getContentTypeCounts(),
-        staleTime: 1000 * 30, // Keep reasonably fresh for sidebar badges
-        refetchOnWindowFocus: true,
-        refetchInterval: 1000 * 15
+        staleTime: 1000 * 60, // Keep reasonably fresh for sidebar badges
+        refetchOnWindowFocus: false,
     })
 }
 
@@ -364,9 +363,8 @@ export function useDepartmentContentCounts() {
                 }, {})
         },
         enabled: !!user?.id,
-        staleTime: 1000 * 30, // Keep reasonably fresh for sidebar badges
-        refetchOnWindowFocus: true,
-        refetchInterval: 1000 * 15
+        staleTime: 1000 * 60, // Keep reasonably fresh for sidebar badges
+        refetchOnWindowFocus: false,
     })
 }
 

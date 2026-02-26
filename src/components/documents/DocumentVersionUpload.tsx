@@ -41,6 +41,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDropzone } from "react-dropzone";
 
 export interface DocumentVersion {
@@ -68,7 +75,8 @@ interface DocumentVersionUploadProps {
   onRestore?: (versionId: string) => void;
   onDownload?: (version: DocumentVersion) => void;
   onCompare?: (versionId1: string, versionId2: string) => void;
-  acceptedFileTypes?: string[];
+  /** react-dropzone v14+ accept object: keys = MIME types, values = allowed extensions */
+  acceptedFileTypes?: Record<string, string[]>;
   maxFileSize?: number; // in bytes
   className?: string;
 }
@@ -102,7 +110,14 @@ export function DocumentVersionUpload({
   onRestore,
   onDownload,
   onCompare,
-  acceptedFileTypes = [".pdf", ".doc", ".docx", ".xls", ".xlsx"],
+  // react-dropzone v14+ requires MIME type keys, not file extensions
+  acceptedFileTypes = {
+    "application/pdf": [".pdf"],
+    "application/msword": [".doc"],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+    "application/vnd.ms-excel": [".xls"],
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+  },
   maxFileSize = 50 * 1024 * 1024, // 50MB default
   className,
 }: DocumentVersionUploadProps) {
@@ -117,7 +132,8 @@ export function DocumentVersionUpload({
   const [isUploading, setIsUploading] = React.useState(false);
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
-    accept: acceptedFileTypes.reduce((acc, type) => ({ ...acc, [type]: [] }), {}),
+    // acceptedFileTypes is already in the MIME-type keyed format react-dropzone v14+ expects
+    accept: acceptedFileTypes,
     maxSize: maxFileSize,
     multiple: false,
     onDrop: (acceptedFiles) => {
@@ -148,7 +164,7 @@ export function DocumentVersionUpload({
   const handleUpload = async () => {
     if (!selectedFile) return;
     setIsUploading(true);
-    
+
     // Simulate upload progress
     const progressInterval = setInterval(() => {
       setUploadProgress((prev) => {
@@ -161,7 +177,7 @@ export function DocumentVersionUpload({
     }, 200);
 
     await onUpload?.(selectedFile, changeNotes);
-    
+
     clearInterval(progressInterval);
     setUploadProgress(100);
     setTimeout(() => {
@@ -270,7 +286,7 @@ export function DocumentVersionUpload({
             {sortedVersions.map((version, index) => {
               const isCurrent = version.id === currentVersionId;
               const isExpanded = expandedVersions.has(version.id);
-              
+
               return (
                 <div
                   key={version.id}
@@ -284,7 +300,15 @@ export function DocumentVersionUpload({
                   {/* Header Row */}
                   <div
                     className="flex items-center gap-3 p-3 cursor-pointer"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleExpand(version.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        toggleExpand(version.id)
+                      }
+                    }}
                   >
                     <div
                       className={cn(

@@ -31,7 +31,9 @@ export function useNotifications() {
       })) as Notification[]
     },
     enabled: !!user,
-    refetchInterval: 30000,
+    refetchInterval: 180000, // 3 min (Realtime in sidebar handles immediate badge updates)
+    refetchOnWindowFocus: false,
+    staleTime: 60000, // Fresh for 1 minute
   })
 
   // Start checking for unread count
@@ -100,6 +102,8 @@ export function useUnreadNotificationsCount() {
       return count || 0
     },
     enabled: !!user,
-    refetchInterval: 30000,
+    refetchInterval: 180000, // 3 min (sidebar Realtime handles badge counts)
+    refetchOnWindowFocus: false,
+    staleTime: 60000, // Fresh for 1 minute
   })
 }

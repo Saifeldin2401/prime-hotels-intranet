@@ -82,10 +82,15 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
     const { data: typeCounts } = useContentTypeCounts()
 
     useEffect(() => {
+        let invalidateTimer: ReturnType<typeof setTimeout> | null = null
+
         const invalidateKnowledgeCounts = () => {
-            queryClient.invalidateQueries({ queryKey: ['knowledge-department-counts-global'] })
-            queryClient.invalidateQueries({ queryKey: ['knowledge-type-counts'] })
-            queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
+            if (invalidateTimer) return
+            invalidateTimer = setTimeout(() => {
+                invalidateTimer = null
+                queryClient.invalidateQueries({ queryKey: ['knowledge-department-counts-global'] })
+                queryClient.invalidateQueries({ queryKey: ['knowledge-type-counts'] })
+            }, 500)
         }
 
         const channel = supabase
@@ -95,6 +100,9 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
             .subscribe()
 
         return () => {
+            if (invalidateTimer) {
+                clearTimeout(invalidateTimer)
+            }
             void supabase.removeChannel(channel)
         }
     }, [queryClient])

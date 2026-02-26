@@ -481,5 +481,11 @@
     "templateitems": "Template Items",
     "startaudit": "Start Audit",
     "checklistitem": "Checklist item",
-    "recentaudits": "Recent Audits"
+    "recentaudits": "Recent Audits",
+    "cross_links": {
+        "view_in_documents": "View in Document Library",
+        "view_in_knowledge": "View in Knowledge Base",
+        "documents_hint": "Access version history, downloads, and file management",
+        "knowledge_hint": "Read with rich viewer, comments, bookmarks, and related articles"
+    }
 }

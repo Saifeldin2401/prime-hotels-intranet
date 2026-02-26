@@ -55,6 +55,40 @@ export function useRealtimeMessaging() {
   useEffect(() => {
     if (!user?.id) return
 
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null
+    let pendingMessagesInvalidate = false
+    let pendingStatsInvalidate = false
+    let pendingNotificationsInvalidate = false
+
+    const scheduleInvalidation = (options: {
+      messages?: boolean
+      stats?: boolean
+      notifications?: boolean
+    }) => {
+      if (options.messages) pendingMessagesInvalidate = true
+      if (options.stats) pendingStatsInvalidate = true
+      if (options.notifications) pendingNotificationsInvalidate = true
+
+      if (invalidateTimer) return
+
+      invalidateTimer = setTimeout(() => {
+        invalidateTimer = null
+
+        if (pendingMessagesInvalidate) {
+          pendingMessagesInvalidate = false
+          queryClient.invalidateQueries({ queryKey: ['messages'] })
+        }
+        if (pendingStatsInvalidate) {
+          pendingStatsInvalidate = false
+          queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
+        }
+        if (pendingNotificationsInvalidate) {
+          pendingNotificationsInvalidate = false
+          queryClient.invalidateQueries({ queryKey: ['notifications'] })
+        }
+      }, 300)
+    }
+
     const unlockAudio = async () => {
       const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined
       if (!AudioCtx) {
@@ -101,15 +135,11 @@ export function useRealtimeMessaging() {
           // Update local cache with new/updated message
           if (payload.eventType === 'INSERT') {
             void playSound() // Play sound on new message
-            queryClient.invalidateQueries({ queryKey: ['messages'] })
-            queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
-            queryClient.invalidateQueries({ queryKey: ['notifications'] })
+            scheduleInvalidation({ messages: true, stats: true, notifications: true })
           } else if (payload.eventType === 'UPDATE') {
-            queryClient.invalidateQueries({ queryKey: ['messages'] })
-            queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
+            scheduleInvalidation({ messages: true, stats: true })
           } else if (payload.eventType === 'DELETE') {
-            queryClient.invalidateQueries({ queryKey: ['messages'] })
-            queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
+            scheduleInvalidation({ messages: true, stats: true })
           }
         }
       )
@@ -126,9 +156,7 @@ export function useRealtimeMessaging() {
           if (payload.eventType === 'INSERT') {
             void playSound()
           }
-          queryClient.invalidateQueries({ queryKey: ['messages'] })
-          queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
-          queryClient.invalidateQueries({ queryKey: ['notifications'] })
+          scheduleInvalidation({ messages: true, stats: true, notifications: true })
         }
       )
       .on(
@@ -139,9 +167,8 @@ export function useRealtimeMessaging() {
           table: 'messages',
           filter: `sender_id=eq.${user.id}`
         },
-        (payload) => {
-          queryClient.invalidateQueries({ queryKey: ['messages'] })
-          queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
+        () => {
+          scheduleInvalidation({ messages: true, stats: true })
         }
       )
       .on(
@@ -152,8 +179,8 @@ export function useRealtimeMessaging() {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`
         },
-        (payload) => {
-          queryClient.invalidateQueries({ queryKey: ['notifications'] })
+        () => {
+          scheduleInvalidation({ notifications: true })
         }
       )
       .subscribe()
@@ -163,6 +190,9 @@ export function useRealtimeMessaging() {
     return () => {
       window.removeEventListener('pointerdown', onUserGesture)
       window.removeEventListener('keydown', onUserGesture)
+      if (invalidateTimer) {
+        clearTimeout(invalidateTimer)
+      }
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current)
       }

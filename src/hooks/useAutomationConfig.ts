@@ -23,7 +23,8 @@ export function useAutomationConfigs() {
         },
         enabled: !!user,
         refetchOnMount: 'always',
-        refetchOnWindowFocus: true
+        refetchOnWindowFocus: false,
+        staleTime: 30000
     })
 }
 

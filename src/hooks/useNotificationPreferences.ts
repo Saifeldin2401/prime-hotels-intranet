@@ -4,6 +4,14 @@ import { useAuth } from './useAuth'
 import type { NotificationPreference } from '@/lib/types'
 import { toast } from 'sonner'
 
+const isAuthError = (error: unknown) => {
+    if (!error || typeof error !== 'object') return false
+    const candidate = error as { code?: string | number; status?: number }
+    const code = String(candidate.code ?? '')
+    const status = Number(candidate.status ?? 0)
+    return status === 401 || code === '401' || code === 'PGRST301' || code === 'PGRST302'
+}
+
 export function useNotificationPreferences() {
     const { user } = useAuth()
     const queryClient = useQueryClient()
@@ -16,41 +24,59 @@ export function useNotificationPreferences() {
                 .from('notification_preferences')
                 .select('*')
                 .eq('user_id', user!.id)
-                .single()
+                .limit(1)
 
             if (error) {
-                // If not found, create default preferences
-                if (error.code === 'PGRST116') {
-                    const { data: newData, error: createError } = await supabase
-                        .from('notification_preferences')
-                        .insert({
-                            user_id: user!.id,
-                            email_enabled: true,
-                            approval_email: true,
-                            training_email: true,
-                            announcement_email: true,
-                            maintenance_email: true,
-                            browser_push_enabled: false,
-                            approval_push: false,
-                            training_push: false,
-                            announcement_push: false,
-                            maintenance_push: false,
-                            quiet_hours_enabled: false,
-                            quiet_hours_start: '22:00:00',
-                            quiet_hours_end: '08:00:00',
-                            daily_digest_enabled: false,
-                            notification_sounds_enabled: true
-                        })
-                        .select()
-                        .single()
-
-                    if (createError) throw createError
-                    return newData as NotificationPreference
-                }
                 throw error
             }
-            return data as NotificationPreference
-        }
+
+            const existingPreferences = Array.isArray(data) ? data[0] : null
+
+            if (existingPreferences) {
+                return existingPreferences as NotificationPreference
+            }
+
+            // No row exists yet for this user: create defaults in an idempotent way.
+            const defaultPreferences = {
+                user_id: user!.id,
+                email_enabled: true,
+                approval_email: true,
+                training_email: true,
+                announcement_email: true,
+                maintenance_email: true,
+                browser_push_enabled: false,
+                approval_push: false,
+                training_push: false,
+                announcement_push: false,
+                maintenance_push: false,
+                quiet_hours_enabled: false,
+                quiet_hours_start: '22:00:00',
+                quiet_hours_end: '08:00:00',
+                daily_digest_enabled: false,
+                notification_sounds_enabled: true
+            }
+
+            const { error: createError } = await supabase
+                .from('notification_preferences')
+                .upsert(defaultPreferences, { onConflict: 'user_id' })
+
+            if (createError) throw createError
+
+            const { data: createdRows, error: loadCreatedError } = await supabase
+                .from('notification_preferences')
+                .select('*')
+                .eq('user_id', user!.id)
+                .limit(1)
+
+            if (loadCreatedError) throw loadCreatedError
+            const createdPreferences = Array.isArray(createdRows) ? createdRows[0] : null
+
+            if (!createdPreferences) {
+                return defaultPreferences as NotificationPreference
+            }
+            return createdPreferences as NotificationPreference
+        },
+        retry: (failureCount, queryError) => !isAuthError(queryError) && failureCount < 2
     })
 
     const updatePreferences = useMutation({

@@ -33,6 +33,11 @@ export function useSidebarCounts() {
     const { currentProperty } = useProperty()
     const queryClient = useQueryClient()
 
+    const propertyIds = properties?.map((p) => p.id) || []
+    const departmentIds = departments?.map((d) => d.id) || []
+    const propertyIdsKey = propertyIds.join(',')
+    const departmentIdsKey = departmentIds.join(',')
+
     // Determine access level
     const isRegionalAccess = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
     const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
@@ -41,6 +46,51 @@ export function useSidebarCounts() {
     // Set up real-time subscriptions for immediate badge updates
     useEffect(() => {
         if (!user?.id) return
+
+        let invalidateTimer: ReturnType<typeof setTimeout> | null = null
+        let pendingInvalidation = false
+
+        const scheduleInvalidate = () => {
+            pendingInvalidation = true
+            if (invalidateTimer) return
+
+            invalidateTimer = setTimeout(() => {
+                invalidateTimer = null
+                if (!pendingInvalidation) return
+                pendingInvalidation = false
+                queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
+            }, 400)
+        }
+
+        const propertyIdSet = new Set(propertyIds)
+        const departmentIdSet = new Set(departmentIds)
+
+        const shouldInvalidateForRequest = (payload: any) => {
+            const row = payload?.new || payload?.old
+            if (!row) return false
+
+            if (isRegionalAccess) {
+                if (!currentProperty || currentProperty.id === 'all') return true
+                return row.property_id === currentProperty.id
+            }
+
+            if (isPropertyLevel) {
+                if (currentProperty && currentProperty.id !== 'all') {
+                    return row.property_id === currentProperty.id
+                }
+                return propertyIdSet.size > 0
+                    ? propertyIdSet.has(row.property_id)
+                    : row.current_assignee_id === user.id
+            }
+
+            if (isDepartmentHead) {
+                return departmentIdSet.size > 0
+                    ? departmentIdSet.has(row.department_id)
+                    : row.current_assignee_id === user.id
+            }
+
+            return row.requester_id === user.id || row.current_assignee_id === user.id
+        }
 
         const channel = supabase
             .channel('sidebar-counts-realtime')
@@ -54,7 +104,7 @@ export function useSidebarCounts() {
                     filter: `user_id=eq.${user.id}`,
                 },
                 () => {
-                    queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
+                    scheduleInvalidate()
                 }
             )
             // Listen for message changes
@@ -67,7 +117,7 @@ export function useSidebarCounts() {
                     filter: `recipient_id=eq.${user.id}`,
                 },
                 () => {
-                    queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
+                    scheduleInvalidate()
                 }
             )
             // Listen for task changes assigned to user
@@ -80,7 +130,7 @@ export function useSidebarCounts() {
                     filter: `assigned_to_id=eq.${user.id}`,
                 },
                 () => {
-                    queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
+                    scheduleInvalidate()
                 }
             )
             // Listen for request changes (approvals)
@@ -91,22 +141,36 @@ export function useSidebarCounts() {
                     schema: 'public',
                     table: 'requests',
                 },
-                () => {
-                    queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
+                (payload) => {
+                    if (shouldInvalidateForRequest(payload)) {
+                        scheduleInvalidate()
+                    }
                 }
             )
             .subscribe()
 
         return () => {
+            if (invalidateTimer) {
+                clearTimeout(invalidateTimer)
+            }
             supabase.removeChannel(channel)
         }
-    }, [user?.id, queryClient])
+    }, [
+        user?.id,
+        queryClient,
+        currentProperty?.id,
+        isRegionalAccess,
+        isPropertyLevel,
+        isDepartmentHead,
+        propertyIdsKey,
+        departmentIdsKey
+    ])
 
     return useQuery({
-        queryKey: ['sidebar-counts', user?.id, primaryRole, currentProperty?.id, properties?.map(p => p.id).join(','), departments?.map(d => d.id).join(',')],
+        queryKey: ['sidebar-counts', user?.id, primaryRole, currentProperty?.id, propertyIdsKey, departmentIdsKey],
         enabled: !!user?.id,
-        refetchInterval: 60000, // Fallback polling every minute
-        staleTime: 30000, // Consider data fresh for 30 seconds
+        refetchInterval: 120000, // Fallback polling every 2 minutes (Realtime handles immediate updates)
+        staleTime: 45000, // Consider data fresh for 45 seconds
         queryFn: async (): Promise<SidebarCounts> => {
             if (!user?.id) {
                 return {
@@ -120,135 +184,40 @@ export function useSidebarCounts() {
                 }
             }
 
-            // Get property IDs for filtering
-            const propertyIds = properties?.map(p => p.id) || []
-            const departmentIds = departments?.map(d => d.id) || []
+            // Single RPC call replaces 6 separate REST queries + 6 CORS preflights
+            const currentPropId = currentProperty && currentProperty.id !== 'all'
+                ? currentProperty.id
+                : null
 
-            // Build approval query based on role (unified requests table)
-            let approvalsQuery = supabase
-                .from('requests')
-                .select('id', { count: 'exact', head: true })
-                .in('status', ['pending_supervisor_approval', 'pending_hr_review'])
+            const { data, error } = await supabase.rpc('get_sidebar_counts', {
+                p_user_id: user.id,
+                p_role: primaryRole || null,
+                p_property_ids: propertyIds.length > 0 ? propertyIds : null,
+                p_department_ids: departmentIds.length > 0 ? departmentIds : null,
+                p_current_property_id: currentPropId,
+            })
 
-            if (isRegionalAccess) {
-                // Regional admin/hr sees ALL pending approvals
-                if (currentProperty && currentProperty.id !== 'all') {
-                    approvalsQuery = approvalsQuery.eq('property_id', currentProperty.id)
+            if (error) {
+                console.error('get_sidebar_counts RPC failed:', error)
+                return {
+                    unreadNotifications: 0,
+                    pendingApprovals: 0,
+                    overdueTasks: 0,
+                    unreadMessages: 0,
+                    pendingTraining: 0,
+                    requiredReading: 0,
+                    activeGoals: 0,
                 }
-            } else if (isPropertyLevel) {
-                // Property manager/hr sees approvals for their properties
-                if (currentProperty && currentProperty.id !== 'all') {
-                    approvalsQuery = approvalsQuery.eq('property_id', currentProperty.id)
-                } else if (propertyIds.length > 0) {
-                    approvalsQuery = approvalsQuery.in('property_id', propertyIds)
-                } else {
-                    approvalsQuery = approvalsQuery.eq('current_assignee_id', user.id)
-                }
-            } else if (isDepartmentHead) {
-                // Department head sees approvals for their departments
-                if (departmentIds.length > 0) {
-                    approvalsQuery = approvalsQuery.in('department_id', departmentIds)
-                } else {
-                    approvalsQuery = approvalsQuery.eq('current_assignee_id', user.id)
-                }
-            } else {
-                // Regular staff: only see requests assigned to them or their own
-                approvalsQuery = approvalsQuery.or(`requester_id.eq.${user.id},current_assignee_id.eq.${user.id}`)
-            }
-
-            // Build tasks query based on role
-            let tasksQuery = supabase
-                .from('tasks')
-                .select('id', { count: 'exact', head: true })
-                .eq('is_deleted', false)
-                .neq('status', 'completed')
-                .neq('status', 'cancelled')
-                .lt('due_date', new Date().toISOString())
-
-            if (isRegionalAccess) {
-                // Regional sees all overdue tasks
-                if (currentProperty && currentProperty.id !== 'all') {
-                    tasksQuery = tasksQuery.eq('property_id', currentProperty.id)
-                }
-            } else if (isPropertyLevel) {
-                if (currentProperty && currentProperty.id !== 'all') {
-                    tasksQuery = tasksQuery.eq('property_id', currentProperty.id)
-                } else if (propertyIds.length > 0) {
-                    tasksQuery = tasksQuery.in('property_id', propertyIds)
-                } else {
-                    tasksQuery = tasksQuery.eq('assigned_to_id', user.id)
-                }
-            } else if (isDepartmentHead) {
-                if (departmentIds.length > 0) {
-                    tasksQuery = tasksQuery.in('department_id', departmentIds)
-                } else {
-                    tasksQuery = tasksQuery.eq('assigned_to_id', user.id)
-                }
-            } else {
-                // Staff: only their own tasks
-                tasksQuery = tasksQuery.eq('assigned_to_id', user.id)
-            }
-
-            // Run all queries in parallel for efficiency
-            const [
-                notificationsResult,
-                approvalsResult,
-                tasksResult,
-                messagesResult,
-                trainingResult,
-                goalsResult,
-            ] = await Promise.allSettled([
-                // Unread notifications count (always user-specific)
-                supabase
-                    .from('notifications')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('user_id', user.id)
-                    .is('read_at', null),
-
-                // Pending approvals (smart routing applied above)
-                approvalsQuery,
-
-                // Overdue tasks (smart routing applied above)
-                tasksQuery,
-
-                // Unread messages (always user-specific)
-                supabase
-                    .from('messages')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('recipient_id', user.id)
-                    .is('read_at', null),
-
-                // Pending training assignments (always user-specific)
-                supabase
-                    .from('learning_progress')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('user_id', user.id)
-                    .in('status', ['assigned', 'in_progress', 'overdue']),
-
-                // Pending goals
-                supabase
-                    .from('goals')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('employee_id', user.id)
-                    .neq('status', 'completed'),
-            ])
-
-            // Extract counts from results, defaulting to 0 on error
-            const extractCount = (result: PromiseSettledResult<any>): number => {
-                if (result.status === 'fulfilled' && !result.value.error) {
-                    return result.value.count ?? 0
-                }
-                return 0
             }
 
             return {
-                unreadNotifications: extractCount(notificationsResult),
-                pendingApprovals: extractCount(approvalsResult),
-                overdueTasks: extractCount(tasksResult),
-                unreadMessages: extractCount(messagesResult),
-                pendingTraining: extractCount(trainingResult),
-                activeGoals: extractCount(goalsResult),
-                requiredReading: 0, // Will be populated from useRequiredReading hook directly
+                unreadNotifications: data?.unreadNotifications ?? 0,
+                pendingApprovals: data?.pendingApprovals ?? 0,
+                overdueTasks: data?.overdueTasks ?? 0,
+                unreadMessages: data?.unreadMessages ?? 0,
+                pendingTraining: data?.pendingTraining ?? 0,
+                activeGoals: data?.activeGoals ?? 0,
+                requiredReading: data?.requiredReading ?? 0,
             }
         },
     })
@@ -275,3 +244,4 @@ export function useBadgeCount(navPath: string): number | undefined {
     const count = pathCountMap[navPath]
     return count && count > 0 ? count : undefined
 }
+

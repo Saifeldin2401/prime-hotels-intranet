@@ -85,6 +85,7 @@ import {
 } from '@/components/knowledge/ContentRenderers'
 import { STATUS_CONFIG } from '@/types/knowledge'
 import { RelatedArticles } from '@/components/knowledge'
+import { ContentCrossLinks } from '@/components/knowledge/ContentCrossLinks'
 import { useTrackView } from '@/hooks/useRecentlyViewed'
 import { SectionLinkButton } from '@/components/knowledge/SectionLinkButton'
 import { SectionLinkInjector } from '@/components/knowledge/SectionLinkInjector'
@@ -155,7 +156,7 @@ export default function KnowledgeViewer() {
 
     // Track last viewed for "Updated since last view" feature
     const { hasBeenUpdatedSinceLastView, markAsViewed, getTimeSinceLastView } = useLastViewed(user?.id)
-    
+
     // Mark as viewed after 10 seconds (considered "read")
     useEffect(() => {
         if (!article?.id) return
@@ -581,13 +582,13 @@ export default function KnowledgeViewer() {
             headings.forEach((heading, index) => {
                 const id = `section-${index}`
                 heading.setAttribute('id', id)
-                
+
                 // Add section link button if not already present
                 if (!heading.querySelector('.section-link-btn')) {
                     heading.classList.add('group', 'relative')
                     heading.style.position = 'relative'
                 }
-                
+
                 items.push({
                     id,
                     text: heading.textContent || '',
@@ -1774,6 +1775,12 @@ export default function KnowledgeViewer() {
                                     />
                                 </div>
                             )}
+
+                            {/* Cross-Link to Documents */}
+                            <ContentCrossLinks
+                                documentId={article.id}
+                                mode="knowledge"
+                            />
                         </aside>
                     )}
                 </div>

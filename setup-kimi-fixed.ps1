@@ -4,7 +4,7 @@ Write-Host "=== KIMI TERMINAL SETUP ===" -ForegroundColor Magenta
 # Set environment variables for this session
 $env:SUPABASE_ACCESS_TOKEN = "<SET_YOUR_SUPABASE_PAT_HERE>"
 $env:SUPABASE_PROJECT_ID = "htsvjfrofcpkfzvjpwvx"
-$env:DATABASE_URL = "postgresql://postgres.htsvjfrofcpkfzvjpwvx.supabase.co:5432/postgres"
+$env:DATABASE_URL = "postgresql://postgres.htsvjfrofcpkfzvjpwvx:[SET_DB_PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
 $env:MCP_CONFIG = ".codex/mcp.json"
 
 # Verify they're set

@@ -59,7 +59,6 @@ export type NavigationGroup =
     | 'knowledge_base'
     | 'learning'
     | 'learning_management'
-    | 'question_bank'
     | 'operations'
     | 'hr_management'
     | 'my_hr'
@@ -180,14 +179,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         collapsible: true
     },
-    {
-        id: 'question_bank',
-        title: 'groups.question_bank',
-        icon: FileQuestion,
-        order: 7,
-        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'department_head'],
-        collapsible: true
-    },
+
     {
         id: 'communication',
         title: 'groups.communication',
@@ -614,7 +606,7 @@ export const ROUTES: RouteConfig[] = [
     },
 
     // -------------------------------------------------------------------------
-    // QUESTION BANK GROUP (Admin)
+    // QUESTIONS & QUIZZES (under Learning Management)
     // -------------------------------------------------------------------------
     {
         path: '/questions',
@@ -622,8 +614,8 @@ export const ROUTES: RouteConfig[] = [
         icon: FileQuestion,
         description: 'Manage knowledge questions',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
-        group: 'question_bank',
-        order: 1
+        group: 'learning_management',
+        order: 5
     },
     {
         path: '/learning/quizzes',
@@ -631,8 +623,8 @@ export const ROUTES: RouteConfig[] = [
         icon: CheckSquare,
         description: 'Manage quizzes',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'department_head'],
-        group: 'question_bank',
-        order: 2
+        group: 'learning_management',
+        order: 6
     },
 
     // -------------------------------------------------------------------------
@@ -661,10 +653,10 @@ export const ROUTES: RouteConfig[] = [
         path: '/documents',
         title: 'documents',
         icon: FileText,
-        description: 'Policies and documents',
+        description: 'Document library and file management',
         allowedRoles: 'all',
-        group: 'communication',
-        order: 3
+        group: 'knowledge_base',
+        order: 4
     },
 
     // -------------------------------------------------------------------------

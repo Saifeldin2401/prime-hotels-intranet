@@ -42,6 +42,7 @@ export function CreateReferralDialog({
 }: CreateReferralDialogProps) {
     const { user, profile } = useAuth()
     const queryClient = useQueryClient()
+    const { t } = useTranslation(['common', 'jobs'])
 
     // Form state
     const [name, setName] = useState('')
@@ -336,16 +337,16 @@ export function CreateReferralDialog({
                                 disabled={success || uploading}
                             />
                         </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Phone *</Label>
-                        <Input
-                            id="phone"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="+1 234 567 890"
-                            disabled={success || uploading}
-                        />
-                    </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Phone *</Label>
+                            <Input
+                                id="phone"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="+1 234 567 890"
+                                disabled={success || uploading}
+                            />
+                        </div>
                     </div>
 
                     {/* CV Upload */}

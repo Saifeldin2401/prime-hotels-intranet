@@ -406,7 +406,12 @@
         "selected_property": "Selected Property",
         "current_property": "Current Property",
         "selected_team": "Selected Team",
-        "requires_ack": "Requires Acknowledgment"
+        "requires_ack": "Requires Acknowledgment",
+        "linked_training": "Linked Training",
+        "training_module": "Training Module",
+        "select_training_module": "Select training...",
+        "no_linked_training": "None",
+        "training_hint": "Link an active training module. Users will see a prompt to take this training when reading this document."
     },
     "browse": {
         "title": "Browse Knowledge Base",

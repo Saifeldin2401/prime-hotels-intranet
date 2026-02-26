@@ -67,7 +67,7 @@ export function ModuleTemplateSelector({
     enabled: open,
     staleTime: 0,
     refetchOnMount: 'always',
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: false
   })
 
   const categories = [

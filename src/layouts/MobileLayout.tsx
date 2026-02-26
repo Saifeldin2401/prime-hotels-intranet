@@ -50,18 +50,18 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                 {children || <Outlet />}
             </main>
 
-            {/* Floating Bottom Navigation */}
-            <MobileNavigation
-                onMenuClick={() => setSidebarOpen(true)}
-                className={sidebarOpen ? "hidden" : ""}
-            />
-
-            {/* Sidebar (Drawer) */}
-            <SidebarNavigation
-                isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-                isMobile={true}
-            />
+            {/* Render one mobile navigation surface at a time to avoid duplicate data subscriptions */}
+            {sidebarOpen ? (
+                <SidebarNavigation
+                    isOpen={sidebarOpen}
+                    onClose={() => setSidebarOpen(false)}
+                    isMobile={true}
+                />
+            ) : (
+                <MobileNavigation
+                    onMenuClick={() => setSidebarOpen(true)}
+                />
+            )}
             <WizardTrigger />
         </div>
     )

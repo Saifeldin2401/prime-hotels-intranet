@@ -653,28 +653,88 @@ export function useMessagingStats() {
     queryFn: async () => {
       if (!user?.id) return null
 
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id},recipient_id.is.null`)
+      const accessFilter = `sender_id.eq.${user.id},recipient_id.eq.${user.id},recipient_id.is.null`
 
-      if (error) throw error
+      const [
+        totalResult,
+        sentResult,
+        receivedResult,
+        unreadResult,
+        urgentResult,
+        directResult,
+        broadcastResult,
+        systemResult
+      ] = await Promise.all([
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .or(accessFilter),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('sender_id', user.id),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('recipient_id', user.id),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('recipient_id', user.id)
+          .neq('status', 'read'),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('recipient_id', user.id)
+          .eq('priority', 'urgent')
+          .neq('status', 'read'),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('message_type', 'direct')
+          .or(accessFilter),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('message_type', 'broadcast')
+          .or(accessFilter),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('message_type', 'system')
+          .or(accessFilter),
+      ])
+
+      const results = [
+        totalResult,
+        sentResult,
+        receivedResult,
+        unreadResult,
+        urgentResult,
+        directResult,
+        broadcastResult,
+        systemResult
+      ]
+
+      const errored = results.find((result) => result.error)
+      if (errored?.error) throw errored.error
 
       const stats = {
-        totalMessages: messages?.length || 0,
-        sentMessages: messages?.filter(m => m.sender_id === user.id).length || 0,
-        receivedMessages: messages?.filter(m => m.recipient_id === user.id).length || 0,
-        unreadMessages: messages?.filter(m => m.recipient_id === user.id && m.status !== 'read').length || 0,
-        urgentMessages: messages?.filter(m => m.priority === 'urgent' && m.status !== 'read').length || 0,
+        totalMessages: totalResult.count || 0,
+        sentMessages: sentResult.count || 0,
+        receivedMessages: receivedResult.count || 0,
+        unreadMessages: unreadResult.count || 0,
+        urgentMessages: urgentResult.count || 0,
         messagesByType: {
-          direct: messages?.filter(m => m.message_type === 'direct').length || 0,
-          broadcast: messages?.filter(m => m.message_type === 'broadcast').length || 0,
-          system: messages?.filter(m => m.message_type === 'system').length || 0
+          direct: directResult.count || 0,
+          broadcast: broadcastResult.count || 0,
+          system: systemResult.count || 0
         }
       }
 
       return stats
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    staleTime: 30_000
   })
 }

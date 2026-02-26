@@ -9,8 +9,9 @@ interface UseInactivityTimeoutOptions {
     enabled?: boolean
 }
 
+const STORAGE_KEY = 'prime_last_activity'
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
-const DEFAULT_WARNING_MS = 25 * 60 * 1000 // 25 minutes (5 min before timeout)
+const DEFAULT_WARNING_MS = 25 * 60 * 1000 // 25 minutes (shows warning 5 mins before timeout)
 
 export function useInactivityTimeout({
     timeoutMs = DEFAULT_TIMEOUT_MS,
@@ -40,6 +41,7 @@ export function useInactivityTimeout({
     const handleTimeout = useCallback(async () => {
         clearAllTimers()
         setShowWarning(false)
+        localStorage.removeItem(STORAGE_KEY)
 
         if (onTimeout) {
             onTimeout()
@@ -49,30 +51,47 @@ export function useInactivityTimeout({
     }, [clearAllTimers, onTimeout, signOut])
 
     const handleWarning = useCallback(() => {
-        setShowWarning(true)
-        setRemainingTime(timeoutMs - warningMs)
+        const now = Date.now()
+        const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
+        const elapsed = now - lastActivity
 
-        // Start countdown
-        countdownRef.current = setInterval(() => {
-            setRemainingTime(prev => {
-                if (prev <= 1000) {
-                    return 0
-                }
-                return prev - 1000
-            })
-        }, 1000)
+        // If we already passed the warning threshold but haven't timed out yet
+        if (elapsed >= warningMs && elapsed < timeoutMs) {
+            setShowWarning(true)
+            const remaining = Math.max(0, timeoutMs - elapsed)
+            setRemainingTime(remaining)
 
-        if (onWarning) {
-            onWarning()
+            if (!countdownRef.current) {
+                countdownRef.current = setInterval(() => {
+                    setRemainingTime(prev => {
+                        if (prev <= 1000) {
+                            if (countdownRef.current) clearInterval(countdownRef.current)
+                            return 0
+                        }
+                        return prev - 1000
+                    })
+                }, 1000)
+            }
+
+            if (onWarning) {
+                onWarning()
+            }
+        } else if (elapsed >= timeoutMs) {
+            handleTimeout()
         }
-    }, [timeoutMs, warningMs, onWarning])
+    }, [timeoutMs, warningMs, onWarning, handleTimeout])
 
-    const resetTimers = useCallback(() => {
+    const resetTimers = useCallback((isExternalUpdate = false) => {
         if (!enabled || !user) return
 
         clearAllTimers()
         setShowWarning(false)
-        lastActivityRef.current = Date.now()
+
+        const now = Date.now()
+        if (!isExternalUpdate) {
+            localStorage.setItem(STORAGE_KEY, now.toString())
+        }
+        lastActivityRef.current = now
 
         // Set warning timer
         warningRef.current = setTimeout(handleWarning, warningMs)
@@ -87,12 +106,12 @@ export function useInactivityTimeout({
 
     // Activity event handler
     const handleActivity = useCallback(() => {
-        // Throttle: only reset if more than 1 second since last activity
+        // Throttle: only reset if more than 1 second since last activity or if warning is showing
         const now = Date.now()
-        if (now - lastActivityRef.current > 1000) {
+        if (showWarning || now - lastActivityRef.current > 1000) {
             resetTimers()
         }
-    }, [resetTimers])
+    }, [resetTimers, showWarning])
 
     useEffect(() => {
         if (!enabled || !user) {
@@ -100,19 +119,44 @@ export function useInactivityTimeout({
             return
         }
 
+        // Initialize last activity if not present
+        if (!localStorage.getItem(STORAGE_KEY)) {
+            localStorage.setItem(STORAGE_KEY, Date.now().toString())
+        }
+
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
-                clearAllTimers()
+                // When hidden, we don't clear timers because we want the background timeout to fire
+                // if the tab stays open in the background. 
+                // However, we should refresh the "last activity" if it's been updated by other tabs.
                 return
             }
 
-            // Treat returning to the tab as activity to keep session stable
-            lastActivityRef.current = Date.now()
-            resetTimers()
+            // returning to the tab: check if we timed out while away
+            const now = Date.now()
+            const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
+            const elapsed = now - lastActivity
+
+            if (elapsed >= timeoutMs) {
+                handleTimeout()
+            } else if (elapsed >= warningMs) {
+                handleWarning()
+            } else {
+                // Not even in warning zone, just reset timers based on the synchronized last activity
+                resetTimers(true)
+            }
         }
 
-        // Set up timers
-        resetTimers()
+        // Listen for activity in other tabs
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === STORAGE_KEY && e.newValue) {
+                // Activity happened in another tab
+                resetTimers(true)
+            }
+        }
+
+        // Set up timers initially
+        resetTimers(true)
 
         // Listen for user activity
         const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']
@@ -120,6 +164,7 @@ export function useInactivityTimeout({
             window.addEventListener(event, handleActivity, { passive: true })
         })
         document.addEventListener('visibilitychange', handleVisibilityChange)
+        window.addEventListener('storage', handleStorageChange)
 
         return () => {
             clearAllTimers()
@@ -127,8 +172,9 @@ export function useInactivityTimeout({
                 window.removeEventListener(event, handleActivity)
             })
             document.removeEventListener('visibilitychange', handleVisibilityChange)
+            window.removeEventListener('storage', handleStorageChange)
         }
-    }, [enabled, user, resetTimers, handleActivity, clearAllTimers])
+    }, [enabled, user, resetTimers, handleActivity, clearAllTimers, handleTimeout, handleWarning, timeoutMs, warningMs])
 
     return {
         showWarning,

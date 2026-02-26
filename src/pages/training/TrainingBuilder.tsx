@@ -263,7 +263,7 @@ export function TrainingBuilder() {
     },
     staleTime: 0,
     refetchOnMount: 'always',
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: false
   })
 
   // Module state

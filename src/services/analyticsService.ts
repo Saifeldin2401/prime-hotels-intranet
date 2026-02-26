@@ -5,6 +5,7 @@ class AnalyticsService {
     private static instance: AnalyticsService
     private buffer: AnalyticsEvent[] = []
     private batchSize = 10
+    private maxBufferSize = 500
     private flushInterval = 5000
     private flushTimer: NodeJS.Timeout | null = null
     private sessionId: string | null = null
@@ -24,6 +25,21 @@ class AnalyticsService {
             AnalyticsService.instance = new AnalyticsService()
         }
         return AnalyticsService.instance
+    }
+
+    private isAuthError(error: unknown) {
+        if (!error || typeof error !== 'object') return false
+        const candidate = error as { code?: string | number; status?: number }
+        const code = String(candidate.code ?? '')
+        const status = Number(candidate.status ?? 0)
+        return (
+            status === 401 ||
+            code === '401' ||
+            code === '403' ||
+            code === '42501' ||
+            code === 'PGRST301' ||
+            code === 'PGRST302'
+        )
     }
 
     /**
@@ -61,9 +77,11 @@ class AnalyticsService {
             .from('user_sessions')
             .select('id')
             .eq('id', sessionId)
-            .single()
+            .limit(1)
 
-        if (error || !data) {
+        const existingSession = Array.isArray(data) ? data[0] : null
+
+        if (error || !existingSession) {
             // Session in local storage but not in DB or error retrieving? Re-create.
             await this.startNewSession()
         }
@@ -84,7 +102,7 @@ class AnalyticsService {
 
             this.userId = user.id
 
-            const { data, error } = await supabase
+            const { data: insertedRows, error } = await supabase
                 .from('user_sessions')
                 .insert({
                     user_id: this.userId,
@@ -98,19 +116,28 @@ class AnalyticsService {
                         }
                     }
                 })
-                .select()
-                .single()
+                .select('id')
+                .limit(1)
 
             if (error) {
                 // If it's a 401 or 403, it's expected if the session just expired
-                if (error.code === '401' || error.code === '42501') {
+                if (this.isAuthError(error)) {
                     console.debug('Analytics session creation skipped: Unauthorized')
                     return
                 }
                 throw error
             }
 
-            this.sessionId = data.id
+            const insertedSession = Array.isArray(insertedRows) ? insertedRows[0] : null
+
+            if (!insertedSession?.id) {
+                // Avoid throwing 406-style "no rows" noise when the insert returns no row.
+                // We can recover on the next analytics event.
+                this.sessionId = null
+                return
+            }
+
+            this.sessionId = insertedSession.id
             this.persistSession()
         } catch (e) {
             console.error('Failed to start analytics session', e)
@@ -143,7 +170,9 @@ class AnalyticsService {
 
                 // If we have a session, update it. If not, start one.
                 if (newUser) {
-                    this.identify(newUser)
+                    void this.identify(newUser).catch((error) => {
+                        console.warn('[Analytics] Failed to identify user after auth change:', error)
+                    })
                 } else {
                     // Logged out: end current session
                     this.sessionId = null
@@ -194,6 +223,9 @@ class AnalyticsService {
         }
 
         this.buffer.push(event)
+        if (this.buffer.length > this.maxBufferSize) {
+            this.buffer = this.buffer.slice(this.buffer.length - this.maxBufferSize)
+        }
 
         if (this.buffer.length >= this.batchSize) {
             this.flush()
@@ -240,9 +272,11 @@ class AnalyticsService {
                 console.error('Failed to flush analytics events', error)
 
                 // Handle 401/403: session expired or unauthorized
-                if (error.code === '401' || error.code === '42501' || (error as any).status === 401) {
+                if (this.isAuthError(error)) {
                     console.warn('[Analytics] Unauthorized flush. Clearing stale session.')
                     this.sessionId = null
+                    this.userId = null
+                    this.buffer = []
                     localStorage.removeItem('prime_analytics_session')
                     // Session will be re-created on next track()
                 }
@@ -270,7 +304,6 @@ class AnalyticsService {
 
     private setupWindowListeners() {
         // Flush on close
-        // Flush on close
         window.addEventListener('beforeunload', () => {
             if (this.buffer.length > 0 && this.sessionId) {
                 const events = this.buffer.map(e => ({
@@ -281,7 +314,7 @@ class AnalyticsService {
 
                 // Use beacon if available for reliable send on unload
                 if (navigator.sendBeacon) {
-                    const blob = new Blob([JSON.stringify(events)], { type: 'application/json' })
+                    new Blob([JSON.stringify(events)], { type: 'application/json' })
                     // Supabase doesn't support raw JSON beacon easily without edge function, 
                     // but we can try calling the edge function if we had one.
                     // Accessing REST API via beacon is tricky with headers.
@@ -297,6 +330,9 @@ class AnalyticsService {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 this.flush()
+            } else if (document.visibilityState === 'visible' && !this.sessionId) {
+                // Recreate analytics session after tab resume if auth session is still valid.
+                this.startNewSession()
             }
         })
     }

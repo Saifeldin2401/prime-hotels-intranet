@@ -26,14 +26,14 @@ export default function ResetPassword() {
     // Check if we have a valid session from the reset link
     useEffect(() => {
         const checkSession = async () => {
+            let isTokenValid = false
             try {
                 const { data: { session }, error } = await supabase.auth.getSession()
 
                 if (error) {
                     console.error('Session error:', error)
-                    setTokenValid(false)
                 } else if (session) {
-                    setTokenValid(true)
+                    isTokenValid = true
                 } else {
                     // Check if there's a hash fragment (Supabase auth redirect)
                     const hashParams = new URLSearchParams(window.location.hash.substring(1))
@@ -42,14 +42,14 @@ export default function ResetPassword() {
                     if (accessToken) {
                         const { error: refreshError } = await supabase.auth.refreshSession()
                         if (!refreshError) {
-                            setTokenValid(true)
+                            isTokenValid = true
                         }
                     }
                 }
             } catch (err) {
                 console.error('Token validation error:', err)
-                setTokenValid(false)
             } finally {
+                setTokenValid(isTokenValid)
                 setValidatingToken(false)
             }
         }
@@ -108,6 +108,12 @@ export default function ResetPassword() {
 
             if (updateError) {
                 throw updateError
+            }
+
+            // Finalize first-time password flows (invite / temp password flags).
+            const { error: finalizeError } = await supabase.rpc('complete_password_reset')
+            if (finalizeError) {
+                console.warn('Password updated, but failed to finalize reset flags:', finalizeError)
             }
 
             setSuccess(true)
@@ -245,8 +251,8 @@ export default function ResetPassword() {
                                     { check: /[a-z]/.test(password), text: 'One lowercase letter' },
                                     { check: /\d/.test(password), text: 'One number' },
                                     { check: /[!@#$%^&*(),.?":{}|<>]/.test(password), text: 'One special character' }
-                                ].map((req, i) => (
-                                    <li key={i} className={`flex items-center gap-1 ${req.check ? 'text-green-600' : 'text-gray-500'}`}>
+                                ].map((req) => (
+                                    <li key={req.text} className={`flex items-center gap-1 ${req.check ? 'text-green-600' : 'text-gray-500'}`}>
                                         {req.check ? <CheckCircle className="h-3 w-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300" />}
                                         {req.text}
                                     </li>

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { UserForm } from '@/components/admin/UserForm'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { Plus, Users, Loader2, Trash2, Edit, MoreVertical, ShieldOff, ShieldCheck, KeyRound, Unlock, AlertTriangle, Clock, CheckSquare, Square } from 'lucide-react'
+import { Plus, Users, Loader2, Trash2, Edit, MoreVertical, ShieldOff, ShieldCheck, KeyRound, Unlock, AlertTriangle, Clock, CheckSquare, Square, MailPlus, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
@@ -26,20 +26,40 @@ import {
 } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { useAccountActions } from '@/hooks/useAccountActions'
 import { UserBulkActionsBar } from '@/components/admin/UserBulkActionsBar'
 import type { Profile } from '@/lib/types'
+import type { AppRole } from '@/lib/constants'
+import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '@/components/ui/use-toast'
 
 type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive'
+
+interface AccountActionNote {
+  id: string
+  action: string
+  note: string | null
+  created_at: string
+  created_by: {
+    id: string
+    full_name: string | null
+    email: string | null
+  } | null
+}
 
 export default function UserManagement() {
   const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation('users')
+  const { toast } = useToast()
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<AccountStatusFilter>('all')
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<AppRole | ''>('staff')
 
   // Account action dialog state
   const [actionDialogOpen, setActionDialogOpen] = useState(false)
@@ -81,13 +101,15 @@ export default function UserManagement() {
         .limit(5)
 
       if (error) throw error
-      return data || []
+      return (data || []) as AccountActionNote[]
     }
   })
 
   // Delete/Deactivate Logic
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null)
+  const [hardDeleteConfirmOpen, setHardDeleteConfirmOpen] = useState(false)
+  const [userToHardDelete, setUserToHardDelete] = useState<Profile | null>(null)
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -104,6 +126,139 @@ export default function UserManagement() {
       setUserToDelete(null)
     }
   })
+
+  const hardDeleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error: fnError } = await supabase.functions.invoke('delete-user', {
+        body: { userId: id },
+      })
+
+      if (fnError) {
+        const maybeContext = fnError as unknown as { context?: { response?: Response } }
+        const response = maybeContext?.context?.response
+        if (response) {
+          const text = await response.text().catch(() => '')
+          let parsedError: string | undefined
+          if (text) {
+            try {
+              const parsed = JSON.parse(text) as { error?: string }
+              parsedError = parsed?.error
+            } catch {
+              parsedError = text
+            }
+          }
+          throw new Error(parsedError || fnError.message || 'Failed to permanently delete user')
+        }
+        throw new Error(fnError.message || 'Failed to permanently delete user')
+      }
+
+      if (data?.error) {
+        throw new Error(data.error)
+      }
+
+      return data as { success?: boolean; hardDeleted?: boolean; userId?: string }
+    },
+    onSuccess: (_data, deletedUserId) => {
+      toast({
+        title: t('bulk.hard_delete_success_title', 'User Permanently Deleted'),
+        description: t(
+          'bulk.hard_delete_success_description',
+          'The user account and authentication record were permanently removed.'
+        ),
+      })
+      setSelectedUserIds((prev) => {
+        const next = new Set(prev)
+        next.delete(deletedUserId)
+        return next
+      })
+      refetch()
+      setHardDeleteConfirmOpen(false)
+      setUserToHardDelete(null)
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t('bulk.hard_delete_failed_title', 'Hard Delete Failed'),
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const inviteUserMutation = useMutation({
+    mutationFn: async (params: { email: string; role: AppRole | '' }) => {
+      const { email, role } = params
+      const trimmedEmail = email.trim().toLowerCase()
+      if (!trimmedEmail || !trimmedEmail.includes('@')) {
+        throw new Error('Please enter a valid email address.')
+      }
+      if (!role) {
+        throw new Error('Please select a role for the invited user.')
+      }
+
+      const appUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
+      const { data, error: fnError } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: trimmedEmail,
+          role,
+          provisioningMethod: 'invite',
+          appUrl,
+        },
+      })
+
+      if (fnError) {
+        const maybeContext = fnError as unknown as { context?: { response?: Response } }
+        const response = maybeContext?.context?.response
+        if (response) {
+          const text = await response.text().catch(() => '')
+          let parsedError: string | undefined
+          if (text) {
+            try {
+              const parsed = JSON.parse(text) as { error?: string }
+              parsedError = parsed?.error
+            } catch {
+              parsedError = text
+            }
+          }
+          throw new Error(parsedError || fnError.message || 'Failed to send invitation')
+        }
+        throw new Error(fnError.message || 'Failed to send invitation')
+      }
+
+      if (data?.error) {
+        throw new Error(data.error)
+      }
+
+      return data as { userId?: string; invitationSent?: boolean }
+    },
+    onSuccess: () => {
+      toast({
+        title: t('form.success.invite_sent_title', 'Invitation Sent'),
+        description: t(
+          'form.success.invite_sent_message',
+          'An invite email was sent. The user should open the link, set a password, and complete their profile.'
+        ),
+      })
+      setInviteDialogOpen(false)
+      setInviteEmail('')
+      setInviteRole('staff')
+      refetch()
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t('form.error.create_failed'),
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const handleInviteDialogOpenChange = (open: boolean) => {
+    setInviteDialogOpen(open)
+    if (!open) {
+      setInviteEmail('')
+      setInviteRole('staff')
+    }
+  }
 
   // Filter users by search + status
   const filteredUsers = users?.filter((user) => {
@@ -131,6 +286,11 @@ export default function UserManagement() {
 
   const handleEdit = (user: Profile) => {
     setSelectedUser(user)
+    setShowForm(true)
+  }
+
+  const openCreateForm = () => {
+    setSelectedUser(null)
     setShowForm(true)
   }
 
@@ -262,13 +422,22 @@ export default function UserManagement() {
         title={t('title')}
         description={t('description')}
         actions={
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-hotel-gold text-white px-4 py-2.5 rounded-md text-sm hover:bg-hotel-gold-dark transition-colors flex items-center gap-2 min-h-touch w-full sm:w-auto justify-center"
-          >
-            <Plus className="w-4 h-4" />
-            {t('add_user')}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setInviteDialogOpen(true)}
+              className="border border-hotel-gold text-hotel-gold px-4 py-2.5 rounded-md text-sm hover:bg-hotel-gold/10 transition-colors flex items-center gap-2 min-h-touch w-full sm:w-auto justify-center"
+            >
+              <MailPlus className="w-4 h-4" />
+              {t('form.invite_user', 'Invite User')}
+            </button>
+            <button
+              onClick={openCreateForm}
+              className="bg-hotel-gold text-white px-4 py-2.5 rounded-md text-sm hover:bg-hotel-gold-dark transition-colors flex items-center gap-2 min-h-touch w-full sm:w-auto justify-center"
+            >
+              <Plus className="w-4 h-4" />
+              {t('add_user')}
+            </button>
+          </div>
         }
       />
 
@@ -472,6 +641,17 @@ export default function UserManagement() {
                             <Trash2 className="w-4 h-4" />
                             {t('bulk.deactivate')}
                           </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setUserToHardDelete(user)
+                              setHardDeleteConfirmOpen(true)
+                            }}
+                            className="gap-2 text-red-700 focus:text-red-700"
+                          >
+                            <UserX className="w-4 h-4" />
+                            {t('bulk.hard_delete', 'Hard Delete')}
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -486,7 +666,7 @@ export default function UserManagement() {
               description={searchTerm ? t('empty.no_results') : t('empty.description')}
               action={{
                 label: t('add_user'),
-                onClick: () => setShowForm(true),
+                onClick: openCreateForm,
                 icon: Plus
               }}
             />
@@ -494,27 +674,117 @@ export default function UserManagement() {
         </div>
       </div>
 
+      {/* Email Invite Dialog */}
+      <Dialog open={inviteDialogOpen} onOpenChange={handleInviteDialogOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MailPlus className="w-5 h-5 text-hotel-gold" />
+              {t('form.invite_user', 'Invite User')}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                'form.invite_description',
+                'Send an invitation email. The user will set a password and complete their profile from the link.'
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="invite-email">{t('form.email')}</Label>
+            <Input
+              id="invite-email"
+              type="email"
+              placeholder="name@example.com"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              disabled={inviteUserMutation.isPending}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  if (inviteEmail.trim()) {
+                    inviteUserMutation.mutate({ email: inviteEmail, role: inviteRole })
+                  }
+                }
+              }}
+            />
+          </div>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="invite-role">{t('form.permission_level', 'Permission Level')}</Label>
+            <select
+              id="invite-role"
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as AppRole)}
+              disabled={inviteUserMutation.isPending}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              required
+            >
+              <option value="">{t('form.select_role', 'Select role')}</option>
+              {ROLE_HIERARCHY.map((roleKey) => (
+                <option key={roleKey} value={roleKey}>
+                  {ROLES[roleKey].label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                'form.invite_role_description',
+                'This role is enforced before the account is created.'
+              )}
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleInviteDialogOpenChange(false)}
+              disabled={inviteUserMutation.isPending}
+            >
+              {t('form.cancel', 'Cancel')}
+            </Button>
+            <Button
+              onClick={() => inviteUserMutation.mutate({ email: inviteEmail, role: inviteRole })}
+              disabled={inviteUserMutation.isPending || !inviteEmail.trim() || !inviteRole}
+            >
+              {inviteUserMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : null}
+              {t('form.send_invite', 'Send Invite')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete/Deactivate Confirmation */}
       <DeleteConfirmation
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={async () => {
           if (userToDelete) {
-            const { error } = await supabase
-              .from('profiles')
-              .update({ is_active: false })
-              .eq('id', userToDelete.id)
-
-            if (!error) {
-              refetch()
-              setDeleteConfirmOpen(false)
-              setUserToDelete(null)
-            }
+            await deleteUserMutation.mutateAsync(userToDelete.id)
           }
         }}
         itemName={userToDelete?.full_name || userToDelete?.email || ''}
         itemType={t('user', 'User')}
-        isLoading={false}
+        isLoading={deleteUserMutation.isPending}
+      />
+
+      {/* Hard Delete Confirmation */}
+      <DeleteConfirmation
+        open={hardDeleteConfirmOpen}
+        onOpenChange={setHardDeleteConfirmOpen}
+        onConfirm={async () => {
+          if (userToHardDelete) {
+            await hardDeleteUserMutation.mutateAsync(userToHardDelete.id)
+          }
+        }}
+        itemName={userToHardDelete?.full_name || userToHardDelete?.email || ''}
+        itemType={t('user', 'User')}
+        title={t('bulk.hard_delete_confirm_title', 'Permanently delete user?')}
+        description={t(
+          'bulk.hard_delete_confirm_description',
+          `This will permanently delete "${userToHardDelete?.full_name || userToHardDelete?.email || ''}" and remove their authentication account. This action cannot be undone.`
+        )}
+        isLoading={hardDeleteUserMutation.isPending}
       />
 
       {/* Account Action Confirmation Dialog */}
@@ -605,7 +875,7 @@ export default function UserManagement() {
               <div className="border rounded-md p-3">
                 <p className="text-xs font-medium text-gray-600 mb-2">{t_ext('recent_admin_notes', 'Recent Admin Notes')}</p>
                 <div className="space-y-2">
-                  {actionNotesQuery.data.map((note: any) => (
+                  {actionNotesQuery.data.map((note: AccountActionNote) => (
                     <div key={note.id} className="text-xs text-gray-600">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{note.action.replace(/_/g, ' ')}</span>

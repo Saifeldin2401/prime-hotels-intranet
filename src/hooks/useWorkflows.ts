@@ -59,7 +59,8 @@ export function useWorkflows() {
         },
         enabled: !!user,
         refetchOnMount: 'always',
-        refetchOnWindowFocus: true
+        refetchOnWindowFocus: false,
+        staleTime: 30000
     })
 }
 
@@ -93,7 +94,8 @@ export function useWorkflowExecutions(workflowId?: string, limit: number = 50) {
         queryFn: () => getWorkflowExecutions(workflowId, limit),
         enabled: !!user,
         refetchOnMount: 'always',
-        refetchOnWindowFocus: true
+        refetchOnWindowFocus: false,
+        staleTime: 15000
     })
 }
 

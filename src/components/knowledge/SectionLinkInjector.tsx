@@ -26,7 +26,7 @@ export function SectionLinkInjector({ containerRef, isActive }: SectionLinkInjec
         // Function to add buttons to headings
         const addButtonsToHeadings = () => {
             const headings = container.querySelectorAll('h1, h2, h3, h4')
-            
+
             headings.forEach((heading, index) => {
                 // Skip if already processed
                 if (heading.querySelector('.section-link-wrapper')) return
@@ -43,7 +43,7 @@ export function SectionLinkInjector({ containerRef, isActive }: SectionLinkInjec
                 // Create container for the button
                 const buttonContainer = document.createElement('span')
                 buttonContainer.className = 'section-link-wrapper inline-flex items-center ml-2'
-                
+
                 // Append to heading
                 heading.appendChild(buttonContainer)
 
@@ -78,15 +78,22 @@ export function SectionLinkInjector({ containerRef, isActive }: SectionLinkInjec
 
         return () => {
             observer.disconnect()
-            // Clean up roots
-            roots.forEach((root, element) => {
-                root.unmount()
-                const wrapper = element.querySelector('.section-link-wrapper')
-                if (wrapper) {
-                    wrapper.remove()
-                }
-            })
+            // Defer unmount to avoid race condition with React's rendering cycle
+            const rootsCopy = new Map(roots)
             roots.clear()
+            setTimeout(() => {
+                rootsCopy.forEach((root, element) => {
+                    try {
+                        root.unmount()
+                    } catch {
+                        // Ignore if already unmounted
+                    }
+                    const wrapper = element.querySelector('.section-link-wrapper')
+                    if (wrapper) {
+                        wrapper.remove()
+                    }
+                })
+            }, 0)
         }
     }, [containerRef, isActive])
 

@@ -268,7 +268,12 @@
             "summary_group_department": "هذا القسم عبر جميع المنشآت",
             "summary_specific_departments": "أقسام محددة عبر المنشآت",
             "summary_role": "المستخدمون ذوي دور محدد"
-        }
+        },
+        "linked_training": "التدريب المرتبط",
+        "training_module": "الوحدة التدريبية",
+        "select_training_module": "اختر التدريب...",
+        "no_linked_training": "لا يوجد",
+        "training_hint": "اربط البرنامج التدريبي. سيرى المستخدمون مطالبة بأخذ هذا التدريب عند قراءة هذا المستند."
     },
     "browse": {
         "title": "تصفح قاعدة المعرفة",

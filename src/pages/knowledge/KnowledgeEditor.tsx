@@ -80,6 +80,7 @@ import { useProperties } from '@/hooks/useProperties'
 import { scanFile } from '@/hooks/useVirusScan'
 import { useDuplicateDetection } from '@/hooks/useDuplicateDetection'
 import { useTagSuggestions } from '@/hooks/useTagSuggestions'
+import { useTrainingModules } from '@/hooks/useTraining'
 
 interface ArticleFormData {
     title: string
@@ -96,6 +97,7 @@ interface ArticleFormData {
     category_id: string | null
     target_property_id: string | null
     specific_department_ids: string[] // For specific departments visibility
+    linked_training_id: string | null
     // Content Type Specific
     checklist_items: ChecklistItem[]
     faq_items: FAQItem[]
@@ -133,6 +135,7 @@ export default function KnowledgeEditor() {
         category_id: null,
         target_property_id: null,
         specific_department_ids: [],
+        linked_training_id: null,
         checklist_items: [],
         faq_items: [],
         video_url: '',
@@ -153,6 +156,7 @@ export default function KnowledgeEditor() {
     const { departments } = useDepartments(currentProperty?.id)
     const { data: categories } = useCategories(formData.department_id || undefined)
     const { data: properties } = useProperties()
+    const { data: trainingModules } = useTrainingModules()
 
     // Duplicate detection and tag suggestions
     const { checkForDuplicates, clearCheck, isReady, result: duplicateResult } = useDuplicateDetection()
@@ -646,6 +650,7 @@ export default function KnowledgeEditor() {
                             category_id: data.category_id || null,
                             target_property_id: data.property_id || null,
                             specific_department_ids: data.department_access_ids || [],
+                            linked_training_id: data.linked_training_id || null,
                             // Content Type Specific
                             checklist_items: data.checklist_items || [],
                             faq_items: data.faq_items || [],
@@ -981,6 +986,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 property_id: normalizedPropertyId,
                 department_id: isUuid(formData.department_id) ? formData.department_id : null,
                 category_id: isUuid(formData.category_id) ? formData.category_id : null,
+                linked_training_id: isUuid(formData.linked_training_id) ? formData.linked_training_id : null,
                 updated_by: user?.id,
                 updated_at: new Date().toISOString(),
                 estimated_read_time: estimatedReadTime,
@@ -1281,8 +1287,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                                 key={idx}
                                                 variant="outline"
                                                 className={`text-[10px] cursor-pointer hover:bg-indigo-50 ${suggestion.confidence === 'high' ? 'border-green-300 text-green-700' :
-                                                        suggestion.confidence === 'medium' ? 'border-blue-300 text-blue-700' :
-                                                            'border-slate-300 text-slate-600'
+                                                    suggestion.confidence === 'medium' ? 'border-blue-300 text-blue-700' :
+                                                        'border-slate-300 text-slate-600'
                                                     }`}
                                                 title={suggestion.reason}
                                             >
@@ -1802,6 +1808,44 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     checked={formData.requires_acknowledgment}
                                     onCheckedChange={v => updateField('requires_acknowledgment', v)}
                                 />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* 3. Linked Training */}
+                    <Card className="border-hotel-navy/10 shadow-sm">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                                <LinkIcon className="h-4 w-4 text-hotel-gold" />
+                                {t('editor.linked_training', 'Linked Training')}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <Label className="text-sm font-semibold mb-1.5 block">
+                                    {t('editor.training_module', 'Training Module')}
+                                </Label>
+                                <Select
+                                    value={formData.linked_training_id || 'none'}
+                                    onValueChange={v => updateField('linked_training_id', v === 'none' ? null : v)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder={t('editor.select_training_module', 'Select training...')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">
+                                            {t('editor.no_linked_training', 'None')}
+                                        </SelectItem>
+                                        {trainingModules?.map(module => (
+                                            <SelectItem key={module.id} value={module.id}>
+                                                {module.title}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
+                                    {t('editor.training_hint', 'Link an active training module. Users will see a prompt to take this training when reading this document.')}
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

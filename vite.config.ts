@@ -12,8 +12,8 @@ const securityHeaders = {
     "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:;",
     `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co'} wss://${(process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co').replace('https://', '')} https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://o4508792767840256.ingest.de.sentry.io https://*.sentry.io https://date.nager.at`,
-    // Allow YouTube and Vimeo video embeds in knowledge base articles
-    "frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com",
+    // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
+    `frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com ${process.env.VITE_SUPABASE_URL || 'https://htsvjfrofcpkfzvjpwvx.supabase.co'}`,
     "frame-ancestors 'none'"
   ].join('; '),
   'X-Content-Type-Options': 'nosniff',

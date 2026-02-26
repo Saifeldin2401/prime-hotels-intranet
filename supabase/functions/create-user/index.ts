@@ -30,6 +30,116 @@ function normalizeDateOnly(value: unknown): string | null {
     return datePart;
 }
 
+type ProvisioningMethod = "temporary_password" | "invite";
+
+function isProvisioningMethod(value: unknown): value is ProvisioningMethod {
+    return value === "temporary_password" || value === "invite";
+}
+
+type AppRole =
+    | "corporate_admin"
+    | "regional_admin"
+    | "regional_hr"
+    | "property_manager"
+    | "property_hr"
+    | "department_head"
+    | "manager"
+    | "staff";
+
+const APP_ROLE_PRIORITY: Record<AppRole, number> = {
+    corporate_admin: 1,
+    regional_admin: 2,
+    regional_hr: 3,
+    property_manager: 4,
+    property_hr: 5,
+    department_head: 6,
+    manager: 7,
+    staff: 8,
+};
+
+const CREATOR_ROLES = new Set<AppRole>([
+    "corporate_admin",
+    "regional_admin",
+    "regional_hr",
+]);
+
+function isAppRole(value: unknown): value is AppRole {
+    return typeof value === "string" && value in APP_ROLE_PRIORITY;
+}
+
+function getMostPrivilegedRole(roles: AppRole[]): AppRole | null {
+    if (roles.length === 0) return null;
+    return roles.reduce((best, current) =>
+        APP_ROLE_PRIORITY[current] < APP_ROLE_PRIORITY[best] ? current : best
+    );
+}
+
+function resolveAppUrl(req: Request, appUrlFromBody: unknown): string | null {
+    const rawCandidates = [
+        typeof appUrlFromBody === "string" ? appUrlFromBody.trim() : "",
+        (Deno.env.get("APP_URL") || "").trim(),
+        (Deno.env.get("SITE_URL") || "").trim(),
+        (req.headers.get("origin") || "").trim(),
+    ];
+
+    for (const candidate of rawCandidates) {
+        if (!candidate) continue;
+        try {
+            const parsed = new URL(candidate);
+            parsed.pathname = "";
+            parsed.search = "";
+            parsed.hash = "";
+            return parsed.toString().replace(/\/$/, "");
+        } catch {
+            // Ignore invalid candidate URL and try next.
+        }
+    }
+
+    return null;
+}
+
+function isLocalhostAppUrl(url: string | null): boolean {
+    if (!url) return false;
+    try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+    } catch {
+        return false;
+    }
+}
+
+function buildInviteCompletionUrl(baseUrl: string, tokenHash: string): string {
+    const inviteUrl = new URL(baseUrl);
+    inviteUrl.searchParams.set("token_hash", tokenHash);
+    inviteUrl.searchParams.set("type", "invite");
+    return inviteUrl.toString();
+}
+
+type GenerateInviteResult = {
+    userId: string | null;
+    error: unknown;
+    tokenHash: string | null;
+};
+
+async function generateInviteLink(
+    email: string,
+    authMetadata: Record<string, string>,
+    redirectTo?: string,
+): Promise<GenerateInviteResult> {
+    const { data, error } = await adminClient.auth.admin.generateLink({
+        type: "invite",
+        email,
+        data: authMetadata,
+        ...(redirectTo ? { options: { redirectTo } } : {}),
+    });
+
+    return {
+        userId: data?.user?.id ?? null,
+        error,
+        tokenHash: data?.properties?.hashed_token ?? null,
+    };
+}
+
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -44,24 +154,60 @@ Deno.serve(async (req: Request) => {
             phone,
             jobTitle,
             role,
-            propertyIds = [],
-            departmentIds = [],
+            propertyIds: rawPropertyIds = [],
+            departmentIds: rawDepartmentIds = [],
             reportingTo,
             dateOfBirth,
-            date_of_birth
+            date_of_birth,
+            provisioningMethod: rawProvisioningMethod = "temporary_password",
+            appUrl,
         } = body;
 
-        const normalizedDob = normalizeDateOnly(dateOfBirth ?? date_of_birth);
-
-        if (!email || !fullName || !normalizedDob) {
-            return new Response(JSON.stringify({ error: "Missing email, fullName, or dateOfBirth" }), {
+        if (!isProvisioningMethod(rawProvisioningMethod)) {
+            return new Response(JSON.stringify({ error: "Invalid provisioningMethod. Expected 'temporary_password' or 'invite'" }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
-        if (!isISODate(normalizedDob)) {
+        const provisioningMethod: ProvisioningMethod = rawProvisioningMethod;
+        const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+        const normalizedFullName = typeof fullName === "string" ? fullName.trim() : "";
+        const normalizedRoleInput = typeof role === "string" ? role.trim().toLowerCase() : "";
+        const normalizedRole: AppRole | null = isAppRole(normalizedRoleInput) ? normalizedRoleInput : null;
+        const propertyIds = Array.isArray(rawPropertyIds)
+            ? rawPropertyIds.filter((pid): pid is string => typeof pid === "string" && pid.trim().length > 0)
+            : [];
+        const departmentIds = Array.isArray(rawDepartmentIds)
+            ? rawDepartmentIds.filter((did): did is string => typeof did === "string" && did.trim().length > 0)
+            : [];
+
+        const normalizedDob = normalizeDateOnly(dateOfBirth ?? date_of_birth);
+        const requiresFullProfile = provisioningMethod === "temporary_password";
+
+        if (!normalizedEmail) {
+            return new Response(JSON.stringify({ error: "Missing email" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        if (requiresFullProfile && (!normalizedFullName || !normalizedDob)) {
+            return new Response(JSON.stringify({ error: "Missing fullName or dateOfBirth" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        if (normalizedDob && !isISODate(normalizedDob)) {
             return new Response(JSON.stringify({ error: "Invalid dateOfBirth format. Expected YYYY-MM-DD" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        if (!normalizedRole) {
+            return new Response(JSON.stringify({ error: "Missing or invalid role" }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -93,15 +239,40 @@ Deno.serve(async (req: Request) => {
         }
 
         // Check Roles (Must be Regional Admin or HR)
-        const { data: roles } = await userClient
+        const { data: roles, error: rolesError } = await userClient
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id);
 
-        const hasPermission = roles?.some(r => ['regional_admin', 'regional_hr'].includes(r.role));
+        if (rolesError) {
+            return new Response(JSON.stringify({ error: "Failed to verify inviter permissions" }), {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        const inviterRoles = (roles || [])
+            .map((r) => r.role)
+            .filter(isAppRole);
+        const inviterBestRole = getMostPrivilegedRole(inviterRoles);
+        const hasPermission = inviterRoles.some((currentRole) => CREATOR_ROLES.has(currentRole));
 
         if (!hasPermission) {
             return new Response(JSON.stringify({ error: "Forbidden: Insufficient privileges" }), {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        if (!inviterBestRole) {
+            return new Response(JSON.stringify({ error: "Forbidden: No valid inviter role found" }), {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        if (APP_ROLE_PRIORITY[normalizedRole] <= APP_ROLE_PRIORITY[inviterBestRole]) {
+            return new Response(JSON.stringify({ error: "Forbidden: You cannot assign a role equal to or higher than your own." }), {
                 status: 403,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -110,7 +281,7 @@ Deno.serve(async (req: Request) => {
         // SECURITY CHECK: END
         // =================================================================
 
-        console.log(`Creating user: ${email}, jobTitle: ${jobTitle}, role: ${role}, reportingTo: ${reportingTo}, by: ${user.email}`);
+        console.log(`Creating user: ${normalizedEmail}, mode: ${provisioningMethod}, jobTitle: ${jobTitle}, role: ${normalizedRole}, reportingTo: ${reportingTo}, by: ${user.email}`);
 
         // Validate job title against FK target to avoid opaque profile FK errors.
         // If the provided title can't be matched, fall back to NULL instead of failing user creation.
@@ -135,19 +306,36 @@ Deno.serve(async (req: Request) => {
         }
 
         // 1. Create Auth User
-        let authData, authError;
+        let authData: { user?: { id?: string } } | null = null;
+        let authError: any = null;
+        let customInviteTokenHash: string | null = null;
+        const resolvedAppUrl = resolveAppUrl(req, appUrl);
+        const inviteRedirectTo = resolvedAppUrl ? `${resolvedAppUrl}/complete-invite` : undefined;
+        const shouldUseCustomLocalInvite = provisioningMethod === "invite" && isLocalhostAppUrl(resolvedAppUrl);
+        const authMetadata: Record<string, string> = {};
+        if (normalizedFullName) authMetadata.full_name = normalizedFullName;
+        if (normalizedDob) authMetadata.date_of_birth = normalizedDob;
         try {
-            const result = await adminClient.auth.admin.createUser({
-                email,
-                password: "TempPassword123!",
-                email_confirm: true,
-                user_metadata: {
-                    full_name: fullName,
-                    date_of_birth: normalizedDob,
-                },
-            });
-            authData = result.data;
-            authError = result.error;
+            if (provisioningMethod === "invite" && shouldUseCustomLocalInvite) {
+                const generatedInvite = await generateInviteLink(normalizedEmail, authMetadata, inviteRedirectTo);
+                authData = generatedInvite.userId ? { user: { id: generatedInvite.userId } } : null;
+                authError = generatedInvite.error;
+                customInviteTokenHash = generatedInvite.tokenHash;
+            } else {
+                const result = provisioningMethod === "invite"
+                    ? await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, {
+                        data: authMetadata,
+                        ...(inviteRedirectTo ? { redirectTo: inviteRedirectTo } : {}),
+                    })
+                    : await adminClient.auth.admin.createUser({
+                        email: normalizedEmail,
+                        password: "TempPassword123!",
+                        email_confirm: true,
+                        user_metadata: authMetadata,
+                    });
+                authData = result.data;
+                authError = result.error;
+            }
         } catch (e: any) {
             console.error("Auth creation threw error:", e);
             authError = { message: e.message || e.toString(), details: e };
@@ -164,22 +352,40 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        const userId = authData.user!.id;
+        const userId = authData?.user?.id;
+        if (!userId) {
+            return new Response(JSON.stringify({ error: "User creation did not return a user id." }), {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
         console.log(`User created: ${userId}`);
 
         // 2. Update Profile (Job Title, Phone, Active, Reporting To)
         // Retry logic could be added here if trigger is slow, but usually it's immediate within transaction or shortly after
+        const profileUpdate: Record<string, unknown> = {
+            phone: phone || null,
+            job_title: normalizedJobTitle,
+            is_active: true,
+            is_temp_password: true,
+            reporting_to: reportingTo || null,
+        };
+
+        if (normalizedFullName) {
+            profileUpdate.full_name = normalizedFullName;
+        }
+        if (normalizedDob) {
+            profileUpdate.date_of_birth = normalizedDob;
+        }
+
+        if (provisioningMethod === "invite") {
+            profileUpdate.force_password_reset = true;
+            profileUpdate.password_initialized = false;
+        }
+
         const { error: profileError } = await adminClient
             .from('profiles')
-            .update({
-                full_name: fullName,
-                phone: phone || null,
-                job_title: normalizedJobTitle,
-                is_active: true,
-                is_temp_password: true, // FORCE PASSWORD CHANGE ON FIRST LOGIN
-                reporting_to: reportingTo || null,
-                date_of_birth: normalizedDob
-            })
+            .update(profileUpdate)
             .eq('id', userId);
 
         if (profileError) {
@@ -192,10 +398,11 @@ Deno.serve(async (req: Request) => {
         }
 
         // 3. Assign Role (user_roles)
-        if (role) {
+        const roleToAssign = normalizedRole;
+        if (roleToAssign) {
             const { error: roleError } = await adminClient
                 .from('user_roles')
-                .insert({ user_id: userId, role });
+                .insert({ user_id: userId, role: roleToAssign });
 
             if (roleError) {
                 console.error("Role assignment failed:", roleError);
@@ -228,46 +435,98 @@ Deno.serve(async (req: Request) => {
             }
         }
 
-        // 6. Send Welcome Email
-        try {
-            console.log(`Sending welcome email to ${email}...`);
-            const welcomeMsg = "Welcome to PHG Connect. Your account has been created with the following temporary credentials:\n\nEmail: " + email + "\nPassword: TempPassword123!\n\nYou will be required to change your password upon your first login.";
+        // 6. Send Welcome Email (temp password mode only).
+        if (provisioningMethod === "temporary_password") {
+            try {
+                console.log(`Sending welcome email to ${normalizedEmail}...`);
+                const welcomeMsg = "Welcome to PHG Connect. Your account has been created with the following temporary credentials:\n\nEmail: " + normalizedEmail + "\nPassword: TempPassword123!\n\nYou will be required to change your password upon your first login.";
 
-            const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": authHeader!,
-                },
-                body: JSON.stringify({
-                    to: email,
-                    templateKey: "user_management_welcome",
-                    title: "Portal Access Credentials",
-                    variables: {
-                        recipient_name: fullName,
-                        message: welcomeMsg
+                const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": authHeader!,
                     },
-                    actionUrl: "/",
-                    businessDomain: "user_management",
-                    notificationType: "system"
-                }),
-            });
+                    body: JSON.stringify({
+                        to: normalizedEmail,
+                        templateKey: "user_management_welcome",
+                        title: "Portal Access Credentials",
+                        variables: {
+                            recipient_name: normalizedFullName,
+                            message: welcomeMsg
+                        },
+                        actionUrl: "/",
+                        businessDomain: "user_management",
+                        notificationType: "system"
+                    }),
+                });
 
-            if (!emailResponse.ok) {
-                const errorData = await emailResponse.json().catch(() => ({}));
-                console.error("Failed to send welcome email:", errorData);
-            } else {
-                console.log("Welcome email successfully sent to " + email);
+                if (!emailResponse.ok) {
+                    const errorData = await emailResponse.json().catch(() => ({}));
+                    console.error("Failed to send welcome email:", errorData);
+                } else {
+                    console.log("Welcome email successfully sent to " + normalizedEmail);
+                }
+            } catch (emailErr) {
+                console.error("Error calling send-email function:", emailErr);
             }
-        } catch (emailErr) {
-            console.error("Error calling send-email function:", emailErr);
+        }
+
+        // 7. Send localhost invite email when Supabase redirect allowlist would otherwise force production URL.
+        if (provisioningMethod === "invite" && shouldUseCustomLocalInvite && customInviteTokenHash && inviteRedirectTo) {
+            try {
+                const localInviteUrl = buildInviteCompletionUrl(inviteRedirectTo, customInviteTokenHash);
+                const inviteMessage = "You have been invited to PHG Connect. Open the link below to set your password and complete your profile.";
+                const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": authHeader!,
+                    },
+                    body: JSON.stringify({
+                        to: normalizedEmail,
+                        subject: "You are invited to PHG Connect",
+                        title: "Complete your account setup",
+                        message: inviteMessage,
+                        actionUrl: localInviteUrl,
+                        actionLabel: "Complete Account Setup",
+                        businessDomain: "user_management",
+                        notificationType: "system",
+                        variables: {
+                            recipient_name: normalizedFullName || normalizedEmail,
+                            invite_url: localInviteUrl,
+                        },
+                    }),
+                });
+
+                if (!emailResponse.ok) {
+                    const errorData = await emailResponse.json().catch(() => ({}));
+                    console.error("Failed to send localhost invite email:", errorData);
+                    await adminClient.auth.admin.deleteUser(userId);
+                    return new Response(JSON.stringify({ error: "Failed to send invitation email." }), {
+                        status: 500,
+                        headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    });
+                }
+            } catch (inviteEmailErr) {
+                console.error("Error sending localhost invite email:", inviteEmailErr);
+                await adminClient.auth.admin.deleteUser(userId);
+                return new Response(JSON.stringify({ error: "Failed to send invitation email." }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
         }
 
         return new Response(
             JSON.stringify({
                 userId: userId,
                 success: true,
-                tempPassword: "TempPassword123!" // Match the password set above
+                provisioningMethod,
+                invitationSent: provisioningMethod === "invite",
+                ...(provisioningMethod === "temporary_password"
+                    ? { tempPassword: "TempPassword123!" } // Match the password set above
+                    : {})
             }),
             {
                 status: 200,

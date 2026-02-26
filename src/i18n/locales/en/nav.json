@@ -83,10 +83,9 @@
     "groups": {
         "home": "Home",
         "my_work": "My Work",
-        "knowledge_base": "Knowledge Base",
+        "knowledge_base": "Knowledge & Documents",
         "learning": "Learning",
         "learning_management": "LMS Admin",
-        "question_bank": "Question Bank",
         "operations": "Operations",
         "hr_management": "HR Management",
         "my_hr": "My HR",

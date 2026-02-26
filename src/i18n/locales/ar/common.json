@@ -512,5 +512,11 @@
     "templateitems": "Template Items",
     "startaudit": "Start Audit",
     "checklistitem": "Checklist item",
-    "recentaudits": "Recent Audits"
+    "recentaudits": "التدقيقات الأخيرة",
+    "cross_links": {
+        "view_in_documents": "عرض في مكتبة المستندات",
+        "view_in_knowledge": "عرض في قاعدة المعرفة",
+        "documents_hint": "الوصول إلى سجل الإصدارات والتنزيلات وإدارة الملفات",
+        "knowledge_hint": "القراءة مع العارض المتقدم والتعليقات والإشارات المرجعية والمقالات ذات الصلة"
+    }
 }

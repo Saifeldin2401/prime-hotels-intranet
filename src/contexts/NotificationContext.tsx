@@ -98,7 +98,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
                 }
                 if (status === 'TIMED_OUT') {
-                    channel.subscribe()
+                    queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
                 }
             })
 

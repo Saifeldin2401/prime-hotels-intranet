@@ -118,6 +118,8 @@ export function useDashboardStats() {
             }
         },
         enabled: !!user?.id,
+        staleTime: 120000, // Fresh for 2 minutes
+        refetchInterval: 300000, // Refetch every 5 minutes
     })
 }
 

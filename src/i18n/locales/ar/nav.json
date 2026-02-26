@@ -27,10 +27,9 @@
     "groups": {
         "home": "الرئيسية",
         "my_work": "عملي",
-        "knowledge_base": "قاعدة المعرفة",
+        "knowledge_base": "المعرفة والمستندات",
         "learning": "التعلم",
         "learning_management": "إدارة نظام التعلم",
-        "question_bank": "بنك الأسئلة",
         "operations": "العمليات",
         "hr_management": "إدارة الموارد البشرية",
         "my_hr": "الموارد البشرية الخاصة بي",

@@ -51,6 +51,7 @@ export function useAnalyticsStats(options?: { enabled?: boolean }) {
             }
         },
         enabled: options?.enabled ?? true,
-        refetchInterval: 60000 // Refresh every minute
+        staleTime: 120000, // Cache for 2 minutes
+        refetchInterval: 300000 // Refresh every 5 minutes
     })
 }

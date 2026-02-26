@@ -1,6 +1,5 @@
 import { lazy } from 'react'
-import { Route, Navigate } from 'react-router-dom'
-import type { User } from '@supabase/supabase-js'
+import { Route } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PublicOnlyRoute } from '@/components/auth/PublicOnlyRoute'
@@ -8,6 +7,7 @@ import { PublicOnlyRoute } from '@/components/auth/PublicOnlyRoute'
 const Login = lazy(() => import('@/pages/Login'))
 const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'))
+const CompleteInvite = lazy(() => import('@/pages/auth/CompleteInvite'))
 const ChangePassword = lazy(() => import('@/pages/auth/ChangePassword'))
 const Unauthorized = lazy(() => import('@/pages/Unauthorized'))
 
@@ -33,6 +33,10 @@ export const AuthRoutes = () => {
             <Route
                 path="/reset-password"
                 element={<ResetPassword />}
+            />
+            <Route
+                path="/complete-invite"
+                element={<CompleteInvite />}
             />
             <Route
                 path="/change-password"

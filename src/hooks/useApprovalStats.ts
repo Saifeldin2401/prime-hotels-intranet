@@ -122,8 +122,8 @@ export function useApprovalStats() {
 
             return stats
         },
-        staleTime: 30000, // Cache for 30 seconds
-        refetchInterval: 60000 // Refetch every minute
+        staleTime: 120000, // Cache for 2 minutes
+        refetchInterval: 300000 // Refetch every 5 minutes
     })
 }
 

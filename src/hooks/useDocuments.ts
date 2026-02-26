@@ -1630,6 +1630,8 @@ export function useDocumentAnalytics(documentId: string) {
   return useQuery({
     queryKey: ['document-analytics', documentId],
     enabled: !!documentId,
+    retry: false,
+    staleTime: 60_000,
     queryFn: async (): Promise<DocumentAnalytics> => {
       // Get basic stats
       const { data: doc, error: docError } = await supabase
@@ -1675,14 +1677,19 @@ export function useDocumentAnalytics(documentId: string) {
 
       if (uniqueError) throw uniqueError
 
-      // Get viewers by department
-      const { data: deptData, error: deptError } = await supabase.rpc('get_document_viewers_by_department', {
-        p_document_id: documentId
-      })
+      // Get viewers by department – try RPC first, fall back gracefully
+      let viewersByDepartment: Array<{ department_name: string; count: number }> = []
+      try {
+        const { data: deptData, error: deptError } = await supabase.rpc('get_document_viewers_by_department', {
+          p_document_id: documentId
+        })
 
-      if (deptError) {
-        // Fallback if RPC doesn't exist
-        console.warn('get_document_viewers_by_department RPC not available:', deptError)
+        if (!deptError && deptData) {
+          viewersByDepartment = deptData
+        }
+        // Silently ignore RPC not found errors (PGRST202)
+      } catch {
+        // RPC unavailable – continue without department data
       }
 
       return {
@@ -1693,7 +1700,7 @@ export function useDocumentAnalytics(documentId: string) {
         acknowledgment_count: ackCount || 0,
         views_over_time: Object.entries(viewsOverTime).map(([date, count]) => ({ date, count })),
         downloads_over_time: [], // Would need separate tracking table
-        viewers_by_department: deptData || []
+        viewers_by_department: viewersByDepartment
       }
     },
   })

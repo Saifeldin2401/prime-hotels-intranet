@@ -768,7 +768,7 @@ export function useMyAssignments() {
     queryKey: ['my-assignments', user?.id],
     queryFn: () => learningService.getMyAssignments(),
     enabled: !!user?.id,
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true
+    refetchInterval: 300000, // 5 min fallback (Realtime handles immediate updates above)
+    refetchOnWindowFocus: false
   })
 }

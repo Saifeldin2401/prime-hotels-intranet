@@ -85,7 +85,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border shadow-lg">
         <p className="text-sm font-medium mb-2">{format(new Date(label), "MMM d, yyyy")}</p>
         {payload.map((entry: any, index: number) => (
-          <div key={index} className="flex items-center gap-2 text-sm">
+          <div key={`${entry?.name ?? 'series'}-${entry?.dataKey ?? index}`} className="flex items-center gap-2 text-sm">
             <div
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: entry.color }}
@@ -111,7 +111,7 @@ export function DocumentAnalyticsCard({
   const midPoint = Math.floor(analytics.viewsOverTime.length / 2);
   const firstHalf = analytics.viewsOverTime.slice(0, midPoint);
   const secondHalf = analytics.viewsOverTime.slice(midPoint);
-  
+
   const firstHalfViews = firstHalf.reduce((sum, d) => sum + d.views, 0);
   const secondHalfViews = secondHalf.reduce((sum, d) => sum + d.views, 0);
   const viewsTrend = calculateTrend(secondHalfViews, firstHalfViews);
@@ -248,7 +248,7 @@ export function DocumentAnalyticsCard({
 
           <TabsContent value="views" className="mt-4">
             <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="99%" height={200} debounce={1}>
                 <AreaChart
                   data={analytics.viewsOverTime}
                   margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
@@ -330,11 +330,10 @@ export function DocumentAnalyticsCard({
                       <div
                         className="h-full bg-[#0B1C3E] rounded-full"
                         style={{
-                          width: `${
-                            analytics.totalViews > 0
+                          width: `${analytics.totalViews > 0
                               ? (user.views / analytics.totalViews) * 100
                               : 0
-                          }%`,
+                            }%`,
                         }}
                       />
                     </div>
@@ -355,7 +354,7 @@ export function DocumentAnalyticsCard({
           <div className="pt-4 border-t">
             <h4 className="text-sm font-medium mb-3">Views by Department</h4>
             <div className="h-[120px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="99%" height={120} debounce={1}>
                 <BarChart
                   data={analytics.departmentBreakdown}
                   layout="vertical"

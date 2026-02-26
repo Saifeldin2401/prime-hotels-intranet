@@ -33,12 +33,12 @@ export function WizardTrigger() {
     useEffect(() => {
         const interval = setInterval(() => {
             setCheckCounter(c => c + 1)
-        }, 500) // Check every 500ms
+        }, 1000) // Check every 1s
 
-        // Stop polling after 10 seconds
+        // Stop polling after 5 seconds
         const timeout = setTimeout(() => {
             clearInterval(interval)
-        }, 10000)
+        }, 5000)
 
         return () => {
             clearInterval(interval)
