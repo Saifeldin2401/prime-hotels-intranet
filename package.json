@@ -16,7 +16,8 @@
     "db:migrate": "powershell -ExecutionPolicy Bypass -File scripts/supabase-cmd.ps1 -Command migration",
     "db:push": "powershell -ExecutionPolicy Bypass -File scripts/supabase-cmd.ps1 -Command db push",
     "db:status": "powershell -ExecutionPolicy Bypass -File scripts/supabase-cmd.ps1 -Command migration list",
-    "audit:ci": "npm audit --omit=dev --audit-level=critical"
+    "audit:ci": "npm audit --omit=dev --audit-level=critical",
+    "start": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
