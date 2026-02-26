@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: prime-hotels-intranet
+    runtime: node
+    buildCommand: bun install && bun run build
+    startCommand: bun run preview --port $PORT --host
+    envVars:
+      - key: SHARP_IGNORE_GLOBAL_LIBVIPS
+        value: 1
+      - key: NODE_ENV
+        value: production
