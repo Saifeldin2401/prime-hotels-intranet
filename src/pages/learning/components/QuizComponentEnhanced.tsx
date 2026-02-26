@@ -570,39 +570,64 @@ export function QuizComponentEnhanced({
             : null
     ), [translationTarget])
 
-    const translateQuestion = async (questionItem: NonNullable<LearningQuiz['questions']>[number]) => {
+    const translateQuestion = useCallback(async (questionItem: NonNullable<LearningQuiz['questions']>[number]) => {
         if (!translationTarget || !questionItem?.question) return
 
         setIsTranslating(true)
         try {
             const questionText = questionItem.question.question_text || ''
             const explanationText = questionItem.question.explanation || ''
-            const optionTexts = questionItem.question.options?.map(o => ({ id: o.id, text: o.option_text })) || []
+            const options = questionItem.question.options || []
+            const textsToTranslate = [
+                questionText,
+                explanationText,
+                ...options.map(option => option.option_text || '')
+            ]
 
-            const [translatedQuestion, translatedExplanation] = await Promise.all([
-                translateAI.mutateAsync({ text: questionText, target_lang: translationTarget, source_lang: 'auto' }),
-                explanationText
-                    ? translateAI.mutateAsync({ text: explanationText, target_lang: translationTarget, source_lang: 'auto' })
-                    : Promise.resolve({ translated_text: '' })
-            ])
+            let translatedTexts: string[] = []
 
-            const translatedOptionsEntries = await Promise.all(
-                optionTexts.map(async (opt) => {
-                    const res = opt.text
-                        ? await translateAI.mutateAsync({ text: opt.text, target_lang: translationTarget, source_lang: 'auto' })
-                        : { translated_text: '' }
-                    return [opt.id, res.translated_text]
+            if (textsToTranslate.length > 0) {
+                const batchResult = await translateAI.mutateAsync({
+                    texts: textsToTranslate,
+                    target_lang: translationTarget,
+                    source_lang: 'auto'
                 })
-            )
+
+                if (Array.isArray(batchResult.translated_texts)) {
+                    translatedTexts = batchResult.translated_texts
+                }
+            }
+
+            if (translatedTexts.length !== textsToTranslate.length) {
+                translatedTexts = await Promise.all(
+                    textsToTranslate.map(async (text) => {
+                        if (!text) return ''
+                        const result = await translateAI.mutateAsync({
+                            text,
+                            target_lang: translationTarget,
+                            source_lang: 'auto'
+                        })
+                        return result.translated_text || ''
+                    })
+                )
+            }
+
+            const translatedQuestionText = translatedTexts[0] || ''
+            const translatedExplanation = translatedTexts[1] || ''
+            const translatedOptionsMap: Record<string, string> = {}
+
+            options.forEach((option, index) => {
+                translatedOptionsMap[option.id] = translatedTexts[index + 2] || ''
+            })
 
             setTranslatedQuestions(prev => ({
                 ...prev,
                 [questionItem.question_id]: {
                     ...prev[questionItem.question_id],
                     [translationTarget]: {
-                        text: translatedQuestion.translated_text,
-                        explanation: translatedExplanation.translated_text,
-                        options: Object.fromEntries(translatedOptionsEntries)
+                        text: translatedQuestionText,
+                        explanation: translatedExplanation,
+                        options: translatedOptionsMap
                     }
                 }
             }))
@@ -611,7 +636,19 @@ export function QuizComponentEnhanced({
         } finally {
             setIsTranslating(false)
         }
-    }
+    }, [translationTarget, translateAI])
+
+    useEffect(() => {
+        if (!translationTarget || !quiz || isTranslating) return
+
+        const currentQ = quiz.questions?.[currentQuestionIndex]
+        if (!currentQ) return
+
+        const existingTranslation = translatedQuestions[currentQ.question_id]?.[translationTarget]
+        if (existingTranslation?.text) return
+
+        void translateQuestion(currentQ)
+    }, [translationTarget, currentQuestionIndex, quiz, isTranslating, translatedQuestions, translateQuestion])
 
     const getTranslatedQuestion = (questionItem?: NonNullable<LearningQuiz['questions']>[number]) => {
         if (!questionItem || !translationTarget) return null
