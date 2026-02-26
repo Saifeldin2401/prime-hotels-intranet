@@ -29,33 +29,46 @@ export function useGoals(employeeId?: string) {
 
             if (error) throw error
 
-            // Fetch training progress for linked modules
-            const goalsWithProgress = await Promise.all(data.map(async (goal) => {
+            // Fetch unique training module IDs
+            const moduleIds = Array.from(new Set(data
+                .map(goal => goal.training_module_id)
+                .filter((id): id is string => id !== null)));
+
+            if (moduleIds.length === 0) return data;
+
+            // Fetch training modules and progress in batch
+            const [modulesResponse, progressResponse] = await Promise.all([
+                supabase
+                    .from('training_modules')
+                    .select('id, title')
+                    .in('id', moduleIds),
+                supabase
+                    .from('training_progress')
+                    .select('training_id, status, quiz_score')
+                    .eq('user_id', targetId)
+                    .in('training_id', moduleIds)
+            ]);
+
+            const modulesMap = new Map(modulesResponse.data?.map(m => [m.id, m.title]));
+            const progressMap = new Map(progressResponse.data?.map(p => [p.training_id, p]));
+
+            // Combine data
+            return data.map((goal) => {
                 if (!goal.training_module_id) return goal;
 
-                const { data: moduleData } = await supabase
-                    .from('training_modules')
-                    .select('title')
-                    .eq('id', goal.training_module_id)
-                    .single();
-
-                const { data: progressData } = await supabase
-                    .from('training_progress')
-                    .select('status, quiz_score')
-                    .eq('user_id', targetId)
-                    .eq('training_id', goal.training_module_id)
-                    .single();
+                const progressData = progressMap.get(goal.training_module_id);
 
                 return {
                     ...goal,
                     training_module: {
-                        title: moduleData?.title || 'Unknown Module',
-                        progress: progressData || undefined
+                        title: modulesMap.get(goal.training_module_id) || 'Unknown Module',
+                        progress: progressData ? {
+                            status: progressData.status,
+                            quiz_score: progressData.quiz_score
+                        } : undefined
                     }
                 };
-            }));
-
-            return goalsWithProgress;
+            });
         },
         enabled: !!targetId,
     })
