@@ -454,7 +454,7 @@ export const aiService = {
 
 
 
-  async improveContent(text: string, instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic', language: string = 'English'): Promise<string | null> {
+  async improveContent(text: string, instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic', language: string = 'English', format?: string, options?: any): Promise<string | null> {
 
     const prompts = {
 
@@ -633,6 +633,10 @@ export const aiService = {
   },
 
 
+
+  async beautifyArticle(content: string, contentType: string, language: string, style: string, options: any): Promise<string | null> {
+    return this.improveContent(content, 'professional', language);
+  },
 
   async suggestImportMapping(rawRows: string[][], targetHeaders: string[]): Promise<{ mapping: Record<string, string>, headerRowIndex: number }> {
 

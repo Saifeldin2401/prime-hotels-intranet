@@ -5,12 +5,10 @@
  * Uses 'documents' table.
  */
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
 import { sanitizeHtml } from '@/lib/sanitize'
-import { extractTextFromAiResponse } from '@/lib/aiResponse'
 import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import {
     Save,
@@ -21,7 +19,6 @@ import {
     Wand2,
     RefreshCw,
     Link as LinkIcon,
-    Languages,
     Clock,
     List,
     ShieldCheck,
@@ -29,7 +26,6 @@ import {
     Palette,
     AlertTriangle,
     Tag,
-    Check,
     X
 } from 'lucide-react'
 import { marked } from 'marked'
@@ -48,22 +44,14 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { MultiDepartmentSelector } from '@/components/shared/MultiDepartmentSelector'
 import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
-import { supabase } from '@/lib/supabase'
-import { triggerService } from '@/services/triggerService'
-import * as KnowledgeService from '@/services/knowledgeService'
-import { createBulkNotifications } from '@/lib/notificationService'
-import { aiService } from '@/lib/gemini'
 import {
     type KnowledgeVisibility,
-    type KnowledgeStatus,
-    type ChecklistItem,
-    type FAQItem,
     CONTENT_TYPE_CONFIG
 } from '@/types/knowledge'
 import {
@@ -75,93 +63,70 @@ import {
     VisualContentBuilder
 } from '@/components/knowledge'
 import { useRelatedArticles, useCategories } from '@/hooks/useKnowledge'
-import { useDepartments } from '@/hooks/useDepartments'
-import { useProperties } from '@/hooks/useProperties'
-import { scanFile } from '@/hooks/useVirusScan'
 import { useDuplicateDetection } from '@/hooks/useDuplicateDetection'
 import { useTagSuggestions } from '@/hooks/useTagSuggestions'
 
-interface ArticleFormData {
-    title: string
-    description: string
-    summary: string              // TL;DR summary for quick reading
-    content: string
-    file_url: string
-    storage_path: string
-    content_type: string
-    visibility: KnowledgeVisibility
-    requires_acknowledgment: boolean
-    featured: boolean
-    department_id: string | null
-    category_id: string | null
-    target_property_id: string | null
-    specific_department_ids: string[] // For specific departments visibility
-    // Content Type Specific
-    checklist_items: ChecklistItem[]
-    faq_items: FAQItem[]
-    video_url: string
-    images: any[]
-}
-
-const isUuid = (value?: string | null): value is string => {
-    if (!value) return false
-    // Accept any canonical UUID-like identifier stored in DB (including legacy non-RFC variant IDs).
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
-}
+import { useArticleForm } from './hooks/useArticleForm'
+import { useArticlePersistence } from './hooks/useArticlePersistence'
+import { useAIService } from './hooks/useAIService'
 
 export default function KnowledgeEditor() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { t } = useTranslation(['knowledge', 'common'])
-    const { user, profile, roles, primaryRole } = useAuth()
+    const { primaryRole } = useAuth()
     const { currentProperty } = useProperty()
-    const queryClient = useQueryClient()
-    const isEditing = Boolean(id)
+    const isEditing = Boolean(id) && id !== 'new'
 
-    const [formData, setFormData] = useState<ArticleFormData>({
-        title: '',
-        description: '',
-        summary: '',
-        content: '',
-        file_url: '',
-        storage_path: '',
-        content_type: 'document',
-        visibility: 'all_properties' as KnowledgeVisibility,
-        requires_acknowledgment: false,
-        featured: false,
-        department_id: null,
-        category_id: null,
-        target_property_id: null,
-        specific_department_ids: [],
-        checklist_items: [],
-        faq_items: [],
-        video_url: '',
-        images: []
-    })
+    // 1. Form State Management
+    const {
+        formData,
+        setFormData,
+        updateField,
+        validationWarnings,
+        selectedDepartmentName,
+        selectedPropertyName,
+        visibilitySummary,
+        uniqueDepartmentNames,
+        departments,
+        properties
+    } = useArticleForm()
 
-    // Fetch existing data if editing
-    // We need to fetch from 'documents' table now
-    // Since useKnowledgeArticle calls service, and service queries documents, it *should* work if service returns correct shape.
-    // But service `getArticleById` maps `documents` result to `KnowledgeArticle` type.
-    // If I didn't update `KnowledgeArticle` type, it might have mismatch.
-    // I'll rely on manual fetch here to be safe and clear about columns.
+    // 2. Persistence & Upload
+    const {
+        isSaving,
+        isUploading,
+        saveArticle,
+        handleFileUpload
+    } = useArticlePersistence(formData, updateField, setFormData, id)
 
-    // Actually, let's just use what we have, but I'll add a useEffect to load data manually if needed.
-    // Or simpler: Load it here.
+    // 3. AI Services
+    const {
+        isGenerating,
+        aiLanguage,
+        setAiLanguage,
+        beautifyOptions,
+        setBeautifyOptions,
+        generateWithAI,
+        beautifyArticle
+    } = useAIService(formData, updateField)
 
+    // 4. Other Data & UI State
     const { data: relatedArticles = [], refetch: refetchRelated } = useRelatedArticles(id || '')
-    const { departments } = useDepartments(currentProperty?.id)
     const { data: categories } = useCategories(formData.department_id || undefined)
-    const { data: properties } = useProperties()
 
-    // Duplicate detection and tag suggestions
-    const { checkForDuplicates, clearCheck, isReady, result: duplicateResult } = useDuplicateDetection()
+    const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
+    const previewRef = useRef<HTMLDivElement>(null)
+    const [isForbidden, setIsForbidden] = useState(false)
+
+    // Duplicate detection
+    const { checkForDuplicates, isReady, result: duplicateResult } = useDuplicateDetection()
     const { suggestions: tagSuggestions, isGenerating: isGeneratingTags, generateSuggestions, clearSuggestions } = useTagSuggestions()
     const [duplicateCheckResult, setDuplicateCheckResult] = useState<{ duplicates: Array<{ id: string; title: string; similarity: number; content_type: string }>; hasDuplicates: boolean } | null>(null)
     const [showDuplicateWarning, setShowDuplicateWarning] = useState(false)
     const [dismissedDuplicateTitle, setDismissedDuplicateTitle] = useState<string | null>(null)
 
-    // Check for duplicates when title changes (debounced)
+    // Check for duplicates logic
     useEffect(() => {
         if (!isReady || formData.title.length < 5 || isEditing) {
             setDuplicateCheckResult(null)
@@ -188,78 +153,28 @@ export default function KnowledgeEditor() {
         }
     }, [duplicateResult, formData.title, dismissedDuplicateTitle])
 
-    // Extract unique department names for group selection
-    const uniqueDepartmentNames = useMemo(() => {
-        if (!departments) return []
-        return Array.from(new Set(departments.map(d => d.name))).sort()
-    }, [departments])
+    // Preview logic
+    const previewHtml = useMemo(() => {
+        const raw = formData.content || ''
+        if (!raw.trim()) return `<p class="text-gray-400">${t('editor.empty_preview')}</p>`
+        const isHtml = raw.trim().startsWith('<')
+        const html = isHtml ? raw : (marked.parse(raw, { async: false }) as string)
+        return transformMermaidCodeBlocks(html)
+    }, [formData.content, t])
 
-    // Helper function to notify reviewers when a document is submitted for review
-    const notifyReviewersOfSubmission = async (documentId: string, documentTitle: string) => {
-        try {
-            // Get reviewers with reviewer roles from user_roles table
-            const reviewerRoles = ['property_manager', 'regional_admin', 'regional_hr']
+    useEffect(() => {
+        if (activeTab !== 'preview') return
+        void renderMermaidDiagrams(previewRef.current)
+    }, [activeTab, previewHtml])
 
-            // Query user_roles to find users with reviewer roles, then get their profile info
-            const { data: reviewerRolesData, error: rolesError } = await supabase
-                .from('user_roles')
-                .select('user_id, profiles!inner(id, full_name, is_active)')
-                .in('role', reviewerRoles)
-
-            if (rolesError) {
-                console.error('Error fetching reviewer roles:', rolesError)
-                return
-            }
-
-            if (!reviewerRolesData || reviewerRolesData.length === 0) {
-                // No reviewers found to notify
-                return
-            }
-
-            // Filter active users and exclude the author, get unique user IDs
-            const uniqueReviewerIds = new Set<string>()
-            const reviewers: { id: string; full_name: string }[] = []
-
-            for (const item of reviewerRolesData) {
-                const profile = (item as any).profiles
-                if (profile?.is_active && profile.id !== user?.id && !uniqueReviewerIds.has(profile.id)) {
-                    uniqueReviewerIds.add(profile.id)
-                    reviewers.push({ id: profile.id, full_name: profile.full_name })
-                }
-            }
-
-            if (reviewers.length === 0) {
-                // No active reviewers found to notify
-                return
-            }
-
-            // Create notifications for all reviewers
-            const notifications = reviewers.map(reviewer => ({
-                user_id: reviewer.id,
-                title: '📋 New Document for Review',
-                message: `"${documentTitle}" has been submitted for review by ${profile?.full_name || 'a team member'}.`,
-            }))
-
-            if (notifications.length > 0) {
-                await createBulkNotifications({
-                    userIds: reviewers.map(r => r.id),
-                    type: 'document_review_pending',
-                    title: '📋 New Document for Review',
-                    message: `"${documentTitle}" has been submitted for review by ${profile?.full_name || 'a team member'}.`,
-                    metadata: {
-                        link: `/knowledge/review`,
-                        document_id: documentId,
-                        submitted_by: user?.id,
-                        submitted_by_name: profile?.full_name
-                    }
-                })
-            } else {
-                // Notified reviewers about document submission
-            }
-        } catch (error) {
-            console.error('Failed to notify reviewers:', error)
+    // Permission check
+    useEffect(() => {
+        if (primaryRole === 'staff') {
+            setIsForbidden(true)
+            toast.error('You do not have permission to create or edit articles.')
+            navigate('/knowledge/search')
         }
-    }
+    }, [primaryRole, navigate])
 
     const VISIBILITY_OPTIONS: { value: KnowledgeVisibility; label: string; description: string }[] = [
         {
@@ -294,872 +209,6 @@ export default function KnowledgeEditor() {
         },
     ]
 
-    const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
-    const previewRef = useRef<HTMLDivElement>(null)
-    const [isSaving, setIsSaving] = useState(false)
-    const [isUploading, setIsUploading] = useState(false)
-    const [isGenerating, setIsGenerating] = useState(false)
-    const [aiLanguage, setAiLanguage] = useState('English')
-    const [isForbidden, setIsForbidden] = useState(false)
-    const [beautifyOptions, setBeautifyOptions] = useState({
-        includeTables: true,
-        includeMermaid: false,
-        includeCallouts: true,
-        includeTOC: true
-    })
-
-    const toPlainText = useCallback((value: string) => {
-        const parser = new DOMParser()
-        const doc = parser.parseFromString(value, 'text/html')
-        return (doc.body.textContent || '').replace(/\s+/g, ' ').trim()
-    }, [])
-
-    const toHtmlContent = useCallback((value: string) => {
-        const trimmed = value.trim()
-        if (!trimmed) return ''
-        return trimmed.startsWith('<')
-            ? trimmed
-            : (marked.parse(trimmed, { async: false }) as string)
-    }, [])
-
-    const ensureBeautifyFeatures = useCallback((html: string, opts: typeof beautifyOptions) => {
-        if (!html) return html
-
-        const parser = new DOMParser()
-        const doc = parser.parseFromString(html, 'text/html')
-        const body = doc.body
-
-        const slugify = (value: string) =>
-            value
-                .toLowerCase()
-                .trim()
-                .replace(/[^a-z0-9\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-
-        const ensureHeadingIds = () => {
-            const used = new Set<string>()
-            const headings = Array.from(body.querySelectorAll('h1, h2, h3, h4'))
-            headings.forEach((h) => {
-                const base = slugify(h.textContent || 'section') || 'section'
-                let id = base
-                let i = 2
-                while (used.has(id)) {
-                    id = `${base}-${i}`
-                    i += 1
-                }
-                h.id = h.id || id
-                used.add(h.id)
-            })
-            return headings
-        }
-
-        const headings = ensureHeadingIds()
-        const nonTitleHeadings = headings.filter((h) => h.tagName !== 'H1')
-        const generatedTOCs = Array.from(body.querySelectorAll('.ai-generated-toc'))
-        const generatedSummaryTables = Array.from(body.querySelectorAll('table.ai-generated-summary-table'))
-        const generatedCallouts = Array.from(body.querySelectorAll('.ai-generated-callout'))
-        const generatedMermaidBlocks = Array.from(body.querySelectorAll('pre.ai-generated-mermaid'))
-        const hasAnyTable = Array.from(body.querySelectorAll('table')).some(
-            (table) => !table.classList.contains('summary-table') && !table.classList.contains('ai-generated-summary-table')
-        )
-        const hasTOC = !!body.querySelector('.table-of-contents, .ai-generated-toc, .ai-content .ai-section-title')
-        const hasCallout = !!body.querySelector(
-            '.ai-highlight-box, .ai-warning-box, .ai-info-box, .ai-tip-box, [class^="alert-"], [class*=" alert-"]'
-        )
-        const hasMermaid = !!body.querySelector('pre.mermaid, .mermaid')
-        const hasHeader = !!body.querySelector('.ai-header')
-        const hasPremiumLayout = !!body.querySelector('.ai-content')
-
-        if (!opts.includeTOC || hasTOC) {
-            generatedTOCs.forEach((node) => node.remove())
-        }
-        if (!opts.includeTables) {
-            generatedSummaryTables.forEach((node) => node.remove())
-        }
-        if (!opts.includeCallouts) {
-            generatedCallouts.forEach((node) => node.remove())
-        }
-        if (!opts.includeMermaid) {
-            generatedMermaidBlocks.forEach((node) => node.remove())
-        }
-
-        const existingTOCs = Array.from(body.querySelectorAll('.table-of-contents'))
-        if (existingTOCs.length > 1) {
-            existingTOCs.slice(1).forEach((node) => node.remove())
-        }
-        const existingSummaryTables = Array.from(body.querySelectorAll('table.summary-table, table.ai-generated-summary-table'))
-        if (existingSummaryTables.length > 1) {
-            existingSummaryTables.slice(1).forEach((node) => node.remove())
-        }
-
-        const insertAtTop = (node: HTMLElement) => {
-            if (body.firstChild) {
-                body.insertBefore(node, body.firstChild)
-            } else {
-                body.appendChild(node)
-            }
-        }
-        const insertAfter = (ref: Element | null, node: HTMLElement) => {
-            if (!ref || !ref.parentNode) {
-                insertAtTop(node)
-                return
-            }
-            const parent = ref.parentNode
-            if (ref.nextSibling) parent.insertBefore(node, ref.nextSibling)
-            else parent.appendChild(node)
-        }
-
-        const titleNode = body.querySelector('h1')
-        if (opts.includeTOC && !hasTOC && nonTitleHeadings.length > 0) {
-            const toc = doc.createElement('section')
-            toc.className = 'ai-section table-of-contents ai-generated-toc'
-            const title = doc.createElement('h2')
-            title.className = 'ai-section-title'
-            title.textContent = t('editor.table_of_contents', 'Table of Contents')
-            const list = doc.createElement('ol')
-            list.className = 'ai-ordered-list'
-            nonTitleHeadings.forEach((h) => {
-                const li = doc.createElement('li')
-                const a = doc.createElement('a')
-                a.setAttribute('href', `#${h.id}`)
-                a.textContent = h.textContent || 'Section'
-                li.appendChild(a)
-                list.appendChild(li)
-            })
-            toc.appendChild(title)
-            toc.appendChild(list)
-
-            const insertionPoint = body.querySelector('.ai-content') || body
-            if (insertionPoint === body) {
-                insertAfter(titleNode, toc)
-            } else {
-                if (insertionPoint.firstChild) insertionPoint.insertBefore(toc, insertionPoint.firstChild)
-                else insertionPoint.appendChild(toc)
-            }
-        }
-
-        if (opts.includeTables && !existingSummaryTables.length && !hasAnyTable) {
-            const table = doc.createElement('table')
-            table.className = 'ai-table summary-table ai-generated-summary-table'
-            const thead = doc.createElement('thead')
-            const headRow = doc.createElement('tr')
-            const th1 = doc.createElement('th')
-            th1.textContent = t('editor.section', 'Section')
-            const th2 = doc.createElement('th')
-            th2.textContent = t('editor.summary', 'Summary')
-            headRow.appendChild(th1)
-            headRow.appendChild(th2)
-            thead.appendChild(headRow)
-            table.appendChild(thead)
-
-            const tbody = doc.createElement('tbody')
-            const getSummary = (heading: Element) => {
-                let sibling = heading.nextElementSibling
-                while (sibling) {
-                    if (/^H[1-4]$/.test(sibling.tagName)) break
-                    if (sibling.tagName === 'P' && sibling.textContent?.trim()) {
-                        return sibling.textContent.trim().slice(0, 180)
-                    }
-                    sibling = sibling.nextElementSibling
-                }
-                return ''
-            }
-
-            if (nonTitleHeadings.length > 0) {
-                nonTitleHeadings.forEach((h) => {
-                    const row = doc.createElement('tr')
-                    const td1 = doc.createElement('td')
-                    td1.textContent = h.textContent || ''
-                    const td2 = doc.createElement('td')
-                    td2.textContent = getSummary(h)
-                    row.appendChild(td1)
-                    row.appendChild(td2)
-                    tbody.appendChild(row)
-                })
-            } else {
-                const row = doc.createElement('tr')
-                const td1 = doc.createElement('td')
-                td1.textContent = t('editor.overview', 'Overview')
-                const td2 = doc.createElement('td')
-                const firstParagraph = body.querySelector('p')?.textContent?.trim() || ''
-                td2.textContent = firstParagraph.slice(0, 180)
-                row.appendChild(td1)
-                row.appendChild(td2)
-                tbody.appendChild(row)
-            }
-
-            table.appendChild(tbody)
-            const tocNode = body.querySelector('.table-of-contents')
-            insertAfter(tocNode || titleNode, table)
-        }
-
-        if (opts.includeCallouts && !hasCallout) {
-            let replaced = false
-            const calloutMap: Record<string, string> = {
-                IMPORTANT: 'ai-warning-box',
-                WARNING: 'ai-warning-box',
-                NOTE: 'ai-info-box',
-                TIP: 'ai-tip-box',
-                REMEMBER: 'ai-highlight-box'
-            }
-
-            Array.from(body.querySelectorAll('p')).forEach((p) => {
-                const text = p.textContent?.trim() || ''
-                const match = text.match(/^(IMPORTANT|WARNING|NOTE|TIP|REMEMBER)\s*[:\-]\s*(.+)$/i)
-                if (!match) return
-                const label = match[1].toUpperCase()
-                const content = match[2]
-                const div = doc.createElement('div')
-                div.className = `${calloutMap[label] || 'ai-info-box'} ai-generated-callout`
-                const strong = doc.createElement('strong')
-                strong.textContent = `${label}: `
-                div.appendChild(strong)
-                div.appendChild(doc.createTextNode(content))
-                p.replaceWith(div)
-                replaced = true
-            })
-
-            if (!replaced) {
-                const fallback = doc.createElement('div')
-                fallback.className = 'ai-info-box ai-generated-callout'
-                const strong = doc.createElement('strong')
-                strong.textContent = `${t('editor.note', 'NOTE')}: `
-                fallback.appendChild(strong)
-                fallback.appendChild(
-                    doc.createTextNode(
-                        t('editor.callout_fallback', 'Review the table of contents for quick navigation and key steps.')
-                    )
-                )
-                const tocNode = body.querySelector('.table-of-contents')
-                const summaryTable = body.querySelector('table.summary-table, table.ai-generated-summary-table')
-                insertAfter(summaryTable || tocNode || titleNode, fallback)
-            }
-        }
-
-        if (opts.includeMermaid && !hasMermaid && nonTitleHeadings.length > 1) {
-            const labels = [
-                (titleNode?.textContent || t('editor.overview', 'Overview')).trim(),
-                ...nonTitleHeadings.slice(0, 4).map((h) => (h.textContent || t('editor.section', 'Section')).trim()),
-            ].filter(Boolean)
-
-            if (labels.length > 1) {
-                const normalizeMermaidLabel = (value: string) => value.replace(/"/g, '\\"')
-                const nodeId = (index: number) => `N${index + 1}`
-                const lines = ['flowchart TD']
-
-                labels.forEach((label, index) => {
-                    lines.push(`${nodeId(index)}["${normalizeMermaidLabel(label)}"]`)
-                    if (index > 0) {
-                        lines.push(`${nodeId(index - 1)} --> ${nodeId(index)}`)
-                    }
-                })
-
-                const mermaidBlock = doc.createElement('pre')
-                mermaidBlock.className = 'mermaid ai-generated-mermaid'
-                mermaidBlock.textContent = lines.join('\n')
-
-                const summaryTable = body.querySelector('table.summary-table, table.ai-generated-summary-table')
-                const tocNode = body.querySelector('.table-of-contents')
-                insertAfter(summaryTable || tocNode || titleNode, mermaidBlock)
-            }
-        }
-
-        return body.innerHTML
-    }, [t])
-
-    const finalizeAiHtmlForEditor = useCallback((
-        rawResult: string,
-        fallbackSource?: string,
-        minRetentionRatio = 0
-    ) => {
-        const extracted = extractTextFromAiResponse(rawResult).trim()
-        if (!extracted) return ''
-
-        const resultHtml = toHtmlContent(extracted)
-        const fallbackHtml = fallbackSource ? toHtmlContent(fallbackSource) : ''
-        const resultPlain = toPlainText(resultHtml)
-        const fallbackPlain = toPlainText(fallbackHtml)
-        const shouldUseFallback =
-            minRetentionRatio > 0 &&
-            !!fallbackPlain &&
-            resultPlain.length < fallbackPlain.length * minRetentionRatio
-
-        let html = shouldUseFallback ? fallbackHtml : resultHtml
-
-        if (beautifyOptions.includeMermaid) {
-            html = transformMermaidCodeBlocks(html)
-        } else {
-            html = html
-                .replace(/<pre[^>]*class=["'][^"']*\bmermaid\b[^"']*["'][^>]*>[\s\S]*?<\/pre>/gi, '')
-                .replace(/```mermaid[\s\S]*?```/gi, '')
-        }
-
-        const enhanced = ensureBeautifyFeatures(html, beautifyOptions)
-        return sanitizeHtml(enhanced)
-    }, [beautifyOptions, ensureBeautifyFeatures, toHtmlContent, toPlainText])
-
-    const previewHtml = useMemo(() => {
-        const raw = formData.content || ''
-        if (!raw.trim()) return `<p class="text-gray-400">${t('editor.empty_preview')}</p>`
-        const isHtml = raw.trim().startsWith('<')
-        const html = isHtml ? raw : (marked.parse(raw, { async: false }) as string)
-        return transformMermaidCodeBlocks(html)
-    }, [formData.content, t])
-
-    useEffect(() => {
-        if (activeTab !== 'preview') return
-        void renderMermaidDiagrams(previewRef.current)
-    }, [activeTab, previewHtml])
-
-    // Permission check
-    useEffect(() => {
-        if (primaryRole === 'staff') {
-            setIsForbidden(true)
-            toast.error('You do not have permission to create or edit articles.')
-            navigate('/knowledge/search')
-        }
-    }, [primaryRole, navigate])
-
-    // Load Data Effect
-    useEffect(() => {
-        if (id && id !== 'new') {
-            supabase
-                .from('documents')
-                .select('*')
-                .eq('id', id)
-                .single()
-                .then(({ data, error }) => {
-                    if (data && !error) {
-                        setFormData({
-                            title: data.title || '',
-                            description: data.description || '',
-                            summary: data.summary || '',
-                            content: data.content || '',
-                            file_url: data.file_url || '',
-                            storage_path: data.storage_path || '',
-                            content_type: data.content_type || 'document',
-                            visibility: data.visibility || 'all_properties',
-                            requires_acknowledgment: data.requires_acknowledgment || false,
-                            featured: false,
-                            department_id: data.department_id || null,
-                            category_id: data.category_id || null,
-                            target_property_id: data.property_id || null,
-                            specific_department_ids: data.department_access_ids || [],
-                            // Content Type Specific
-                            checklist_items: data.checklist_items || [],
-                            faq_items: data.faq_items || [],
-                            video_url: data.video_url || '',
-                            images: data.images || []
-                        })
-                    }
-                })
-        }
-    }, [isEditing, id])
-
-    const updateField = useCallback(<K extends keyof ArticleFormData>(
-        field: K,
-        value: ArticleFormData[K]
-    ) => {
-        setFormData(prev => {
-            const updated = { ...prev, [field]: value }
-
-            // Smart validation: Auto-adjust visibility based on department selection
-            if (field === 'department_id') {
-                // If department is set to None (null), reset visibility if it requires department
-                if (value === null && (updated.visibility === 'department' || updated.visibility === 'group_department')) {
-                    updated.visibility = 'all_properties' as KnowledgeVisibility
-                }
-            }
-
-            // Smart validation: If visibility requires department but none selected, show warning
-            if (field === 'visibility') {
-                const visValue = value as KnowledgeVisibility
-                // If switching to department-based visibility without a department, auto-select cannot proceed
-                // Just update the value, validation will show warning
-            }
-
-            return updated
-        })
-    }, [])
-
-    // Computed validation warnings
-    const validationWarnings = {
-        departmentRequired: (formData.visibility === 'department' || formData.visibility === 'group_department') && !formData.department_id,
-        propertyIrrelevant: (formData.visibility === 'all_properties' || formData.visibility === 'group_department') && formData.target_property_id,
-    }
-
-    const selectedDepartmentName = useMemo(() => {
-        if (!formData.department_id) return null
-        return departments?.find(d => d.id === formData.department_id)?.name || null
-    }, [departments, formData.department_id])
-
-    const selectedPropertyName = useMemo(() => {
-        if (formData.target_property_id) {
-            return properties?.find(p => p.id === formData.target_property_id)?.name || t('editor.selected_property', 'selected property')
-        }
-        return currentProperty?.name || t('editor.current_property', 'current property')
-    }, [currentProperty?.name, formData.target_property_id, properties, t])
-
-    const visibilitySummary = useMemo(() => {
-        switch (formData.visibility) {
-            case 'all_properties':
-                return t('editor.visibility.summary_all_hotels', {
-                    defaultValue: 'Visible to all staff in all hotels.'
-                })
-            case 'property':
-                return t('editor.visibility.summary_property', {
-                    defaultValue: 'Visible to all staff in {{property}}.',
-                    property: selectedPropertyName
-                })
-            case 'department':
-                return t('editor.visibility.summary_department', {
-                    defaultValue: 'Visible to {{department}} team in {{property}}.',
-                    department: selectedDepartmentName || t('editor.selected_team', 'selected team'),
-                    property: selectedPropertyName
-                })
-            case 'group_department':
-                return t('editor.visibility.summary_group_department', {
-                    defaultValue: 'Visible to {{department}} team in all hotels.',
-                    department: selectedDepartmentName || t('editor.selected_team', 'selected team')
-                })
-            case 'specific_departments':
-                return t('editor.visibility.summary_specific_departments', {
-                    defaultValue: 'Visible to {{count}} selected team(s).',
-                    count: formData.specific_department_ids.length
-                })
-            case 'role':
-                return t('editor.visibility.summary_role', {
-                    defaultValue: 'Visible based on role rules.'
-                })
-            default:
-                return ''
-        }
-    }, [
-        formData.specific_department_ids.length,
-        formData.visibility,
-        selectedDepartmentName,
-        selectedPropertyName,
-        t
-    ])
-
-    // AI
-    const generateWithAI = async (action: 'outline' | 'expand' | 'improve' | 'summarize') => {
-        if (action === 'outline' && !formData.title && !formData.content) {
-            toast.error(t('editor.alerts.title_required'))
-            return
-        }
-        if ((action === 'expand' || action === 'improve' || action === 'summarize') && !formData.content) {
-            toast.error(t('editor.write_placeholder'))
-            return
-        }
-
-        setIsGenerating(true)
-        try {
-            let result: string | null = null
-
-            // Content generation actions (outline, expand, improve)
-            if (action === 'outline') {
-                const outlineSeed = formData.content?.trim()
-                    ? `Create a structured outline from this content with clear sections, numbered steps, and callout-worthy highlights:\n\n${formData.content}`
-                    : `Create a detailed outline for this article topic: ${formData.title}`
-                result = await aiService.improveContent(outlineSeed, 'expand', aiLanguage, 'html', beautifyOptions)
-            } else if (action === 'expand') {
-                result = await aiService.improveContent(formData.content, 'expand', aiLanguage, 'html', beautifyOptions)
-            } else if (action === 'improve') {
-                result = await aiService.improveContent(formData.content, 'professional', aiLanguage, 'html', beautifyOptions)
-            } else if (action === 'summarize') {
-                // Build language instruction based on selection
-                const langInstruction = aiLanguage === 'Arabic'
-                    ? 'IMPORTANT: Write your response in ARABIC ONLY. لا تستخدم اللغة الإنجليزية.'
-                    : aiLanguage === 'English and Arabic'
-                        ? 'IMPORTANT: Write your response in BOTH English AND Arabic. First write in English, then provide the Arabic translation below it.'
-                        : 'IMPORTANT: Write your response in ENGLISH ONLY. Do not use any other language.'
-
-                // Generate BOTH summary and description from content
-                // Summary: 2-3 sentence overview of key points
-                const summaryResult = await aiService.improveContent(
-                    `Read this hotel policy/SOP document and write a 2-3 sentence summary that captures: 1) What this document is for, 2) Who it applies to, 3) The key requirement or procedure. Be specific and professional.
-
-${langInstruction}
-
-DOCUMENT:
-${formData.content.substring(0, 4000)}
-
-Write ONLY the summary, no labels or prefixes.`,
-                    'shorten',
-                    aiLanguage
-                )
-                if (summaryResult) {
-                    updateField('summary', extractTextFromAiResponse(summaryResult))
-                }
-
-                // Description: Short tagline/subtitle style (max 15 words)
-                const descResult = await aiService.improveContent(
-                    `Create a SHORT tagline (maximum 10-15 words) for this document. It should be like a subtitle that appears under the title. Do NOT write a full sentence - just a brief phrase.
-
-${langInstruction}
-
-DOCUMENT TITLE: ${formData.title}
-CONTENT PREVIEW: ${formData.content.substring(0, 1000)}
-
-Write ONLY the tagline, no quotes or labels.
-${aiLanguage === 'English' ? 'Example: "Step-by-step procedures for handling guest complaints"' : ''}
-${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شكاوى النزلاء"' : ''}`,
-                    'shorten',
-                    aiLanguage
-                )
-                if (descResult) {
-                    // Clean up any quotes the AI might add
-                    let cleanDesc = extractTextFromAiResponse(descResult).replace(/^["']|["']$/g, '').trim()
-
-                    // Only filter non-ASCII if English-only mode (to remove Chinese mistakes)
-                    if (aiLanguage === 'English') {
-                        cleanDesc = cleanDesc.replace(/[^\x00-\x7F]/g, '').trim()
-                    }
-                    updateField('description', cleanDesc)
-                }
-
-                toast.success('Summary and description generated!')
-                setIsGenerating(false)
-                return
-            }
-
-            // For content actions only - just update content
-            if (result) {
-                const sourceForRetention = action === 'outline' ? undefined : formData.content
-                const minRetentionRatio = action === 'outline' ? 0 : 0.4
-                const preparedHtml = finalizeAiHtmlForEditor(result, sourceForRetention, minRetentionRatio)
-                if (preparedHtml) {
-                    updateField('content', preparedHtml)
-                }
-            }
-            toast.success(t('editor.alerts.ai_success'))
-        } catch (error) {
-            toast.error(t('editor.alerts.ai_failed'))
-        } finally {
-            setIsGenerating(false)
-        }
-    }
-
-    // AI Beautify Function
-    const beautifyArticle = async () => {
-        if (!formData.content || formData.content.trim().length < 10) {
-            toast.error('Please add some content before beautifying.')
-            return
-        }
-
-        setIsGenerating(true)
-        try {
-            const result = await aiService.beautifyArticle(
-                formData.content,
-                formData.content_type,
-                aiLanguage,
-                'professional',
-                beautifyOptions
-            )
-
-            if (result) {
-                const preparedHtml = finalizeAiHtmlForEditor(result, formData.content, 0.6)
-                if (!preparedHtml) {
-                    toast.error('AI beautification returned empty content. Please try again.')
-                    return
-                }
-
-                updateField('content', preparedHtml)
-                toast.success('Content beautified with AI. Existing options were applied.')
-            } else {
-                toast.error('AI beautification failed. Please try again.')
-            }
-        } catch (error) {
-            console.error('AI beautification error:', error)
-            toast.error('AI beautification failed. Please try again.')
-        } finally {
-            setIsGenerating(false)
-        }
-    }
-
-    const calculateEstimatedReadTime = useCallback((value: string): number | null => {
-        if (!value) return null
-        const plainText = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-        if (!plainText) return null
-        return Math.max(1, Math.round(plainText.split(' ').length / 200))
-    }, [])
-
-    const saveArticle = async (status: 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED') => {
-        if (!formData.title.trim()) {
-            toast.error(t('editor.alerts.title_required'))
-            return
-        }
-
-        if (isUploading) {
-            toast.error(t('editor.alerts.file_uploading'))
-            return
-        }
-
-        if ((formData.visibility === 'department' || formData.visibility === 'group_department') && !formData.department_id) {
-            toast.error(t('editor.alerts.dept_required'))
-            return
-        }
-
-        const rawPropertyId = formData.target_property_id || currentProperty?.id || null
-        if (formData.visibility === 'property' && !isUuid(rawPropertyId)) {
-            toast.error(t('editor.alerts.property_required', { defaultValue: 'Please select a specific property.' }))
-            return
-        }
-
-        setIsSaving(true)
-
-        let finalSummary = formData.summary
-        let finalDescription = formData.description
-
-        if (formData.content && formData.content.length > 100) {
-            const needsSummary = !formData.summary || formData.summary.trim().length < 10
-            const needsDescription = !formData.description || formData.description.trim().length < 5
-
-            if (needsSummary || needsDescription) {
-                toast.info('🤖 Auto-generating summary...', { duration: 2000 })
-                try {
-                    const cleanContent = formData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-                    if (needsSummary) {
-                        const summaryResult = await aiService.improveContent(
-                            `Write a 2-3 sentence professional summary of this hotel document.\n\nDOCUMENT:\n${cleanContent.substring(0, 3000)}\n\nWrite ONLY the summary in English.`,
-                            'shorten',
-                            'English'
-                        )
-                        if (summaryResult) {
-                            const normalizedSummary = extractTextFromAiResponse(summaryResult)
-                            finalSummary = normalizedSummary
-                            updateField('summary', normalizedSummary)
-                        }
-                    }
-                    if (needsDescription) {
-                        const descResult = await aiService.improveContent(
-                            `Create a 10-15 word tagline for this document.\n\nTITLE: ${formData.title}\nCONTENT: ${cleanContent.substring(0, 1000)}\n\nWrite ONLY the tagline in English.`,
-                            'shorten',
-                            'English'
-                        )
-                        if (descResult) {
-                            const cleanDesc = extractTextFromAiResponse(descResult)
-                                .replace(/^["']|["']$/g, '')
-                                .replace(/[^\x00-\x7F]/g, '')
-                                .trim()
-                            finalDescription = cleanDesc
-                            updateField('description', cleanDesc)
-                        }
-                    }
-                } catch (aiErr) {
-                    console.warn('Auto-summarization failed:', aiErr)
-                }
-            }
-        }
-
-        try {
-            const normalizedPropertyId = formData.visibility === 'all_properties' ||
-                formData.visibility === 'group_department' ||
-                formData.visibility === 'specific_departments'
-                ? null
-                : (isUuid(rawPropertyId) ? rawPropertyId : null)
-
-            const estimatedReadTime = calculateEstimatedReadTime(formData.content)
-            let savedArticleId: string | null = null
-            let savedArticleData: any = null
-            let redirectToArticleId: string | null = null
-
-            const articleData = {
-                title: formData.title,
-                description: finalDescription || null,
-                summary: finalSummary || null,
-                content: formData.content || null,
-                file_url: formData.file_url || null,
-                storage_bucket: 'documents',
-                storage_path: formData.storage_path || null,
-                content_type: formData.content_type,
-                visibility: formData.visibility,
-                requires_acknowledgment: formData.requires_acknowledgment,
-                status: status,
-                property_id: normalizedPropertyId,
-                department_id: isUuid(formData.department_id) ? formData.department_id : null,
-                category_id: isUuid(formData.category_id) ? formData.category_id : null,
-                updated_by: user?.id,
-                updated_at: new Date().toISOString(),
-                estimated_read_time: estimatedReadTime,
-                checklist_items: formData.checklist_items || [],
-                faq_items: formData.faq_items || [],
-                video_url: formData.video_url || null,
-                images: formData.images || []
-            }
-
-            if (isEditing && id) {
-                const { data, error } = await supabase
-                    .from('documents')
-                    .update(articleData)
-                    .eq('id', id)
-                    .select()
-                    .single()
-                if (error) throw error
-                savedArticleId = id
-                savedArticleData = data
-
-                // Save specific departments access if needed
-                if (formData.visibility === 'specific_departments') {
-                    await supabase.from('document_department_access').delete().eq('document_id', id)
-                    if (formData.specific_department_ids.length > 0) {
-                        const accessData = formData.specific_department_ids.map(deptId => ({
-                            document_id: id,
-                            department_id: deptId
-                        }))
-                        await supabase.from('document_department_access').insert(accessData)
-                    }
-                }
-
-                if (status === 'PENDING_REVIEW') {
-                    await notifyReviewersOfSubmission(id, formData.title)
-                }
-                if (status === 'PUBLISHED') {
-                    await triggerService.onSOPPublished(id, formData.department_id || undefined)
-                }
-
-                const typeLabel = t(`content_types.${formData.content_type}`, { defaultValue: formData.content_type.toUpperCase() })
-                toast.success(status === 'PENDING_REVIEW'
-                    ? t('editor.alerts.submitted_for_review')
-                    : t('editor.alerts.update_success', { type: typeLabel }))
-            } else {
-                const insertPayload = {
-                    ...articleData,
-                    created_by: user?.id
-                }
-                const { data, error } = await supabase
-                    .from('documents')
-                    .insert(insertPayload)
-                    .select()
-                    .single()
-                if (error) throw error
-                savedArticleId = data.id
-                savedArticleData = data
-
-                // Save specific departments access if needed
-                if (formData.visibility === 'specific_departments' && formData.specific_department_ids.length > 0) {
-                    const accessData = formData.specific_department_ids.map(deptId => ({
-                        document_id: data.id,
-                        department_id: deptId
-                    }))
-                    await supabase.from('document_department_access').insert(accessData)
-                }
-
-                if (status === 'PENDING_REVIEW') {
-                    await notifyReviewersOfSubmission(data.id, formData.title)
-                }
-                if (status === 'PUBLISHED') {
-                    await triggerService.onSOPPublished(data.id, formData.department_id || undefined)
-                }
-
-                const typeLabel = t(`content_types.${formData.content_type}`, { defaultValue: formData.content_type.toUpperCase() })
-                toast.success(status === 'PENDING_REVIEW'
-                    ? t('editor.alerts.submitted_for_review')
-                    : (isEditing ? t('editor.alerts.update_success', { type: typeLabel }) : t('editor.alerts.save_success', { type: typeLabel })))
-                redirectToArticleId = data.id
-            }
-
-            let syncedArticleData: any = savedArticleData
-            if (savedArticleId) {
-                const hydratedArticle = await KnowledgeService.getArticleById(savedArticleId, user?.id)
-                if (hydratedArticle) {
-                    syncedArticleData = hydratedArticle
-                }
-            }
-
-            const mergeArticleIntoCollection = (existing: any) => {
-                if (!savedArticleId || !syncedArticleData || !existing) return existing
-
-                if (Array.isArray(existing)) {
-                    return existing.map((item: any) =>
-                        item?.id === savedArticleId ? { ...item, ...syncedArticleData } : item
-                    )
-                }
-
-                if (Array.isArray(existing.articles)) {
-                    return {
-                        ...existing,
-                        articles: existing.articles.map((item: any) =>
-                            item?.id === savedArticleId ? { ...item, ...syncedArticleData } : item
-                        )
-                    }
-                }
-
-                return existing
-            }
-
-            if (savedArticleId && syncedArticleData) {
-                queryClient.setQueryData(
-                    ['knowledge-article', savedArticleId, user?.id],
-                    syncedArticleData
-                )
-                queryClient.setQueriesData(
-                    { queryKey: ['knowledge-article', savedArticleId], exact: false },
-                    (existing: any) => existing ? { ...existing, ...syncedArticleData } : syncedArticleData
-                )
-                queryClient.setQueriesData(
-                    { queryKey: ['knowledge-articles'], exact: false },
-                    mergeArticleIntoCollection
-                )
-                queryClient.setQueriesData(
-                    { queryKey: ['knowledge-featured'], exact: false },
-                    mergeArticleIntoCollection
-                )
-                queryClient.setQueriesData(
-                    { queryKey: ['knowledge-recent'], exact: false },
-                    mergeArticleIntoCollection
-                )
-            }
-
-            await Promise.all([
-                queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] }),
-                queryClient.invalidateQueries({ queryKey: ['knowledge-department-counts-global'] }),
-                queryClient.invalidateQueries({ queryKey: ['knowledge-type-counts'] }),
-                queryClient.invalidateQueries({ queryKey: ['knowledge-featured'] }),
-                queryClient.invalidateQueries({ queryKey: ['knowledge-recent'] }),
-                savedArticleId
-                    ? queryClient.invalidateQueries({ queryKey: ['knowledge-article', savedArticleId] })
-                    : Promise.resolve(),
-                savedArticleId
-                    ? queryClient.invalidateQueries({ queryKey: ['knowledge-related', savedArticleId] })
-                    : Promise.resolve(),
-            ])
-
-            await Promise.all([
-                queryClient.refetchQueries({
-                    queryKey: ['knowledge-articles'],
-                    type: 'all'
-                }),
-                queryClient.refetchQueries({
-                    queryKey: ['knowledge-featured'],
-                    type: 'all'
-                }),
-                queryClient.refetchQueries({
-                    queryKey: ['knowledge-recent'],
-                    type: 'all'
-                }),
-                savedArticleId
-                    ? queryClient.refetchQueries({
-                        queryKey: ['knowledge-article', savedArticleId],
-                        type: 'all'
-                    })
-                    : Promise.resolve(),
-            ])
-
-            if (redirectToArticleId) {
-                navigate(`/knowledge/${redirectToArticleId}`)
-            }
-        } catch (error: any) {
-            console.error('Error in saveArticle:', error)
-            const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error))
-            toast.error(t('editor.alerts.save_error', { error: errorMessage }))
-        } finally {
-            setIsSaving(false)
-        }
-    }
-
     if (isForbidden || primaryRole === 'staff') {
         return null
     }
@@ -1184,7 +233,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4 mr-2" />}
                         {t('editor.draft')}
                     </Button>
-                    {/* Submit for Review (Dept Head, HR, Prop Manager) */}
+
                     {['department_head', 'property_hr', 'property_manager'].includes(primaryRole || '') && (
                         <Button
                             onClick={() => saveArticle('PENDING_REVIEW')}
@@ -1196,7 +245,6 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         </Button>
                     )}
 
-                    {/* Publish (Prop Manager, Admin only) */}
                     {['property_manager', 'regional_admin', 'corporate_admin'].includes(primaryRole || '') && (
                         <Button
                             onClick={() => saveArticle('PUBLISHED')}
@@ -1342,58 +390,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         type="file"
                                         accept=".pdf"
                                         disabled={isUploading}
-                                        onChange={async (e) => {
-                                            const file = e.target.files?.[0]
-                                            if (!file) return
-
-                                            if (file.type !== 'application/pdf') {
-                                                toast.error(t('editor.alerts.only_pdf'))
-                                                return
-                                            }
-
-                                            if (!user?.id) {
-                                                toast.error(t('editor.alerts.user_error'))
-                                                return
-                                            }
-
-                                            setIsUploading(true)
-                                            try {
-                                                const scanResult = await scanFile(file, {
-                                                    bucket: 'documents',
-                                                    context: 'knowledge_editor_upload'
-                                                })
-                                                if (!scanResult.safe) {
-                                                    throw new Error(scanResult.message || 'File failed security scan')
-                                                }
-
-                                                // RLS requires uploading to a folder matching the user ID
-                                                const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-                                                const { data, error } = await supabase.storage
-                                                    .from('documents')
-                                                    .upload(fileName, file)
-
-                                                if (error) throw error
-
-                                                const { data: { publicUrl } } = supabase.storage
-                                                    .from('documents')
-                                                    .getPublicUrl(fileName)
-
-                                                updateField('file_url', publicUrl)
-                                                updateField('storage_path', fileName)
-                                                toast.success(t('editor.alerts.upload_success'))
-
-                                                // Auto-set title if empty
-                                                if (!formData.title) {
-                                                    updateField('title', file.name.replace('.pdf', ''))
-                                                }
-                                            } catch (error: unknown) {
-                                                const errorMessage = error instanceof Error ? error.message : 'Unknown upload error'
-                                                console.error('Upload error:', error)
-                                                toast.error(t('editor.alerts.upload_error') + errorMessage)
-                                            } finally {
-                                                setIsUploading(false)
-                                            }
-                                        }}
+                                        onChange={handleFileUpload}
                                         className="cursor-pointer"
                                     />
                                     {isUploading && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
@@ -1723,7 +720,6 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                                 }
                                                 onValueChange={(deptName) => {
                                                     // When name is selected, find a valid department ID from the list (prefer current property or Head Office)
-                                                    // We'll prioritize Head Office if exists, else first match
                                                     const match = departments?.find(d => d.name === deptName && (
                                                         d.property_id === currentProperty?.id ||
                                                         properties?.find(p => p.id === d.property_id)?.name.toLowerCase().includes('head office')
