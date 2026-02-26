@@ -201,7 +201,7 @@ export const aiService = {
       ... (continue for ${count} items)
     ]
 
-    Important: For true_false, options MUST be translated to ${language} equivalents.
+    Important: For true_false MUST be translated to ${language} equivalents.
     
     Context Content:
     ${context}`
@@ -226,7 +226,7 @@ export const aiService = {
     return heuristicQuiz()
   },
 
-  async improveContent(text: string, instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic', language: string = 'English', format?: string, options?: any): Promise<string | null> {
+  async improveContent(text: string, instruction: 'grammar' | 'expand' | 'shorten' | 'professional' | 'arabic', language: string = 'English'): Promise<string | null> {
     const prompts = {
       grammar: "Fix grammar and spelling errors. Maintain the original meaning.",
       expand: "Expand this text with necessary operational details. Use a clear, helpful tone suitable for hotel staff.",
@@ -316,8 +316,8 @@ export const aiService = {
     return heuristicImprovement(text, instruction)
   },
 
-  async beautifyArticle(content: string, contentType: string, language: string, style: string, options: any): Promise<string | null> {
-    return this.improveContent(content, 'professional', language, style, options);
+  async beautifyArticle(content: string, contentType: string, language: string): Promise<string | null> {
+    return this.improveContent(content, 'professional', language);
   },
 
   async suggestImportMapping(rawRows: string[][], targetHeaders: string[]): Promise<{ mapping: Record<string, string>, headerRowIndex: number }> {
