@@ -6,6 +6,7 @@ BEGIN;
 -- user_roles
 DROP POLICY IF EXISTS user_roles_select_admin ON public.user_roles;
 DROP POLICY IF EXISTS user_roles_select_own ON public.user_roles;
+DROP POLICY IF EXISTS user_roles_select_self_or_admin ON public.user_roles;
 
 CREATE POLICY user_roles_select_self_or_admin
 ON public.user_roles
@@ -28,6 +29,7 @@ USING (
 -- user_properties
 DROP POLICY IF EXISTS user_properties_select_admin ON public.user_properties;
 DROP POLICY IF EXISTS user_properties_select_own ON public.user_properties;
+DROP POLICY IF EXISTS user_properties_select_self_or_admin ON public.user_properties;
 
 CREATE POLICY user_properties_select_self_or_admin
 ON public.user_properties
@@ -50,6 +52,7 @@ USING (
 -- user_departments
 DROP POLICY IF EXISTS user_departments_select_admin ON public.user_departments;
 DROP POLICY IF EXISTS user_departments_select_own ON public.user_departments;
+DROP POLICY IF EXISTS user_departments_select_self_or_admin ON public.user_departments;
 
 CREATE POLICY user_departments_select_self_or_admin
 ON public.user_departments

@@ -5,6 +5,7 @@ BEGIN;
 
 DROP POLICY IF EXISTS document_comments_resolve ON public.document_comments;
 DROP POLICY IF EXISTS document_comments_update_own ON public.document_comments;
+DROP POLICY IF EXISTS document_comments_update_access ON public.document_comments;
 
 CREATE POLICY document_comments_update_access
 ON public.document_comments
