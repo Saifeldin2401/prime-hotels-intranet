@@ -2,18 +2,16 @@ import { useEffect, useState, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import type { Message, Notification } from '@/lib/types'
-
-// Simple "pop" sound for notifications
-const NOTIFICATION_SOUND = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTS1UAAAAOAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYaW5nAAAADwAAAA8AAC1dAAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBf/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAArwAAAAxAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSZA2AAAAB/AAAAQAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAv/7kmRAAAAAH8AAABAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export function useRealtimeMessaging() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const subscriptionRef = useRef<any>(null)
+  const subscriptionRef = useRef<RealtimeChannel | null>(null)
   const audioUnlockedRef = useRef(false)
   const pendingSoundRef = useRef(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
 
   const playSound = () => {
     try {
@@ -22,7 +20,8 @@ export function useRealtimeMessaging() {
         return
       }
 
-      const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined
+      const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext }
+      const AudioCtx = (window.AudioContext || audioWindow.webkitAudioContext) as typeof AudioContext | undefined
       if (!AudioCtx) return
 
       if (!audioCtxRef.current) {
@@ -55,6 +54,7 @@ export function useRealtimeMessaging() {
   useEffect(() => {
     if (!user?.id) return
 
+    let isMounted = true
     let invalidateTimer: ReturnType<typeof setTimeout> | null = null
     let pendingMessagesInvalidate = false
     let pendingStatsInvalidate = false
@@ -90,7 +90,8 @@ export function useRealtimeMessaging() {
     }
 
     const unlockAudio = async () => {
-      const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined
+      const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext }
+      const AudioCtx = (window.AudioContext || audioWindow.webkitAudioContext) as typeof AudioContext | undefined
       if (!AudioCtx) {
         audioUnlockedRef.current = true
         if (pendingSoundRef.current) pendingSoundRef.current = false
@@ -183,11 +184,23 @@ export function useRealtimeMessaging() {
           scheduleInvalidation({ notifications: true })
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (!isMounted) return
+
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true)
+          return
+        }
+
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setIsConnected(false)
+        }
+      })
 
     subscriptionRef.current = channel
 
     return () => {
+      isMounted = false
       window.removeEventListener('pointerdown', onUserGesture)
       window.removeEventListener('keydown', onUserGesture)
       if (invalidateTimer) {
@@ -195,23 +208,25 @@ export function useRealtimeMessaging() {
       }
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current)
+        subscriptionRef.current = null
       }
       if (audioCtxRef.current) {
         void audioCtxRef.current.close().catch(() => undefined)
         audioCtxRef.current = null
       }
+      setIsConnected(false)
     }
   }, [user?.id, queryClient])
 
   return {
-    isConnected: !!subscriptionRef.current
+    isConnected
   }
 }
 
 export function useMessageTypingIndicator(conversationId?: string) {
   const [typingUsers, setTypingUsers] = useState<string[]>([])
   const { user } = useAuth()
-  const channelRef = useRef<any>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
 
   useEffect(() => {
     if (!conversationId || !user?.id) return

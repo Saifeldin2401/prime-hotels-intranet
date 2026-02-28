@@ -22,7 +22,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   Send,
   Plus,
-  Wifi,
   WifiOff,
   MessageSquare,
   ArrowLeft,
@@ -83,27 +82,29 @@ export default function MessagingDashboard() {
   const { data: allProfiles = [] } = useProfiles()
 
   const handleRefresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['messages'] })
-    await queryClient.invalidateQueries({ queryKey: ['messaging-stats'] })
-    await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['messages'] }),
+      queryClient.invalidateQueries({ queryKey: ['messaging-stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['conversations'] }),
+    ])
   }
 
-  useEffect(() => {
-    if (activeChannel) return
-    if (!activeConversationId && conversations && conversations.length > 0) {
-      setActiveConversationId(conversations[0].id)
-    }
-  }, [activeConversationId, conversations, activeChannel])
+  const effectiveConversationId = useMemo(() => {
+    if (activeChannel) return null
+    if (activeConversationId) return activeConversationId
+    return conversations?.[0]?.id || null
+  }, [activeChannel, activeConversationId, conversations])
 
   const activeConversation = useMemo(() => {
-    return (conversations || []).find((c: any) => c.id === activeConversationId) || null
-  }, [conversations, activeConversationId])
+    if (!effectiveConversationId) return null
+    return (conversations || []).find((c: any) => c.id === effectiveConversationId) || null
+  }, [conversations, effectiveConversationId])
 
   const otherParticipant = useMemo(() => {
     const participants = (activeConversation?.participants || []) as any[]
     if (!user?.id) return participants[0] || null
     return participants.find((p) => p.id !== user.id) || participants[0] || null
-  }, [activeConversation, user?.id])
+  }, [activeConversation, user])
 
   const { data: threadMessages = [], isLoading: threadLoading } = useConversationMessages({
     conversationId: activeConversation?.id || null,
@@ -370,7 +371,7 @@ export default function MessagingDashboard() {
                   {filteredConversations.map((c: any) => {
                     const participants = (c.participants || []) as any[]
                     const other = user?.id ? (participants.find((p) => p.id !== user.id) || participants[0]) : participants[0]
-                    const isActive = c.id === activeConversationId && !activeChannel
+                    const isActive = c.id === effectiveConversationId && !activeChannel
                     const initials = getInitials(other?.full_name, other?.email)
 
                     return (

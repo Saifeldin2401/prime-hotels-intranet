@@ -428,7 +428,7 @@ Deno.serve(async (req: Request) => {
             const message = authError.message?.includes("date_of_birth")
                 ? "Failed to create user: date of birth is required by profile constraints."
                 : authError.message;
-            return new Response(JSON.stringify({ error: message, details: authError }), {
+            return new Response(JSON.stringify({ error: message }), {
                 status: 400, // Return 400 for validation/duplicate/auth errors
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -618,7 +618,7 @@ Deno.serve(async (req: Request) => {
 
     } catch (err: any) {
         console.error("Edge create-user unexpected error:", err);
-        return new Response(JSON.stringify({ error: "Unexpected error: " + (err.message || err.toString()) }), {
+        return new Response(JSON.stringify({ error: "Unexpected error while creating user." }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

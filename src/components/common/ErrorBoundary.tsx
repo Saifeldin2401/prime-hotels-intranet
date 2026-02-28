@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { analytics } from '@/services/analyticsService'
 import * as Sentry from "@sentry/react"
+import { isValidSentryDsn } from '@/lib/sentry'
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -38,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }, 'error')
 
     // Capture error in Sentry
-    if (import.meta.env.VITE_SENTRY_DSN) {
+    if (isValidSentryDsn(import.meta.env.VITE_SENTRY_DSN)) {
       Sentry.captureException(error, { extra: errorInfo as unknown as Record<string, unknown> });
     }
 

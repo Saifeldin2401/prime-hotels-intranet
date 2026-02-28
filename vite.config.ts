@@ -11,7 +11,7 @@ const securityHeaders = {
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:;",
-    `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://*.supabase.co'} wss://*.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.com`,
+    `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://*.supabase.co'} wss://*.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.com https://api.open-meteo.com`,
     // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
     `frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com https://*.supabase.co`,
     "frame-ancestors 'none'"
@@ -20,7 +20,7 @@ const securityHeaders = {
   'X-Frame-Options': 'DENY',
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'geolocation=(), microphone=(), camera=()'
+  'Permissions-Policy': 'geolocation=(self), microphone=(), camera=()'
 }
 
 const sentryRelease = process.env.VERCEL_GIT_COMMIT_SHA || process.env.VITE_RELEASE
@@ -88,6 +88,12 @@ export default defineConfig({
   build: {
     // Security: Build optimizations
     minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     // Generate sourcemaps for Sentry upload but use 'hidden' in production so they aren't
     // referenced in the bundle (Sentry plugin deletes .map files after upload anyway).
     sourcemap: enableSentryUpload ? 'hidden' : (process.env.NODE_ENV !== 'production'),
@@ -97,9 +103,19 @@ export default defineConfig({
           if (!id.includes('node_modules')) return undefined
 
           if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase'
-          if (id.includes('/node_modules/mermaid')) return 'vendor-mermaid'
-          if (id.includes('/node_modules/pdfjs-dist') || id.includes('/node_modules/jspdf') || id.includes('/node_modules/html2pdf.js')) {
-            return 'vendor-pdf'
+          if (
+            id.includes('/node_modules/mermaid') ||
+            id.includes('/node_modules/d3-') ||
+            id.includes('/node_modules/dagre-d3-es') ||
+            id.includes('/node_modules/khroma')
+          ) {
+            return 'vendor-mermaid'
+          }
+          if (id.includes('/node_modules/katex')) return 'vendor-katex'
+          if (id.includes('/node_modules/pdfjs-dist')) return 'vendor-pdfjs'
+          if (id.includes('/node_modules/jspdf') || id.includes('/node_modules/jspdf-autotable')) return 'vendor-jspdf'
+          if (id.includes('/node_modules/html2pdf.js') || id.includes('/node_modules/html2canvas') || id.includes('/node_modules/canvg')) {
+            return 'vendor-html2pdf'
           }
           if (id.includes('/node_modules/exceljs')) return 'vendor-excel'
           if (id.includes('/node_modules/@tiptap/')) return 'vendor-editor'

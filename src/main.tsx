@@ -6,6 +6,7 @@ import './i18n/i18n'
 
 import * as Sentry from "@sentry/react";
 import App from './App'
+import { isValidSentryDsn } from '@/lib/sentry'
 
 if (typeof globalThis.t_ext !== 'function') {
   globalThis.t_ext = (_key: string, fallback?: string) => fallback ?? _key
@@ -90,7 +91,7 @@ const SENTRY_RELEASE =
   import.meta.env.VITE_GIT_COMMIT ||
   undefined
 
-const sentryEnabled = Boolean(SENTRY_DSN)
+const sentryEnabled = isValidSentryDsn(SENTRY_DSN)
 const tracesSampleRate = Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? (import.meta.env.PROD ? 0.1 : 1.0))
 const replaySessionSampleRate = Number(import.meta.env.VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE ?? (import.meta.env.PROD ? 0.02 : 0.1))
 const replayOnErrorSampleRate = Number(import.meta.env.VITE_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE ?? 1.0)
@@ -110,6 +111,19 @@ if (sentryEnabled) {
     replaysOnErrorSampleRate: replayOnErrorSampleRate,
     sendDefaultPii,
   })
+}
+
+const isDev = import.meta.env.DEV
+const devLog = (...args: unknown[]) => {
+  if (isDev) console.log(...args)
+}
+const reportNonFatalError = (message: string, error: unknown) => {
+  if (sentryEnabled) {
+    Sentry.captureException(error, { level: 'warning', tags: { scope: 'pwa' }, extra: { message } })
+  }
+  if (isDev) {
+    console.error(message, error)
+  }
 }
 
 if (redirectPath) {
@@ -171,7 +185,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
               if (installingWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
                   // New content is available; activate and reload automatically.
-                  console.log('[PWA] New content available, activating update.');
+                  devLog('[PWA] New content available, activating update.');
                   activateWaitingWorker()
                 }
               }
@@ -180,7 +194,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         };
       })
       .catch((error) => {
-        console.error('[PWA] Service Worker registration failed:', error)
+        reportNonFatalError('[PWA] Service Worker registration failed', error)
       })
   })
 }

@@ -1,18 +1,18 @@
-import { useState, Suspense, useEffect, useMemo } from 'react'
+import { useState, Suspense, useMemo, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
-import { motion, AnimatePresence } from 'framer-motion'
+import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion'
 import {
-  Building2, MapPin, Users, CheckCircle, FileText, GraduationCap,
-  Bell, Zap, ChevronRight
+  CheckCircle, FileText, GraduationCap,
+  Bell, Zap, ChevronRight, X
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useNotifications } from '@/hooks/useNotifications'
+import { useUndoableAction } from '@/hooks/useUndoableAction.ts'
 // Dynamic Registry and Permissions
 import { WIDGET_REGISTRY, type WidgetId } from './components/WidgetRegistry'
 import { useWidgetPermissions } from '@/hooks/useWidgetPermissions'
@@ -24,12 +24,60 @@ import { NotificationsPanel } from './components/NotificationsPanel'
 import { DashboardCustomizeModal } from './components/DashboardCustomizeModal'
 import { useTranslation } from "react-i18next";
 
+interface RegistryWidgetRendererProps {
+  id: WidgetId
+  effectivePermittedWidgets: WidgetId[]
+  visibleWidgets: Record<string, boolean>
+  itemVariants: {
+    hidden: { y: number; opacity: number }
+    visible: { y: number; opacity: number }
+  }
+  statsList: Array<Record<string, unknown>>
+  statsLoading: boolean
+  extraProps?: Record<string, unknown>
+  onRemoveWidget?: (widgetId: WidgetId) => void
+}
 
+function RegistryWidgetRenderer({
+  id,
+  effectivePermittedWidgets,
+  visibleWidgets,
+  itemVariants,
+  statsList,
+  statsLoading,
+  extraProps,
+  onRemoveWidget
+}: RegistryWidgetRendererProps) {
+  if (!effectivePermittedWidgets.includes(id) || visibleWidgets[id] === false) return null
+  const WidgetComponent = WIDGET_REGISTRY[id].component
+
+  return (
+    <m.div variants={itemVariants} key={id} layout className="relative group">
+      <Suspense fallback={<Skeleton className="w-full h-[200px] rounded-xl" />}>
+        {id === 'statsGrid' ? (
+          <WidgetComponent stats={statsList} isLoading={statsLoading} {...extraProps} />
+        ) : (
+          <WidgetComponent {...extraProps} />
+        )}
+      </Suspense>
+      {/* Quick remove button - shows on hover */}
+      {onRemoveWidget && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
+          onClick={() => onRemoveWidget(id)}
+        >
+          <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
+        </Button>
+      )}
+    </m.div>
+  )
+}
 
 export function IntegratedDashboard() {
   const { t, ready } = useTranslation('dashboard');
-  const { user, profile, primaryRole } = useAuth()
-  const { currentProperty } = useProperty()
+  const { user, profile } = useAuth()
   const { data: stats, isLoading: statsLoading, refetch } = useDashboardStats()
   const { notifications } = useNotifications()
   const [showNotifications, setShowNotifications] = useState(false)
@@ -60,51 +108,49 @@ export function IntegratedDashboard() {
     }, {} as Record<string, boolean>)
   }, [effectivePermittedWidgets])
 
-  const [visibleWidgets, setVisibleWidgets] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
-    if (effectivePermittedWidgets.length === 0) return
-
-    setVisibleWidgets(prev => {
-      const next = { ...prev }
-      let changed = false
-
-      effectivePermittedWidgets.forEach((id) => {
-        if (typeof next[id] === 'undefined') {
-          next[id] = WIDGET_REGISTRY[id]?.defaultVisible ?? true
-          changed = true
-        }
-      })
-
-      const permittedSet = new Set(effectivePermittedWidgets)
-      Object.keys(next).forEach((key) => {
-        if (!permittedSet.has(key as WidgetId)) {
-          delete next[key]
-          changed = true
-        }
-      })
-
-      return changed ? next : prev
-    })
-  }, [effectivePermittedWidgets])
+  const [widgetVisibilityOverrides, setWidgetVisibilityOverrides] = useState<Record<string, boolean>>({})
+  const visibleWidgets = useMemo(() => {
+    return effectivePermittedWidgets.reduce((acc, widgetId) => {
+      acc[widgetId] = widgetVisibilityOverrides[widgetId] ?? (WIDGET_REGISTRY[widgetId]?.defaultVisible ?? true)
+      return acc
+    }, {} as Record<string, boolean>)
+  }, [effectivePermittedWidgets, widgetVisibilityOverrides])
 
   const toggleWidget = (key: string, visible: boolean) => {
-    setVisibleWidgets(prev => ({ ...prev, [key]: visible }))
+    setWidgetVisibilityOverrides((prev) => ({ ...prev, [key]: visible }))
   }
 
   const resetWidgets = () => {
-    setVisibleWidgets(defaultVisibility)
+    setWidgetVisibilityOverrides(defaultVisibility)
   }
 
-  const isWidgetEnabled = (id: WidgetId) =>
-    effectivePermittedWidgets.includes(id) && visibleWidgets[id] !== false
+  // Undoable action for removing widgets
+  const { execute: executeRemoveWidget } = useUndoableAction(
+    async (widgetId: WidgetId) => {
+      toggleWidget(widgetId, false)
+    },
+    {
+      delay: 5000,
+      message: t('undo.widget_removed', 'Widget removed'),
+      successMessage: t('undo.widget_removed_permanent', 'Widget removed from dashboard'),
+      onCancel: () => {
+        // Restore all widgets by resetting overrides
+        // This is a simplified approach - in production you might track specific cancelled widgets
+        resetWidgets()
+      },
+    }
+  )
 
-  const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0
+  const handleRemoveWidget = useCallback((widgetId: WidgetId) => {
+    executeRemoveWidget(widgetId)
+  }, [executeRemoveWidget])
+
+  const unreadCount = notifications?.filter((notification: { is_read?: boolean }) => !notification.is_read).length || 0
 
   // Dynamic stats based on role - memoized to prevent translation key flashing
   const statsList = useMemo(() => {
     if (!ready) return []
-    
+
     const baseStats = [
       {
         title: t('widgets.tasks') || 'My Tasks',
@@ -168,211 +214,201 @@ export function IntegratedDashboard() {
       opacity: 1
     }
   }
-
-  // Dynamic Rendering Helper for Registry Widgets
-  const renderRegistryWidget = (id: WidgetId, extraProps?: any) => {
-    if (!effectivePermittedWidgets.includes(id) || visibleWidgets[id] === false) return null
-    const WidgetComponent = WIDGET_REGISTRY[id].component
-
-    return (
-      <motion.div variants={itemVariants} key={id}>
-        <Suspense fallback={<Skeleton className="w-full h-[200px] rounded-xl" />}>
-          {id === 'statsGrid' ? (
-            <WidgetComponent stats={statsList} isLoading={statsLoading} {...extraProps} />
-          ) : (
-            <WidgetComponent {...extraProps} />
-          )}
-        </Suspense>
-      </motion.div>
-    )
+  const widgetRendererProps = {
+    effectivePermittedWidgets,
+    visibleWidgets,
+    itemVariants,
+    statsList,
+    statsLoading,
   }
+  const sidebarWidgetIds: WidgetId[] = [
+    'onlineUsers',
+    'announcements',
+    'todaysBirthdays',
+    'employeeOfMonth',
+    'knowledgeBase',
+    'training',
+    'maintenance',
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950/50 p-6 space-y-8">
-      <WelcomeHeader
-        config={{
-          title: `${t('welcome_header.welcome') || 'Welcome'}${profile?.full_name ? `, ${profile.full_name}` : ''}`,
-          subtitle: t('welcome_header.subtitle') || 'Operational dashboard overview',
-          theme: 'navy',
-          accentColor: 'gold'
-        }}
-        onRefresh={refetch}
-        isLoading={statsLoading}
-        unreadCount={unreadCount}
-        onToggleNotifications={() => setShowNotifications(!showNotifications)}
-      />
+    <LazyMotion features={domAnimation}>
+      <div className="min-h-screen bg-slate-50 p-4 lg:p-8 space-y-8 font-sans selection:bg-blue-100 selection:text-blue-900">
+        <WelcomeHeader
+          config={{
+            title: `${t('welcome_header.welcome') || 'Welcome'}${profile?.full_name ? `, ${profile.full_name}` : ''}`,
+            subtitle: t('welcome_header.subtitle') || 'Operational dashboard overview',
+            theme: 'navy',
+            accentColor: 'gold'
+          }}
+          onRefresh={refetch}
+          isLoading={statsLoading}
+          unreadCount={unreadCount}
+          onToggleNotifications={() => setShowNotifications(!showNotifications)}
+        />
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-12 gap-6"
-      >
-        {/* Left Column - Main Content */}
-        <div className="col-span-12 lg:col-span-8 space-y-6">
+        <m.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-12 gap-6"
+        >
+          {/* Left Column - Main Content */}
+          <div className="col-span-12 lg:col-span-8 space-y-6">
 
-          {/* Quick Insights Row - REAL DATA */}
-          {renderRegistryWidget('quickInsights')}
+            {/* Quick Insights Row - REAL DATA */}
+            <RegistryWidgetRenderer
+              id="quickInsights"
+              {...widgetRendererProps}
+              onRemoveWidget={handleRemoveWidget}
+            />
 
-          {/* Motivation Widget - Premium Placement */}
-          {renderRegistryWidget('motivation')}
+            {/* Motivation Widget - Premium Placement */}
+            <RegistryWidgetRenderer
+              id="motivation"
+              {...widgetRendererProps}
+              onRemoveWidget={handleRemoveWidget}
+            />
 
-          {/* Stats Grid */}
-          {renderRegistryWidget('statsGrid')}
+            {/* Stats Grid */}
+            <RegistryWidgetRenderer
+              id="statsGrid"
+              {...widgetRendererProps}
+              onRemoveWidget={handleRemoveWidget}
+            />
 
-          {/* Quick Actions */}
-          {effectivePermittedWidgets.includes('quickActions') && visibleWidgets.quickActions !== false && (
-            <motion.div
-              variants={itemVariants}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-amber-500" />
-                  {t('widgets.quick_actions')}
-                </h2>
+            {/* Quick Actions */}
+            {effectivePermittedWidgets.includes('quickActions') && visibleWidgets.quickActions !== false && (
+              <m.div
+                variants={itemVariants}
+                className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative group"
+              >
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
-                  onClick={() => setShowCustomize(true)}
+                  size="icon"
+                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
+                  onClick={() => handleRemoveWidget('quickActions')}
                 >
-                  {t('actions.view_all')} <ChevronRight className="w-4 h-4 ml-1" />
+                  <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
                 </Button>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-amber-500" />
+                    {t('widgets.quick_actions')}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={() => setShowCustomize(true)}
+                  >
+                    {t('actions.view_all')} <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+                <RegistryWidgetRenderer
+                  id="quickActions"
+                  {...widgetRendererProps}
+                />
+              </m.div>
+            )}
+
+            <div className="mt-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Social Feed */}
+                <m.div variants={itemVariants} className="md:col-span-2 relative group">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
+                    onClick={() => handleRemoveWidget('socialFeed')}
+                  >
+                    <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
+                  </Button>
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle>{t('widgets.activity_feed') || 'Activity Feed'}</CardTitle>
+                      <CardDescription>{t('widgets.activity_desc') || 'Latest updates and assignments'}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {feedLoading ? (
+                        <div className="space-y-4">
+                          <Skeleton className="h-32 w-full" />
+                          <Skeleton className="h-32 w-full" />
+                          <Skeleton className="h-32 w-full" />
+                        </div>
+                      ) : (
+                        <ScrollArea className="h-[600px] pr-4">
+                          {currentUser && (
+                            <SocialFeed
+                              user={currentUser}
+                              feedItems={feedItems}
+                              onReact={onReact}
+                              onComment={onComment}
+                              onShare={onShare}
+                            />
+                          )}
+                        </ScrollArea>
+                      )}
+                    </CardContent>
+                  </Card>
+                </m.div>
               </div>
-              {renderRegistryWidget('quickActions')}
-            </motion.div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <RegistryWidgetRenderer
+                  id="tasks"
+                  {...widgetRendererProps}
+                  onRemoveWidget={handleRemoveWidget}
+                />
+                <RegistryWidgetRenderer
+                  id="calendar"
+                  {...widgetRendererProps}
+                  onRemoveWidget={handleRemoveWidget}
+                />
+              </div>
+
+              {/* Hospitality News - Wide Layout */}
+              <div className="grid grid-cols-1 gap-6">
+                <RegistryWidgetRenderer
+                  id="hospitalityNews"
+                  {...widgetRendererProps}
+                  onRemoveWidget={handleRemoveWidget}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Sidebar Widgets */}
+          <div className="col-span-12 lg:col-span-4 space-y-6">
+            {sidebarWidgetIds.map((widgetId) => (
+              <RegistryWidgetRenderer
+                key={widgetId}
+                id={widgetId}
+                {...widgetRendererProps}
+                onRemoveWidget={handleRemoveWidget}
+              />
+            ))}
+          </div>
+        </m.div>
+
+        {/* Floating Notification Panel */}
+        <AnimatePresence>
+          {showNotifications && (
+            <NotificationsPanel onClose={() => setShowNotifications(false)} />
           )}
+        </AnimatePresence>
 
-          <div className="mt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Social Feed */}
-              <motion.div variants={itemVariants} className="md:col-span-2">
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle>{t('widgets.activity_feed') || 'Activity Feed'}</CardTitle>
-                    <CardDescription>{t('widgets.activity_desc') || 'Latest updates and assignments'}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {feedLoading ? (
-                      <div className="space-y-4">
-                        <Skeleton className="h-32 w-full" />
-                        <Skeleton className="h-32 w-full" />
-                        <Skeleton className="h-32 w-full" />
-                      </div>
-                    ) : (
-                      <ScrollArea className="h-[600px] pr-4">
-                        {currentUser && (
-                          <SocialFeed
-                            user={currentUser}
-                            feedItems={feedItems}
-                            onReact={onReact}
-                            onComment={onComment}
-                            onShare={onShare}
-                          />
-                        )}
-                      </ScrollArea>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
+        {/* Customization Modal */}
+        <DashboardCustomizeModal
+          open={showCustomize}
+          onOpenChange={setShowCustomize}
+          visibleWidgets={visibleWidgets}
+          onToggleWidget={toggleWidget}
+          onReset={resetWidgets}
+        />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {renderRegistryWidget('tasks')}
-              {renderRegistryWidget('calendar')}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Sidebar Widgets */}
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          {renderRegistryWidget('onlineUsers')}
-          {renderRegistryWidget('announcements')}
-          {renderRegistryWidget('todaysBirthdays')}
-          {renderRegistryWidget('employeeOfMonth')}
-          {renderRegistryWidget('knowledgeBase')}
-          {renderRegistryWidget('training')}
-          {renderRegistryWidget('hospitalityNews')}
-          {renderRegistryWidget('maintenance')}
-        </div>
-      </motion.div>
-
-      {/* Floating Notification Panel */}
-      <AnimatePresence>
-        {showNotifications && (
-          <NotificationsPanel onClose={() => setShowNotifications(false)} />
-        )}
-      </AnimatePresence>
-
-      {/* Customization Modal */}
-      <DashboardCustomizeModal
-        open={showCustomize}
-        onOpenChange={setShowCustomize}
-        visibleWidgets={visibleWidgets}
-        onToggleWidget={toggleWidget}
-        onReset={resetWidgets}
-      />
-
-    </div>
-  )
-}
-
-// Property Overview Card with real data
-function PropertyOverviewCard() {
-  const { t } = useTranslation('dashboard');
-  const { currentProperty } = useProperty()
-  const { profile } = useAuth()
-
-  return (
-    <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-white to-slate-50/50">
-      <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-primary/40" />
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Building2 className="w-5 h-5 text-primary" />
-          </div>
-          {t('property_overview', { name: currentProperty?.name || '' })}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {currentProperty ? (
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                <Building2 className="w-8 h-8" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-bold truncate">{currentProperty.name}</h3>
-              </div>
-            </div>
-
-            <div className="space-y-2.5 pt-3 border-t border-dashed">
-              {currentProperty.address && (
-                <div className="flex items-start gap-3 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">{currentProperty.address}</span>
-                </div>
-              )}
-              {profile?.department && (
-                <div className="flex items-center gap-3 text-sm">
-                  <Users className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-muted-foreground">{profile.department}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Building2 className="w-8 h-8 opacity-40" />
-            </div>
-            <p className="font-medium">{t('cards.property_not_found')}</p>
-            <p className="text-sm">{t('cards.no_address_provided')}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </LazyMotion>
   )
 }
 

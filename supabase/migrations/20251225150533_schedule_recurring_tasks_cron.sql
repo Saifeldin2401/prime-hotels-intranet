@@ -6,7 +6,10 @@ SELECT cron.schedule(
     SELECT
         net.http_post(
             url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/generate-template-tasks',
-            headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0c3ZqZnJvZmNwa2Z6dmpwd3Z4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTM3OTUxNCwiZXhwIjoyMDgwOTU1NTE0fQ.7Mm34jjj4jWdp4AK2ABTn9r4H3qcPC3uKgkKdUnBKsI"}'::jsonb
+            headers:=jsonb_build_object(
+                'Content-Type', 'application/json',
+                'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key' limit 1)
+            )
         ) as request_id;
     $$
 );

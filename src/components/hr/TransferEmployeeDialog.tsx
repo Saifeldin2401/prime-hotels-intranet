@@ -275,204 +275,202 @@ export function TransferEmployeeDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="employeeId"
-                            render={({ field }) => {
-                                const selectedEmp = employees.find(e => e.id === field.value);
-                                const currentProp = selectedEmp?.user_properties?.[0]?.properties;
-                                const currentPropName = Array.isArray(currentProp) ? currentProp[0]?.name : currentProp?.name;
+                <Form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="employeeId"
+                        render={({ field }) => {
+                            const selectedEmp = employees.find(e => e.id === field.value);
+                            const currentProp = selectedEmp?.user_properties?.[0]?.properties;
+                            const currentPropName = Array.isArray(currentProp) ? currentProp[0]?.name : currentProp?.name;
 
-                                return (
-                                    <FormItem>
-                                        <FormLabel>Employee *</FormLabel>
-                                        <Select
-                                            onValueChange={field.onChange}
-                                            value={field.value}
-                                            disabled={!!editRecord || loadingData}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select employee" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {employees.map((emp) => (
-                                                    <SelectItem key={emp.id} value={emp.id}>
-                                                        {emp.full_name} ({emp.job_title || "No Title"})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {currentPropName && (
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                Current Property: <span className="font-medium text-foreground">{currentPropName}</span>
-                                            </p>
-                                        )}
-                                        <FormMessage />
-                                    </FormItem>
-                                );
-                            }}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="targetPropertyId"
-                            render={({ field }) => (
+                            return (
                                 <FormItem>
-                                    <FormLabel>New Property *</FormLabel>
+                                    <FormLabel>Employee *</FormLabel>
                                     <Select
                                         onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger disabled={loadingData}>
-                                                <SelectValue placeholder="Select new property" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {properties.map((prop) => (
-                                                <SelectItem key={prop.id} value={prop.id}>
-                                                    {prop.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="targetDepartmentId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>New Department (Optional)</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
+                                        value={field.value}
+                                        disabled={!!editRecord || loadingData}
                                     >
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select department" />
+                                                <SelectValue placeholder="Select employee" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {filteredDepartments.map((dept) => (
-                                                <SelectItem key={dept.id} value={dept.id}>
-                                                    {dept.name}
+                                            {employees.map((emp) => (
+                                                <SelectItem key={emp.id} value={emp.id}>
+                                                    {emp.full_name} ({emp.job_title || "No Title"})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    {currentPropName && (
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            Current Property: <span className="font-medium text-foreground">{currentPropName}</span>
+                                        </p>
+                                    )}
                                     <FormMessage />
                                 </FormItem>
-                            )}
-                        />
+                            );
+                        }}
+                    />
 
-                        <FormField
-                            control={form.control}
-                            name="effectiveDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Effective Date *</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "PPP")
-                                                    ) : (
-                                                        <span>Pick a date</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="notes"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Notes</FormLabel>
+                    <FormField
+                        control={form.control}
+                        name="targetPropertyId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>New Property *</FormLabel>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                >
                                     <FormControl>
-                                        <Textarea
-                                            placeholder="Reason for transfer..."
-                                            className="resize-none"
-                                            {...field}
-                                        />
+                                        <SelectTrigger disabled={loadingData}>
+                                            <SelectValue placeholder="Select new property" />
+                                        </SelectTrigger>
                                     </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                    <SelectContent>
+                                        {properties.map((prop) => (
+                                            <SelectItem key={prop.id} value={prop.id}>
+                                                {prop.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                        <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Summary</p>
-                            <div className="grid grid-cols-1 gap-2">
-                                <div>
-                                    <p className="text-muted-foreground">Employee</p>
-                                    <p className="font-medium">{selectedEmployee?.full_name || '-'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">Current Property</p>
-                                    <p className="font-medium">{currentPropName || '-'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">New Property</p>
-                                    <p className="font-medium">{selectedProperty?.name || '-'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">New Department</p>
-                                    <p className="font-medium">{selectedDepartment?.name || '—'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">Effective Date</p>
-                                    <p className="font-medium">{effectiveDateValue ? format(effectiveDateValue, "PPP") : '-'}</p>
-                                </div>
+                    <FormField
+                        control={form.control}
+                        name="targetDepartmentId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>New Department (Optional)</FormLabel>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select department" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {filteredDepartments.map((dept) => (
+                                            <SelectItem key={dept.id} value={dept.id}>
+                                                {dept.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="effectiveDate"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Effective Date *</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full pl-3 text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                {field.value ? (
+                                                    format(field.value, "PPP")
+                                                ) : (
+                                                    <span>Pick a date</span>
+                                                )}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Notes</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                        placeholder="Reason for transfer..."
+                                        className="resize-none"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Summary</p>
+                        <div className="grid grid-cols-1 gap-2">
+                            <div>
+                                <p className="text-muted-foreground">Employee</p>
+                                <p className="font-medium">{selectedEmployee?.full_name || '-'}</p>
                             </div>
-                            {isEffectiveDatePast && (
-                                <p className="text-[11px] text-amber-600">
-                                    Effective date is in the past. The transfer will apply immediately after approval.
-                                </p>
-                            )}
+                            <div>
+                                <p className="text-muted-foreground">Current Property</p>
+                                <p className="font-medium">{currentPropName || '-'}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">New Property</p>
+                                <p className="font-medium">{selectedProperty?.name || '-'}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">New Department</p>
+                                <p className="font-medium">{selectedDepartment?.name || '—'}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">Effective Date</p>
+                                <p className="font-medium">{effectiveDateValue ? format(effectiveDateValue, "PPP") : '-'}</p>
+                            </div>
                         </div>
+                        {isEffectiveDatePast && (
+                            <p className="text-[11px] text-amber-600">
+                                Effective date is in the past. The transfer will apply immediately after approval.
+                            </p>
+                        )}
+                    </div>
 
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                )}
-                                {editRecord ? 'Save Changes' : 'Submit Request'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                            {form.formState.isSubmitting && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            {editRecord ? 'Save Changes' : 'Submit Request'}
+                        </Button>
+                    </DialogFooter>
                 </Form>
             </DialogContent>
         </Dialog>

@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,9 +14,11 @@ const containerVariants = {
 }
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
+  hidden: { opacity: 0, y: 15, scale: 0.98 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 24 } }
 }
+
+const skeletonCardKeys = ['stats-skeleton-1', 'stats-skeleton-2', 'stats-skeleton-3', 'stats-skeleton-4']
 
 interface StatItem {
   title: string
@@ -34,27 +36,28 @@ interface StatsGridProps {
   isLoading: boolean
 }
 
-const colorClasses: Record<string, string> = {
-  primary: 'from-blue-500 to-blue-600',
-  emerald: 'from-emerald-500 to-emerald-600',
-  gold: 'from-amber-500 to-amber-600',
-  purple: 'from-purple-500 to-purple-600',
-  red: 'from-red-500 to-red-600',
-  navy: 'from-slate-700 to-slate-800',
-  violet: 'from-violet-500 to-violet-600',
-  orange: 'from-orange-500 to-orange-600',
-  teal: 'from-teal-500 to-teal-600'
+const colorStyles: Record<string, { bg: string, text: string, iconBg: string, border: string, glow: string }> = {
+  primary: { bg: 'bg-white', text: 'text-blue-600', iconBg: 'bg-blue-50', border: 'border-blue-100', glow: 'bg-blue-400' },
+  emerald: { bg: 'bg-white', text: 'text-emerald-600', iconBg: 'bg-emerald-50', border: 'border-emerald-100', glow: 'bg-emerald-400' },
+  gold: { bg: 'bg-white', text: 'text-amber-600', iconBg: 'bg-amber-50', border: 'border-amber-100', glow: 'bg-amber-400' },
+  purple: { bg: 'bg-white', text: 'text-purple-600', iconBg: 'bg-purple-50', border: 'border-purple-100', glow: 'bg-purple-400' },
+  red: { bg: 'bg-white', text: 'text-rose-600', iconBg: 'bg-rose-50', border: 'border-rose-100', glow: 'bg-rose-400' },
+  navy: { bg: 'bg-white', text: 'text-slate-700', iconBg: 'bg-slate-100', border: 'border-slate-200', glow: 'bg-slate-400' },
+  violet: { bg: 'bg-white', text: 'text-violet-600', iconBg: 'bg-violet-50', border: 'border-violet-100', glow: 'bg-violet-400' },
+  orange: { bg: 'bg-white', text: 'text-orange-600', iconBg: 'bg-orange-50', border: 'border-orange-100', glow: 'bg-orange-400' },
+  teal: { bg: 'bg-white', text: 'text-teal-600', iconBg: 'bg-teal-50', border: 'border-teal-100', glow: 'bg-teal-400' }
 }
 
 export function StatsGrid({ stats, isLoading }: StatsGridProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <Card key={i}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        {skeletonCardKeys.map((skeletonKey) => (
+          <Card key={skeletonKey} className="border-0 shadow-sm rounded-2xl bg-white">
             <CardContent className="p-6">
-              <Skeleton className="h-12 w-24 mb-2" />
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-24 mb-3" />
+              <Skeleton className="h-4 w-32 mb-2" />
+              <Skeleton className="h-3 w-40" />
             </CardContent>
           </Card>
         ))}
@@ -63,71 +66,80 @@ export function StatsGrid({ stats, isLoading }: StatsGridProps) {
   }
 
   return (
-    <motion.div 
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-    >
-      {stats.map((stat) => {
-        const Icon = stat.icon
-        const content = (
-          <motion.div
-            variants={itemVariants}
-            whileHover={{ y: -4, transition: { duration: 0.2 } }}
-            className="h-full"
-          >
-            <Card className={cn(
-              "relative overflow-hidden cursor-pointer h-full group",
-              "hover:shadow-xl transition-all duration-300",
-              "border-0 shadow-lg"
-            )}>
-              <div className={cn(
-                "absolute inset-0 bg-gradient-to-br opacity-10 group-hover:opacity-15 transition-opacity",
-                colorClasses[stat.color]
-              )} />
-              
-              <div className={cn(
-                "absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-20",
-                "bg-gradient-to-br",
-                colorClasses[stat.color]
-              )} />
-              
-              <CardContent className="relative p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">{stat.title}</p>
-                    <h3 className="text-3xl font-bold tracking-tight">{stat.value}</h3>
-                    {stat.subtitle && (
-                      <p className="text-sm text-muted-foreground mt-1">{stat.subtitle}</p>
-                    )}
-                    {stat.trend && (
-                      <div className={cn(
-                        "flex items-center gap-1 mt-2 text-sm font-medium",
-                        stat.trendUp ? "text-emerald-600" : "text-red-600"
-                      )}>
-                        {stat.trendUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                        {stat.trend}
-                      </div>
-                    )}
-                  </div>
-                  <div className={cn(
-                    "p-3 rounded-xl bg-gradient-to-br text-white shadow-lg",
-                    colorClasses[stat.color]
-                  )}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )
+    <LazyMotion features={domAnimation}>
+      <m.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6"
+      >
+        {stats.map((stat) => {
+          const Icon = stat.icon
+          const style = colorStyles[stat.color] || colorStyles.navy
 
-        if (stat.href) {
-          return <Link key={stat.title} to={stat.href} className="block h-full">{content}</Link>
-        }
-        return content
-      })}
-    </motion.div>
+          const content = (
+            <m.div
+              variants={itemVariants}
+              className="h-full"
+            >
+              <Card className={cn(
+                "relative overflow-hidden cursor-pointer h-full group",
+                "transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg",
+                style.bg,
+                "border border-slate-200 hover:border-slate-300 rounded-2xl shadow-sm"
+              )}>
+
+                {/* Subtle top glow line */}
+                <div className={cn(
+                  "absolute top-0 inset-x-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+                  style.glow
+                )} />
+
+                {/* Subtle ambient corner glow */}
+                <div className={cn(
+                  "absolute -right-8 -top-8 w-32 h-32 rounded-full blur-[50px] opacity-5 group-hover:opacity-15 transition-opacity duration-700",
+                  style.glow
+                )} />
+
+                <CardContent className="relative p-6 pt-5">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 pr-4">
+                      <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-1.5">{stat.title}</p>
+                      <h3 className="text-4xl font-extrabold tracking-tight text-slate-800 mb-1">{stat.value}</h3>
+
+                      {stat.subtitle && (
+                        <p className="text-sm font-medium text-slate-500 leading-snug">{stat.subtitle}</p>
+                      )}
+
+                      {stat.trend && (
+                        <div className={cn(
+                          "inline-flex items-center gap-1 mt-3 px-2 py-0.5 rounded-md text-xs font-bold border",
+                          stat.trendUp ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
+                        )}>
+                          {stat.trendUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                          {stat.trend}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={cn(
+                      "p-3 rounded-2xl transition-transform duration-300 group-hover:scale-110 shadow-sm border",
+                      style.iconBg, style.text, style.border
+                    )}>
+                      <Icon className="w-6 h-6 stroke-[2.5]" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </m.div>
+          )
+
+          if (stat.href) {
+            return <Link key={stat.title} to={stat.href} className="block h-full outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded-2xl">{content}</Link>
+          }
+          return <div key={stat.title}>{content}</div>
+        })}
+      </m.div>
+    </LazyMotion>
   )
 }

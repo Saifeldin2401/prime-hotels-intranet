@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -100,8 +100,7 @@ export function DelegateApprovalDialog({
     const [notifyOnAction, setNotifyOnAction] = useState(true)
     const [notifyOnExpiry, setNotifyOnExpiry] = useState(true)
 
-    useEffect(() => {
-        if (!open) return
+    const resetFormState = () => {
         setDelegateId('')
         setReason('')
         setExpiryDays('7')
@@ -117,7 +116,14 @@ export function DelegateApprovalDialog({
         setNotifyDelegator(true)
         setNotifyOnAction(true)
         setNotifyOnExpiry(true)
-    }, [open, approvalId])
+    }
+
+    const handleDialogOpenChange = (nextOpen: boolean) => {
+        if (nextOpen) {
+            resetFormState()
+        }
+        onOpenChange(nextOpen)
+    }
 
     // Fetch potential delegates (same role level or higher)
     const { data: delegates, isLoading: loadingDelegates } = useQuery({
@@ -245,7 +251,7 @@ export function DelegateApprovalDialog({
     const fallbackOptions = delegates?.filter(d => d.id !== delegateId) || []
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -482,26 +488,56 @@ export function DelegateApprovalDialog({
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            <label className="flex items-center gap-2 rounded-md border p-2">
-                                <Checkbox checked={allowRedelegate} onCheckedChange={(val) => setAllowRedelegate(!!val)} />
-                                Allow re-delegation
-                            </label>
-                            <label className="flex items-center gap-2 rounded-md border p-2">
-                                <Checkbox checked={notifyDelegate} onCheckedChange={(val) => setNotifyDelegate(!!val)} />
-                                Notify delegate on creation
-                            </label>
-                            <label className="flex items-center gap-2 rounded-md border p-2">
-                                <Checkbox checked={notifyDelegator} onCheckedChange={(val) => setNotifyDelegator(!!val)} />
-                                Notify delegator on changes
-                            </label>
-                            <label className="flex items-center gap-2 rounded-md border p-2">
-                                <Checkbox checked={notifyOnAction} onCheckedChange={(val) => setNotifyOnAction(!!val)} />
-                                Notify on approval actions
-                            </label>
-                            <label className="flex items-center gap-2 rounded-md border p-2">
-                                <Checkbox checked={notifyOnExpiry} onCheckedChange={(val) => setNotifyOnExpiry(!!val)} />
-                                Notify on expiry
-                            </label>
+                            <div className="flex items-center gap-2 rounded-md border p-2">
+                                <Checkbox
+                                    id="allow-redelegate"
+                                    checked={allowRedelegate}
+                                    onCheckedChange={(val) => setAllowRedelegate(!!val)}
+                                />
+                                <Label htmlFor="allow-redelegate" className="text-xs font-normal cursor-pointer">
+                                    Allow re-delegation
+                                </Label>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-md border p-2">
+                                <Checkbox
+                                    id="notify-delegate"
+                                    checked={notifyDelegate}
+                                    onCheckedChange={(val) => setNotifyDelegate(!!val)}
+                                />
+                                <Label htmlFor="notify-delegate" className="text-xs font-normal cursor-pointer">
+                                    Notify delegate on creation
+                                </Label>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-md border p-2">
+                                <Checkbox
+                                    id="notify-delegator"
+                                    checked={notifyDelegator}
+                                    onCheckedChange={(val) => setNotifyDelegator(!!val)}
+                                />
+                                <Label htmlFor="notify-delegator" className="text-xs font-normal cursor-pointer">
+                                    Notify delegator on changes
+                                </Label>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-md border p-2">
+                                <Checkbox
+                                    id="notify-on-action"
+                                    checked={notifyOnAction}
+                                    onCheckedChange={(val) => setNotifyOnAction(!!val)}
+                                />
+                                <Label htmlFor="notify-on-action" className="text-xs font-normal cursor-pointer">
+                                    Notify on approval actions
+                                </Label>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-md border p-2">
+                                <Checkbox
+                                    id="notify-on-expiry"
+                                    checked={notifyOnExpiry}
+                                    onCheckedChange={(val) => setNotifyOnExpiry(!!val)}
+                                />
+                                <Label htmlFor="notify-on-expiry" className="text-xs font-normal cursor-pointer">
+                                    Notify on expiry
+                                </Label>
+                            </div>
                         </div>
                     </div>
 

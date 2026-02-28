@@ -13,6 +13,7 @@ const QuestionEditor = lazy(() => import('@/pages/questions/QuestionEditor'))
 const QuestionReview = lazy(() => import('@/pages/questions/QuestionReview'))
 const QuestionLibrary = lazy(() => import('@/pages/questions/QuestionLibrary'))
 const QuestionGeneratorPage = lazy(() => import('@/pages/questions/QuestionGeneratorPage'))
+const SystemWiki = lazy(() => import('@/pages/knowledge/SystemWiki'))
 
 const SOPViewerRedirect = () => {
     const { id } = useParams()
@@ -28,6 +29,16 @@ export const KnowledgeRoutes = () => (
         <Route
             path="/sops/:id"
             element={<SOPViewerRedirect />}
+        />
+        <Route
+            path="/knowledge/wiki"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <SystemWiki />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
         />
         <Route
             path="/knowledge"

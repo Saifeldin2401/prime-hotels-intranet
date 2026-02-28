@@ -352,7 +352,15 @@
         "back": "رجوع",
         "edit": "تعديل",
         "next": "التالي",
-        "save_success": "تم الحفظ بنجاح"
+        "save_success": "تم الحفظ بنجاح",
+        "undo": "تراجع",
+        "acknowledge": "إقرار",
+        "acknowledged": "تم الإقرار"
+    },
+    "undo": {
+        "seconds_remaining": "{{count}}ث",
+        "action_will_execute": "سيتم تنفيذ الإجراء خلال {{count}}ث",
+        "click_to_undo": "انقر للتراجع"
     },
     "error": "خطأ",
     "goToFirstPage": "الذهاب للصفحة الأولى",

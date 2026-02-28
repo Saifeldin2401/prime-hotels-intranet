@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Wrench, ArrowRight, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { Wrench, ArrowRight, AlertTriangle, Clock as ClockIcon, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,17 +10,19 @@ import { useAssignedMaintenanceTickets } from '@/hooks/useMaintenanceTickets'
 import { cn } from '@/lib/utils'
 import { format, differenceInHours } from 'date-fns'
 
-const priorityConfig: Record<string, { color: string; bg: string; label: string }> = {
-  urgent: { color: 'text-red-600', bg: 'bg-red-50', label: 'Urgent' },
-  high: { color: 'text-orange-600', bg: 'bg-orange-50', label: 'High' },
-  medium: { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Medium' },
-  low: { color: 'text-blue-600', bg: 'bg-blue-50', label: 'Low' },
+const maintenanceSkeletonKeys = ['maintenance-skeleton-1', 'maintenance-skeleton-2', 'maintenance-skeleton-3']
+
+const priorityConfig: Record<string, { color: string; bg: string; label: string; border: string }> = {
+  urgent: { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200', label: 'Urgent' },
+  high: { color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', label: 'High' },
+  medium: { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', label: 'Medium' },
+  low: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', label: 'Low' },
 }
 
-const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
-  open: { icon: AlertTriangle, color: 'text-red-500', label: 'Open' },
-  in_progress: { icon: Clock, color: 'text-amber-500', label: 'In Progress' },
-  resolved: { icon: CheckCircle2, color: 'text-emerald-500', label: 'Resolved' },
+const statusConfig: Record<string, { icon: any; color: string; bg: string; border: string; label: string }> = {
+  open: { icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100', label: 'Open' },
+  in_progress: { icon: ClockIcon, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100', label: 'In Progress' },
+  resolved: { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Resolved' },
 }
 
 export function MaintenanceWidget() {
@@ -29,102 +31,125 @@ export function MaintenanceWidget() {
 
   if (isLoading) {
     return (
-      <Card className="h-full">
-        <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
-        <CardContent className="space-y-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}
-        </CardContent>
+      <Card className="h-full border border-slate-200 shadow-sm rounded-2xl bg-white p-6">
+        <Skeleton className="h-6 w-32 mb-6" />
+        <div className="space-y-4">
+          {maintenanceSkeletonKeys.map((skeletonKey) => <Skeleton key={skeletonKey} className="h-20 w-full rounded-xl" />)}
+        </div>
       </Card>
     )
   }
 
   return (
-    <Card className="h-full border-0 shadow-lg bg-gradient-to-b from-white to-slate-50/50">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Link to="/maintenance" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <Wrench className="w-5 h-5 text-red-500" />
-              Maintenance
-            </Link>
-          </CardTitle>
-          <CardDescription>Open tickets requiring attention</CardDescription>
-        </div>
-        <Link to="/maintenance">
-          <Button variant="ghost" size="sm" className="gap-1">
-            View All <ArrowRight className="w-4 h-4" />
-          </Button>
-        </Link>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[320px]">
-          <div className="space-y-2 pr-4">
-            {tickets?.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-600" />
-                </div>
-                <p className="text-muted-foreground font-medium">All systems operational</p>
-                <p className="text-sm text-muted-foreground">No open maintenance tickets</p>
+    <LazyMotion features={domAnimation}>
+      <Card className="h-full border border-slate-200 shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
+        <CardHeader className="flex flex-row items-center justify-between pb-4 pt-6 px-6 relative z-10 bg-white border-b border-slate-100/50">
+          <div>
+            <CardTitle className="text-xl font-bold flex items-center gap-2 text-slate-800">
+              <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
+                <Wrench className="w-5 h-5" />
               </div>
-            ) : (
-              tickets?.map((ticket: any, index: number) => {
-                const priority = priorityConfig[ticket.priority] || priorityConfig.medium
-                const StatusIcon = statusConfig[ticket.status]?.icon || AlertTriangle
-                const hoursOpen = differenceInHours(new Date(), new Date(ticket.created_at))
-                
-                return (
-                  <motion.div
-                    key={ticket.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Link 
-                      to={`/maintenance/${ticket.id}`}
-                      className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-red-200 hover:shadow-md transition-all group bg-white"
-                    >
-                      <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                        priority.bg
-                      )}>
-                        <StatusIcon className={cn("w-5 h-5", priority.color)} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                            {ticket.title}
-                          </p>
-                          <Badge 
-                            variant="secondary" 
-                            className={cn("text-[10px] h-5", priority.bg, priority.color)}
-                          >
-                            {priority.label}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                          {ticket.location} • {ticket.category}
-                        </p>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {hoursOpen < 24 
-                              ? `${hoursOpen}h ago` 
-                              : format(new Date(ticket.created_at), 'MMM d')}
-                          </span>
-                          {hoursOpen > 48 && ticket.priority !== 'low' && (
-                            <span className="text-red-500 font-medium">Overdue</span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                )
-              })
-            )}
+              <Link to="/maintenance" className="hover:text-rose-500 transition-colors">
+                Maintenance
+              </Link>
+            </CardTitle>
+            <CardDescription className="text-sm font-medium text-slate-500 mt-1">
+              Open tickets requiring attention
+            </CardDescription>
           </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+          <Button asChild variant="ghost" size="sm" className="gap-1 text-slate-500 hover:text-slate-900 font-semibold h-8 rounded-full px-4 hover:bg-slate-100 transition-colors">
+            <Link to="/maintenance">
+              View All <ArrowRight className="w-4 h-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+
+        <CardContent className="p-0 flex-1 relative bg-slate-50/30">
+          <ScrollArea className="h-[340px] px-6 pb-6 pt-4">
+            <div className="space-y-3">
+              {tickets?.length === 0 ? (
+                <m.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-12 flex flex-col items-center justify-center h-full"
+                >
+                  <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 ring-1 ring-emerald-100 shadow-sm">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                  </div>
+                  <p className="text-slate-800 font-bold text-lg">All systems operational</p>
+                  <p className="text-sm text-slate-500 font-medium mt-1">No open maintenance tickets</p>
+                </m.div>
+              ) : (
+                tickets?.map((ticket: any, index: number) => {
+                  const priority = priorityConfig[ticket.priority] || priorityConfig.medium
+                  const StatusIcon = statusConfig[ticket.status]?.icon || AlertTriangle
+                  const hoursOpen = differenceInHours(new Date(), new Date(ticket.created_at))
+                  const isOverdue = hoursOpen > 48 && ticket.priority !== 'low'
+
+                  return (
+                    <m.div
+                      key={ticket.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05, ease: "easeOut" }}
+                    >
+                      <Link
+                        to={`/maintenance/${ticket.id}`}
+                        className={cn(
+                          "group flex items-start gap-4 p-4 rounded-2xl border bg-white shadow-[0_2px_8px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_16px_rgb(0,0,0,0.04)] transition-all ease-out hover:-translate-y-0.5",
+                          isOverdue ? "border-rose-100 hover:border-rose-300" : "border-slate-100 hover:border-slate-300"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border",
+                          statusConfig[ticket.status]?.bg || 'bg-slate-50',
+                          statusConfig[ticket.status]?.border || 'border-slate-100'
+                        )}>
+                          <StatusIcon className={cn("w-5 h-5", statusConfig[ticket.status]?.color || 'text-slate-500')} />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3 mb-1">
+                            <p className="font-bold text-[15px] text-slate-800 line-clamp-1 group-hover:text-rose-600 transition-colors">
+                              {ticket.title}
+                            </p>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] uppercase tracking-wider font-bold h-6 px-2 shrink-0 border",
+                                priority.bg, priority.color, priority.border
+                              )}
+                            >
+                              {priority.label}
+                            </Badge>
+                          </div>
+
+                          <p className="text-sm font-medium text-slate-500 line-clamp-1 mb-2">
+                            {ticket.location} <span className="text-slate-300 mx-1">•</span> {ticket.category}
+                          </p>
+
+                          <div className="flex items-center gap-3 text-xs font-semibold">
+                            <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-500">
+                              <ClockIcon className="w-3.5 h-3.5" />
+                              {hoursOpen < 24 ? `${hoursOpen}h open` : format(new Date(ticket.created_at), 'MMM d')}
+                            </span>
+                            {isOverdue && (
+                              <span className="text-rose-600 flex items-center gap-1">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                Overdue
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    </m.div>
+                  )
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    </LazyMotion>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useId } from 'react'
+import { useState, useMemo, useId } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -47,17 +47,6 @@ interface EmployeeAssignmentDialogProps {
     onClose: () => void
 }
 
-// Role hierarchy - higher number = more power
-const ROLE_HIERARCHY: Record<string, number> = {
-    'corporate_admin': 110,
-    'regional_admin': 100,
-    'regional_hr': 90,
-    'property_manager': 50,
-    'property_hr': 40,
-    'department_head': 30,
-    'staff': 10
-}
-
 // Which roles can be assigned by which admin role
 const ASSIGNABLE_ROLES: Record<string, string[]> = {
     'corporate_admin': ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff'],
@@ -74,17 +63,13 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
     const { primaryRole, properties: userProperties } = useAuth()
     const queryClient = useQueryClient()
 
-    const [selectedPropertyId, setSelectedPropertyId] = useState<string>('')
-    const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('none')
-    const [selectedRole, setSelectedRole] = useState<string>('')
-    const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null)
+    const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => employee?.propertyId || '')
+    const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>(() => employee?.departmentId || 'none')
+    const [selectedRole, setSelectedRole] = useState<string>(() => employee?.roles?.[0] || 'staff')
+    const [selectedManagerId, setSelectedManagerId] = useState<string | null>(() => employee?.reporting_to || null)
     const [openManagerSelect, setOpenManagerSelect] = useState(false)
     const [managerSearch, setManagerSearch] = useState('')
     const managerListId = useId()
-
-    // Determine admin's permission level
-    const adminRoleLevel = ROLE_HIERARCHY[primaryRole || ''] || 0
-    const targetRoleLevel = ROLE_HIERARCHY[employee?.roles?.[0] || 'staff'] || 0
 
     // Check if admin can edit this employee
     const canEditEmployee = useMemo(() => {
@@ -239,22 +224,29 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
         enabled: managerSearch.trim().length >= 2
     })
 
-    // Initialize form when employee changes
-    useEffect(() => {
-        if (employee) {
-            setSelectedPropertyId(employee.propertyId || '')
-            setSelectedDepartmentId(employee.departmentId || 'none')
-            setSelectedRole(employee.roles?.[0] || 'staff')
-            setSelectedManagerId(employee.reporting_to || null)
-        }
-    }, [employee])
+    const initializeForm = (targetEmployee: OrgEmployee) => {
+        setSelectedPropertyId(targetEmployee.propertyId || '')
+        setSelectedDepartmentId(targetEmployee.departmentId || 'none')
+        setSelectedRole(targetEmployee.roles?.[0] || 'staff')
+        setSelectedManagerId(targetEmployee.reporting_to || null)
+    }
 
-    // Reset department when property changes
-    useEffect(() => {
-        if (employee && selectedPropertyId !== employee.propertyId) {
+    const handlePropertyChange = (nextPropertyId: string) => {
+        setSelectedPropertyId(nextPropertyId)
+        if (employee && nextPropertyId !== employee.propertyId) {
             setSelectedDepartmentId('none')
         }
-    }, [selectedPropertyId, employee])
+    }
+
+    const handleDialogOpenChange = (open: boolean) => {
+        if (open && employee) {
+            initializeForm(employee)
+            return
+        }
+        if (!open) {
+            onClose()
+        }
+    }
 
     // Mutation to update user assignment
     const updateAssignment = useMutation({
@@ -404,7 +396,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
         .toUpperCase() || '??'
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-3">
@@ -446,7 +438,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                         </Label>
                         <Select
                             value={selectedPropertyId}
-                            onValueChange={setSelectedPropertyId}
+                            onValueChange={handlePropertyChange}
                             disabled={!canEditEmployee}
                         >
                             <SelectTrigger>
@@ -571,16 +563,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                                 }}
                                                 className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                             >
-                                                <div
-                                                    className="w-full flex items-center px-2 py-1.5 cursor-pointer"
-                                                    onPointerDown={(e) => e.preventDefault()}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        setSelectedManagerId(null)
-                                                        setManagerSearch('')
-                                                        setOpenManagerSelect(false)
-                                                    }}
-                                                >
+                                                <div className="w-full flex items-center px-2 py-1.5">
                                                     <Check
                                                         className={cn(
                                                             "mr-2 h-4 w-4",
@@ -601,16 +584,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                                     }}
                                                     className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                 >
-                                                    <div
-                                                        className="w-full flex items-center px-2 py-1.5 cursor-pointer"
-                                                        onPointerDown={(e) => e.preventDefault()}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            setSelectedManagerId(manager.id)
-                                                            setManagerSearch('')
-                                                            setOpenManagerSelect(false)
-                                                        }}
-                                                    >
+                                                    <div className="w-full flex items-center px-2 py-1.5">
                                                         <Check
                                                             className={cn(
                                                                 "mr-2 h-4 w-4",

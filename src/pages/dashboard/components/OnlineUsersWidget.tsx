@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import { Users, Circle, MessageSquare, Search, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -35,6 +35,12 @@ export function OnlineUsersWidget() {
   const { user: currentUser } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
+  const [currentTime, setCurrentTime] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   // All users including self for the count badge in header
   const totalOnline = onlineUsers.length
@@ -74,7 +80,7 @@ export function OnlineUsersWidget() {
   }
 
   const getTimeOnline = (onlineAt: string) => {
-    const minutes = Math.floor((Date.now() - new Date(onlineAt).getTime()) / 60000)
+    const minutes = Math.floor((currentTime - new Date(onlineAt).getTime()) / 60000)
     if (minutes < 1) return t('online_users.just_now', 'Just now')
     if (minutes < 60) return t('online_users.minutes', '{{count}}m', { count: minutes })
     const hours = Math.floor(minutes / 60)
@@ -84,156 +90,158 @@ export function OnlineUsersWidget() {
 
   return (
     <LazyMotion features={domAnimation}>
-    <Card className="border-slate-100 shadow-xl overflow-hidden bg-white/70 backdrop-blur-sm border">
-      <div className="h-1.5 bg-gradient-to-r from-emerald-500 to-emerald-300" />
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="p-2 rounded-xl bg-emerald-50">
-                <Users className="w-5 h-5 text-emerald-600" />
+      <Card className="h-full border border-slate-200 shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
+        <CardHeader className="pb-4 pt-6 px-6 relative z-10 bg-white border-b border-slate-100/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                  <Users className="w-5 h-5" />
+                </div>
+                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white" />
+                </span>
               </div>
-              <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-              </span>
+              <div>
+                <CardTitle className="text-xl font-bold text-slate-800 tracking-tight">
+                  {t('widgets.online_users_title', 'Online Now')}
+                </CardTitle>
+                <CardDescription className="text-sm font-medium text-slate-500 mt-1">
+                  {t('widgets.online_users_desc', '{{count}} team members active', { count: totalOnline })}
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-lg font-bold text-slate-800">
-                {t('widgets.online_users_title', 'Online Now')}
-              </CardTitle>
-              <CardDescription className="text-slate-500 text-xs">
-                {t('widgets.online_users_desc', '{{count}} team members active', { count: totalOnline })}
-              </CardDescription>
-            </div>
+
+            {totalOnline > 0 && (
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold px-2.5 shadow-sm text-sm">
+                <Circle className="w-2 h-2 fill-emerald-500 text-emerald-500 mr-1.5" />
+                {totalOnline}
+              </Badge>
+            )}
           </div>
 
-          {totalOnline > 0 && (
-            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100">
-              <Circle className="w-2 h-2 fill-emerald-500 text-emerald-500 mr-1.5" />
-              {totalOnline}
-            </Badge>
-          )}
-        </div>
-
-        {/* Search */}
-        {totalCount > 3 && (
-          <div className="relative mt-3">
-            <Search className={cn(
-              "absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400",
-              isRTL ? "right-3" : "left-3"
-            )} />
-            <Input
-              placeholder={t('online_users.search_placeholder', 'Search team members...')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(
-                "h-9 text-sm bg-slate-50 border-slate-200 focus:bg-white transition-colors",
-                isRTL ? "pr-9" : "pl-9"
+          {/* Search */}
+          {totalCount > 3 && (
+            <div className="relative mt-4">
+              <Search className={cn(
+                "absolute top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600/50",
+                isRTL ? "right-3" : "left-3"
+              )} />
+              <Input
+                placeholder={t('online_users.search_placeholder', 'Search team members...')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn(
+                  "h-10 text-[14px] font-medium bg-emerald-50/50 border-emerald-100/50 focus:bg-white focus:border-emerald-300 focus:ring-emerald-200/50 shadow-inner rounded-xl transition-all",
+                  isRTL ? "pr-10" : "pl-10"
+                )}
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1/2 -translate-y-1/2 right-1 h-8 w-8 text-slate-400 hover:text-slate-600 rounded-lg"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               )}
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-1/2 -translate-y-1/2 right-1 h-7 w-7"
-                onClick={() => setSearchQuery('')}
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-        )}
-      </CardHeader>
-
-      <CardContent>
-        {sortedUsers.length === 0 ? (
-          <div className="text-center py-8 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Users className="w-8 h-8 text-slate-300" />
             </div>
-            <p className="text-sm text-slate-500 font-medium">
-              {t('online_users.no_active', 'No other team members online right now')}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              {t('online_users.check_back', 'Check back later')}
-            </p>
-          </div>
-        ) : (
-          <>
-            <ScrollArea className={cn(
-              "pr-4",
-              showAll ? "h-[320px]" : "h-[240px]"
-            )}>
-              <m.div
-                variants={ANIMATION_CONFIG.container}
-                initial="hidden"
-                animate="visible"
-                className="space-y-2"
-              >
-                <AnimatePresence mode="popLayout">
-                  {displayedUsers.map((onlineUser) => (
-                    <m.div
-                      key={onlineUser.user_id}
-                      variants={ANIMATION_CONFIG.item}
-                      layout
-                      className="group flex items-center gap-3 p-3 rounded-xl bg-slate-50/50 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all"
-                    >
-                      <div className="relative">
-                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                          <AvatarImage src={onlineUser.avatar_url} />
-                          <AvatarFallback className="bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-700 text-xs font-bold">
-                            {getInitials(onlineUser.full_name || onlineUser.email || 'User')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
-                      </div>
+          )}
+        </CardHeader>
 
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-emerald-700 transition-colors">
-                          {onlineUser.full_name || onlineUser.email?.split('@')[0] || t('common.user', 'User')}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span className="truncate">{onlineUser.role || t('common.team_member', 'Team Member')}</span>
-                          <span className="text-slate-300">•</span>
-                          <span className="text-emerald-600 font-medium">{getTimeOnline(onlineUser.online_at)}</span>
-                        </div>
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                        asChild
+        <CardContent className="p-0 flex-1 relative bg-slate-50/30">
+          {sortedUsers.length === 0 ? (
+            <div className="text-center py-12 flex flex-col items-center justify-center h-full">
+              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 ring-1 ring-slate-100 shadow-sm">
+                <Users className="w-8 h-8 text-slate-300" />
+              </div>
+              <p className="text-slate-800 font-bold text-lg">
+                {t('online_users.no_active', 'No other team members online')}
+              </p>
+              <p className="text-sm text-slate-500 font-medium mt-1">
+                {t('online_users.check_back', 'Check back later')}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col h-full">
+              <ScrollArea className={cn(
+                "px-6 pb-2 pt-4 flex-1"
+              )}>
+                <m.div
+                  variants={ANIMATION_CONFIG.container}
+                  initial="hidden"
+                  animate="visible"
+                  className="space-y-3"
+                >
+                  <AnimatePresence mode="popLayout">
+                    {displayedUsers.map((onlineUser) => (
+                      <m.div
+                        key={onlineUser.user_id}
+                        variants={ANIMATION_CONFIG.item}
+                        layout
+                        className="group flex items-center gap-4 p-3 rounded-2xl bg-white shadow-[0_2px_8px_rgb(0,0,0,0.02)] hover:shadow-md border border-slate-100 hover:border-emerald-100 transition-all ease-out"
                       >
-                        <Link to={`/messages?user=${onlineUser.user_id}`}>
-                          <MessageSquare className="w-4 h-4 text-slate-400 hover:text-emerald-600" />
-                        </Link>
-                      </Button>
-                    </m.div>
-                  ))}
-                </AnimatePresence>
-              </m.div>
-            </ScrollArea>
+                        <div className="relative">
+                          <Avatar className="h-11 w-11 border-2 border-white shadow-sm ring-1 ring-emerald-100/50">
+                            <AvatarImage src={onlineUser.avatar_url} />
+                            <AvatarFallback className="bg-emerald-50 text-emerald-700 text-[13px] font-bold">
+                              {getInitials(onlineUser.full_name || onlineUser.email || 'User')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white" />
+                          </span>
+                        </div>
 
-            {/* Show More/Less */}
-            {sortedUsers.length > 5 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full mt-3 text-xs text-slate-500 hover:text-emerald-700"
-                onClick={() => setShowAll(!showAll)}
-              >
-                {showAll
-                  ? t('common.show_less', 'Show Less')
-                  : t('common.show_more', 'Show {{count}} More', { count: sortedUsers.length - 5 })
-                }
-              </Button>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[15px] font-bold text-slate-800 truncate group-hover:text-emerald-700 transition-colors leading-tight mb-0.5">
+                            {onlineUser.full_name || onlineUser.email?.split('@')[0] || t('common.user', 'User')}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                            <span className="truncate">{onlineUser.role || t('common.team_member', 'Team Member')}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-emerald-600">{getTimeOnline(onlineUser.online_at)}</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all rounded-xl border-emerald-100 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 bg-white"
+                          asChild
+                        >
+                          <Link to={`/messages?user=${onlineUser.user_id}`}>
+                            <MessageSquare className="w-4 h-4 fill-emerald-100/50" />
+                          </Link>
+                        </Button>
+                      </m.div>
+                    ))}
+                  </AnimatePresence>
+                </m.div>
+              </ScrollArea>
+
+              {/* Show More/Less */}
+              {sortedUsers.length > 5 && (
+                <div className="px-6 pb-6 pt-2 bg-slate-50/30">
+                  <Button
+                    variant="outline"
+                    className="w-full font-bold text-slate-600 shadow-sm hover:bg-white hover:text-slate-900 border-slate-200 rounded-xl bg-white/50"
+                    onClick={() => setShowAll(!showAll)}
+                  >
+                    {showAll
+                      ? t('common.show_less', 'Show Less')
+                      : t('common.show_more', 'Show {{count}} More', { count: sortedUsers.length - 5 })
+                    }
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </LazyMotion>
   )
 }
@@ -243,30 +251,19 @@ export function OnlineUsersWidgetSkeleton() {
   const skeletonRows = ['u1', 'u2', 'u3', 'u4']
 
   return (
-    <Card className="border-0 shadow-lg overflow-hidden">
-      <div className="h-1.5 bg-emerald-100" />
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-10 rounded-xl" />
-          <div>
-            <Skeleton className="h-5 w-32 mb-1" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {skeletonRows.map((id) => (
-            <div key={id} className="flex items-center gap-3 p-3">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="flex-1">
-                <Skeleton className="h-4 w-32 mb-1" />
-                <Skeleton className="h-3 w-20" />
-              </div>
+    <Card className="h-full border border-slate-200 shadow-sm rounded-2xl bg-white p-6">
+      <Skeleton className="h-6 w-32 mb-6" />
+      <div className="space-y-4">
+        {skeletonRows.map((rowKey) => (
+          <div key={rowKey} className="flex gap-4 items-center">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-3 w-1/4" />
             </div>
-          ))}
-        </div>
-      </CardContent>
+          </div>
+        ))}
+      </div>
     </Card>
   )
 }

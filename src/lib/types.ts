@@ -1,4 +1,5 @@
 ﻿import type { AppRole, DocumentStatus, DocumentVisibility, AnnouncementPriority, TrainingProgressStatus } from './constants'
+export type { AppRole }
 import type { Database } from '@/types/supabase'
 
 export type EntityStatus = Database['public']['Enums']['entity_status']
@@ -34,25 +35,25 @@ export interface Profile {
   last_login_at?: string | null
   force_password_reset?: boolean
 
-    // Employment details
-    employment_type?: 'full_time' | 'part_time' | 'contract' | 'probation' | 'intern'
-    contract_end_date?: string | null
-    iqama_number?: string | null
-    iqama_expiry?: string | null
+  // Employment details
+  employment_type?: 'full_time' | 'part_time' | 'contract' | 'probation' | 'intern'
+  contract_end_date?: string | null
+  iqama_number?: string | null
+  iqama_expiry?: string | null
 
-    // Public profile fields (added by migration 20260221170000)
-    bio?: string | null
-    phone_extension?: string | null
+  // Public profile fields (added by migration 20260221170000)
+  bio?: string | null
+  phone_extension?: string | null
 
-    // Private profile fields – HR/Admin only (added by migration 20260221170000)
-    national_id?: string | null
-    salary_grade?: string | null
+  // Private profile fields – HR/Admin only (added by migration 20260221170000)
+  national_id?: string | null
+  salary_grade?: string | null
 
-    // Relations
-    reporting_to_profile?: Profile // Populated when fetching with joins
-    roles?: AppRole[]
-    properties?: Property[]
-    departments?: Department[]
+  // Relations
+  reporting_to_profile?: Profile // Populated when fetching with joins
+  roles?: AppRole[]
+  properties?: Property[]
+  departments?: Department[]
 }
 
 export interface UserRole {
@@ -356,6 +357,28 @@ export interface Document {
   departments?: { id: string; name: string } | null
   properties?: { id: string; name: string } | null
   profiles?: { id: string; full_name: string | null } | null
+}
+
+export interface SystemWikiSubtopic {
+  id: string
+  title_en: string
+  title_ar: string
+  content_en: string
+  content_ar: string
+}
+
+export interface SystemWikiArticle {
+  id: string
+  slug: string
+  title_en: string
+  title_ar: string
+  content_en: string
+  content_ar: string
+  subtopics: SystemWikiSubtopic[]
+  allowed_roles: AppRole[]
+  order_index: number
+  is_active: boolean
+  updated_at: string
 }
 
 export interface DocumentVersion {

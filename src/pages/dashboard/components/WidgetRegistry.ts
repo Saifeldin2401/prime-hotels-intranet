@@ -51,6 +51,7 @@ const CalendarWidget = lazyWidget(() => import('./CalendarWidget'), 'CalendarWid
 const HospitalityNewsWidget = lazyWidget(() => import('./HospitalityNewsWidget'), 'HospitalityNewsWidget')
 const TodaysBirthdaysWidget = lazyWidget(() => import('./TodaysBirthdaysWidget'), 'TodaysBirthdaysWidget')
 const OnlineUsersWidget = lazyWidget(() => import('./OnlineUsersWidget'), 'OnlineUsersWidget')
+const PinnedItemsWidget = lazyWidget(() => import('./PinnedItemsWidget'), 'PinnedItemsWidget')
 
 /**
  * WIDGET_REGISTRY
@@ -185,6 +186,15 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
+    },
+    pinnedItems: {
+        id: 'pinnedItems',
+        component: PinnedItemsWidget,
+        title: 'Pinned Items',
+        requiredRoles: ['all'],
+        defaultVisible: true,
+        sensitivity: 'low',
+        gridSize: { w: 2, h: 2 }
     }
 }
 

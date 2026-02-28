@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     rolesRef.current = roles
   }, [roles])
 
-  const isAuthError = (error: unknown) => {
+  const isAuthError = useCallback((error: unknown) => {
     if (!error || typeof error !== 'object') return false
     const candidate = error as { code?: string | number; status?: number }
     const code = String(candidate.code ?? '')
@@ -59,9 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       code === 'PGRST302' ||
       code.toUpperCase().includes('JWT')
     )
-  }
+  }, [])
 
-  const resetLocalAuthState = () => {
+  const resetLocalAuthState = useCallback(() => {
     setUser(null)
     setProfile(null)
     setRoles([])
@@ -71,9 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     activeUserIdRef.current = null
     lastUserDataRefreshRef.current = 0
     loadSeqRef.current += 1
-  }
+  }, [])
 
-  const clearLocalSession = async (reason: string) => {
+  const clearLocalSession = useCallback(async (reason: string) => {
     if (authRecoveryInProgressRef.current) return
     authRecoveryInProgressRef.current = true
     try {
@@ -85,16 +85,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetLocalAuthState()
       authRecoveryInProgressRef.current = false
     }
-  }
+  }, [resetLocalAuthState])
 
-  const shouldRefreshUserData = (userId: string) => {
+  const shouldRefreshUserData = useCallback((userId: string) => {
     if (activeUserIdRef.current !== userId) return true
     if (!profileRef.current || rolesRef.current.length === 0) return true
     if (!lastUserDataRefreshRef.current) return true
     return Date.now() - lastUserDataRefreshRef.current > 5 * 60 * 1000
-  }
+  }, [])
 
-  const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string) => {
+  const withTimeout = useCallback(<T,>(promise: Promise<T>, ms: number, label: string) => {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(`${label} timeout`)), ms)
       promise
@@ -107,9 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           reject(err)
         })
     })
-  }
+  }, [])
 
-  const loadUserData = async (userId: string) => {
+  const loadUserData = useCallback(async (userId: string) => {
     try {
       const loadId = ++loadSeqRef.current
       activeUserIdRef.current = userId
@@ -298,7 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       console.error('Unexpected error loading user data:', error)
     }
-  }
+  }, [clearLocalSession, isAuthError, withTimeout])
 
   useEffect(() => {
     let mounted = true
@@ -442,7 +442,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', handleWindowFocus)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [])
+  }, [clearLocalSession, loadUserData, resetLocalAuthState, shouldRefreshUserData])
 
   const signIn = async (email: string, password: string) => {
     try {

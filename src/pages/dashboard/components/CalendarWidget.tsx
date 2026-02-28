@@ -1,11 +1,12 @@
-import { useState, useMemo, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useMemo } from 'react'
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion'
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, CalendarDays, Plus, Sun, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useEvents, useUpcomingEvents } from '@/hooks/useEvents'
 import { useUserShifts } from '@/hooks/useUserShifts'
@@ -29,14 +30,14 @@ import { useTranslation } from "react-i18next";
 import { EventDialogs } from './EventDialogs'
 
 const eventTypeColors: Record<string, string> = {
-  meeting: 'bg-hotel-gold',
-  training: 'bg-hotel-navy-light',
-  review: 'bg-indigo-500',
-  holiday: 'bg-rose-500',
-  deadline: 'bg-red-500',
-  shift: 'bg-emerald-500',
-  event: 'bg-amber-500',
-  default: 'bg-slate-400'
+  meeting: 'bg-blue-500 shadow-blue-500/30',
+  training: 'bg-indigo-500 shadow-indigo-500/30',
+  review: 'bg-purple-500 shadow-purple-500/30',
+  holiday: 'bg-rose-500 shadow-rose-500/30',
+  deadline: 'bg-red-500 shadow-red-500/30',
+  shift: 'bg-emerald-500 shadow-emerald-500/30',
+  event: 'bg-amber-500 shadow-amber-500/30',
+  default: 'bg-slate-400 shadow-slate-400/30'
 }
 
 // Automatic KSA Holidays for 2026
@@ -57,13 +58,128 @@ interface ExternalHoliday {
   name: string;
 }
 
+interface CalendarHolidayEvent {
+  id: string
+  title: string
+  start_time: string
+  type: 'holiday'
+  location: string
+}
+
+interface SelectedDateEventsPanelProps {
+  selectedDate: Date | null
+  selectedDateEvents: any[]
+  isRTL: boolean
+  shouldReduceMotion: boolean
+  t: (key: string, fallback: string) => string
+  onSelectEvent: (event: any) => void
+}
+
+function SelectedDateEventsPanel({
+  selectedDate,
+  selectedDateEvents,
+  isRTL,
+  shouldReduceMotion,
+  t,
+  onSelectEvent,
+}: SelectedDateEventsPanelProps) {
+  return (
+    <div className="space-y-4 pt-2">
+      <div className="flex items-center gap-2 px-1">
+        <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+        <h4 className="text-sm font-extrabold text-slate-800 tracking-tight">
+          {selectedDate ? format(selectedDate, 'EEEE, MMMM d', { locale: isRTL ? ar : undefined }) : t('schedule.select_date', 'Select a date')}
+        </h4>
+      </div>
+      <ScrollArea className="h-[210px] -mx-1 px-1">
+        <div className="space-y-3 pr-4">
+          <AnimatePresence mode="popLayout">
+            {selectedDateEvents.length === 0 ? (
+              <m.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center justify-center py-12 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl"
+              >
+                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-sm border border-slate-100">
+                  <CalendarDays className="w-6 h-6 text-slate-400" />
+                </div>
+                <p className="text-sm font-bold text-slate-600">
+                  {t('schedule.no_events', 'No events scheduled')}
+                </p>
+                {isSameDay(selectedDate || new Date(), new Date()) && (
+                  <p className="text-xs font-medium text-slate-400 mt-1">
+                    {t('schedule.enjoy_day', 'Enjoy your day!')}
+                  </p>
+                )}
+              </m.div>
+            ) : (
+              selectedDateEvents.map((event: any, idx: number) => (
+                <m.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: shouldReduceMotion ? 1 : 0.98 }}
+                  transition={{ delay: shouldReduceMotion ? 0 : idx * 0.04, duration: shouldReduceMotion ? 0.12 : 0.2 }}
+                  onClick={() => onSelectEvent(event)}
+                  className="group flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-[0_2px_8px_rgb(0,0,0,0.02)] hover:border-slate-300 hover:shadow-[0_8px_16px_rgb(0,0,0,0.04)] transition-all cursor-pointer ease-out hover:-translate-y-0.5"
+                >
+                  <div className={cn(
+                    "w-3 h-3 mt-1.5 rounded-full flex-shrink-0 shadow-sm",
+                    eventTypeColors[event.type] || eventTypeColors.default
+                  )} />
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors truncate text-[15px] leading-tight flex-1">
+                        {event.title}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] uppercase font-bold tracking-wider text-slate-500 border-slate-200 bg-slate-50 flex-shrink-0 px-2 h-6"
+                      >
+                        {event.type}
+                      </Badge>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 mt-2.5">
+                      {(event.start_time || event.start_date) && (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 px-2 py-1 rounded-md bg-slate-50 border border-slate-100">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          {format(parseISO(event.start_time || event.start_date), 'h:mm a')}
+                          {event.end_time && (
+                            <>
+                              <span className="text-slate-300 mx-0.5">-</span>
+                              {format(parseISO(event.end_time), 'h:mm a')}
+                            </>
+                          )}
+                        </span>
+                      )}
+                      {event.location && (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 px-2 py-1 rounded-md bg-slate-50 border border-slate-100">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="truncate max-w-[120px]">{event.location}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </m.div>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}
+
 export function CalendarWidget() {
-  const { user, primaryRole } = useAuth()
+  const { primaryRole } = useAuth()
   const { t, i18n } = useTranslation('dashboard');
   const isRTL = i18n.dir() === 'rtl';
+  const shouldReduceMotion = useReducedMotion()
   const [currentDate, setCurrentDate] = useState(new Date())
+  const currentYear = currentDate.getFullYear()
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
-  const [fetchedHolidays, setFetchedHolidays] = useState<any[]>([])
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
@@ -72,28 +188,27 @@ export function CalendarWidget() {
   const hasSchedulingPrivileges = schedulingRoles.includes(primaryRole || '')
   const schedulePath = hasSchedulingPrivileges ? '/hr/scheduling' : '/hr/attendance'
 
-  // Fetch KSA Holidays automatically
-  useEffect(() => {
-    const year = currentDate.getFullYear()
-    fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/SA`)
-      .then(async res => {
-        if (!res.ok) return [];
-        const text = await res.text();
-        return text ? JSON.parse(text) : [];
-      })
-      .then((data: ExternalHoliday[]) => {
-        if (!Array.isArray(data)) return;
-        const formatted = data.map(h => ({
-          id: `holiday-ext-${h.date}-${h.name}`,
-          title: isRTL ? h.localName : h.name,
-          start_time: `${h.date}T00:00:00`,
-          type: 'holiday',
-          location: t('common.ksa', 'Saudi Arabia')
-        }))
-        setFetchedHolidays(formatted)
-      })
-      .catch(err => console.debug('Handled holiday fetch error:', err))
-  }, [currentDate.getFullYear(), isRTL, t])
+  const { data: fetchedHolidays = [] } = useQuery<CalendarHolidayEvent[]>({
+    queryKey: ['ksa-holidays', currentYear, i18n.language],
+    queryFn: async () => {
+      const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${currentYear}/SA`)
+      if (!response.ok) return []
+
+      const data = await response.json().catch(() => []) as ExternalHoliday[]
+      if (!Array.isArray(data)) return []
+
+      return data.map((holiday) => ({
+        id: `holiday-ext-${holiday.date}-${holiday.name}`,
+        title: isRTL ? holiday.localName : holiday.name,
+        start_time: `${holiday.date}T00:00:00`,
+        type: 'holiday',
+        location: t('common.ksa', 'Saudi Arabia')
+      }))
+    },
+    staleTime: 1000 * 60 * 60 * 24,
+    gcTime: 1000 * 60 * 60 * 24 * 7,
+    retry: 1,
+  })
 
   // Get events for current month
   const monthStart = startOfMonth(currentDate)
@@ -189,21 +304,20 @@ export function CalendarWidget() {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-lg overflow-hidden">
-        <div className="h-1.5 bg-hotel-navy/10" />
-        <CardHeader className="pb-3">
+      <Card className="border border-slate-200 shadow-sm rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="pb-4">
           <Skeleton className="h-6 w-32 mb-2" />
           <Skeleton className="h-4 w-48" />
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 gap-2 mb-4">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton key={i} className="h-4 w-full rounded" />
+            {Array.from({ length: 7 }, (_, n) => `weekday-skeleton-${n + 1}`).map((skeletonKey) => (
+              <Skeleton key={skeletonKey} className="h-4 w-full rounded" />
             ))}
           </div>
           <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: 35 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-square rounded-xl" />
+            {Array.from({ length: 35 }, (_, n) => `day-skeleton-${n + 1}`).map((skeletonKey) => (
+              <Skeleton key={skeletonKey} className="aspect-square rounded-xl" />
             ))}
           </div>
         </CardContent>
@@ -212,294 +326,217 @@ export function CalendarWidget() {
   }
 
   return (
-    <Card className="border-slate-100 shadow-xl overflow-hidden bg-white/70 backdrop-blur-sm border">
-      <div className="h-1.5 bg-gradient-to-r from-hotel-navy to-hotel-gold/60" />
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-xl font-bold flex items-center gap-2 text-hotel-navy">
-              <Link to={schedulePath} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <Calendar className="w-5 h-5 text-hotel-gold" />
-                {t('widgets.schedule_title', 'Schedule')}
-              </Link>
-            </CardTitle>
-            <CardDescription className="text-slate-500">{t('widgets.schedule_desc', 'Your events and shifts')}</CardDescription>
-          </div>
-          <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100 shadow-sm">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-white hover:shadow-xs transition-all"
-              onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-            >
-              <ChevronLeft className={cn("w-4 h-4", isRTL && "rotate-180")} />
-            </Button>
-            <span className="text-sm font-semibold min-w-[110px] text-center text-hotel-navy">
-              {format(currentDate, 'MMMM yyyy', { locale: isRTL ? ar : undefined })}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-white hover:shadow-xs transition-all"
-              onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-            >
-              <ChevronRight className={cn("w-4 h-4", isRTL && "rotate-180")} />
-            </Button>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => setIsAddModalOpen(true)}
-            className="rounded-xl h-9 px-4 bg-hotel-gold text-white hover:bg-hotel-gold/90 border-0 shadow-sm transition-all flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('schedule.add_event', 'Add Event')}</span>
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Calendar Grid */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-          {/* Weekday Headers */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {weekDays.map(d => (
-              <div key={d} className="text-center text-[11px] font-semibold text-slate-400 py-2">
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((date, idx) => {
-              const isSelected = selectedDate && isSameDay(date, selectedDate)
-              const isCurrentMonth = isSameMonth(date, currentDate)
-              const isToday = isSameDay(date, new Date())
-              const dayEvents = getEventsForDate(date)
-              const hasEvents = dayEvents.length > 0
-
-              return (
-                <motion.button
-                  key={idx}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedDate(date)}
-                  className={cn(
-                    "aspect-square rounded-lg flex flex-col items-center justify-center text-sm relative transition-all duration-150",
-                    isSelected
-                      ? "bg-hotel-navy text-white shadow-md"
-                      : isToday
-                        ? "bg-hotel-gold/15 text-hotel-navy font-bold ring-2 ring-hotel-gold/40"
-                        : isCurrentMonth
-                          ? "hover:bg-slate-50 text-slate-700"
-                          : "text-slate-300"
-                  )}
+    <LazyMotion features={domAnimation}>
+      <Card className="border border-slate-200 shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col h-full">
+        <CardHeader className="pb-4 pt-6 px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-xl font-bold flex items-center gap-2 text-slate-800">
+                <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <Link to={schedulePath} className="hover:text-blue-600 transition-colors">
+                  {t('widgets.schedule_title', 'Schedule')}
+                </Link>
+              </CardTitle>
+              <CardDescription className="text-sm font-medium text-slate-500 mt-1">
+                {t('widgets.schedule_desc', 'Your events and shifts')}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-200 shadow-[0_1px_2px_rgb(0,0,0,0.02)]">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-white hover:shadow-sm transition-all rounded-lg text-slate-500 hover:text-slate-800"
+                  onClick={() => setCurrentDate(subMonths(currentDate, 1))}
                 >
-                  {/* Today indicator dot */}
-                  {isToday && !isSelected && (
-                    <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-hotel-gold rounded-full" />
-                  )}
-
-                  <span className={cn(
-                    "text-sm font-medium",
-                    isSelected && "font-bold"
-                  )}>
-                    {format(date, 'd')}
-                  </span>
-
-                  {/* Event dots */}
-                  {hasEvents && (
-                    <div className="flex gap-0.5 mt-0.5">
-                      {dayEvents.slice(0, 3).map((e: any, i: number) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "w-1 h-1 rounded-full",
-                            isSelected ? "bg-white/80" : (eventTypeColors[e.type] || eventTypeColors.default)
-                          )}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </motion.button>
-              )
-            })}
+                  <ChevronLeft className={cn("w-4 h-4", isRTL && "rotate-180")} />
+                </Button>
+                <span className="text-sm font-bold min-w-[120px] text-center text-slate-800 tracking-tight">
+                  {format(currentDate, 'MMMM yyyy', { locale: isRTL ? ar : undefined })}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-white hover:shadow-sm transition-all rounded-lg text-slate-500 hover:text-slate-800"
+                  onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+                >
+                  <ChevronRight className={cn("w-4 h-4", isRTL && "rotate-180")} />
+                </Button>
+              </div>
+              <Button
+                size="icon"
+                onClick={() => setIsAddModalOpen(true)}
+                className="rounded-xl h-10 w-10 bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-all flex items-center justify-center shrink-0"
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
-        </div>
+        </CardHeader>
 
-        {/* Today's Summary - Compact & Clean */}
-        <div className={cn(
-          "flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all",
-          hasEventsToday
-            ? "bg-gradient-to-r from-amber-50/80 to-orange-50/60 border-amber-200/60 shadow-sm"
-            : "bg-gradient-to-r from-emerald-50/80 to-teal-50/60 border-emerald-200/60 shadow-sm"
-        )}>
+        <CardContent className="space-y-6 px-6 pb-6">
+          {/* Calendar Grid */}
+          <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 shadow-[inset_0_1px_2px_rgb(0,0,0,0.02)]">
+            {/* Weekday Headers */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {weekDays.map(d => (
+                <div key={d} className="text-center text-[10px] font-extrabold tracking-wider text-slate-400 uppercase py-1">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-1.5">
+              {days.map((date) => {
+                const isSelected = selectedDate && isSameDay(date, selectedDate)
+                const isCurrentMonth = isSameMonth(date, currentDate)
+                const isToday = isSameDay(date, new Date())
+                const dayEvents = getEventsForDate(date)
+                const hasEvents = dayEvents.length > 0
+
+                return (
+                  <m.button
+                    key={date.toISOString()}
+                    whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
+                    onClick={() => setSelectedDate(date)}
+                    className={cn(
+                      "aspect-square rounded-xl flex flex-col items-center justify-center text-sm relative transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                      isSelected
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                        : isToday
+                          ? "bg-blue-50 text-blue-700 font-bold border-2 border-blue-200"
+                          : isCurrentMonth
+                            ? "hover:bg-white hover:shadow-sm hover:border-slate-200 border border-transparent text-slate-700 font-medium"
+                            : "text-slate-300"
+                    )}
+                  >
+                    {/* Today indicator dot */}
+                    {isToday && !isSelected && (
+                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                    )}
+
+                    <span className={cn(
+                      "text-sm",
+                      isSelected && "font-bold"
+                    )}>
+                      {format(date, 'd')}
+                    </span>
+
+                    {/* Event dots */}
+                    {hasEvents && (
+                      <div className="flex gap-1 mt-1">
+                      {dayEvents.slice(0, 3).map((e: any) => (
+                          <div
+                            key={`${e.id || e.start_time || e.title}-${date.toISOString()}`}
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              isSelected ? "bg-white border-white/20" : (eventTypeColors[e.type] || eventTypeColors.default)
+                            )}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </m.button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Today's Summary - Compact & Clean */}
           <div className={cn(
-            "flex items-center justify-center w-10 h-10 rounded-xl shrink-0",
+            "flex items-center gap-4 p-4 rounded-2xl border transition-all",
             hasEventsToday
-              ? "bg-amber-100 text-amber-600"
-              : "bg-emerald-100 text-emerald-600"
+              ? "bg-amber-50 border-amber-100 shadow-sm"
+              : "bg-emerald-50 border-emerald-100 shadow-sm"
           )}>
-            {hasEventsToday ? (
-              <AlertCircle className="w-5 h-5" />
-            ) : (
-              <CheckCircle2 className="w-5 h-5" />
+            <div className={cn(
+              "flex items-center justify-center w-12 h-12 rounded-xl shrink-0 shadow-sm bg-white border",
+              hasEventsToday
+                ? "text-amber-500 border-amber-100"
+                : "text-emerald-500 border-emerald-100"
+            )}>
+              {hasEventsToday ? (
+                <AlertCircle className="w-6 h-6" />
+              ) : (
+                <CheckCircle2 className="w-6 h-6" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-extrabold text-slate-800 leading-tight">
+                {hasEventsToday
+                  ? t('schedule.today_events', { count: todayEventCount })
+                  : t('schedule.no_events_today', 'No events today')
+                }
+              </p>
+              <p className="text-xs font-semibold text-slate-500 mt-1">
+                {format(new Date(), 'EEEE, MMMM d', { locale: isRTL ? ar : undefined })}
+              </p>
+            </div>
+
+            {!isSameDay(selectedDate || new Date(), new Date()) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-4 text-xs font-bold rounded-xl shrink-0 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
+                onClick={goToToday}
+              >
+                <Sun className="w-4 h-4 mr-1.5" />
+                {t('schedule.go_to_today', 'Today')}
+              </Button>
             )}
           </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-800 leading-tight">
-              {hasEventsToday
-                ? t('schedule.today_events', { count: todayEventCount })
-                : t('schedule.no_events_today', 'No events today')
-              }
-            </p>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {format(new Date(), 'EEEE, MMMM d', { locale: isRTL ? ar : undefined })}
-            </p>
-          </div>
+          <SelectedDateEventsPanel
+            selectedDate={selectedDate}
+            selectedDateEvents={selectedDateEvents}
+            isRTL={isRTL}
+            shouldReduceMotion={shouldReduceMotion}
+            t={t}
+            onSelectEvent={setSelectedEvent}
+          />
 
-          {!isSameDay(selectedDate || new Date(), new Date()) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-8 px-3 text-xs font-medium rounded-lg shrink-0",
-                "bg-white/60 hover:bg-white border border-slate-200/60",
-                "text-slate-600 hover:text-hotel-navy transition-all"
-              )}
-              onClick={goToToday}
-            >
-              <Sun className="w-3.5 h-3.5 mr-1.5" />
-              {t('schedule.go_to_today', 'Today')}
-            </Button>
-          )}
-        </div>
-
-        {/* Selected Date Events */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <div className="w-1 h-5 bg-hotel-gold rounded-full" />
-            <h4 className="text-sm font-bold text-slate-800">
-              {selectedDate ? format(selectedDate, 'EEEE, MMMM d', { locale: isRTL ? ar : undefined }) : t('schedule.select_date', 'Select a date')}
-            </h4>
-          </div>
-          <ScrollArea className="h-[200px] -mx-1 px-1">
-            <div className="space-y-3 pr-4">
-              <AnimatePresence mode="popLayout">
-                {selectedDateEvents.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200"
+          {/* Upcoming Summary (Mobile/Compact) */}
+          {!isRTL && (upcomingEvents || []).length > 0 && (
+            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 mt-4">
+              <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5" />
+                {t('schedule.upcoming', 'Next Up')}
+              </h4>
+              <div className="space-y-4">
+                {(upcomingEvents || []).slice(0, 3).map((event: any) => (
+                  <Link
+                    key={event.id}
+                    to={schedulePath}
+                    className="flex items-center gap-3 text-sm hover:-translate-y-0.5 transition-transform group"
                   >
-                    <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
-                      <CalendarDays className="w-7 h-7 text-slate-300" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-500">
-                      {t('schedule.no_events', 'No events scheduled')}
-                    </p>
-                    {isSameDay(selectedDate || new Date(), new Date()) && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        {t('schedule.enjoy_day', 'Enjoy your day!')}
-                      </p>
-                    )}
-                  </motion.div>
-                ) : (
-                  selectedDateEvents.map((event: any, idx: number) => (
-                    <motion.div
-                      key={event.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ delay: idx * 0.04, duration: 0.2 }}
-                      onClick={() => setSelectedEvent(event)}
-                      className="group flex items-start gap-3 p-3.5 rounded-xl bg-white border border-slate-100 hover:border-hotel-gold/40 hover:shadow-md transition-all cursor-pointer"
-                    >
-                      {/* Event Type Indicator */}
-                      <div className={cn(
-                        "w-2 h-2 mt-2 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm",
-                        eventTypeColors[event.type] || eventTypeColors.default
-                      )} />
-
-                      <div className="flex-1 min-w-0">
-                        {/* Title Row */}
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-semibold text-slate-800 group-hover:text-hotel-navy transition-colors truncate text-sm leading-tight">
-                            {event.title}
-                          </p>
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] bg-slate-100 text-slate-600 border-0 font-medium flex-shrink-0 px-2 py-0.5"
-                          >
-                            {event.type}
-                          </Badge>
-                        </div>
-
-                        {/* Meta Row */}
-                        <div className="flex flex-wrap items-center gap-3 mt-1.5">
-                          {(event.start_time || event.start_date) && (
-                            <span className="flex items-center gap-1 text-xs text-slate-500">
-                              <Clock className="w-3 h-3 text-hotel-gold" />
-                              {format(parseISO(event.start_time || event.start_date), 'h:mm a')}
-                              {event.end_time && (
-                                <>
-                                  <span className="text-slate-300 mx-0.5">-</span>
-                                  {format(parseISO(event.end_time), 'h:mm a')}
-                                </>
-                              )}
-                            </span>
-                          )}
-                          {event.location && (
-                            <span className="flex items-center gap-1 text-xs text-slate-500">
-                              <MapPin className="w-3 h-3 text-slate-400" />
-                              <span className="truncate max-w-[120px]">{event.location}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
+                    <div className={cn(
+                      "w-2.5 h-2.5 rounded-full shadow-sm shrink-0",
+                      eventTypeColors[event.type] || eventTypeColors.default
+                    )} />
+                    <span className="truncate flex-1 font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{event.title}</span>
+                    <span className="text-[11px] font-bold text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
+                      {format(parseISO(event.start_time || event.start_date), 'MMM d')}
+                    </span>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </ScrollArea>
-        </div>
-
-        {/* Upcoming Summary (Mobile/Compact) */}
-        {!isRTL && (upcomingEvents || []).length > 0 && (
-          <div className="bg-hotel-navy/5 p-4 rounded-2xl border border-hotel-navy/10 mt-auto">
-            <h4 className="text-[10px] font-bold text-hotel-navy/60 uppercase tracking-widest mb-3">
-              {t('schedule.upcoming', 'Next Up')}
-            </h4>
-            <div className="space-y-3">
-              {(upcomingEvents || []).slice(0, 2).map((event: any) => (
-                <Link
-                  key={event.id}
-                  to={schedulePath}
-                  className="flex items-center gap-3 text-sm hover:translate-x-1 transition-transform group"
-                >
-                  <div className={cn(
-                    "w-2 h-2 rounded-full ring-4 ring-white shadow-sm",
-                    eventTypeColors[event.type] || eventTypeColors.default
-                  )} />
-                  <span className="truncate flex-1 font-semibold text-hotel-navy group-hover:text-hotel-gold transition-colors">{event.title}</span>
-                  <span className="text-[10px] font-bold text-hotel-navy/40">
-                    {format(parseISO(event.start_time || event.start_date), 'MMM d')}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-      <EventDialogs
-        selectedEvent={selectedEvent}
-        setSelectedEvent={setSelectedEvent}
-        isAddModalOpen={isAddModalOpen}
-        setIsAddModalOpen={setIsAddModalOpen}
-        selectedDate={selectedDate}
-      />
-    </Card>
+          )}
+        </CardContent>
+        <EventDialogs
+          selectedEvent={selectedEvent}
+          setSelectedEvent={setSelectedEvent}
+          isAddModalOpen={isAddModalOpen}
+          setIsAddModalOpen={setIsAddModalOpen}
+          selectedDate={selectedDate}
+        />
+      </Card>
+    </LazyMotion>
   )
 }
 

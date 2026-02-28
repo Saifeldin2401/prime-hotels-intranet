@@ -70,6 +70,8 @@ export default function MyProfile() {
     const [emergencyPhone, setEmergencyPhone] = useState('')
     const [bio, setBio] = useState('')
     const [phoneExtension, setPhoneExtension] = useState('')
+    const [iqamaNumber, setIqamaNumber] = useState('')
+    const [dateOfBirth, setDateOfBirth] = useState('')
 
     useEffect(() => {
         if (authProfile) {
@@ -82,6 +84,8 @@ export default function MyProfile() {
             setEmergencyPhone(authProfile.emergency_contact_phone || '')
             setBio(authProfile.bio || '')
             setPhoneExtension(authProfile.phone_extension || '')
+            setIqamaNumber(authProfile.iqama_number || '')
+            setDateOfBirth(authProfile.date_of_birth || '')
         }
     }, [authProfile])
 
@@ -115,6 +119,8 @@ export default function MyProfile() {
                     emergency_contact_phone: emergencyPhone,
                     bio: bio || null,
                     phone_extension: phoneExtension || null,
+                    iqama_number: iqamaNumber || null,
+                    date_of_birth: dateOfBirth || null,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', user.id)
@@ -248,7 +254,7 @@ export default function MyProfile() {
 
             {/* Profile Completion Banner */}
             {completion.percent < 100 && (
-                <div className="px-4 mb-4">
+                <div className="px-4 mb-6 -mt-12 relative z-20">
                     <Card className="border-amber-200 bg-amber-50/70 shadow-sm">
                         <CardContent className="py-4 px-5">
                             <div className="flex items-center justify-between mb-2">
@@ -270,7 +276,7 @@ export default function MyProfile() {
             )}
 
             {/* Tabs */}
-            <div className="-mt-12 px-4 relative z-20">
+            <div className={`px-4 relative z-20 ${completion.percent < 100 ? 'pt-2' : '-mt-12'}`}>
                 <Tabs defaultValue="personal" className="space-y-6">
                     <TabsList className="bg-white shadow-lg rounded-xl border border-gray-100 grid w-full grid-cols-3 lg:w-[500px] p-1 h-auto">
                         <TabsTrigger value="personal" className="py-2.5 text-sm">
@@ -335,6 +341,16 @@ export default function MyProfile() {
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
+                                            </div>
+                                        </div>
+                                        <div className="grid md:grid-cols-2 gap-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="iqamaNumber">{t('iqama_number', 'Iqama Number')}</Label>
+                                                <Input id="iqamaNumber" placeholder="ID Number" value={iqamaNumber} onChange={(e) => setIqamaNumber(e.target.value)} />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="dateOfBirth">{t('date_of_birth', 'Date of Birth')}</Label>
+                                                <Input id="dateOfBirth" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
                                             </div>
                                         </div>
                                         {/* Bio */}
@@ -423,11 +439,7 @@ export default function MyProfile() {
                                         </div>
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="grid gap-2">
-                                                <Label>{t('iqama_number')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{authProfile?.iqama_number || t('not_specified', 'Not specified')}</div>
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label>{t('iqama_expiry')}</Label>
+                                                <Label>{t('iqama_expiry', 'Iqama Expiry')}</Label>
                                                 <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
                                                     {authProfile?.iqama_expiry ? format(new Date(authProfile.iqama_expiry), 'MMMM d, yyyy') : t('not_specified', 'Not specified')}
                                                 </div>

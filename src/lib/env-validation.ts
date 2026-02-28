@@ -13,6 +13,12 @@ interface EnvConfig {
   VITE_CERTIFICATE_VERIFY_URL?: string
 }
 
+const PLACEHOLDER_MARKERS = [
+  'your-project-id',
+  'your_supabase_anon_key_here',
+  'examplePublicKey@o0.ingest.sentry.io/0',
+]
+
 // Required environment variables
 const REQUIRED_VARS: Array<keyof EnvConfig> = [
   'VITE_SUPABASE_URL',
@@ -29,6 +35,8 @@ export function validateEnvironment(): EnvConfig {
     const value = import.meta.env[varName]
     if (!value) {
       errors.push(`Missing required environment variable: ${varName}`)
+    } else if (PLACEHOLDER_MARKERS.some((marker) => value.includes(marker))) {
+      errors.push(`Environment variable ${varName} is still using a placeholder value`)
     } else {
       (config as any)[varName] = value
     }
@@ -66,9 +74,21 @@ export function validateEnvironment(): EnvConfig {
   if (supabaseUrl && !supabaseUrl.startsWith('https://')) {
     console.warn('Supabase URL should use HTTPS for production')
   }
-
-  if (supabaseKey && supabaseKey.length < 100) {
-    console.warn('Supabase anon key seems too short')
+  if (supabaseUrl) {
+    try {
+      if (!/\.supabase\.co$/i.test(new URL(supabaseUrl).host)) {
+        console.warn('Supabase URL does not appear to be a standard Supabase project URL')
+      }
+    } catch {
+      errors.push('VITE_SUPABASE_URL must be a valid URL')
+    }
+  }
+  if (supabaseKey && !(supabaseKey.startsWith('sb_publishable_') || supabaseKey.startsWith('eyJ'))) {
+    errors.push('VITE_SUPABASE_ANON_KEY must be a Supabase publishable key or legacy anon JWT')
+  }
+  if (errors.length > 0) {
+    console.error('Environment validation errors:', errors)
+    throw new Error(`Environment configuration error: ${errors.join(', ')}`)
   }
 
   return config as EnvConfig

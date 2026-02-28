@@ -8,6 +8,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
     BarChart3,
     Bell,
@@ -29,6 +30,7 @@ interface DashboardCustomizeModalProps {
     visibleWidgets: Record<string, boolean>
     onToggleWidget: (key: string, visible: boolean) => void
     onReset: () => void
+    isSaving?: boolean
 }
 
 export function DashboardCustomizeModal({
@@ -36,7 +38,8 @@ export function DashboardCustomizeModal({
     onOpenChange,
     visibleWidgets,
     onToggleWidget,
-    onReset
+    onReset,
+    isSaving = false
 }: DashboardCustomizeModalProps) {
     const widgetConfig = [
         { key: 'quickInsights', label: 'Quick Insights', icon: LayoutDashboard },
@@ -66,11 +69,17 @@ export function DashboardCustomizeModal({
                     <DialogTitle>Customize Dashboard</DialogTitle>
                     <DialogDescription>
                         Choose which widgets to display on your dashboard.
+                        {isSaving && (
+                            <span className="flex items-center gap-2 mt-2 text-muted-foreground">
+                                <Spinner className="h-4 w-4" />
+                                Saving preferences...
+                            </span>
+                        )}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto pr-2">
                         {widgetConfig.map((widget) => {
                             const Icon = widget.icon
                             return (
@@ -88,8 +97,9 @@ export function DashboardCustomizeModal({
                                     </div>
                                     <Switch
                                         id={`widget-${widget.key}`}
-                                        checked={visibleWidgets[widget.key]}
+                                        checked={visibleWidgets[widget.key] ?? true}
                                         onCheckedChange={(checked) => onToggleWidget(widget.key, checked)}
+                                        disabled={isSaving}
                                     />
                                 </div>
                             )
@@ -98,10 +108,24 @@ export function DashboardCustomizeModal({
                 </div>
 
                 <div className="flex justify-end gap-3">
-                    <Button variant="outline" onClick={onReset}>
-                        Reset to Default
+                    <Button 
+                        variant="outline" 
+                        onClick={onReset}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? (
+                            <>
+                                <Spinner className="h-4 w-4 mr-2" />
+                                Resetting...
+                            </>
+                        ) : (
+                            'Reset to Default'
+                        )}
                     </Button>
-                    <Button onClick={() => onOpenChange(false)}>
+                    <Button 
+                        onClick={() => onOpenChange(false)}
+                        disabled={isSaving}
+                    >
                         Done
                     </Button>
                 </div>
@@ -110,7 +134,7 @@ export function DashboardCustomizeModal({
     )
 }
 
-function Star(props: any) {
+function Star(props: React.SVGProps<SVGSVGElement>) {
     return (
         <svg
             {...props}

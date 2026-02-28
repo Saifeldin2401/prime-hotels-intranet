@@ -352,7 +352,15 @@
         "back": "Back",
         "edit": "Edit",
         "next": "Next",
-        "save_success": "Save Success"
+        "save_success": "Save Success",
+        "undo": "Undo",
+        "acknowledge": "Acknowledge",
+        "acknowledged": "Acknowledged"
+    },
+    "undo": {
+        "seconds_remaining": "{{count}}s",
+        "action_will_execute": "Action will execute in {{count}}s",
+        "click_to_undo": "Click to undo"
     },
     "error": "Error",
     "goToFirstPage": "Go To First Page",

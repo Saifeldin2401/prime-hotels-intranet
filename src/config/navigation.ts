@@ -45,6 +45,7 @@ import {
     Brain,
     Activity,
     Clock,
+    Layers,
     type LucideIcon
 } from 'lucide-react'
 import { ROLES, type AppRole } from '@/lib/constants'
@@ -416,6 +417,15 @@ export const ROUTES: RouteConfig[] = [
         order: 6.8
     },
     {
+        path: '/hr/team',
+        title: 'my_team',
+        icon: Users,
+        description: 'Manage your direct reports',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        group: 'hr_management',
+        order: 6.9
+    },
+    {
         path: '/directory',
         title: 'directory',
         icon: Users,
@@ -509,6 +519,15 @@ export const ROUTES: RouteConfig[] = [
         badgeKey: 'requiredReading',
         group: 'knowledge_base',
         order: 1
+    },
+    {
+        path: '/knowledge/wiki',
+        title: 'system_wiki',
+        icon: BookOpen,
+        description: 'How to use PRIME Connect',
+        allowedRoles: 'all',
+        group: 'knowledge_base',
+        order: 1.5
     },
     {
         path: '/knowledge/review',
@@ -699,6 +718,15 @@ export const ROUTES: RouteConfig[] = [
         order: 2
     },
     {
+        path: '/hr/departments',
+        title: 'departments',
+        icon: Layers,
+        description: 'Manage property departments',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'administration',
+        order: 2.5
+    },
+    {
         path: '/reports',
         title: 'reports',
         icon: BarChart3,
@@ -751,6 +779,42 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
         group: 'administration',
         order: 3.75
+    },
+    {
+        path: '/admin/finance-controls',
+        title: 'finance_controls',
+        icon: Wallet,
+        description: 'Manage financial approval policies, budgets, and finance audit controls',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 3.78
+    },
+    {
+        path: '/admin/governance-controls',
+        title: 'governance_controls',
+        icon: Shield,
+        description: 'Manage authority model, ownership structure, and department governance settings',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 3.79
+    },
+    {
+        path: '/admin/governance-risk',
+        title: 'governance_risk',
+        icon: Activity,
+        description: 'Operate incident escalation, delegation authority, and compliance audit controls',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 3.80
+    },
+    {
+        path: '/admin/governance-executive',
+        title: 'governance_executive',
+        icon: BarChart3,
+        description: 'Executive governance dashboard with portfolio and property rollups',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 3.81
     },
     {
         path: '/admin/notifications',

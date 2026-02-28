@@ -25,6 +25,10 @@ const PayslipsAdmin = lazy(() => import('@/pages/hr/PayslipsAdmin'))
 const OnboardingTracker = lazy(() => import('@/pages/onboarding/OnboardingTracker'))
 const EmployeeOfMonthManagement = lazy(() => import('@/pages/hr/EmployeeOfMonthManagement'))
 
+// New routes
+const MyTeam = lazy(() => import('@/pages/hr/MyTeam'))
+const PropertyDepartments = lazy(() => import('@/pages/hr/PropertyDepartments'))
+
 export const HRRoutes = () => (
     <>
         <Route
@@ -245,6 +249,26 @@ export const HRRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
                     <AppLayout>
                         <EmployeeOfMonthManagement />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/team"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+                    <AppLayout>
+                        <MyTeam />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/departments"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+                    <AppLayout>
+                        <PropertyDepartments />
                     </AppLayout>
                 </ProtectedRoute>
             }

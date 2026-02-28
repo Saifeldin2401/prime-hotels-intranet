@@ -141,8 +141,8 @@ BEGIN
 
     -- 5. Pending Training (always user-specific)
     SELECT count(*)::integer INTO v_pending_training
-    FROM learning_progress
-    WHERE user_id = p_user_id AND status IN ('assigned', 'in_progress', 'overdue');
+    FROM learning_assignments
+    WHERE user_id = p_user_id AND is_deleted = false AND status IN ('assigned', 'in_progress', 'overdue');
 
     -- 6. Active Goals (always user-specific)
     SELECT count(*)::integer INTO v_active_goals

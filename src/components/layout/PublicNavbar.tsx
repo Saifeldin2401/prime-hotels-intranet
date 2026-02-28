@@ -6,10 +6,9 @@ import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 
 export function PublicNavbar() {
-  const { t, i18n } = useTranslation('public')
+  const { t } = useTranslation('public')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const isRTL = i18n.dir() === 'rtl'
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,7 +33,7 @@ export function PublicNavbar() {
         element.scrollIntoView({ behavior: 'smooth' })
       }
     } else {
-      window.location.href = href
+      window.location.assign(href)
     }
   }
 
@@ -83,7 +82,7 @@ export function PublicNavbar() {
               showLabel={false}
             />
             <Button
-              onClick={() => window.location.href = '/login'}
+              onClick={() => window.location.assign('/login')}
               size="sm"
               className="hidden sm:flex bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-semibold px-5 rounded-full transition-all"
             >
@@ -115,7 +114,7 @@ export function PublicNavbar() {
               ))}
               <div className="pt-3 px-1">
                 <Button
-                  onClick={() => window.location.href = '/login'}
+                  onClick={() => window.location.assign('/login')}
                   className="w-full bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-semibold rounded-full"
                 >
                   {t('login_button')}

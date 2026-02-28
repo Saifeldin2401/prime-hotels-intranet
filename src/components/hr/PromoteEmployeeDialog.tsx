@@ -288,109 +288,122 @@ export function PromoteEmployeeDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="employeeId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Employee *</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value}
-                                        disabled={!!editRecord || loadingUsers}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select employee" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {employees.map((emp) => (
-                                                <SelectItem key={emp.id} value={emp.id}>
-                                                    {emp.full_name} ({emp.job_title || "No Title"})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                <Form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="employeeId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Employee *</FormLabel>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    value={field.value}
+                                    disabled={!!editRecord || loadingUsers}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select employee" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {employees.map((emp) => (
+                                            <SelectItem key={emp.id} value={emp.id}>
+                                                {emp.full_name} ({emp.job_title || "No Title"})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                        <FormField
-                            control={form.control}
-                            name="newRole"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>New Role *</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select new role" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="staff">Staff</SelectItem>
-                                            <SelectItem value="department_head">
-                                                Department Head
-                                            </SelectItem>
-                                            <SelectItem value="property_hr">Property HR</SelectItem>
-                                            <SelectItem value="property_manager">
-                                                Property Manager
-                                            </SelectItem>
-                                            <SelectItem value="regional_hr">Regional HR</SelectItem>
-                                            <SelectItem value="regional_admin">
-                                                Regional Admin
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                    <FormField
+                        control={form.control}
+                        name="newRole"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>New Role *</FormLabel>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select new role" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="staff">Staff</SelectItem>
+                                        <SelectItem value="department_head">
+                                            Department Head
+                                        </SelectItem>
+                                        <SelectItem value="property_hr">Property HR</SelectItem>
+                                        <SelectItem value="property_manager">
+                                            Property Manager
+                                        </SelectItem>
+                                        <SelectItem value="regional_hr">Regional HR</SelectItem>
+                                        <SelectItem value="regional_admin">
+                                            Regional Admin
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                        <FormField
-                            control={form.control}
-                            name="newJobTitle"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>New Job Title *</FormLabel>
-                                    <Popover open={openJobTitle} onOpenChange={setOpenJobTitle}>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    aria-expanded={openJobTitle}
-                                                    aria-controls={jobTitleListId}
-                                                    className={cn(
-                                                        "w-full justify-between",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value
-                                                        ? jobTitlesList?.find((t) => t.title === field.value)?.title || field.value
-                                                        : "Select job title"}
-                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[400px] p-0" align="start">
-                                            <Command>
-                                                <CommandInput placeholder="Search job title..." />
-                                                <CommandList id={jobTitleListId}>
-                                                    <CommandEmpty>No job title found.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {jobTitlesList?.map((item) => (
-                                                            <CommandItem
-                                                                value={item.title}
-                                                                key={item.id}
-                                                                onSelect={() => {
+                    <FormField
+                        control={form.control}
+                        name="newJobTitle"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>New Job Title *</FormLabel>
+                                <Popover open={openJobTitle} onOpenChange={setOpenJobTitle}>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                aria-expanded={openJobTitle}
+                                                aria-controls={jobTitleListId}
+                                                className={cn(
+                                                    "w-full justify-between",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                {field.value
+                                                    ? jobTitlesList?.find((t) => t.title === field.value)?.title || field.value
+                                                    : "Select job title"}
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Search job title..." />
+                                            <CommandList id={jobTitleListId}>
+                                                <CommandEmpty>No job title found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {jobTitlesList?.map((item) => (
+                                                        <CommandItem
+                                                            value={item.title}
+                                                            key={item.id}
+                                                            onSelect={() => {
+                                                                form.setValue("newJobTitle", item.title)
+                                                                if (item.default_role && !form.getValues("newRole")) {
+                                                                    // @ts-ignore
+                                                                    form.setValue("newRole", item.default_role)
+                                                                }
+                                                                setOpenJobTitle(false)
+                                                            }}
+                                                            className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
+                                                        >
+                                                            <div
+                                                                className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                                onPointerDown={(e) => e.preventDefault()}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
                                                                     form.setValue("newJobTitle", item.title)
                                                                     if (item.default_role && !form.getValues("newRole")) {
                                                                         // @ts-ignore
@@ -398,143 +411,128 @@ export function PromoteEmployeeDialog({
                                                                     }
                                                                     setOpenJobTitle(false)
                                                                 }}
-                                                                className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                             >
-                                                                <div
-                                                                    className="w-full flex items-center px-2 py-1.5 cursor-pointer"
-                                                                    onPointerDown={(e) => e.preventDefault()}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation()
-                                                                        form.setValue("newJobTitle", item.title)
-                                                                        if (item.default_role && !form.getValues("newRole")) {
-                                                                            // @ts-ignore
-                                                                            form.setValue("newRole", item.default_role)
-                                                                        }
-                                                                        setOpenJobTitle(false)
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            item.title === field.value
-                                                                                ? "opacity-100"
-                                                                                : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
-                                                                </div>
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        item.title === field.value
+                                                                            ? "opacity-100"
+                                                                            : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                        <FormField
-                            control={form.control}
-                            name="newDepartmentId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>New Department (Optional)</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select department" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {departments.map((dept) => (
-                                                <SelectItem key={dept.id} value={dept.id}>
-                                                    {dept.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="effectiveDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Effective Date *</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "PPP")
-                                                    ) : (
-                                                        <span>Pick a date</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                    <p className="text-[0.8rem] text-muted-foreground">
-                                        Promotion will be automatically applied on this date
-                                    </p>
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="notes"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Notes</FormLabel>
+                    <FormField
+                        control={form.control}
+                        name="newDepartmentId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>New Department (Optional)</FormLabel>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                >
                                     <FormControl>
-                                        <Textarea
-                                            placeholder="Add any additional notes about this promotion..."
-                                            className="resize-none"
-                                            {...field}
-                                        />
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select department" />
+                                        </SelectTrigger>
                                     </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                    <SelectContent>
+                                        {departments.map((dept) => (
+                                            <SelectItem key={dept.id} value={dept.id}>
+                                                {dept.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                )}
-                                {editRecord ? 'Save Changes' : 'Submit Request'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
+                    <FormField
+                        control={form.control}
+                        name="effectiveDate"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Effective Date *</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full pl-3 text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                {field.value ? (
+                                                    format(field.value, "PPP")
+                                                ) : (
+                                                    <span>Pick a date</span>
+                                                )}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                                <p className="text-[0.8rem] text-muted-foreground">
+                                    Promotion will be automatically applied on this date
+                                </p>
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Notes</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                        placeholder="Add any additional notes about this promotion..."
+                                        className="resize-none"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                            {form.formState.isSubmitting && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            {editRecord ? 'Save Changes' : 'Submit Request'}
+                        </Button>
+                    </DialogFooter>
                 </Form>
             </DialogContent>
         </Dialog>

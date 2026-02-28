@@ -1,5 +1,6 @@
 // Comprehensive security configuration for Prime Hotels Intranet
 import * as Sentry from "@sentry/react";
+import { isValidSentryDsn } from './sentry';
 
 export const securityConfig = {
   // Authentication security
@@ -232,7 +233,7 @@ export const securityUtils = {
   // Centralized exception logging
   logException: (error: Error, context?: Record<string, any>) => {
     // Integrate with Sentry
-    if (import.meta.env.VITE_SENTRY_DSN) {
+    if (isValidSentryDsn(import.meta.env.VITE_SENTRY_DSN)) {
       Sentry.captureException(error, { extra: context });
     }
 

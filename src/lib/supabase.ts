@@ -14,9 +14,7 @@ if (!supabaseUrl.startsWith('https://')) {
   throw new Error('Supabase URL must use HTTPS for security')
 }
 
-if (supabaseAnonKey.length < 100) {
-  throw new Error('Invalid Supabase anon key format')
-}
+
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

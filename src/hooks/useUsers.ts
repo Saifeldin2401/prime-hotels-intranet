@@ -4,6 +4,8 @@ import { escapeSearchQuery } from '@/lib/utils'
 
 
 
+export { useProfiles as useUsers }
+
 export function useProfiles(filters?: {
     search?: string
     property_id?: string

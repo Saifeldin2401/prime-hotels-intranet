@@ -76,9 +76,11 @@ export default function RequestsInbox() {
 
   const handleDateRangeSelect = (date: Date | undefined, type: 'start' | 'end') => {
     if (!date) return
-    const newRange = dateRange || { start: '', end: '' }
-    newRange[type] = date.toISOString().split('T')[0]
-    setDateRange(newRange)
+    const dateValue = date.toISOString().split('T')[0]
+    setDateRange((prev) => {
+      const base = prev ?? { start: '', end: '' }
+      return { ...base, [type]: dateValue }
+    })
   }
 
   const clearFilters = () => {

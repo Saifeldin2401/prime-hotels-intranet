@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     Dialog,
@@ -34,12 +34,13 @@ export function RejectionDialog({
     const [reason, setReason] = useState('')
     const [error, setError] = useState('')
 
-    useEffect(() => {
-        if (open) {
+    const handleDialogOpenChange = (nextOpen: boolean) => {
+        if (nextOpen) {
             setReason('')
             setError('')
         }
-    }, [open])
+        onOpenChange(nextOpen)
+    }
 
     const handleConfirm = () => {
         if (!reason.trim()) {
@@ -50,7 +51,7 @@ export function RejectionDialog({
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>{title || t('reject_dialog_title_document', 'Reject Document')}</DialogTitle>

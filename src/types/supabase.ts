@@ -316,6 +316,38 @@ export type Database = {
                     updated_at?: string | null
                 }
             }
+            user_dashboard_preferences: {
+                Row: {
+                    id: string
+                    user_id: string
+                    widget_visibility: Json
+                    widget_order: Json
+                    property_filter: string | null
+                    department_filter: string[] | null
+                    created_at: string | null
+                    updated_at: string | null
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    widget_visibility?: Json
+                    widget_order?: Json
+                    property_filter?: string | null
+                    department_filter?: string[] | null
+                    created_at?: string | null
+                    updated_at?: string | null
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    widget_visibility?: Json
+                    widget_order?: Json
+                    property_filter?: string | null
+                    department_filter?: string[] | null
+                    created_at?: string | null
+                    updated_at?: string | null
+                }
+            }
         }
         Enums: {
             app_role: "corporate_admin" | "regional_admin" | "regional_hr" | "property_manager" | "property_hr" | "department_head" | "manager" | "staff"

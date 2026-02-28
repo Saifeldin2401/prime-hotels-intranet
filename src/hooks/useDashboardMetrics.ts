@@ -26,6 +26,8 @@ interface DashboardMetrics {
   isLoading: boolean
 }
 
+const COMPLETED_TASK_STATUSES = ['completed'] as const
+
 /**
  * Calculate week-over-week trend
  */
@@ -70,16 +72,16 @@ export function useDashboardMetrics(): DashboardMetrics {
         supabase.from('tasks').select('id', { count: 'exact', head: true })
           .eq('is_deleted', false).eq('assigned_to_id', user.id),
         supabase.from('tasks').select('id', { count: 'exact', head: true })
-          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', ['completed', 'done', 'resolved']),
+          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES),
         supabase.from('tasks').select('id', { count: 'exact', head: true })
-          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', ['completed', 'done', 'resolved'])
+          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
           .gte('completed_at', currentWeekStart.toISOString()),
         supabase.from('tasks').select('id', { count: 'exact', head: true })
           .eq('is_deleted', false).eq('assigned_to_id', user.id)
           .gte('created_at', previousWeekStart.toISOString())
           .lt('created_at', currentWeekStart.toISOString()),
         supabase.from('tasks').select('id', { count: 'exact', head: true })
-          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', ['completed', 'done', 'resolved'])
+          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
           .gte('created_at', previousWeekStart.toISOString())
           .lt('created_at', currentWeekStart.toISOString()),
       ])
