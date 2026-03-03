@@ -70,7 +70,7 @@ export function KnowledgeBaseWidget() {
                                         <Book className="w-8 h-8 text-indigo-400" />
                                     </div>
                                     <p className="text-slate-800 font-bold text-lg">{t('widgets.no_articles', 'No articles found')}</p>
-                                    <p className="text-sm text-slate-500 font-medium mt-1">New content will appear here.</p>
+                                    <p className="text-sm text-slate-500 font-medium mt-1">{t('widgets.no_articles_desc', 'New content will appear here.')}</p>
                                 </m.div>
                             ) : (
                                 articles?.map((article: any, index: number) => (

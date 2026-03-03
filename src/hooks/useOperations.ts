@@ -11,6 +11,7 @@ import type {
     OperationsKPIs
 } from '@/types/operations'
 import { crudToasts } from '@/lib/toastHelpers'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 // ============================================================================
 // PROPERTIES
@@ -52,7 +53,7 @@ export function usePMSSystems() {
                 .order('created_at', { ascending: false })
 
             const propertyId = currentProperty?.id
-            if (propertyId && propertyId !== 'all') {
+            if (isRealPropertyId(propertyId)) {
                 query = query.eq('property_id', propertyId)
             }
 
@@ -86,7 +87,7 @@ export function useDailyOccupancy(filters?: {
                 .order('business_date', { ascending: false })
 
             const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
-            if (propertyId && propertyId !== 'all') {
+            if (isRealPropertyId(propertyId)) {
                 query = query.eq('property_id', propertyId)
             }
 
@@ -150,7 +151,7 @@ export function useDailyRevenue(filters?: {
                 .order('business_date', { ascending: false })
 
             const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
-            if (propertyId && propertyId !== 'all') {
+            if (isRealPropertyId(propertyId)) {
                 query = query.eq('property_id', propertyId)
             }
 
@@ -210,7 +211,7 @@ export function useMarketSegments(filters?: {
                 .order('revenue', { ascending: false })
 
             const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
-            if (propertyId && propertyId !== 'all') {
+            if (isRealPropertyId(propertyId)) {
                 query = query.eq('property_id', propertyId)
             }
 
@@ -244,7 +245,7 @@ export function useRoomInventory(filters?: {
                 .order('room_type', { ascending: true })
 
             const propertyId = filters?.propertyId || currentProperty?.id
-            if (propertyId && propertyId !== 'all') {
+            if (isRealPropertyId(propertyId)) {
                 query = query.eq('property_id', propertyId)
             }
 
@@ -280,7 +281,7 @@ export function useDataImportLogs(propertyId?: string) {
                 .limit(50)
 
             const propId = propertyId !== undefined ? propertyId : currentProperty?.id
-            if (propId && propId !== 'all') {
+            if (isRealPropertyId(propId)) {
                 query = query.eq('property_id', propId)
             }
 
@@ -360,7 +361,7 @@ export function useOperationsKPIs(filters?: {
                 .select('rooms_available, rooms_sold, occupancy_rate')
                 .eq('business_date', businessDate)
 
-            if (propertyId && propertyId !== 'all') {
+            if (isRealPropertyId(propertyId)) {
                 occQuery = occQuery.eq('property_id', propertyId)
             }
 
@@ -372,7 +373,7 @@ export function useOperationsKPIs(filters?: {
                 .select('room_revenue, fb_revenue, spa_revenue, other_revenue, total_revenue, adr, revpar')
                 .eq('business_date', businessDate)
 
-            if (propertyId && propertyId !== 'all') {
+            if (isRealPropertyId(propertyId)) {
                 revQuery = revQuery.eq('property_id', propertyId)
             }
 

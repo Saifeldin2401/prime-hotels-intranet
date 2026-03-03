@@ -4,10 +4,10 @@ import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation'
 import { WizardTrigger } from '@/components/common/WizardTrigger'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import { Globe, Building } from 'lucide-react'
 import { useProperty } from '@/contexts/PropertyContext'
+import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 
 interface MobileLayoutProps {
     children?: React.ReactNode
@@ -37,7 +37,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                     {/* Compact Property Indicator */}
                     {currentProperty && (
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-full text-[10px] font-medium text-gray-600">
-                            {currentProperty.id === 'all' ? <Globe className="w-3 h-3 text-indigo-500" /> : <Building className="w-3 h-3 text-hotel-gold" />}
+                            {isConsolidatedPropertyId(currentProperty.id) ? <Globe className="w-3 h-3 text-indigo-500" /> : <Building className="w-3 h-3 text-hotel-gold" />}
                             <span className="max-w-[80px] truncate">{currentProperty.name}</span>
                         </div>
                     )}

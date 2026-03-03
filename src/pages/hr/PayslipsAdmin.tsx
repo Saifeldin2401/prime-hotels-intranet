@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 const STATUS_OPTIONS = ['draft', 'processing', 'published', 'archived']
 
@@ -47,7 +48,7 @@ export default function PayslipsAdmin() {
   const { t } = useTranslation('hr')
   const queryClient = useQueryClient()
   const { currentProperty } = useProperty()
-  const propertyId = currentProperty?.id && currentProperty.id !== 'all' ? currentProperty.id : undefined
+  const propertyId = isRealPropertyId(currentProperty?.id) ? currentProperty.id : undefined
 
   const [departmentId, setDepartmentId] = useState('all')
   const [employeeFilter, setEmployeeFilter] = useState('all')
@@ -204,7 +205,7 @@ export default function PayslipsAdmin() {
 
       toast.success(t('hr_admin.messages.payslip_deleted', 'Payslip deleted.'))
       queryClient.invalidateQueries({ queryKey: ['payslips-admin'] })
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('hr_admin.messages.payslip_delete_failed', 'Failed to delete payslip.'))
     }
   }

@@ -51,6 +51,13 @@ import { useDailyOccupancy, useDailyRevenue, useMarketSegments, usePMSSystems } 
 import { cn } from '@/lib/utils'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 import { ChartViewport } from '@/components/ui/ChartViewport'
+import {
+    CONSOLIDATED_PROPERTY_ID,
+    getFirstRealPropertyId,
+    hasConsolidatedView,
+    isConsolidatedPropertyId,
+    normalizePropertyScopeId,
+} from '@/lib/propertyScope'
 
 import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
 
@@ -235,23 +242,58 @@ export default function DailyFlashReport() {
     const { currentProperty, availableProperties } = useProperty()
     const { user, profile } = useAuth()
     const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
-    const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all')
+    const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => currentProperty?.id ?? CONSOLIDATED_PROPERTY_ID)
+    const canUseConsolidatedView = useMemo(
+        () => hasConsolidatedView(availableProperties),
+        [availableProperties]
+    )
+    const firstRealPropertyId = useMemo(
+        () => getFirstRealPropertyId(availableProperties),
+        [availableProperties]
+    )
+
+    const resolvedSelectedPropertyId = useMemo(() => {
+        const isAvailableOption = availableProperties.some((property) => property.id === selectedPropertyId)
+        const isInvalidConsolidatedSelection =
+            isConsolidatedPropertyId(selectedPropertyId) && !canUseConsolidatedView
+
+        if (isAvailableOption && !isInvalidConsolidatedSelection) {
+            return selectedPropertyId
+        }
+
+        return (
+            currentProperty?.id ??
+            firstRealPropertyId ??
+            (canUseConsolidatedView ? CONSOLIDATED_PROPERTY_ID : '')
+        )
+    }, [availableProperties, canUseConsolidatedView, currentProperty?.id, firstRealPropertyId, selectedPropertyId])
+
+    const effectivePropertyId = useMemo(
+        () =>
+            normalizePropertyScopeId(resolvedSelectedPropertyId, {
+                allowConsolidated: canUseConsolidatedView,
+                fallbackPropertyId: firstRealPropertyId ?? currentProperty?.id,
+            }),
+        [canUseConsolidatedView, currentProperty?.id, firstRealPropertyId, resolvedSelectedPropertyId]
+    )
+
+    const isConsolidatedSelection = isConsolidatedPropertyId(effectivePropertyId)
 
     // Fetch data
     const { data: occupancyData } = useDailyOccupancy({
-        propertyId: selectedPropertyId,
+        propertyId: effectivePropertyId,
         startDate: selectedDate,
         endDate: selectedDate
     })
 
     const { data: revenueData } = useDailyRevenue({
-        propertyId: selectedPropertyId,
+        propertyId: effectivePropertyId,
         startDate: selectedDate,
         endDate: selectedDate
     })
 
     const { data: segmentData } = useMarketSegments({
-        propertyId: selectedPropertyId,
+        propertyId: effectivePropertyId,
         businessDate: selectedDate
     })
 
@@ -358,12 +400,23 @@ export default function DailyFlashReport() {
         }).format(value)
     }
 
+    const revenueComposition = useMemo(() => {
+        if (!consolidated) return []
+
+        return [
+            { name: 'Room', value: consolidated.roomRevenue, color: '#2563eb' },
+            { name: 'F&B', value: consolidated.fbRevenue, color: '#10b981' },
+            { name: 'Spa', value: consolidated.spaRevenue, color: '#8b5cf6' },
+            { name: 'Other', value: consolidated.otherRevenue, color: '#f59e0b' },
+        ].filter((item) => item.value > 0)
+    }, [consolidated])
+
     const handlePrint = async () => {
         if (!consolidated) return
 
         const logo = await loadLogoAsDataUrl()
-        const selectedProp = availableProperties.find(p => p.id === selectedPropertyId)
-        const hotelName = selectedPropertyId === 'all'
+        const selectedProp = availableProperties.find(p => p.id === effectivePropertyId)
+        const hotelName = isConsolidatedSelection
             ? 'Consolidated View (All)'
             : selectedProp?.name || 'Unknown'
 
@@ -372,7 +425,7 @@ export default function DailyFlashReport() {
                 reportType: 'flash_report',
                 title: 'Daily Flash Report',
                 hotelName,
-                hotelCode: selectedPropertyId === 'all' ? 'ALL' : undefined,
+                hotelCode: isConsolidatedSelection ? 'ALL' : undefined,
                 period: { start: selectedDate, end: selectedDate },
                 generatedBy: {
                     name: profile?.full_name || user?.email || 'System',
@@ -435,10 +488,10 @@ export default function DailyFlashReport() {
                         title: 'Revenue Breakdown & Attribution',
                         headers: ['Category', 'Total Amount', 'Property Breakdown'],
                         rows: [
-                            ['Room Revenue', formatCurrency(consolidated.roomRevenue), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.roomRevenue)}`).join(' | ') : ''],
-                            ['F&B Revenue', formatCurrency(consolidated.fbRevenue), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.fbRevenue)}`).join(' | ') : ''],
-                            ['Spa Revenue', formatCurrency(consolidated.spaRevenue), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.spaRevenue)}`).join(' | ') : ''],
-                            ['Other Revenue', formatCurrency(consolidated.otherRevenue), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.otherRevenue)}`).join(' | ') : ''],
+                            ['Room Revenue', formatCurrency(consolidated.roomRevenue), isConsolidatedSelection ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.roomRevenue)}`).join(' | ') : ''],
+                            ['F&B Revenue', formatCurrency(consolidated.fbRevenue), isConsolidatedSelection ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.fbRevenue)}`).join(' | ') : ''],
+                            ['Spa Revenue', formatCurrency(consolidated.spaRevenue), isConsolidatedSelection ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.spaRevenue)}`).join(' | ') : ''],
+                            ['Other Revenue', formatCurrency(consolidated.otherRevenue), isConsolidatedSelection ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.revenue.otherRevenue)}`).join(' | ') : ''],
                             ['TOTAL REVENUE', formatCurrency(consolidated.totalRevenue), ''],
                         ]
                     },
@@ -446,9 +499,9 @@ export default function DailyFlashReport() {
                         title: 'Collections & Payments Attribution',
                         headers: ['Method', 'Total Amount', 'Property Breakdown'],
                         rows: [
-                            ['Cash', formatCurrency(consolidated.cashCollections), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.cash)}`).join('\n') : ''],
-                            ['Credit Card', formatCurrency(consolidated.creditCollections), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.credit)}`).join('\n') : ''],
-                            ['Accounts Receivable', formatCurrency(consolidated.arCollections), selectedPropertyId === 'all' ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.ar)}`).join('\n') : ''],
+                            ['Cash', formatCurrency(consolidated.cashCollections), isConsolidatedSelection ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.cash)}`).join('\n') : ''],
+                            ['Credit Card', formatCurrency(consolidated.creditCollections), isConsolidatedSelection ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.credit)}`).join('\n') : ''],
+                            ['Accounts Receivable', formatCurrency(consolidated.arCollections), isConsolidatedSelection ? reportData.map(r => `${r.property.name}: ${formatCurrency(r.collections.ar)}`).join('\n') : ''],
                             ['TOTAL COLLECTIONS', formatCurrency(consolidated.totalCollections), ''],
                         ]
                     },
@@ -517,18 +570,14 @@ export default function DailyFlashReport() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                    <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                    <Select value={resolvedSelectedPropertyId} onValueChange={setSelectedPropertyId}>
                         <SelectTrigger className="w-64 bg-background">
-                            <SelectValue placeholder="Select Property" />
+                            <SelectValue placeholder={canUseConsolidatedView ? 'Consolidated View (All)' : 'Select Property'} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Consolidated View (All)</SelectItem>
-                            {availableProperties
-                                .filter(p => p.id !== 'all')
-                                .map(prop => (
-                                    <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
-                                ))
-                            }
+                            {availableProperties.map(prop => (
+                                <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                     <input
@@ -632,12 +681,7 @@ export default function DailyFlashReport() {
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
-                                                data={[
-                                                    { name: 'Room', value: consolidated.roomRevenue, color: '#2563eb' },
-                                                    { name: 'F&B', value: consolidated.fbRevenue, color: '#10b981' },
-                                                    { name: 'Spa', value: consolidated.spaRevenue, color: '#8b5cf6' },
-                                                    { name: 'Other', value: consolidated.otherRevenue, color: '#f59e0b' },
-                                                ].filter(d => d.value > 0)}
+                                                data={revenueComposition}
                                                 cx="50%"
                                                 cy="50%"
                                                 innerRadius={60}
@@ -645,13 +689,8 @@ export default function DailyFlashReport() {
                                                 paddingAngle={5}
                                                 dataKey="value"
                                             >
-                                                {[
-                                                    { color: '#2563eb' },
-                                                    { color: '#10b981' },
-                                                    { color: '#8b5cf6' },
-                                                    { color: '#f59e0b' },
-                                                ].map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                {revenueComposition.map((entry) => (
+                                                    <Cell key={`revenue-slice-${entry.name}`} fill={entry.color} />
                                                 ))}
                                             </Pie>
                                             <RechartTooltip
@@ -734,7 +773,7 @@ export default function DailyFlashReport() {
                                             </div>
 
                                             {/* Property Attribution (Consolidated Mode Only) */}
-                                            {selectedPropertyId === 'all' && reportData.length > 1 && (
+                                            {isConsolidatedSelection && reportData.length > 1 && (
                                                 <div className="pl-8 space-y-1">
                                                     {reportData.map((report) => {
                                                         const val = (report.revenue as any)[item.key]
@@ -780,7 +819,7 @@ export default function DailyFlashReport() {
                                             </div>
 
                                             {/* Property Attribution (Consolidated Mode Only) */}
-                                            {selectedPropertyId === 'all' && reportData.length > 1 && (
+                                            {isConsolidatedSelection && reportData.length > 1 && (
                                                 <div className="pl-8 space-y-1">
                                                     {reportData.map((report) => {
                                                         const val = (report.collections as any)[item.key]

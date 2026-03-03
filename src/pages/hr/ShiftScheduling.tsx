@@ -31,6 +31,7 @@ import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 const defaultShiftForm: {
   user_id: string
@@ -72,8 +73,22 @@ function toLocalDateTimeInput(value?: string | null) {
 export default function ShiftScheduling() {
   const { t } = useTranslation('hr')
   const queryClient = useQueryClient()
-  const { currentProperty } = useProperty()
-  const propertyId = currentProperty?.id && currentProperty.id !== 'all' ? currentProperty.id : undefined
+  const { currentProperty, availableProperties } = useProperty()
+  const isConsolidatedScope = !isRealPropertyId(currentProperty?.id)
+  const selectableProperties = useMemo(
+    () => availableProperties.filter((property) => isRealPropertyId(property.id)),
+    [availableProperties]
+  )
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('')
+  const propertyId = (() => {
+    if (isRealPropertyId(currentProperty?.id)) return currentProperty.id
+    if (!isConsolidatedScope) return undefined
+
+    const isSelectedPropertyValid = selectableProperties.some((property) => property.id === selectedPropertyId)
+    if (isSelectedPropertyValid) return selectedPropertyId
+
+    return selectableProperties[0]?.id
+  })()
 
   const today = new Date()
   const defaultStart = new Date(today)
@@ -91,6 +106,7 @@ export default function ShiftScheduling() {
   const [attendanceForm, setAttendanceForm] = useState(defaultAttendanceForm)
   const [editingAttendanceId, setEditingAttendanceId] = useState<string | null>(null)
   const shiftStatusOptions: Shift['status'][] = ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show']
+  const propertyRequiredMessage = 'Select a property before managing shifts or attendance'
 
   const { departments } = useDepartments(propertyId)
   const { data: staff = [] } = useProfiles({
@@ -99,8 +115,7 @@ export default function ShiftScheduling() {
     limit: 500
   })
 
-  const staffOptions = useMemo(() => staff, [staff])
-  const staffIds = useMemo(() => new Set(staffOptions.map(member => member.id)), [staffOptions])
+  const staffIds = useMemo(() => new Set(staff.map(member => member.id)), [staff])
 
   const createShift = useCreateShift()
   const updateShift = useUpdateShift()
@@ -109,6 +124,8 @@ export default function ShiftScheduling() {
   const shiftsQuery = useQuery({
     queryKey: ['shift-scheduling', propertyId, departmentId, dateStart, dateEnd],
     queryFn: async () => {
+      if (!propertyId) return []
+
       const start = new Date(`${dateStart}T00:00:00`)
       const end = new Date(`${dateEnd}T23:59:59`)
 
@@ -119,9 +136,7 @@ export default function ShiftScheduling() {
         .lte('start_time', end.toISOString())
         .order('start_time', { ascending: true })
 
-      if (propertyId) {
-        query = query.eq('property_id', propertyId)
-      }
+      query = query.eq('property_id', propertyId)
       if (departmentId !== 'all') {
         query = query.eq('department_id', departmentId)
       }
@@ -130,21 +145,21 @@ export default function ShiftScheduling() {
       if (error) throw error
       return data || []
     },
-    enabled: !!dateStart && !!dateEnd
+    enabled: !!dateStart && !!dateEnd && !!propertyId
   })
 
   const attendanceQuery = useQuery({
-    queryKey: ['attendance-corrections', propertyId, departmentId, attendanceDate, staffOptions.length],
+    queryKey: ['attendance-corrections', propertyId, departmentId, attendanceDate, staff.length],
     queryFn: async () => {
+      if (!propertyId) return []
+
       let query = supabase
         .from('attendance')
         .select('*, employee:profiles(id, full_name, email, job_title)')
         .eq('date', attendanceDate)
         .order('check_in', { ascending: true })
 
-      if (propertyId) {
-        query = query.eq('property_id', propertyId)
-      }
+      query = query.eq('property_id', propertyId)
 
       const { data, error } = await query
       if (error) throw error
@@ -152,11 +167,19 @@ export default function ShiftScheduling() {
       if (departmentId === 'all') return data || []
       return (data || []).filter((row: any) => staffIds.has(row.employee_id))
     },
-    enabled: !!attendanceDate
+    enabled: !!attendanceDate && !!propertyId
   })
 
   const createAttendance = useMutation({
     mutationFn: async () => {
+      if (!propertyId) {
+        throw new Error('Property context is required')
+      }
+      // Safety guard: attendance must target an employee in the currently selected property scope.
+      if (!staffIds.has(attendanceForm.employee_id)) {
+        throw new Error('Selected staff member is outside the current property scope')
+      }
+
       const payload = {
         employee_id: attendanceForm.employee_id,
         date: attendanceDate,
@@ -164,7 +187,7 @@ export default function ShiftScheduling() {
         check_out: attendanceForm.check_out ? new Date(attendanceForm.check_out).toISOString() : null,
         status: attendanceForm.status,
         notes: attendanceForm.notes || null,
-        property_id: propertyId || null
+        property_id: propertyId
       }
       const { error } = await supabase.from('attendance').insert(payload)
       if (error) throw error
@@ -174,23 +197,35 @@ export default function ShiftScheduling() {
       queryClient.invalidateQueries({ queryKey: ['attendance-corrections'] })
       setAttendanceForm(defaultAttendanceForm)
     },
-    onError: () => toast.error('Failed to add attendance')
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Failed to add attendance')
   })
 
   const updateAttendance = useMutation({
     mutationFn: async () => {
-      if (!editingAttendanceId) return
+      if (!editingAttendanceId) {
+        throw new Error('Attendance record is required')
+      }
+      if (!propertyId) {
+        throw new Error('Property context is required')
+      }
       const payload = {
         check_in: attendanceForm.check_in ? new Date(attendanceForm.check_in).toISOString() : null,
         check_out: attendanceForm.check_out ? new Date(attendanceForm.check_out).toISOString() : null,
         status: attendanceForm.status,
         notes: attendanceForm.notes || null
       }
-      const { error } = await supabase
+      // Property predicate prevents cross-property updates if a record ID is stale or leaked.
+      const { data, error } = await supabase
         .from('attendance')
         .update(payload)
         .eq('id', editingAttendanceId)
+        .eq('property_id', propertyId)
+        .select('id')
+        .maybeSingle()
       if (error) throw error
+      if (!data) {
+        throw new Error('Attendance record was not found in the selected property')
+      }
     },
     onSuccess: () => {
       toast.success(t('shift_management.form.save', 'Saved'))
@@ -198,10 +233,15 @@ export default function ShiftScheduling() {
       setEditingAttendanceId(null)
       setAttendanceForm(defaultAttendanceForm)
     },
-    onError: () => toast.error('Failed to update attendance')
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Failed to update attendance')
   })
 
   const handleSaveShift = async () => {
+    if (!propertyId) {
+      toast.error(propertyRequiredMessage)
+      return
+    }
+
     if (!shiftForm.user_id) {
       toast.error('Select a staff member')
       return
@@ -233,7 +273,7 @@ export default function ShiftScheduling() {
           end_time: new Date(shiftForm.end_time).toISOString(),
           location: shiftForm.location || null,
           department_id: departmentId !== 'all' ? departmentId : null,
-          property_id: propertyId || null,
+          property_id: propertyId,
           notes: shiftForm.notes || null,
           break_duration_minutes: Number(shiftForm.break_duration_minutes) || 0,
           status: shiftForm.status
@@ -242,7 +282,7 @@ export default function ShiftScheduling() {
       }
       setEditingShiftId(null)
       setShiftForm(defaultShiftForm)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save shift')
     }
   }
@@ -265,7 +305,7 @@ export default function ShiftScheduling() {
     try {
       await deleteShift.mutateAsync(id)
       toast.success(t('shift_management.actions.delete', 'Shift deleted'))
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete shift')
     }
   }
@@ -282,6 +322,11 @@ export default function ShiftScheduling() {
   }
 
   const handleSaveAttendance = () => {
+    if (!propertyId) {
+      toast.error(propertyRequiredMessage)
+      return
+    }
+
     if (!editingAttendanceId && !attendanceForm.employee_id) {
       toast.error('Select a staff member')
       return
@@ -304,10 +349,36 @@ export default function ShiftScheduling() {
         <Card className="border-primary/10">
           <CardHeader>
             <CardTitle>{t('shift_management.filters.department', 'Department')}</CardTitle>
-            <CardDescription>{t('shift_management.filters.all_departments', 'All departments')}</CardDescription>
+            <CardDescription>
+              {isConsolidatedScope && !propertyId
+                ? propertyRequiredMessage
+                : t('shift_management.filters.all_departments', 'All departments')}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={isConsolidatedScope ? 'grid grid-cols-1 md:grid-cols-4 gap-4' : 'grid grid-cols-1 md:grid-cols-3 gap-4'}>
+              {isConsolidatedScope && (
+                <div className="space-y-2">
+                  <Label>{t('common:labels.property', 'Property')}</Label>
+                  <Select
+                    value={selectedPropertyId || propertyId || ''}
+                    onValueChange={(value) => {
+                      setSelectedPropertyId(value)
+                      setDepartmentId('all')
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('common:labels.property', 'Property')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectableProperties.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>{property.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>{t('shift_management.filters.department', 'Department')}</Label>
                 <Select value={departmentId} onValueChange={setDepartmentId}>
@@ -355,7 +426,7 @@ export default function ShiftScheduling() {
                         <SelectValue placeholder={t('shift_management.form.staff_member', 'Staff Member')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {staffOptions.map(member => (
+                        {staff.map(member => (
                           <SelectItem key={member.id} value={member.id}>
                             {member.full_name || member.email}
                           </SelectItem>
@@ -398,7 +469,7 @@ export default function ShiftScheduling() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button onClick={handleSaveShift}>
+                  <Button onClick={handleSaveShift} disabled={!propertyId}>
                     {editingShiftId ? t('shift_management.form.save', 'Save') : t('shift_management.actions.create_shift', 'Create Shift')}
                   </Button>
                   {editingShiftId && (
@@ -473,7 +544,7 @@ export default function ShiftScheduling() {
                         <SelectValue placeholder={t('shift_management.form.staff_member', 'Staff Member')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {staffOptions.map(member => (
+                        {staff.map(member => (
                           <SelectItem key={member.id} value={member.id}>{member.full_name || member.email}</SelectItem>
                         ))}
                       </SelectContent>
@@ -506,7 +577,7 @@ export default function ShiftScheduling() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button onClick={handleSaveAttendance}>
+                  <Button onClick={handleSaveAttendance} disabled={!propertyId}>
                     {editingAttendanceId ? t('shift_management.form.save', 'Save') : t('shift_management.actions.add_attendance', 'Add Attendance')}
                   </Button>
                   {editingAttendanceId && (

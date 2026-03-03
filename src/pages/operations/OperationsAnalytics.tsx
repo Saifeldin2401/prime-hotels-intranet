@@ -33,8 +33,15 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { useProperty } from '@/contexts/PropertyContext'
-import { useDailyOccupancy, useDailyRevenue, useMarketSegments, useOperationsKPIs } from '@/hooks/useOperations'
+import { useDailyOccupancy, useDailyRevenue, useMarketSegments } from '@/hooks/useOperations'
 import { cn } from '@/lib/utils'
+import {
+    CONSOLIDATED_PROPERTY_ID,
+    getFirstRealPropertyId,
+    hasConsolidatedView,
+    isConsolidatedPropertyId,
+    normalizePropertyScopeId,
+} from '@/lib/propertyScope'
 
 // Types for charts
 interface ChartDataPoint {
@@ -251,9 +258,9 @@ function SimplePieChart({ data }: {
                             dataKey="value"
                             animationDuration={500}
                         >
-                            {chartData.map((entry, index) => (
+                            {chartData.map((entry) => (
                                 <Cell
-                                    key={`cell-${index}`}
+                                    key={`cell-${entry.name}`}
                                     fill={entry.actualColor}
                                     stroke="hsl(var(--background))"
                                     strokeWidth={2}
@@ -275,8 +282,8 @@ function SimplePieChart({ data }: {
 
             {/* Legend */}
             <div className="flex-1 space-y-2">
-                {chartData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
+                {chartData.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2">
                             <div
                                 className="w-3 h-3 rounded"
@@ -361,7 +368,42 @@ export default function OperationsAnalytics() {
     const { t } = useTranslation(['operations', 'common'])
     const { currentProperty, availableProperties } = useProperty()
     const [dateRange, setDateRange] = useState<'7d' | '30d' | 'mtd' | 'ytd'>('30d')
-    const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all')
+    const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => currentProperty?.id ?? CONSOLIDATED_PROPERTY_ID)
+    const canUseConsolidatedView = useMemo(
+        () => hasConsolidatedView(availableProperties),
+        [availableProperties]
+    )
+    const firstRealPropertyId = useMemo(
+        () => getFirstRealPropertyId(availableProperties),
+        [availableProperties]
+    )
+
+    const resolvedSelectedPropertyId = useMemo(() => {
+        const isAvailableOption = availableProperties.some((property) => property.id === selectedPropertyId)
+        const isInvalidConsolidatedSelection =
+            isConsolidatedPropertyId(selectedPropertyId) && !canUseConsolidatedView
+
+        if (isAvailableOption && !isInvalidConsolidatedSelection) {
+            return selectedPropertyId
+        }
+
+        return (
+            currentProperty?.id ??
+            firstRealPropertyId ??
+            (canUseConsolidatedView ? CONSOLIDATED_PROPERTY_ID : '')
+        )
+    }, [availableProperties, canUseConsolidatedView, currentProperty?.id, firstRealPropertyId, selectedPropertyId])
+
+    const effectivePropertyId = useMemo(
+        () =>
+            normalizePropertyScopeId(resolvedSelectedPropertyId, {
+                allowConsolidated: canUseConsolidatedView,
+                fallbackPropertyId: firstRealPropertyId ?? currentProperty?.id,
+            }),
+        [canUseConsolidatedView, currentProperty?.id, firstRealPropertyId, resolvedSelectedPropertyId]
+    )
+
+    const isConsolidatedSelection = isConsolidatedPropertyId(effectivePropertyId)
 
     // Calculate date range
     const { startDate, endDate } = useMemo(() => {
@@ -393,19 +435,19 @@ export default function OperationsAnalytics() {
 
     // Fetch data
     const { data: occupancyData } = useDailyOccupancy({
-        propertyId: selectedPropertyId,
+        propertyId: effectivePropertyId,
         startDate,
         endDate
     })
 
     const { data: revenueData } = useDailyRevenue({
-        propertyId: selectedPropertyId,
+        propertyId: effectivePropertyId,
         startDate,
         endDate
     })
 
     const { data: segmentData } = useMarketSegments({
-        propertyId: selectedPropertyId
+        propertyId: effectivePropertyId
     })
 
     // Prepare chart data
@@ -584,9 +626,11 @@ export default function OperationsAnalytics() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                    <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                    <Select value={resolvedSelectedPropertyId} onValueChange={setSelectedPropertyId}>
                         <SelectTrigger className="w-48">
-                            <SelectValue placeholder="Consolidated View (All)" />
+                            <SelectValue
+                                placeholder={canUseConsolidatedView ? "Consolidated View (All)" : "Select Property"}
+                            />
                         </SelectTrigger>
                         <SelectContent>
                             {availableProperties.map(prop => (
@@ -752,13 +796,21 @@ export default function OperationsAnalytics() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Property Performance Comparison</CardTitle>
-                            <CardDescription>Compare KPIs across all properties for the selected period</CardDescription>
+                            <CardDescription>
+                                {isConsolidatedSelection
+                                    ? 'Compare KPIs across all properties for the selected period'
+                                    : 'Switch to consolidated scope to compare KPIs across properties'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {propertyComparison.length > 0 ? (
+                            {isConsolidatedSelection && propertyComparison.length > 0 ? (
                                 <PropertyComparisonTable data={propertyComparison} />
                             ) : (
-                                <p className="text-muted-foreground text-center py-8">No comparison data available</p>
+                                <p className="text-muted-foreground text-center py-8">
+                                    {isConsolidatedSelection
+                                        ? 'No comparison data available'
+                                        : 'Consolidated view is required for cross-property comparison'}
+                                </p>
                             )}
                         </CardContent>
                     </Card>

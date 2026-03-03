@@ -58,12 +58,12 @@ serve(async (req) => {
 
   try {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-      return jsonResponse({ error: "Missing Supabase environment variables" }, 500);
+      return jsonResponse({ error: "Missing Supabase environment variables" }, 500, corsHeaders);
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Missing Authorization header" }, 401);
+      return jsonResponse({ error: "Missing Authorization header" }, 401, corsHeaders);
     }
 
     const body = (await req.json()) as SendEmailBody;
@@ -71,7 +71,7 @@ serve(async (req) => {
     const cleanedRecipients = recipients.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
 
     if (cleanedRecipients.length === 0) {
-      return jsonResponse({ error: "Missing required field: to" }, 400);
+      return jsonResponse({ error: "Missing required field: to" }, 400, corsHeaders);
     }
 
     const isServiceRoleCall = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
@@ -87,7 +87,7 @@ serve(async (req) => {
       } = await userClient.auth.getUser();
 
       if (userError || !authUser) {
-        return jsonResponse({ error: "Unauthorized", details: userError?.message }, 401);
+        return jsonResponse({ error: "Unauthorized", details: userError?.message }, 401, corsHeaders);
       }
       user = authUser;
     }
@@ -97,7 +97,7 @@ serve(async (req) => {
     });
     const runtimeConfig = await loadRuntimeConfig(serviceClient);
     if (!runtimeConfig.resendApiKey) {
-      return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500);
+      return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500, corsHeaders);
     }
 
     if (!isServiceRoleCall && user) {
@@ -109,7 +109,7 @@ serve(async (req) => {
         .in("role", adminRoles);
 
       if (roleError) {
-        return jsonResponse({ error: "Failed to validate permissions" }, 500);
+        return jsonResponse({ error: "Failed to validate permissions" }, 500, corsHeaders);
       }
 
       const isAdmin = Boolean(roleRows && roleRows.length > 0);
@@ -121,7 +121,7 @@ serve(async (req) => {
         (!body.userId || body.userId === user.id);
 
       if (!isAdmin && !isSelfCertificateEmail) {
-        return jsonResponse({ error: "Forbidden" }, 403);
+        return jsonResponse({ error: "Forbidden" }, 403, corsHeaders);
       }
     }
 
@@ -174,7 +174,7 @@ serve(async (req) => {
     });
 
     if (!resendResult.ok) {
-      return jsonResponse({ error: "Failed to send email via Resend", details: resendResult.payload }, 500);
+      return jsonResponse({ error: "Failed to send email via Resend", details: resendResult.payload }, 500, corsHeaders);
     }
 
     const data = resendResult.payload;
@@ -195,10 +195,10 @@ serve(async (req) => {
       console.error("Delivery tracking failed:", trackError);
     }
 
-    return jsonResponse({ success: true, data });
+    return jsonResponse({ success: true, data }, 200, corsHeaders);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse({ error: message }, 500, corsHeaders);
   }
 });
 
@@ -232,9 +232,9 @@ function buildContext(
 
   const baseContext: Record<string, string> = {
     title: asText(body.title, body.subject || "Notification"),
-    message: asText(body.message, isAr ? "Ù„Ø¯ÙŠÙƒ ØªØ­Ø¯ÙŠØ« Ø¬Ø¯ÙŠØ¯ ÙÙŠ Ø¨Ø±Ø§ÙŠÙ… ÙƒÙˆÙ†ÙƒØª." : "You have a new update in PHG Connect."),
+    message: asText(body.message, isAr ? "\u0644\u062F\u064A\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0641\u064A PHG Connect." : "You have a new update in PHG Connect."),
     action_url: actionUrl,
-    action_label: asText(body.actionLabel, isAr ? "ÙØªØ­ Ø§Ù„Ù…Ù†ØµØ©" : "Open PHG Connect"),
+    action_label: asText(body.actionLabel, isAr ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0646\u0635\u0629" : "Open PHG Connect"),
     app_url: appBaseUrl,
     logo_url: `${appBaseUrl}/prime-logo-white-full.png`, // Standard premium logo
     recipient_name: fallbackRecipient,
@@ -247,7 +247,7 @@ function buildContext(
     brand_gradient: branding.gradient,
     business_unit_label: isAr ? branding.labelAr : branding.labelEn,
     footer_text: isAr
-      ? "Ø¥Ø´Ø¹Ø§Ø± ØªÙ„Ù‚Ø§Ø¦ÙŠ Ù…Ù† Ø¨Ø±Ø§ÙŠÙ… ÙƒÙˆÙ†ÙƒØª. ØªÙ… Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø¥Ø¬Ø±Ø§Ø¡ ÙÙŠ Ù‚Ø³Ù…Ùƒ Ø£Ùˆ ØªØ¹ÙŠÙŠÙ† Ù…Ù‡Ù…Ø© Ù„Ùƒ."
+      ? "\u0625\u0634\u0639\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A \u0645\u0646 PHG Connect. \u062A\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0625\u062C\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u0642\u0633\u0645 \u0623\u0648 \u0645\u0647\u0645\u0629/\u0627\u0639\u062A\u0645\u0627\u062F \u0645\u0631\u062A\u0628\u0637 \u0628\u0643."
       : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
     has_data_box: body.variables?.data_box ? "true" : "false",
     data_box_content: asText(body.variables?.data_box, "")
@@ -264,48 +264,54 @@ function buildContext(
 
 function resolveBranding(domain: string) {
   const map: Record<string, { color: string; gradient: string; labelEn: string; labelAr: string }> = {
+    user_management: {
+      color: "#0B1C3E",
+      gradient: "linear-gradient(135deg, #0B1C3E 0%, #1E40AF 100%)",
+      labelEn: "User Management",
+      labelAr: "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646",
+    },
     hr: {
       color: "#0D9488",
       gradient: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
       labelEn: "HR & Workplace Excellence",
-      labelAr: "Ø§Ù„Ù…ÙˆØ§Ø±Ø¯ Ø§Ù„Ø¨Ø´Ø±ÙŠØ© ÙˆØ§Ù„ØªÙ…ÙŠØ²"
+      labelAr: "\u0627\u0644\u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0628\u0634\u0631\u064A\u0629 \u0648\u0627\u0644\u062A\u0645\u064A\u0632 \u0627\u0644\u0648\u0638\u064A\u0641\u064A",
     },
     learning: {
       color: "#D97706",
       gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
       labelEn: "Learning & Academy",
-      labelAr: "Ø§Ù„ØªØ¹Ù„Ù… ÙˆØ§Ù„Ø£ÙƒØ§Ø¯ÙŠÙ…ÙŠØ©"
+      labelAr: "\u0627\u0644\u062A\u0639\u0644\u0645 \u0648\u0627\u0644\u0623\u0643\u0627\u062F\u064A\u0645\u064A\u0629",
     },
     finance: {
       color: "#2563EB",
       gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
       labelEn: "Finance & Approvals",
-      labelAr: "Ø§Ù„Ù…Ø§Ù„ÙŠØ© ÙˆØ§Ù„Ø§Ø¹ØªÙ…Ø§Ø¯Ø§Øª"
+      labelAr: "\u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A",
     },
     operations: {
       color: "#DC2626",
       gradient: "linear-gradient(135deg, #DC2626 0%, #991B1B 100%)",
       labelEn: "Operations & Safety",
-      labelAr: "Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª ÙˆØ§Ù„Ø³Ù„Ø§Ù…Ø©"
+      labelAr: "\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629",
     },
     management: {
       color: "#1E293B",
       gradient: "linear-gradient(135deg, #334155 0%, #0F172A 100%)",
       labelEn: "Corporate Management",
-      labelAr: "Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¹Ø§Ù…Ø©"
+      labelAr: "\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629",
     },
     sales: {
       color: "#4F46E5",
       gradient: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)",
       labelEn: "Sales & Pipelines",
-      labelAr: "Ø§Ù„Ù…Ø¨ÙŠØ¹Ø§Øª ÙˆØ§Ù„Ù†Ù…Ùˆ"
+      labelAr: "\u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0648\u062E\u0637\u0648\u0637 \u0627\u0644\u0625\u064A\u0631\u0627\u062F\u0627\u062A",
     },
     system: {
       color: "#0F172A",
       gradient: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
       labelEn: "System Administration",
-      labelAr: "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù†Ø¸Ø§Ù…"
-    }
+      labelAr: "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0638\u0627\u0645",
+    },
   };
 
   return map[domain] || map.system;
@@ -362,7 +368,7 @@ function resolveAbsoluteUrl(pathOrUrl: string, appBaseUrl: string): string {
 
 function normalizeDomain(domain?: string): string {
   const value = (domain || "system").toLowerCase();
-  const allowed = ["system", "user_management", "operations", "hr", "finance", "sales", "management"];
+  const allowed = ["system", "user_management", "operations", "hr", "learning", "finance", "sales", "management"];
   return allowed.includes(value) ? value : "system";
 }
 
@@ -504,7 +510,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, clamped));
 }
 
-function jsonResponse(payload: Record<string, unknown>, status = 200): Response {
+function jsonResponse(payload: Record<string, unknown>, status = 200, corsHeaders: HeadersInit = {}): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },

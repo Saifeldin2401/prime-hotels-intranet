@@ -17,6 +17,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
 
 export interface SidebarCounts {
     unreadNotifications: number
@@ -37,6 +38,7 @@ export function useSidebarCounts() {
     const departmentIds = departments?.map((d) => d.id) || []
     const propertyIdsKey = propertyIds.join(',')
     const departmentIdsKey = departmentIds.join(',')
+    const currentPropertyId = currentProperty?.id
 
     // Determine access level
     const isRegionalAccess = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
@@ -62,30 +64,43 @@ export function useSidebarCounts() {
             }, 400)
         }
 
-        const propertyIdSet = new Set(propertyIds)
-        const departmentIdSet = new Set(departmentIds)
+        const propertyIdSet = new Set(propertyIdsKey ? propertyIdsKey.split(',') : [])
+        const departmentIdSet = new Set(departmentIdsKey ? departmentIdsKey.split(',') : [])
 
-        const shouldInvalidateForRequest = (payload: any) => {
+        const shouldInvalidateForRequest = (payload: {
+            new?: {
+                property_id?: string | null
+                department_id?: string | null
+                requester_id?: string | null
+                current_assignee_id?: string | null
+            } | null
+            old?: {
+                property_id?: string | null
+                department_id?: string | null
+                requester_id?: string | null
+                current_assignee_id?: string | null
+            } | null
+        }) => {
             const row = payload?.new || payload?.old
             if (!row) return false
 
             if (isRegionalAccess) {
-                if (!currentProperty || currentProperty.id === 'all') return true
-                return row.property_id === currentProperty.id
+                if (!currentPropertyId || isConsolidatedPropertyId(currentPropertyId)) return true
+                return row.property_id === currentPropertyId
             }
 
             if (isPropertyLevel) {
-                if (currentProperty && currentProperty.id !== 'all') {
-                    return row.property_id === currentProperty.id
+                if (isRealPropertyId(currentPropertyId)) {
+                    return row.property_id === currentPropertyId
                 }
                 return propertyIdSet.size > 0
-                    ? propertyIdSet.has(row.property_id)
+                    ? propertyIdSet.has(row.property_id || '')
                     : row.current_assignee_id === user.id
             }
 
             if (isDepartmentHead) {
                 return departmentIdSet.size > 0
-                    ? departmentIdSet.has(row.department_id)
+                    ? departmentIdSet.has(row.department_id || '')
                     : row.current_assignee_id === user.id
             }
 
@@ -158,7 +173,7 @@ export function useSidebarCounts() {
     }, [
         user?.id,
         queryClient,
-        currentProperty?.id,
+        currentPropertyId,
         isRegionalAccess,
         isPropertyLevel,
         isDepartmentHead,
@@ -167,7 +182,7 @@ export function useSidebarCounts() {
     ])
 
     return useQuery({
-        queryKey: ['sidebar-counts', user?.id, primaryRole, currentProperty?.id, propertyIdsKey, departmentIdsKey],
+        queryKey: ['sidebar-counts', user?.id, primaryRole, currentPropertyId, propertyIdsKey, departmentIdsKey],
         enabled: !!user?.id,
         refetchInterval: 120000, // Fallback polling every 2 minutes (Realtime handles immediate updates)
         staleTime: 45000, // Consider data fresh for 45 seconds
@@ -185,9 +200,7 @@ export function useSidebarCounts() {
             }
 
             // Single RPC call replaces 6 separate REST queries + 6 CORS preflights
-            const currentPropId = currentProperty && currentProperty.id !== 'all'
-                ? currentProperty.id
-                : null
+            const currentPropId = isRealPropertyId(currentPropertyId) ? currentPropertyId : null
 
             const { data, error } = await supabase.rpc('get_sidebar_counts', {
                 p_user_id: user.id,

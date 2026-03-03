@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isRealPropertyId } from '@/lib/propertyScope';
 
 export interface Department {
   id: string;
@@ -12,7 +12,7 @@ export interface Department {
 
 export function useDepartments(propertyId?: string) { // Optional filter
   const queryClient = useQueryClient();
-  const normalizedPropertyId = propertyId && propertyId !== 'all' ? propertyId : undefined;
+  const normalizedPropertyId = isRealPropertyId(propertyId) ? propertyId : undefined;
 
   // Fetch departments
   const { data: departments = [], isLoading, error } = useQuery({

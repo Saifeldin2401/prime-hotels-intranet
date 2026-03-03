@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Search, X, Building2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
 
 interface TaskFiltersProps {
     filters: any
@@ -16,15 +17,14 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
     const { t } = useTranslation('tasks')
     const { currentProperty } = useProperty()
 
-    // Fetch departments for current property (or all if viewing 'all')
-    // Normalize property ID to avoid 'all' in query key
-    const normalizedPropertyId = currentProperty?.id && currentProperty.id !== 'all' ? currentProperty.id : undefined
+    // Fetch departments for current property (or all in consolidated scope).
+    const normalizedPropertyId = isRealPropertyId(currentProperty?.id) ? currentProperty.id : undefined
     const { data: departments = [] } = useQuery({
         queryKey: ['departments', normalizedPropertyId],
         queryFn: async () => {
             if (!currentProperty?.id) return []
-            if (currentProperty.id === 'all') {
-                // Fetch all departments when 'All Properties' is selected
+            if (isConsolidatedPropertyId(currentProperty.id)) {
+                // Fetch all departments when consolidated scope is selected.
                 const { data, error } = await supabase
                     .from('departments')
                     .select('id, name')

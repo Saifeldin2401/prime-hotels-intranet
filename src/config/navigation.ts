@@ -421,7 +421,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'my_team',
         icon: Users,
         description: 'Manage your direct reports',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager'],
         group: 'hr_management',
         order: 6.9
     },
@@ -484,7 +484,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'shift_scheduling',
         icon: Clock,
         description: 'Shift planning and attendance corrections',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager'],
         group: 'hr_management',
         order: 6.5
     },

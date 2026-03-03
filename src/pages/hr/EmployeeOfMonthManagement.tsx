@@ -1,9 +1,8 @@
-import { useState, useEffect, useId } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useId, useCallback } from 'react'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -11,13 +10,14 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Search, Trophy, Calendar, Save, Trash2, UserPlus, Check, ChevronsUpDown, Pencil } from 'lucide-react'
+import { Trophy, Calendar, Save, Trash2, UserPlus, Check, ChevronsUpDown, Pencil } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { createNotification, NotificationTemplates } from '@/lib/notificationService'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 interface Profile {
     id: string
@@ -69,7 +69,7 @@ export default function EmployeeOfMonthManagement() {
         }
 
         const propertyId = currentProperty?.id
-        const isAll = !propertyId || propertyId === 'all'
+        const isAll = !isRealPropertyId(propertyId)
 
         try {
 
@@ -98,7 +98,7 @@ export default function EmployeeOfMonthManagement() {
         }
     }
 
-    const fetchWinners = async () => {
+    const fetchWinners = useCallback(async () => {
         setLoading(true)
         try {
             let queryBuilder = supabase
@@ -119,7 +119,7 @@ export default function EmployeeOfMonthManagement() {
                     )
                 `)
 
-            if (currentProperty && currentProperty.id !== 'all') {
+            if (isRealPropertyId(currentProperty?.id)) {
                 queryBuilder = queryBuilder.eq('property_id', currentProperty.id)
             }
 
@@ -134,11 +134,11 @@ export default function EmployeeOfMonthManagement() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [currentProperty?.id])
 
     useEffect(() => {
         fetchWinners()
-    }, [currentProperty])
+    }, [fetchWinners])
 
     const handleSelectEmployee = (profile: Profile) => {
         setSelectedEmployee(profile)
@@ -228,11 +228,11 @@ export default function EmployeeOfMonthManagement() {
 
         setSaving(true)
         try {
-            const targetPropertyId = currentProperty?.id !== 'all'
-                ? currentProperty?.id
+            const targetPropertyId = isRealPropertyId(currentProperty?.id)
+                ? currentProperty.id
                 : selectedEmployee.user_properties?.[0]?.property_id;
 
-            if (!targetPropertyId || targetPropertyId === 'all') {
+            if (!isRealPropertyId(targetPropertyId)) {
                 toast({
                     title: t('common:errors.validation_failed'),
                     description: "Could not determine property for this employee",
@@ -304,18 +304,19 @@ export default function EmployeeOfMonthManagement() {
     const years = [2025, 2026].map(String)
 
     return (
-        <div className="container mx-auto py-8">
-            <div className="flex items-center gap-3 mb-8">
-                <div className="bg-hotel-gold/10 p-3 rounded-2xl">
-                    <Trophy className="h-8 w-8 text-hotel-gold" />
+        <LazyMotion features={domAnimation}>
+            <div className="container mx-auto py-8">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="bg-hotel-gold/10 p-3 rounded-2xl">
+                        <Trophy className="h-8 w-8 text-hotel-gold" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-bold text-hotel-charcoal">{t('widgets.employee_of_the_month.manage')}</h1>
+                        <p className="text-hotel-charcoal/60">Recognize and celebrate outstanding team members</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-3xl font-bold text-hotel-charcoal">{t('widgets.employee_of_the_month.manage')}</h1>
-                    <p className="text-hotel-charcoal/60">Recognize and celebrate outstanding team members</p>
-                </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1">
                     <Card className="sticky top-24 border-hotel-gold/20 shadow-lg">
                         <CardHeader>
@@ -394,14 +395,7 @@ export default function EmployeeOfMonthManagement() {
                                                             onSelect={() => handleSelectEmployee(p)}
                                                             className="p-0 data-[disabled]:pointer-events-auto data-[disabled]:opacity-100"
                                                         >
-                                                            <div
-                                                                className="flex w-full items-center gap-3 p-2 cursor-pointer"
-                                                                onPointerDown={(e) => e.preventDefault()}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    handleSelectEmployee(p)
-                                                                }}
-                                                            >
+                                                            <div className="flex w-full items-center gap-3 p-2">
                                                                 <Avatar className="h-8 w-8">
                                                                     <AvatarImage src={p.avatar_url || undefined} />
                                                                     <AvatarFallback>{(p.full_name || '?').charAt(0)}</AvatarFallback>
@@ -427,7 +421,7 @@ export default function EmployeeOfMonthManagement() {
                             </div>
 
                             {selectedEmployee && (
-                                <motion.div
+                                <m.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="bg-hotel-gold/5 rounded-xl p-4 border border-hotel-gold/10 flex items-center gap-4"
@@ -443,7 +437,7 @@ export default function EmployeeOfMonthManagement() {
                                     <Button variant="ghost" size="icon" onClick={() => setSelectedEmployee(null)}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
-                                </motion.div>
+                                </m.div>
                             )}
 
                             <div className="space-y-2">
@@ -504,7 +498,11 @@ export default function EmployeeOfMonthManagement() {
 
                     {loading ? (
                         <div className="space-y-4">
-                            {[1, 2, 3].map(i => <Card key={i} className="h-24"><CardContent className="animate-pulse" /></Card>)}
+                            {['skeleton-1', 'skeleton-2', 'skeleton-3'].map((key) => (
+                                <Card key={key} className="h-24">
+                                    <CardContent className="animate-pulse" />
+                                </Card>
+                            ))}
                         </div>
                     ) : winners.length > 0 ? (
                         <div className="grid gap-4">
@@ -570,7 +568,8 @@ export default function EmployeeOfMonthManagement() {
                         </div>
                     )}
                 </div>
+                </div>
             </div>
-        </div>
+        </LazyMotion>
     )
 }

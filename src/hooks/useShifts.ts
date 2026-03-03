@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export interface Shift {
     id: string
@@ -26,7 +27,7 @@ export interface CreateShiftInput {
     end_time: string
     location?: string
     department_id?: string
-    property_id?: string
+    property_id: string
     notes?: string
     break_duration_minutes?: number
     status?: Shift['status']
@@ -77,11 +78,16 @@ export function useCreateShift() {
     return useMutation({
         mutationFn: async (input: CreateShiftInput) => {
             if (!user) throw new Error('User must be authenticated')
+            // Production safeguard: shifts must always belong to a concrete property.
+            if (!isRealPropertyId(input.property_id)) {
+                throw new Error('A valid property_id is required to create a shift')
+            }
 
             const { data, error } = await supabase
                 .from('shifts')
                 .insert({
                     ...input,
+                    property_id: input.property_id,
                     created_by: user.id
                 })
                 .select()
@@ -105,6 +111,11 @@ export function useUpdateShift() {
 
     return useMutation({
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<CreateShiftInput> }) => {
+            // Prevent accidental writes that clear property ownership or use consolidated sentinel IDs.
+            if (updates.property_id !== undefined && !isRealPropertyId(updates.property_id)) {
+                throw new Error('A valid property_id is required when updating shift property scope')
+            }
+
             const { data, error } = await supabase
                 .from('shifts')
                 .update(updates)

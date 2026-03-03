@@ -15,6 +15,7 @@ export interface UseUndoableActionOptions {
   message: string;
   successMessage?: string;
   errorMessage?: string;
+  onCancel?: () => void;
 }
 
 export interface UseUndoableActionReturn<T = unknown> {
@@ -48,7 +49,7 @@ export function useUndoableAction<T = unknown>(
   action: (data: T) => Promise<void> | void,
   options: UseUndoableActionOptions
 ): UseUndoableActionReturn<T> {
-  const { delay = 5000, message, successMessage, errorMessage } = options;
+  const { delay = 5000, message, successMessage, errorMessage, onCancel } = options;
   const toastIdRef = useRef<string | number | null>(null);
   const actionDataRef = useRef<T | undefined>(undefined);
 
@@ -75,6 +76,7 @@ export function useUndoableAction<T = unknown>(
         toastIdRef.current = null;
       }
       actionDataRef.current = undefined;
+      onCancel?.();
     },
   });
 

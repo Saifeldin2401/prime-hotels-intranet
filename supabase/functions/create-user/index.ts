@@ -521,7 +521,7 @@ Deno.serve(async (req: Request) => {
         if (provisioningMethod === "temporary_password") {
             try {
                 console.log(`Sending welcome email to ${normalizedEmail}...`);
-                const welcomeMsg = "Welcome to PHG Connect. Your account has been created with the following temporary credentials:\n\nEmail: " + normalizedEmail + "\nPassword: " + temporaryPassword + "\n\nYou will be required to change your password upon your first login.";
+                const welcomeMsg = "Welcome to PHG Connect. Your account is now active and ready for first-time access.";
 
                 const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
                     method: "POST",
@@ -533,9 +533,13 @@ Deno.serve(async (req: Request) => {
                         to: normalizedEmail,
                         templateKey: "user_management_welcome",
                         title: "Portal Access Credentials",
+                        message: welcomeMsg,
+                        actionLabel: "Sign In to PHG Connect",
                         variables: {
                             recipient_name: normalizedFullName,
-                            message: welcomeMsg
+                            credential_email: normalizedEmail,
+                            credential_password: temporaryPassword,
+                            security_note: "For your security, you must change this temporary password after your first successful sign in."
                         },
                         actionUrl: "/",
                         businessDomain: "user_management",

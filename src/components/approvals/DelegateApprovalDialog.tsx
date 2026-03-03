@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next'
 import { useProperty } from '@/contexts/PropertyContext'
 import { format, addDays, differenceInMinutes } from 'date-fns'
 import { getUserFriendlyError } from '@/lib/errorMessages'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 const toLocalInputValue = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000
@@ -184,7 +185,7 @@ export function DelegateApprovalDialog({
 
             // Determine scope: if approvalId is provided, this is approval-specific delegation
             // Otherwise, fall back to property-based scope
-            const scopeType = currentProperty?.id && currentProperty.id !== 'all' ? 'property' : 'all'
+            const scopeType = isRealPropertyId(currentProperty?.id) ? 'property' : 'all'
             const scopeId = scopeType === 'property' ? currentProperty?.id : null
             const resolvedScope = approvalId ? scopeMode : 'scope'
 
@@ -353,7 +354,7 @@ export function DelegateApprovalDialog({
                                         All approvals in my scope
                                     </Label>
                                     <p className="text-xs text-muted-foreground">
-                                        Applies to {currentProperty?.id && currentProperty.id !== 'all' ? (currentProperty.name || 'current property') : 'all properties'}.
+                                        Applies to {isRealPropertyId(currentProperty?.id) ? (currentProperty.name || 'current property') : 'all properties'}.
                                     </p>
                                 </div>
                             </div>

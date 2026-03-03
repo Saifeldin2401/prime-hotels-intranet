@@ -3,15 +3,19 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export function useDashboardStats() {
-    const { user, profile } = useAuth()
+    const { user, profile, roles, departments, properties } = useAuth()
+    const { currentProperty, propertyIds } = useProperty()
 
     return useQuery({
-        queryKey: ['dashboard-stats', user?.id],
+        queryKey: ['dashboard-stats', user?.id, currentProperty?.id],
         queryFn: async () => {
             const userId = profile?.id || user?.id
             if (!userId) return null
+
+            const isScoped = isRealPropertyId(currentProperty?.id)
 
             const [
                 documentsResult,
@@ -24,12 +28,21 @@ export function useDashboardStats() {
                 unreadNotificationsResult,
                 pendingTasksResult
             ] = await Promise.all([
-                // 1. Documents Count
-                supabase
-                    .from('documents')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('status', 'PUBLISHED')
-                    .eq('is_deleted', false),
+                // 1. Documents Count (Scoped)
+                (async () => {
+                    const q = supabase
+                        .from('documents')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('status', 'PUBLISHED')
+                        .eq('is_deleted', false)
+
+                    if (isScoped) {
+                        q.eq('property_id', currentProperty?.id)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
+                    return q
+                })(),
 
                 // 2. Training Progress
                 supabase
@@ -39,12 +52,12 @@ export function useDashboardStats() {
                     .eq('content_type', 'module')
                     .or('is_deleted.is.null,is_deleted.eq.false'),
 
-                // 3. Announcements (Recent 10)
+                // 3. Announcements (Recent 100 for better client-side filtering)
                 supabase
                     .from('announcements')
-                    .select('id, created_at')
+                    .select('id, created_at, target_audience, created_by')
                     .order('created_at', { ascending: false })
-                    .limit(10),
+                    .limit(100),
 
                 // 4. Read Announcements
                 supabase
@@ -81,12 +94,21 @@ export function useDashboardStats() {
                     .eq('user_id', userId)
                     .is('read_at', null),
 
-                // 9. Pending Tasks
-                supabase
-                    .from('tasks')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('assigned_to_id', userId)
-                    .in('status', ['open', 'todo', 'in_progress', 'pending'])
+                // 9. Pending Tasks (Scoped)
+                (async () => {
+                    const q = supabase
+                        .from('tasks')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('assigned_to_id', userId)
+                        .in('status', ['open', 'todo', 'in_progress', 'pending'])
+
+                    if (isScoped) {
+                        q.eq('property_id', currentProperty?.id)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
+                    return q
+                })()
             ])
 
             // Process Results
@@ -99,7 +121,29 @@ export function useDashboardStats() {
             const announcements = announcementsResult.data || []
             const readAnnouncements = readAnnouncementsResult.data || []
             const readIds = new Set(readAnnouncements.map(r => r.announcement_id))
-            const unreadAnnouncements = announcements.filter(a => !readIds.has(a.id)).length
+
+            // Filter announcements by audience (same logic as useAnnouncements)
+            const filteredAnnouncements = announcements.filter(announcement => {
+                if (announcement.created_by === user?.id) return true
+                const audience = announcement.target_audience as any
+                if (!audience || audience.type === 'all') return true
+                const values = audience.values || []
+
+                switch (audience.type) {
+                    case 'role':
+                        return roles.some(userRole => values.includes(userRole.role))
+                    case 'department':
+                        return departments.some(dept => values.includes(dept.id))
+                    case 'property':
+                        return properties.some(prop => values.includes(prop.id))
+                    case 'individual':
+                        return values.includes(user?.id || '')
+                    default:
+                        return true
+                }
+            })
+
+            const unreadAnnouncements = filteredAnnouncements.filter(a => !readIds.has(a.id)).length
 
             const pendingApprovals = (pendingRequestsResult.count || 0) +
                 (pendingDocumentsResult.count || 0) +
@@ -133,12 +177,13 @@ export interface PropertyManagerStats {
 }
 
 export function usePropertyManagerStats() {
-    const { currentProperty } = useProperty()
+    const { currentProperty, propertyIds } = useProperty()
 
     return useQuery({
         queryKey: ['property-manager-stats', currentProperty?.id],
         queryFn: async (): Promise<PropertyManagerStats> => {
             const propertyId = currentProperty?.id
+            const isScopedProperty = isRealPropertyId(propertyId)
             if (!propertyId) return {
                 totalStaff: 0,
                 pendingTasks: 0,
@@ -149,50 +194,74 @@ export function usePropertyManagerStats() {
             }
 
             // Fetch property users first for training stats
-            const { data: propertyUsers } = await supabase
+            let propertyUsersQuery = supabase
                 .from('user_properties')
                 .select('user_id')
-                .eq('property_id', propertyId)
-            const userIds = propertyUsers?.map(u => u.user_id) || []
+
+            if (isScopedProperty) {
+                propertyUsersQuery = propertyUsersQuery.eq('property_id', propertyId)
+            } else if (propertyIds.length > 0) {
+                propertyUsersQuery = propertyUsersQuery.in('property_id', propertyIds)
+            }
+
+            const { data: propertyUsers } = await propertyUsersQuery
+            const userIds = Array.from(new Set((propertyUsers?.map((user) => user.user_id) || [])))
 
             const [
-                totalStaffResult,
                 pendingTasksResult,
                 maintenanceIssuesResult,
                 activeDepartmentsResult,
                 completedTrainingResult,
                 totalAssignmentsResult
             ] = await Promise.all([
-                // 1. Total Staff
-                supabase
-                    .from('user_properties')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('property_id', propertyId),
+                // 1. Pending Tasks
+                (async () => {
+                    let query = supabase
+                        .from('tasks')
+                        .select('id', { count: 'exact', head: true })
+                        .neq('status', 'completed')
+                        .neq('status', 'cancelled')
 
-                // 2. Pending Tasks
-                supabase
-                    .from('tasks')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('property_id', propertyId)
-                    .neq('status', 'completed')
-                    .neq('status', 'cancelled'),
+                    if (isScopedProperty) {
+                        query = query.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        query = query.in('property_id', propertyIds)
+                    }
+                    return query
+                })(),
 
-                // 3. Maintenance Issues
-                supabase
-                    .from('maintenance_tickets')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('property_id', propertyId)
-                    .neq('status', 'completed')
-                    .neq('status', 'closed'),
+                // 2. Maintenance Issues
+                (async () => {
+                    let query = supabase
+                        .from('maintenance_tickets')
+                        .select('id', { count: 'exact', head: true })
+                        .neq('status', 'completed')
+                        .neq('status', 'closed')
 
-                // 4. Active Departments
-                supabase
-                    .from('departments')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('property_id', propertyId)
-                    .eq('is_active', true),
+                    if (isScopedProperty) {
+                        query = query.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        query = query.in('property_id', propertyIds)
+                    }
+                    return query
+                })(),
 
-                // 5. Completed Training
+                // 3. Active Departments
+                (async () => {
+                    let query = supabase
+                        .from('departments')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('is_active', true)
+
+                    if (isScopedProperty) {
+                        query = query.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        query = query.in('property_id', propertyIds)
+                    }
+                    return query
+                })(),
+
+                // 4. Completed Training
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
@@ -204,7 +273,7 @@ export function usePropertyManagerStats() {
                         .in('user_id', userIds)
                 })(),
 
-                // 6. Total Assignments
+                // 5. Total Assignments
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
@@ -216,7 +285,7 @@ export function usePropertyManagerStats() {
                 })()
             ])
 
-            const totalStaff = totalStaffResult.count || 0
+            const totalStaff = userIds.length
             const pendingTasks = pendingTasksResult.count || 0
             const maintenanceIssues = maintenanceIssuesResult.count || 0
             const activeDepartments = activeDepartmentsResult.count || 0
@@ -402,12 +471,13 @@ export interface HRStats {
 }
 
 export function useHRStats(propertyId?: string) {
-    const { currentProperty } = useProperty()
+    const { currentProperty, propertyIds } = useProperty()
     const propId = propertyId || currentProperty?.id
 
     return useQuery({
         queryKey: ['hr-stats', propId],
         queryFn: async (): Promise<HRStats> => {
+            const isScopedProperty = isRealPropertyId(propId)
             if (!propId) return {
                 totalStaff: 0,
                 presentToday: 0,
@@ -418,11 +488,18 @@ export function useHRStats(propertyId?: string) {
             }
 
             // Pre-fetch property users for training
-            const { data: propUsers } = await supabase
+            let propUsersQuery = supabase
                 .from('user_properties')
                 .select('user_id')
-                .eq('property_id', propId)
-            const propUserIds = propUsers?.map(u => u.user_id) || []
+
+            if (isScopedProperty) {
+                propUsersQuery = propUsersQuery.eq('property_id', propId)
+            } else if (propertyIds.length > 0) {
+                propUsersQuery = propUsersQuery.in('property_id', propertyIds)
+            }
+
+            const { data: propUsers } = await propUsersQuery
+            const propUserIds = Array.from(new Set((propUsers?.map((user) => user.user_id) || [])))
 
             const now = new Date().toISOString()
             const startOfMonth = new Date()
@@ -430,7 +507,6 @@ export function useHRStats(propertyId?: string) {
             startOfMonth.setHours(0, 0, 0, 0)
 
             const [
-                totalStaffResult,
                 presentTodayResult,
                 pendingLeaveResult,
                 newHiresResult,
@@ -438,49 +514,70 @@ export function useHRStats(propertyId?: string) {
                 completedTrainingResult,
                 totalAssignmentsResult
             ] = await Promise.all([
-                // 1. Total Staff
-                supabase
-                    .from('user_properties')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('property_id', propId),
-
-                // 2. Present Today
-                supabase
-                    .from('shifts')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('property_id', propId)
-                    .lte('start_time', now)
-                    .gte('end_time', now)
-                    .neq('status', 'cancelled')
-                    .neq('status', 'no_show'),
-
-                // 3. Pending Leave Requests
+                // 1. Present Today
                 (async () => {
-                    let q = supabase
+                    let query = supabase
+                        .from('shifts')
+                        .select('id', { count: 'exact', head: true })
+                        .lte('start_time', now)
+                        .gte('end_time', now)
+                        .neq('status', 'cancelled')
+                        .neq('status', 'no_show')
+
+                    if (isScopedProperty) {
+                        query = query.eq('property_id', propId)
+                    } else if (propertyIds.length > 0) {
+                        query = query.in('property_id', propertyIds)
+                    }
+                    return query
+                })(),
+
+                // 2. Pending Leave Requests
+                (async () => {
+                    let query = supabase
                         .from('leave_requests')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'pending')
-                    if (propId !== 'all') {
-                        q = q.eq('property_id', propId)
+
+                    if (isScopedProperty) {
+                        query = query.eq('property_id', propId)
+                    } else if (propertyIds.length > 0) {
+                        query = query.in('property_id', propertyIds)
                     }
-                    return q
+                    return query
                 })(),
 
-                // 4. New Hires
-                supabase
-                    .from('user_properties')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('property_id', propId)
-                    .gte('created_at', startOfMonth.toISOString()),
+                // 3. New Hires
+                (async () => {
+                    let query = supabase
+                        .from('user_properties')
+                        .select('id', { count: 'exact', head: true })
+                        .gte('created_at', startOfMonth.toISOString())
 
-                // 5. Open Positions
-                supabase
-                    .from('job_postings')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('property_id', propId)
-                    .eq('status', 'open'),
+                    if (isScopedProperty) {
+                        query = query.eq('property_id', propId)
+                    } else if (propertyIds.length > 0) {
+                        query = query.in('property_id', propertyIds)
+                    }
+                    return query
+                })(),
 
-                // 6. Completed Training
+                // 4. Open Positions
+                (async () => {
+                    let query = supabase
+                        .from('job_postings')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('status', 'open')
+
+                    if (isScopedProperty) {
+                        query = query.eq('property_id', propId)
+                    } else if (propertyIds.length > 0) {
+                        query = query.in('property_id', propertyIds)
+                    }
+                    return query
+                })(),
+
+                // 5. Completed Training
                 (async () => {
                     if (propUserIds.length === 0) return { count: 0 }
                     return supabase
@@ -492,7 +589,7 @@ export function useHRStats(propertyId?: string) {
                         .in('user_id', propUserIds)
                 })(),
 
-                // 7. Total Assignments
+                // 6. Total Assignments
                 (async () => {
                     if (propUserIds.length === 0) return { count: 0 }
                     return supabase
@@ -504,7 +601,7 @@ export function useHRStats(propertyId?: string) {
                 })()
             ])
 
-            const totalStaff = totalStaffResult.count || 0
+            const totalStaff = propUserIds.length
             const presentToday = presentTodayResult.count || 0
             const pendingLeaveRequests = pendingLeaveResult.count || 0
             const newHiresThisMonth = newHiresResult.count || 0
@@ -541,25 +638,25 @@ export interface AreaManagerStats {
 }
 
 export function useAreaManagerStats(propertyId?: string) {
+    const { propertyIds } = useProperty()
+
     return useQuery({
         queryKey: ['area-manager-stats', propertyId],
         queryFn: async (): Promise<AreaManagerStats> => {
-            const isAll = !propertyId || propertyId === 'all'
+            const isScoped = isRealPropertyId(propertyId)
 
-            // Pre-fetch users if we need to filter by property
+            // Pre-fetch users if we need to filter by property/cluster
             let userIds: string[] = []
-            if (!isAll) {
-                const { data: users } = await supabase
-                    .from('user_properties')
-                    .select('user_id')
-                    .eq('property_id', propertyId)
-                userIds = users?.map(u => u.user_id) || []
+            let userPropsQuery = supabase.from('user_properties').select('user_id')
 
-                // If filtering by property and no users found, short-circuit training stats
-                if (userIds.length === 0) {
-                    // We still need other stats like properties, tasks, vacancies even if no staff
-                }
+            if (isScoped) {
+                userPropsQuery = userPropsQuery.eq('property_id', propertyId)
+            } else if (propertyIds.length > 0) {
+                userPropsQuery = userPropsQuery.in('property_id', propertyIds)
             }
+
+            const { data: users } = await userPropsQuery
+            userIds = users?.map(u => u.user_id) || []
 
             // maintenance efficiency date range
             const thirtyDaysAgo = new Date()
@@ -577,7 +674,11 @@ export function useAreaManagerStats(propertyId?: string) {
                 // 1. Total Properties
                 (async () => {
                     const q = supabase.from('properties').select('id', { count: 'exact', head: true }).eq('is_active', true)
-                    if (!isAll) q.eq('id', propertyId)
+                    if (isScoped) {
+                        q.eq('id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('id', propertyIds)
+                    }
                     return q
                 })(),
 
@@ -586,12 +687,20 @@ export function useAreaManagerStats(propertyId?: string) {
                     const [tasks, tickets] = await Promise.all([
                         (async () => {
                             const q = supabase.from('tasks').select('id', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'cancelled')
-                            if (!isAll) q.eq('property_id', propertyId)
+                            if (isScoped) {
+                                q.eq('property_id', propertyId)
+                            } else if (propertyIds.length > 0) {
+                                q.in('property_id', propertyIds)
+                            }
                             return q
                         })(),
                         (async () => {
                             const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'closed')
-                            if (!isAll) q.eq('property_id', propertyId)
+                            if (isScoped) {
+                                q.eq('property_id', propertyId)
+                            } else if (propertyIds.length > 0) {
+                                q.in('property_id', propertyIds)
+                            }
                             return q
                         })()
                     ]);
@@ -602,47 +711,57 @@ export function useAreaManagerStats(propertyId?: string) {
 
                 // 3. Completed Training
                 (async () => {
-                    if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase
+                    if (userIds.length === 0) return { count: 0 }
+                    return supabase
                         .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')
-                    if (!isAll && userIds.length > 0) q.in('user_id', userIds)
-                    return q
+                        .in('user_id', userIds)
                 })(),
 
                 // 4. Total Training Assignments
                 (async () => {
-                    if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase
+                    if (userIds.length === 0) return { count: 0 }
+                    return supabase
                         .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')
-                    if (!isAll && userIds.length > 0) q.in('user_id', userIds)
-                    return q
+                        .in('user_id', userIds)
                 })(),
 
                 // 5. Completed Maintenance Tickets (Last 30 Days)
                 (async () => {
                     const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('created_at', thirtyDaysAgo.toISOString())
-                    if (!isAll) q.eq('property_id', propertyId)
+                    if (isScoped) {
+                        q.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
                     return q
                 })(),
 
                 // 6. Total Maintenance Tickets (Last 30 Days)
                 (async () => {
                     const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo.toISOString())
-                    if (!isAll) q.eq('property_id', propertyId)
+                    if (isScoped) {
+                        q.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
                     return q
                 })(),
 
                 // 7. Open Vacancies
                 (async () => {
                     const q = supabase.from('job_postings').select('id', { count: 'exact', head: true }).eq('status', 'open')
-                    if (!isAll) q.eq('property_id', propertyId)
+                    if (isScoped) {
+                        q.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
                     return q
                 })()
             ])
@@ -688,20 +807,25 @@ export interface CorporateStats {
 }
 
 export function useCorporateStats(propertyId?: string) {
+    const { propertyIds } = useProperty()
+
     return useQuery({
         queryKey: ['corporate-stats', propertyId],
         queryFn: async (): Promise<CorporateStats> => {
-            const isAll = !propertyId || propertyId === 'all'
+            const isScoped = isRealPropertyId(propertyId)
 
-            // Pre-fetch users if we need to filter by property
+            // Pre-fetch users if we need to filter by property/cluster
             let userIds: string[] = []
-            if (!isAll) {
-                const { data: users } = await supabase
-                    .from('user_properties')
-                    .select('user_id')
-                    .eq('property_id', propertyId)
-                userIds = users?.map(u => u.user_id) || []
+            let userPropsQuery = supabase.from('user_properties').select('user_id')
+
+            if (isScoped) {
+                userPropsQuery = userPropsQuery.eq('property_id', propertyId)
+            } else if (propertyIds.length > 0) {
+                userPropsQuery = userPropsQuery.in('property_id', propertyIds)
             }
+
+            const { data: users } = await userPropsQuery
+            userIds = users?.map(u => u.user_id) || []
 
             const [
                 propResult,
@@ -715,60 +839,78 @@ export function useCorporateStats(propertyId?: string) {
                 // 1. Total Properties
                 (async () => {
                     const q = supabase.from('properties').select('id', { count: 'exact', head: true }).eq('is_active', true)
-                    if (!isAll) q.eq('id', propertyId)
+                    if (isScoped) {
+                        q.eq('id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('id', propertyIds)
+                    }
                     return q
                 })(),
 
                 // 2. Total Staff
                 (async () => {
                     const q = supabase.from('user_properties').select('user_id', { count: 'exact', head: true })
-                    if (!isAll) q.eq('property_id', propertyId)
+                    if (isScoped) {
+                        q.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
                     return q
                 })(),
 
                 // 3. Completed Training
                 (async () => {
-                    if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase
+                    if (userIds.length === 0) return { count: 0 }
+                    return supabase
                         .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')
-                    if (!isAll && userIds.length > 0) q.in('user_id', userIds)
-                    return q
+                        .in('user_id', userIds)
                 })(),
 
                 // 4. Total Training Assignments
                 (async () => {
-                    if (!isAll && userIds.length === 0) return { count: 0 }
-                    const q = supabase
+                    if (userIds.length === 0) return { count: 0 }
+                    return supabase
                         .from('learning_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')
-                    if (!isAll && userIds.length > 0) q.in('user_id', userIds)
-                    return q
+                        .in('user_id', userIds)
                 })(),
 
                 // 5. Completed Maintenance
                 (async () => {
                     const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).eq('status', 'completed')
-                    if (!isAll) q.eq('property_id', propertyId)
+                    if (isScoped) {
+                        q.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
                     return q
                 })(),
 
                 // 6. Total Maintenance
                 (async () => {
                     const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true })
-                    if (!isAll) q.eq('property_id', propertyId)
+                    if (isScoped) {
+                        q.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
                     return q
                 })(),
 
                 // 7. Vacancies
                 (async () => {
                     const q = supabase.from('job_postings').select('id', { count: 'exact', head: true }).eq('status', 'open')
-                    if (!isAll) q.eq('property_id', propertyId)
+                    if (isScoped) {
+                        q.eq('property_id', propertyId)
+                    } else if (propertyIds.length > 0) {
+                        q.in('property_id', propertyIds)
+                    }
                     return q
                 })()
             ])
@@ -804,3 +946,4 @@ export function useCorporateStats(propertyId?: string) {
         staleTime: 120000
     })
 }
+

@@ -2,13 +2,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import type { Property } from '@/lib/types'
+import {
+    CONSOLIDATED_PROPERTY_ID,
+    isRealPropertyId,
+    roleSupportsConsolidatedView,
+} from '@/lib/propertyScope'
 
 interface PropertyContextType {
     currentProperty: Property | null
     availableProperties: Property[]
     isLoading: boolean
     isMultiPropertyUser: boolean
-    /** IDs of real properties the user has access to (excludes the 'all' pseudo-property) */
+    /** IDs of real properties the user has access to (excludes the consolidated pseudo-property). */
     propertyIds: string[]
     switchProperty: (propertyId: string) => void
     refreshProperties: () => Promise<void>
@@ -22,8 +27,8 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
     const [availableProperties, setAvailableProperties] = useState<Property[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    // System roles that have access to ALL properties (Corporate level)
-    const isCorporateRole = ['corporate_admin', 'regional_admin'].includes(primaryRole || '')
+    // System roles that have access to all properties at group level.
+    const isCorporateRole = roleSupportsConsolidatedView(primaryRole)
 
     const fetchProperties = async () => {
         if (!user) {
@@ -49,7 +54,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
 
                 // Add Group-level option for corporate users (also acts as Head Office)
                 const allOption: Property = {
-                    id: 'all',
+                    id: CONSOLIDATED_PROPERTY_ID,
                     name: 'PRIME GROUP (HEAD OFFICE)',
                     address: 'Corporate Headquarters & Global Operations',
                     phone: '',
@@ -73,20 +78,24 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                     .map((item: any) => item.property as Property | null | undefined)
                     .filter((p): p is Property => !!p)
 
+                const uniqueProperties = Array.from(
+                    new Map(mappedProperties.map((property) => [property.id, property])).values()
+                ).sort((a, b) => a.name.localeCompare(b.name))
+
                 // If user is assigned to 2+ properties, add a cluster aggregation option
-                if (mappedProperties.length > 1) {
-                    const clusterNames = mappedProperties.map(p => p.name).join(' & ')
+                if (uniqueProperties.length > 1) {
+                    const clusterNames = uniqueProperties.map((property) => property.name).join(' & ')
                     const clusterOption: Property = {
-                        id: 'all',
-                        name: `My Cluster (${mappedProperties.length})`,
+                        id: CONSOLIDATED_PROPERTY_ID,
+                        name: `My Cluster (${uniqueProperties.length})`,
                         address: clusterNames,
                         phone: '',
                         is_active: true,
                         created_at: new Date().toISOString()
                     }
-                    props = [clusterOption, ...mappedProperties]
+                    props = [clusterOption, ...uniqueProperties]
                 } else {
-                    props = mappedProperties
+                    props = uniqueProperties
                 }
             }
 
@@ -128,16 +137,16 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
-    // Real property IDs (excludes the 'all' pseudo-property)
+    // Real property IDs (excludes the consolidated pseudo-property).
     const propertyIds = availableProperties
-        .filter(p => p.id !== 'all')
+        .filter((property) => isRealPropertyId(property.id))
         .map(p => p.id)
 
     const value = {
         currentProperty,
         availableProperties,
         isLoading,
-        isMultiPropertyUser: availableProperties.length > 1 || isCorporateRole,
+        isMultiPropertyUser: propertyIds.length > 1 || isCorporateRole,
         propertyIds,
         switchProperty,
         refreshProperties: fetchProperties

@@ -5,6 +5,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import type { MaintenanceTicket, MaintenanceComment, MaintenanceAttachment } from '@/lib/types'
 import { crudToasts } from '@/lib/toastHelpers'
 import { scanFile } from '@/hooks/useVirusScan'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export function useMyMaintenanceTickets() {
   const { user } = useAuth()
@@ -28,8 +29,8 @@ export function useMyMaintenanceTickets() {
         .eq('is_deleted', false) // Exclude soft-deleted tickets
         .order('created_at', { ascending: false })
 
-      // Filter by current property if selected (and not 'all')
-      if (currentProperty && currentProperty.id !== 'all') {
+      // Filter by current property if explicitly scoped.
+      if (isRealPropertyId(currentProperty?.id)) {
         query = query.eq('property_id', currentProperty.id)
       }
 
@@ -64,8 +65,8 @@ export function useAssignedMaintenanceTickets() {
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
-      // Filter by current property if selected (and not 'all')
-      if (currentProperty && currentProperty.id !== 'all') {
+      // Filter by current property if explicitly scoped.
+      if (isRealPropertyId(currentProperty?.id)) {
         query = query.eq('property_id', currentProperty.id)
       }
 
@@ -86,7 +87,7 @@ export function useAssignedMaintenanceTickets() {
         }
       } else if (userRole === 'property_manager' || userRole === 'property_hr') {
         // Property level roles see all tickets for their assigned property/properties
-        const propIds = properties?.map(p => p.id) || []
+        const propIds = properties?.map(p => p.id).filter(isRealPropertyId) || []
         if (propIds.length > 0) {
           query = query.in('property_id', propIds)
         } else {
@@ -112,6 +113,7 @@ export function useAssignedMaintenanceTickets() {
 
 export function useMaintenanceTicket(ticketId: string) {
   const { user } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useQuery({
     queryKey: ['maintenance-tickets', 'single', ticketId],
@@ -119,7 +121,7 @@ export function useMaintenanceTicket(ticketId: string) {
     queryFn: async () => {
       if (!ticketId || !user?.id) return null
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('maintenance_tickets')
         .select(`
           *,
@@ -136,8 +138,13 @@ export function useMaintenanceTicket(ticketId: string) {
             uploaded_by:profiles!uploaded_by_id(id, full_name, email)
           )
         `)
-        .eq('id', ticketId)
-        .single()
+
+      query = query.eq('id', ticketId)
+      if (isRealPropertyId(currentProperty?.id)) {
+        query = query.eq('property_id', currentProperty.id)
+      }
+
+      const { data, error } = await query.single()
 
       if (error) throw error
       return data as MaintenanceTicket
@@ -160,8 +167,15 @@ export function useCreateMaintenanceTicket() {
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
-      // Use provided property_id or default to user's first property
-      const propertyId = data.property_id || (properties.length > 0 ? properties[0].id : null)
+      const assignedPropertyIds = (properties || []).map((property) => property.id).filter(isRealPropertyId)
+      const scopedPropertyId = isRealPropertyId(data.property_id)
+        ? data.property_id
+        : (assignedPropertyIds.length === 1 ? assignedPropertyIds[0] : null)
+
+      // Production safety: maintenance tickets must be created against a concrete property.
+      if (!scopedPropertyId) {
+        throw new Error('Select a specific property before creating a maintenance ticket')
+      }
 
       const { data: result, error } = await supabase
         .from('maintenance_tickets')
@@ -171,7 +185,7 @@ export function useCreateMaintenanceTicket() {
           category: data.category,
           priority: data.priority,
           room_number: data.room_number || null,
-          property_id: propertyId,
+          property_id: scopedPropertyId,
           reported_by_id: user.id
         })
         .select()

@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { ApprovalType } from '@/components/approvals/ApprovalCard'
 import type { MaintenanceTicket } from '@/lib/types'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export interface ApprovalItem {
     id: string
@@ -88,14 +89,14 @@ export function useUnifiedApprovals() {
                 .eq('status', 'open')
                 .order('created_at', { ascending: false })
 
-            if (currentProperty && currentProperty.id !== 'all') {
+            if (isRealPropertyId(currentProperty?.id)) {
                 scopedQuery = scopedQuery.eq('property_id', currentProperty.id)
             }
 
             if (isRegionalAccess) {
                 // Regional access: no additional filter
             } else if (isPropertyLevel) {
-                const propertyIds = properties?.map(p => p.id).filter(Boolean) || []
+                const propertyIds = properties?.map(p => p.id).filter(isRealPropertyId) || []
                 if (propertyIds.length > 0) {
                     scopedQuery = scopedQuery.in('property_id', propertyIds)
                 } else {

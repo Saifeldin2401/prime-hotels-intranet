@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { type TaskFormData } from '@/lib/validationSchemas'
 import { addDays, format } from 'date-fns'
+import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
 
 
 // Adapt the schema for form use (dates as strings, optional fields)
@@ -64,8 +65,8 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
 
     const { availableProperties, isMultiPropertyUser } = useProperty()
 
-    // Default to currentProperty if it's a real property (not 'all')
-    const initialPropertyId = currentProperty?.id !== 'all' ? currentProperty?.id : null
+    // Default to currentProperty only when scoped to a real property.
+    const initialPropertyId = isRealPropertyId(currentProperty?.id) ? currentProperty.id : null
 
     const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(
         task?.property_id || initialPropertyId
@@ -93,14 +94,13 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
         setSelectedAssigneeId('none')
     }
 
-    // Fetch departments for current property (or all if viewing 'all')
-    // Normalize property ID to avoid 'all' in query key
+    // Fetch departments for current property (or all in consolidated scope).
     const propertyToQuery = selectedPropertyId || currentProperty?.id
-    const normalizedPropertyId = propertyToQuery && propertyToQuery !== 'all' ? propertyToQuery : undefined
+    const normalizedPropertyId = isRealPropertyId(propertyToQuery) ? propertyToQuery : undefined
     const { data: departments = [] } = useQuery({
         queryKey: ['departments', normalizedPropertyId],
         queryFn: async () => {
-            if (!propertyToQuery || propertyToQuery === 'all') {
+            if (!propertyToQuery || isConsolidatedPropertyId(propertyToQuery)) {
                 // Fetch all departments when no specific property selected
                 const { data, error } = await supabase
                     .from('departments')
@@ -130,7 +130,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             let userIds: string[] = []
 
             // Step 1: Get users for the selected property (via user_properties)
-            if (propertyToQuery && propertyToQuery !== 'all') {
+            if (isRealPropertyId(propertyToQuery)) {
                 const { data: userPropertyLinks, error: upError } = await supabase
                     .from('user_properties')
                     .select('user_id')
@@ -289,7 +289,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="none">{t('select_property', 'Select Property')}</SelectItem>
-                            {availableProperties.filter(p => p.id !== 'all').map((prop) => (
+                            {availableProperties.filter((property) => isRealPropertyId(property.id)).map((prop) => (
                                 <SelectItem key={prop.id} value={prop.id}>
                                     {prop.name}
                                 </SelectItem>

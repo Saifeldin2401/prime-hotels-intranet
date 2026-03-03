@@ -10,9 +10,9 @@
  * - Mobile responsive (Bottom Sheet Launcher)
  */
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from 'framer-motion'
 import { sidebarItemVariants } from '@/lib/motion'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -63,6 +63,7 @@ import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { useTranslation } from 'react-i18next'
 import { useNavigation } from '@/hooks/useNavigation'
 import type { NavigationGroupWithItems, NavigationItem } from '@/hooks/useNavigation'
+import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 
 interface SidebarNavigationProps {
   isOpen: boolean
@@ -79,26 +80,19 @@ export function SidebarNavigation({
   onToggleCollapse,
   isMobile = false
 }: SidebarNavigationProps) {
-  const { t, i18n } = useTranslation(['nav', 'common'])
+  const { t } = useTranslation(['nav', 'common'])
   const navigate = useNavigate()
   const { primaryRole, profile, signOut } = useAuth()
   const { groupedNavigation } = useNavigation()
   const { currentProperty } = useProperty()
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
-  const isRTL = i18n.dir() === 'rtl'
 
-  // Auto-expand groups with active items
-  useEffect(() => {
-    const activeGroups = groupedNavigation
-      .filter(group => group.items.some(item => item.isActive))
-      .map(group => group.config.id)
-
-    setExpandedGroups(prev => {
-      const newGroups = activeGroups.filter(id => !prev.includes(id))
-      if (newGroups.length === 0) return prev
-      return [...prev, ...newGroups]
-    })
-  }, [groupedNavigation])
+  const activeGroupIds = useMemo(
+    () => groupedNavigation
+      .filter((group) => group.items.some((item) => item.isActive))
+      .map((group) => group.config.id),
+    [groupedNavigation]
+  )
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups(prev =>
@@ -117,7 +111,7 @@ export function SidebarNavigation({
     if (isMobile) onClose()
   }
 
-  const handleDragEnd = (_: any, info: any) => {
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (!isMobile) return
     const swipeThreshold = 50
     if (info.offset.y > swipeThreshold) {
@@ -163,7 +157,7 @@ export function SidebarNavigation({
 
         <AnimatePresence>
           {(!collapsed || isMobile) && (
-            <motion.div
+            <m.div
               variants={sidebarItemVariants}
               initial="hidden"
               animate="visible"
@@ -190,7 +184,7 @@ export function SidebarNavigation({
                   {item.badgeCount > 99 ? '99+' : item.badgeCount}
                 </Badge>
               )}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </Link>
@@ -199,7 +193,10 @@ export function SidebarNavigation({
 
   const renderGroup = (group: NavigationGroupWithItems) => {
     const GroupIcon = group.config.icon
-    const isExpanded = expandedGroups.includes(group.config.id) || !group.config.collapsible
+    const isExpanded =
+      expandedGroups.includes(group.config.id) ||
+      activeGroupIds.includes(group.config.id) ||
+      !group.config.collapsible
     const hasActiveBadge = group.items.some(item => item.badgeCount && item.badgeCount > 0)
 
     return (
@@ -215,7 +212,7 @@ export function SidebarNavigation({
           >
             <AnimatePresence>
               {!collapsed && (
-                <motion.div
+                <m.div
                   variants={sidebarItemVariants}
                   initial="hidden"
                   animate="visible"
@@ -234,7 +231,7 @@ export function SidebarNavigation({
                       isExpanded && "rotate-180"
                     )}
                   />
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
             {collapsed && <GroupIcon className="h-4 w-4" />}
@@ -242,7 +239,7 @@ export function SidebarNavigation({
         ) : (
           <AnimatePresence>
             {!collapsed && (
-              <motion.div
+              <m.div
                 variants={sidebarItemVariants}
                 initial="hidden"
                 animate="visible"
@@ -253,7 +250,7 @@ export function SidebarNavigation({
                 )}
               >
                 {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         )}
@@ -272,15 +269,17 @@ export function SidebarNavigation({
   }
 
   return (
-    <>
+    <LazyMotion features={domAnimation}>
       {isMobile && isOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-[998] lg:hidden animate-fade-in"
+        <button
+          type="button"
+          className="fixed inset-0 bg-black/60 z-[998] lg:hidden animate-fade-in border-0 p-0"
           onClick={onClose}
+          aria-label={t('common:actions.close', 'Close sidebar overlay')}
         />
       )}
 
-      <motion.div
+      <m.div
         drag={isMobile && isOpen ? "y" : false}
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.1}
@@ -342,6 +341,25 @@ export function SidebarNavigation({
             )}
           </div>
 
+          {/* Property / Cluster Mode Indicator */}
+          {!collapsed && !isMobile && currentProperty && (
+            <div className="px-4 py-2">
+              <div className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider border transition-colors",
+                isConsolidatedPropertyId(currentProperty.id)
+                  ? "bg-hotel-gold/10 text-hotel-gold border-hotel-gold/20"
+                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              )}>
+                {isConsolidatedPropertyId(currentProperty.id) ? (
+                  <Globe className="w-3.5 h-3.5" />
+                ) : (
+                  <Building className="w-3.5 h-3.5" />
+                )}
+                <span className="truncate">{currentProperty.name}</span>
+              </div>
+            </div>
+          )}
+
           {!collapsed && (
             <div className="px-4 py-3">
               <DropdownMenu>
@@ -376,14 +394,14 @@ export function SidebarNavigation({
                         </p>
                         {currentProperty && (
                           <div className="flex items-center gap-1 text-[9px] text-hotel-gold/80 italic truncate">
-                            {currentProperty.id === 'all' ? <Globe className="w-2.5 h-2.5" /> : <Building className="w-2.5 h-2.5" />}
+                            {isConsolidatedPropertyId(currentProperty.id) ? <Globe className="w-2.5 h-2.5" /> : <Building className="w-2.5 h-2.5" />}
                             <span>{currentProperty.name}</span>
                           </div>
                         )}
                       </div>
                     </div>
                     {isMobile ? (
-                      <div className="p-1 px-2 rounded-full bg-white/5 text-[10px] text-white/40 uppercase tracking-tighter">Profile</div>
+                      <div className="p-1 px-2 rounded-full bg-white/5 text-[10px] text-white/40 uppercase tracking-tighter">{t('common:profile', 'Profile')}</div>
                     ) : (
                       <ChevronsUpDown className="h-4 w-4 text-white/40 group-hover:text-white transition-colors" />
                     )}
@@ -409,7 +427,7 @@ export function SidebarNavigation({
                       <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
-                          <span>{t('common:status')}</span>
+                          <span>{t('common:status_label', 'Status')}</span>
                         </div>
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-2xl">
@@ -446,7 +464,7 @@ export function SidebarNavigation({
                       onSelect={() => navigate('/notifications')}
                     >
                       <Bell className="me-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
-                      <span>{t('notifications', 'Notifications')}</span>
+                      <span>{t('common:notifications_label', 'Notifications')}</span>
                       <Badge className="ms-auto h-4 px-1 bg-hotel-gold text-hotel-navy text-[10px]">New</Badge>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -473,20 +491,20 @@ export function SidebarNavigation({
                     </AlertDialogTriggerRoot>
                     <AlertDialogContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-hotel-gold font-serif">Confirm Sign Out</AlertDialogTitle>
+                        <AlertDialogTitle className="text-hotel-gold font-serif">{t('common:auth.confirm_signout', 'Confirm Sign Out')}</AlertDialogTitle>
                         <AlertDialogDescription className="text-white/70">
-                          Are you sure you want to sign out of PRIME Connect? You will need to log back in to access your dashboard.
+                          {t('common:auth.signout_message', 'Are you sure you want to sign out of PRIME Connect? You will need to log back in to access your dashboard.')}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
-                          Cancel
+                          {t('common:cancel', 'Cancel')}
                         </AlertDialogCancel>
                         <AlertDialogAction
                           onClick={handleSignOut}
                           className="bg-red-600 text-white hover:bg-red-700 border-none"
                         >
-                          Sign Out
+                          {t('nav.logout', 'Sign out')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -534,7 +552,7 @@ export function SidebarNavigation({
             </Button>
           </div>
         </div>
-      </motion.div>
-    </>
+      </m.div>
+    </LazyMotion>
   )
 }

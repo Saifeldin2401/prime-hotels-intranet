@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
@@ -56,22 +54,25 @@ import {
   AlertDialogTrigger as AlertDialogTriggerRoot,
 } from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge'
+import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 
 interface HeaderProps {
   sidebarCollapsed: boolean
   setSidebarCollapsed: (value: boolean) => void
-  handleLogout: () => void
 }
 
 export function Header({
   sidebarCollapsed,
-  setSidebarCollapsed,
-  handleLogout
+  setSidebarCollapsed
 }: HeaderProps) {
   const navigate = useNavigate()
   const { user, profile, primaryRole, signOut } = useAuth()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const { t } = useTranslation(['common', 'nav'])
+  const isConsolidatedContext = isConsolidatedPropertyId(currentProperty?.id)
+  const consolidatedProperties = availableProperties.filter((property) => isConsolidatedPropertyId(property.id))
+  const scopedProperties = availableProperties.filter((property) => !isConsolidatedPropertyId(property.id))
+  const hasConsolidatedOption = consolidatedProperties.length > 0
 
   const handleSignOut = async () => {
     await signOut()
@@ -105,14 +106,14 @@ export function Header({
                 <Select value={currentProperty?.id ?? ''} onValueChange={switchProperty}>
                   <SelectTrigger className={cn(
                     "w-[300px] h-11 bg-hotel-navy-dark/80 border-hotel-gold/30 text-white hover:bg-hotel-navy-light/50 focus:ring-hotel-gold focus:ring-2 transition-all duration-200 rounded-lg shadow-lg",
-                    currentProperty?.id === 'all' && "border-hotel-gold bg-hotel-navy-light/30"
+                    isConsolidatedContext && "border-hotel-gold bg-hotel-navy-light/30"
                   )}>
                     <div className="flex items-center gap-3 truncate w-full">
                       <div className={cn(
                         "p-2 rounded-md shrink-0",
-                        currentProperty?.id === 'all' ? "bg-hotel-gold text-hotel-navy" : "bg-hotel-gold/20 text-hotel-gold"
+                        isConsolidatedContext ? "bg-hotel-gold text-hotel-navy" : "bg-hotel-gold/20 text-hotel-gold"
                       )}>
-                        {currentProperty?.id === 'all' ? (
+                        {isConsolidatedContext ? (
                           <Globe className="h-4 w-4" />
                         ) : (
                           <Building className="h-4 w-4" />
@@ -120,7 +121,7 @@ export function Header({
                       </div>
                       <div className="flex flex-col items-start overflow-hidden min-w-0">
                         <span className="text-[10px] text-hotel-gold/80 uppercase tracking-wider font-semibold leading-none">
-                          {currentProperty?.id === 'all' ? 'Administrative Context' : 'Active Property'}
+                          {isConsolidatedContext ? 'Administrative Context' : 'Active Property'}
                         </span>
                         <span className="text-sm font-medium truncate">
                           {currentProperty?.name || 'Select Property'}
@@ -138,7 +139,7 @@ export function Header({
                     {/* Property List - Dynamically Grouped by Region */}
                     <div className="py-2">
                       {/* Administrative/Consolidated View First */}
-                      {availableProperties.filter(p => p.id === 'all').map(prop => (
+                      {consolidatedProperties.map(prop => (
                         <SelectItem
                           key={prop.id}
                           value={prop.id}
@@ -184,7 +185,7 @@ export function Header({
                       ))}
 
                       {/* Divider if both types exist */}
-                      {availableProperties.some(p => p.id === 'all') && availableProperties.some(p => p.id !== 'all') && (
+                      {hasConsolidatedOption && scopedProperties.length > 0 && (
                         <div className="my-3 mx-4 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                       )}
 
@@ -194,8 +195,7 @@ export function Header({
                         const regionMap = new Map<string, typeof availableProperties>()
                         const regionOrder = ['Riyadh', 'Jeddah', 'Makkah', 'Madinah', 'Dammam', 'Khobar', 'Tabuk', 'Abha', 'Taif', 'Buraidah', 'Hail', 'Jubail', 'Yanbu', 'Najran', 'Hafar Al-Batin', 'Other']
 
-                        availableProperties
-                          .filter(p => p.id !== 'all')
+                        scopedProperties
                           .forEach(prop => {
                             const address = (prop.address || '').toLowerCase()
                             // Find matching region from known KSA cities

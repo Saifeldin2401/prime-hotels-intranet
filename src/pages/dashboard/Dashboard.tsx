@@ -178,11 +178,11 @@ export function IntegratedDashboard() {
       },
       {
         title: t('widgets.announcements') || 'Announcements',
-        value: unreadCount,
+        value: stats?.unreadAnnouncements || 0,
         subtitle: t('widgets.announcements_desc') || 'Unread announcements',
         icon: Bell,
         href: '/announcements',
-        color: unreadCount > 0 ? 'red' : 'navy'
+        color: (stats?.unreadAnnouncements || 0) > 0 ? 'red' : 'navy'
       },
     ]
 
@@ -259,6 +259,13 @@ export function IntegratedDashboard() {
             {/* Quick Insights Row - REAL DATA */}
             <RegistryWidgetRenderer
               id="quickInsights"
+              {...widgetRendererProps}
+              onRemoveWidget={handleRemoveWidget}
+            />
+
+            {/* Role-Aware Operational KPIs - Leadership Roles Only */}
+            <RegistryWidgetRenderer
+              id="roleAwareInsights"
               {...widgetRendererProps}
               onRemoveWidget={handleRemoveWidget}
             />

@@ -1,4 +1,4 @@
-﻿import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
 import {
   RefreshCw,
   Building2,
@@ -171,7 +171,7 @@ export function WelcomeHeader({
   meetingCount: meetingCountProp,
   completionRate: completionRateProp
 }: WelcomeHeaderProps) {
-  const { i18n } = useTranslation('dashboard')
+  const { t, i18n } = useTranslation('dashboard')
   const isRTL = i18n.dir() === 'rtl'
   const { user, profile } = useAuth()
   const { currentProperty } = useProperty()
@@ -201,33 +201,33 @@ export function WelcomeHeader({
 
   // Real data injections
   if (highPriorityTaskCount > 0) {
-    tickerItems.push(`Action Required: ${highPriorityTaskCount} urgent tasks pending`)
+    tickerItems.push(t("welcome_header.ticker.action_required", { count: highPriorityTaskCount }))
   } else {
-    tickerItems.push('You are all caught up on urgent tasks')
+    tickerItems.push(t("welcome_header.ticker.caught_up"))
   }
 
   if (nextMeeting) {
-    tickerItems.push(`Next Meeting: ${nextMeeting.title} at ${format(new Date(nextMeeting.start_date), 'h:mm a')}`)
+    tickerItems.push(t("welcome_header.ticker.next_meeting", { title: nextMeeting.title, time: format(new Date(nextMeeting.start_date), "h:mm a") }))
   }
 
   if (announcements && announcements.length > 0) {
-    announcements.forEach((announcement) => tickerItems.push(`Announcement: ${announcement.title}`))
+    announcements.forEach((announcement) => tickerItems.push(t("welcome_header.ticker.announcement", { title: announcement.title })))
   }
 
   if (realTaskCount > 0 && highPriorityTaskCount === 0) {
-    tickerItems.push(`You have ${realTaskCount} active tasks in your queue`)
+    tickerItems.push(t("welcome_header.ticker.active_tasks", { count: realTaskCount }))
   }
 
   if (dashboardStats?.completedTraining && dashboardStats.completedTraining > 0) {
-    tickerItems.push(`Milestone: ${dashboardStats.completedTraining} training modules completed`)
+    tickerItems.push(t("welcome_header.ticker.milestone", { count: dashboardStats.completedTraining }))
   }
 
   if (currentProperty?.name) {
-    tickerItems.push(`Operational focus: ${currentProperty.name}`)
+    tickerItems.push(t("welcome_header.ticker.operational_focus", { name: currentProperty.name }))
   }
 
   // Base system status
-  tickerItems.push('PRIME Connect operational')
+  tickerItems.push(t("welcome_header.ticker.system_operational"))
 
   const totalTraining = (dashboardStats?.completedTraining || 0) + (dashboardStats?.inProgressTraining || 0)
   const realCompletionRate = completionRateProp ?? (totalTraining > 0
@@ -274,7 +274,7 @@ export function WelcomeHeader({
                 )}
               >
                 <Zap className={cn("w-3.5 h-3.5 mr-1.5", focusMode && "fill-amber-500 text-amber-500 animate-pulse")} />
-                {focusMode ? "Focus Mode On" : "Focus Mode"}
+                {focusMode ? t("welcome_header.focus_mode_on", "Focus Mode On") : t("welcome_header.focus_mode", "Focus Mode")}
               </Button>
 
               <div className="flex items-center gap-1 bg-white rounded-full p-1 border border-slate-200 shadow-sm">
@@ -298,10 +298,10 @@ export function WelcomeHeader({
             <m.div className="space-y-1 relative" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
               <div className="flex items-center gap-2 text-slate-500 font-bold text-[11px] tracking-widest uppercase mb-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                DASHBOARD OVERVIEW
+                {t("welcome_header.dashboard_overview", "DASHBOARD OVERVIEW")}
               </div>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-700 leading-tight">
-                Good to see you, <br className="hidden md:block" />
+                {t("welcome_header.good_to_see_you", "Good to see you,")} <br className="hidden md:block" />
                 <span className="font-bold text-slate-800">
                   {firstName}
                 </span>
@@ -327,7 +327,7 @@ export function WelcomeHeader({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 w-full lg:w-3/5">
               <StatBentoCard
                 icon={CheckCircle2}
-                title="Tasks"
+                title={t("welcome_header.stats.tasks", "Tasks")}
                 value={realTaskCount}
                 trend={realTaskCount > 5 ? 'down' : 'up'}
                 accentColor="text-blue-600"
@@ -336,13 +336,13 @@ export function WelcomeHeader({
                   highPriorityTaskCount > 0 ? (
                     <span className="flex items-center gap-1 text-rose-600 font-semibold"><AlertCircle className="w-3 h-3" /> {highPriorityTaskCount} urgent</span>
                   ) : (
-                    <span className="text-slate-400 font-medium">All caught up</span>
+                    <span className="text-slate-400 font-medium">{t("welcome_header.stats.all_caught_up", "All caught up")}</span>
                   )
                 }
               />
               <StatBentoCard
                 icon={Calendar}
-                title="Agenda"
+                title={t("welcome_header.stats.agenda", "Agenda")}
                 value={realMeetingCount}
                 accentColor="text-indigo-600"
                 delay={0.3}
@@ -350,13 +350,13 @@ export function WelcomeHeader({
                   nextMeeting ? (
                     <span className="flex items-center gap-1 text-indigo-600 font-semibold"><CalendarClock className="w-3 h-3" /> {format(new Date(nextMeeting.start_date), 'h:mm a')}</span>
                   ) : (
-                    <span className="text-slate-400 font-medium">Schedule clear</span>
+                    <span className="text-slate-400 font-medium">{t("welcome_header.stats.schedule_clear", "Schedule clear")}</span>
                   )
                 }
               />
               <StatBentoCard
                 icon={TrendingUp}
-                title="Training"
+                title={t("welcome_header.stats.training", "Training")}
                 value={`${realCompletionRate}%`}
                 trend={realCompletionRate > 50 ? 'up' : 'neutral'}
                 accentColor="text-emerald-600"
@@ -364,7 +364,7 @@ export function WelcomeHeader({
                 subtext={
                   <div className="flex flex-col gap-1.5 w-full">
                     <Progress value={realCompletionRate} className="h-1.5 bg-slate-200" />
-                    <span className="text-slate-400 text-[10px] font-semibold">{dashboardStats?.completedTraining || 0} / {totalTraining} done</span>
+                    <span className="text-slate-400 text-[10px] font-semibold">{dashboardStats?.completedTraining || 0} / {totalTraining} {t("welcome_header.stats.done", "done")}</span>
                   </div>
                 }
               />
@@ -383,4 +383,5 @@ function Badge({ children, className }: { children: React.ReactNode, className?:
     </div>
   )
 }
+
 

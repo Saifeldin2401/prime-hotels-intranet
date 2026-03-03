@@ -97,8 +97,9 @@ interface EmailNotificationPayload {
 
 const BULK_NOTIFICATION_EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`
 
-function resolveNotificationDomain(type: NotificationType): 'system' | 'user_management' | 'operations' | 'hr' | 'finance' | 'sales' | 'management' {
-  if (type.includes('training') || type.includes('maintenance')) return 'operations'
+function resolveNotificationDomain(type: NotificationType): 'system' | 'user_management' | 'operations' | 'hr' | 'learning' | 'finance' | 'sales' | 'management' {
+  if (type.includes('maintenance')) return 'operations'
+  if (type.includes('training')) return 'learning'
   if (type.includes('approval') || type.includes('request') || type.includes('promotion') || type.includes('transfer') || type.includes('referral')) return 'hr'
   if (type.includes('announcement') || type.includes('escalation')) return 'management'
   return 'system'

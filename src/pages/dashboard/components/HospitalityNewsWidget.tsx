@@ -62,7 +62,7 @@ export function HospitalityNewsWidget() {
                                         <Newspaper className="w-8 h-8 text-blue-400" />
                                     </div>
                                     <p className="text-slate-800 font-bold text-lg">{t('hospitality_news.no_news', 'No news available')}</p>
-                                    <p className="text-sm text-slate-500 font-medium mt-1">Check back later for industry updates.</p>
+                                    <p className="text-sm text-slate-500 font-medium mt-1">{t('hospitality_news.no_news_desc', 'Check back later for industry updates.')}</p>
                                 </m.div>
                             ) : (
                                 news?.map((item: any, index: number) => (
@@ -101,11 +101,11 @@ export function HospitalityNewsWidget() {
                                                 <div className="flex-1 flex flex-col p-5">
                                                     <div className="flex items-center gap-2 mb-3 mt-1">
                                                         <Badge variant="outline" className="text-[10px] tracking-wider uppercase font-bold px-2 h-5 bg-blue-50 text-blue-600 border-blue-200">
-                                                            {item.category || "News"}
+                                                            {item.category || t('hospitality_news.category_news', 'News')}
                                                         </Badge>
                                                         <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
                                                             <ClockIcon className="w-3.5 h-3.5" />
-                                                            {item.published_at ? formatDistanceToNow(new Date(item.published_at), { addSuffix: true, locale: isRTL ? ar : undefined }) : "Recently"}
+                                                            {item.published_at ? formatDistanceToNow(new Date(item.published_at), { addSuffix: true, locale: isRTL ? ar : undefined }) : t('hospitality_news.recently', 'Recently')}
                                                         </span>
                                                     </div>
 

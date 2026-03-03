@@ -15,11 +15,9 @@ import {
     Settings,
     ChevronRight,
     ArrowUpRight,
-    ArrowDownRight,
     Users,
     Zap,
     Printer,
-    Download,
     Trash2,
     AlertCircle,
     Loader2
@@ -37,7 +35,6 @@ import {
     ResponsiveContainer,
     BarChart,
     Bar,
-    Cell,
     Legend
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -73,6 +70,7 @@ import {
 import type { DateRange } from 'react-day-picker'
 
 import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
+import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 
 // KPI Card Component
 function KPICard({
@@ -191,7 +189,7 @@ export default function OperationsDashboard() {
                 reportType: type,
                 title,
                 hotelName: currentProperty?.name || 'Consolidated View (All)',
-                hotelCode: currentProperty?.id === 'all' ? 'CONSOLIDATED' : undefined,
+                hotelCode: isConsolidatedPropertyId(currentProperty?.id) ? 'CONSOLIDATED' : undefined,
                 period: {
                     start: dateRange?.from?.toISOString().split('T')[0] || selectedDate,
                     end: dateRange?.to?.toISOString().split('T')[0] || selectedDate

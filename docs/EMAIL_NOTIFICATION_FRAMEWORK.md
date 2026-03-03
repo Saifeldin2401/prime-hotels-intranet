@@ -40,6 +40,7 @@ Migration: `supabase/migrations/20260217120000_domain_email_notification_framewo
 - `user_management`
 - `operations`
 - `hr`
+- `learning`
 - `finance`
 - `sales`
 - `management`

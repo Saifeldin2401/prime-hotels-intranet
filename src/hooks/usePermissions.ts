@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { ROLES, type AppRole } from '@/lib/constants'
+import { isConsolidatedPropertyId, roleSupportsConsolidatedView } from '@/lib/propertyScope'
 
 export type Permission =
   // Training permissions
@@ -10,6 +11,7 @@ export type Permission =
   | 'training.delete'
   | 'training.assign'
   | 'training.report'
+  | 'training.export'
   // User management permissions
   | 'users.view'
   | 'users.create'
@@ -22,11 +24,17 @@ export type Permission =
   | 'documents.edit'
   | 'documents.delete'
   | 'documents.approve'
+  | 'documents.export'
   // Announcement permissions
   | 'announcements.view'
   | 'announcements.create'
   | 'announcements.edit'
   | 'announcements.delete'
+  // Task permissions
+  | 'tasks.reassign'
+  | 'tasks.escalate'
+  // HR permissions
+  | 'hr.export'
   // System permissions
   | 'system.view_logs'
   | 'system.manage_settings'
@@ -47,27 +55,36 @@ const PERMISSION_CONFIG: PermissionConfig = {
   'training.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
   'training.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
   'training.assign': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
-  'training.report': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'training.report': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
+  'training.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
 
   // User management permissions
-  'users.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'users.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'], requiresPropertyAccess: true },
   'users.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
-  'users.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'users.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'], requiresPropertyAccess: true },
   'users.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
   'users.assign_roles': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
 
   // Document permissions
   'documents.view': { roles: ['all'] },
-  'documents.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
-  'documents.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
-  'documents.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'documents.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
+  'documents.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
+  'documents.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
   'documents.approve': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'documents.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
 
   // Announcement permissions
   'announcements.view': { roles: ['all'] },
   'announcements.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
   'announcements.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
   'announcements.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+
+  // Task permissions
+  'tasks.reassign': { roles: ['corporate_admin', 'regional_admin', 'property_manager', 'department_head'], requiresPropertyAccess: true },
+  'tasks.escalate': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head', 'manager'] },
+
+  // HR permissions
+  'hr.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'], requiresPropertyAccess: true },
 
   // System permissions
   'system.view_logs': { roles: ['corporate_admin', 'regional_admin'] },
@@ -77,6 +94,10 @@ const PERMISSION_CONFIG: PermissionConfig = {
 
 export function usePermissions() {
   const { primaryRole, properties, departments } = useAuth()
+  const canAccessConsolidatedView = useMemo(() => {
+    if (roleSupportsConsolidatedView(primaryRole)) return true
+    return properties.length > 1
+  }, [primaryRole, properties.length])
 
   const hasPermission = useMemo(() => {
     return (permission: Permission, propertyId?: string, departmentId?: string) => {
@@ -105,6 +126,10 @@ export function usePermissions() {
 
       // Check property access if required
       if (propertyId && config.requiresPropertyAccess) {
+        if (isConsolidatedPropertyId(propertyId)) {
+          return canAccessConsolidatedView
+        }
+
         const hasPropertyAccess = properties.some(p => p.id === propertyId)
         if (!hasPropertyAccess) return false
       }
@@ -117,13 +142,16 @@ export function usePermissions() {
 
       return true
     }
-  }, [primaryRole, properties, departments])
+  }, [canAccessConsolidatedView, primaryRole, properties, departments])
 
   const canAccessProperty = useMemo(() => {
     return (propertyId: string) => {
+      if (isConsolidatedPropertyId(propertyId)) {
+        return canAccessConsolidatedView
+      }
       return properties.some(p => p.id === propertyId)
     }
-  }, [properties])
+  }, [canAccessConsolidatedView, properties])
 
   const canAccessDepartment = useMemo(() => {
     return (departmentId: string) => {
@@ -166,6 +194,7 @@ export function usePermissions() {
   return {
     hasPermission,
     canAccessProperty,
+    canAccessConsolidatedView,
     canAccessDepartment,
     getAccessibleProperties,
     getAccessibleDepartments,

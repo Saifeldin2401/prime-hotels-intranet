@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { Building2, Plus, Pencil, Trash2, ShieldAlert, Users, AlertCircle, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { isRealPropertyId } from '@/lib/propertyScope'
 const STANDARD_DEPARTMENTS = [
     "Front Office",
     "Housekeeping",
@@ -34,7 +35,7 @@ export default function PropertyDepartments() {
     const { currentProperty } = useProperty()
     const { toast } = useToast()
 
-    const { departments, createDepartment, updateDepartment, deleteDepartment, isLoading } = useDepartments(currentProperty?.id || '')
+    const { departments, createDepartment, updateDepartment, deleteDepartment, isLoading } = useDepartments(currentProperty?.id)
 
     const [selectedDept, setSelectedDept] = useState<string>('')
     const [editingDeptId, setEditingDeptId] = useState<string | null>(null)
@@ -51,7 +52,7 @@ export default function PropertyDepartments() {
                 .select('*', { count: 'exact', head: true })
                 .eq('is_active', true)
 
-            if (currentProperty.id !== 'all') {
+            if (isRealPropertyId(currentProperty.id)) {
                 staffQuery = staffQuery.eq('property_id', currentProperty.id)
             }
 
@@ -65,7 +66,7 @@ export default function PropertyDepartments() {
                 .in('status', ['open', 'todo', 'in_progress', 'pending'])
                 .eq('is_deleted', false)
 
-            if (currentProperty.id !== 'all') {
+            if (isRealPropertyId(currentProperty.id)) {
                 taskQuery = taskQuery.eq('property_id', currentProperty.id)
             }
 
@@ -94,7 +95,7 @@ export default function PropertyDepartments() {
     }
 
     const handleAdd = () => {
-        if (!selectedDept || !currentProperty.id) return
+        if (!selectedDept || !isRealPropertyId(currentProperty?.id)) return
 
         // Prevent duplicate names
         if (departments.some(d => d.name === selectedDept)) {
@@ -283,7 +284,6 @@ export default function PropertyDepartments() {
                                                     value={editingDeptName}
                                                     onChange={(e) => setEditingDeptName(e.target.value)}
                                                     className="max-w-xs"
-                                                    autoFocus
                                                 />
                                                 <Button
                                                     size="sm"

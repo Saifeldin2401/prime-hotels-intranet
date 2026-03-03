@@ -5,6 +5,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { crudToasts } from '@/lib/toastHelpers'
 import type { LeaveRequest } from '@/lib/types'
 import { notifyApprovalOutcome } from '@/services/approvalNotificationService'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 /**
  * Smart Leave Request Hooks
@@ -43,7 +44,7 @@ export function useMyLeaveRequests() {
         .order('created_at', { ascending: false })
 
       // Filter by current property if selected
-      if (currentProperty && currentProperty.id !== 'all') {
+      if (isRealPropertyId(currentProperty?.id)) {
         query = query.eq('property_id', currentProperty.id)
       }
 
@@ -88,15 +89,15 @@ export function useTeamLeaveRequests() {
       if (isRegionalAccess) {
         // Regional admin/hr sees ALL leave requests
         // Optionally filter by selected property if not "all"
-        if (currentProperty && currentProperty.id !== 'all') {
+        if (isRealPropertyId(currentProperty?.id)) {
           query = query.eq('property_id', currentProperty.id)
         }
       } else if (isPropertyLevel) {
         // Property manager/hr sees requests for their properties
-        if (currentProperty && currentProperty.id !== 'all') {
+        if (isRealPropertyId(currentProperty?.id)) {
           query = query.eq('property_id', currentProperty.id)
         } else if (properties && properties.length > 0) {
-          query = query.in('property_id', properties.map(p => p.id))
+          query = query.in('property_id', properties.map(p => p.id).filter(isRealPropertyId))
         } else {
           // No properties assigned, see only own requests
           query = query.eq('requester_id', user.id)
@@ -109,7 +110,7 @@ export function useTeamLeaveRequests() {
           query = query.eq('requester_id', user.id)
         }
         // Also filter by property if selected
-        if (currentProperty && currentProperty.id !== 'all') {
+        if (isRealPropertyId(currentProperty?.id)) {
           query = query.eq('property_id', currentProperty.id)
         }
       } else {
@@ -187,14 +188,14 @@ export function usePendingLeaveRequests() {
         .order('created_at', { ascending: false })
 
       if (isRegionalAccess) {
-        if (currentProperty && currentProperty.id !== 'all') {
+        if (isRealPropertyId(currentProperty?.id)) {
           legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
         }
       } else if (isPropertyLevel) {
-        if (currentProperty && currentProperty.id !== 'all') {
+        if (isRealPropertyId(currentProperty?.id)) {
           legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
         } else if (properties && properties.length > 0) {
-          legacyQuery = legacyQuery.in('property_id', properties.map(p => p.id))
+          legacyQuery = legacyQuery.in('property_id', properties.map(p => p.id).filter(isRealPropertyId))
         } else {
           legacyQuery = legacyQuery.eq('requester_id', user.id)
         }
@@ -204,7 +205,7 @@ export function usePendingLeaveRequests() {
         } else {
           legacyQuery = legacyQuery.eq('requester_id', user.id)
         }
-        if (currentProperty && currentProperty.id !== 'all') {
+        if (isRealPropertyId(currentProperty?.id)) {
           legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
         }
       } else {
@@ -259,19 +260,17 @@ export function useSubmitLeaveRequest() {
       }
 
       // Determine property for the request
-      let propertyId: string | null = null
+      const assignedPropertyIds = (properties || []).map((property) => property.id).filter(isRealPropertyId)
+      const propertyId: string | null = isRealPropertyId(currentProperty?.id)
+        ? currentProperty.id
+        : (assignedPropertyIds.length === 1 ? assignedPropertyIds[0] : null)
 
-      if (currentProperty && currentProperty.id !== 'all') {
-        // User has explicitly selected a property
-        propertyId = currentProperty.id
-      } else if (properties.length === 1) {
-        // User only has one property, use it
-        propertyId = properties[0].id
-      } else if (properties.length > 1) {
-        // User has multiple properties but hasn't selected one
+      if (!propertyId && assignedPropertyIds.length > 1) {
         throw new Error('Please select a specific property for your leave request')
       }
-      // If properties.length === 0, propertyId stays null (handled by backend validation)
+      if (!propertyId && assignedPropertyIds.length === 0) {
+        throw new Error('No property access found for this account')
+      }
 
       const departmentId = departments.length > 0 ? departments[0].id : null
 

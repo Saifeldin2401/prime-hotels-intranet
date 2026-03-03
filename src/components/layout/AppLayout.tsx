@@ -1,25 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { SidebarNavigation } from './SidebarNavigation'
 import { MobileLayout } from '@/layouts/MobileLayout'
-import { ThemeToggle } from '@/components/common/ThemeToggle'
-import { Button } from '@/components/ui/button'
-import {
-  Search,
-  Menu,
-  User,
-  ChevronDown,
-  LogOut,
-  Settings
-} from 'lucide-react'
 import { Header } from '@/components/layout/Header'
-import { GlobalSearch } from '@/components/search/GlobalSearch'
-import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
-import { pageVariants } from '@/lib/motion'
+import { AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 import { PageTransition } from '@/components/layout/PageTransition'
@@ -31,16 +15,9 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-    const { t: t_ext } = useTranslation('extracted');
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { user, signOut } = useAuth()
-  const { t } = useTranslation(['nav', 'common'])
+  const { t: t_ext } = useTranslation('extracted')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   // Global ⌘K / Ctrl+K shortcut
@@ -55,39 +32,18 @@ export function AppLayout({ children }: AppLayoutProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  const handleLogout = async () => {
-    try {
-      await signOut()
-      navigate('/login')
-    } catch (error) {
-      console.error('Failed to log out', error)
-    }
-  }
-
-
-
   // Check for mobile view (could be hook or prop)
   // For now, we'll rely on the existing sidebarOpen/isMobile prop logic or add a new check
   // But since this is a layout component, we might want to return MobileLayout directly if isMobile is true
   // However, AppLayout is often used as a wrapper. Let's add the check.
 
   // Check for mobile view using matchMedia for better performance
-  const [isMobileView, setIsMobileView] = useState(false)
+  const [isMobileView, setIsMobileView] = useState(
+    () => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false)
+  )
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1023px)')
-
-    // Set initial value
-    setIsMobileView(mediaQuery.matches)
 
     // Handler for changes
     const handleMediaChange = (e: MediaQueryListEvent) => {
@@ -128,7 +84,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           <Header
             sidebarCollapsed={sidebarCollapsed}
             setSidebarCollapsed={setSidebarCollapsed}
-            handleLogout={handleLogout}
           />
         </div>
 

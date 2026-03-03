@@ -1,10 +1,13 @@
 import { lazy, createElement } from 'react'
 import type { AppRole } from '@/lib/constants'
 
+type WidgetComponentProps = Record<string, unknown>
+type WidgetComponent = React.ComponentType<WidgetComponentProps>
+
 // Define the shape of a Widget configuration in the registry
 export interface WidgetConfig {
     id: string
-    component: React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>
+    component: React.LazyExoticComponent<WidgetComponent> | WidgetComponent
     title: string
     requiredRoles: (AppRole | 'all')[]
     requiredDepartments?: string[]
@@ -23,10 +26,10 @@ const MissingWidget = ({ name }: { name: string }) =>
         `${name} failed to load.`
     )
 
-const lazyWidget = (loader: () => Promise<any>, exportName: string) =>
+const lazyWidget = (loader: () => Promise<Record<string, unknown>>, exportName: string) =>
     lazy(async () => {
         const module = await loader()
-        const component = module?.[exportName] ?? module?.default
+        const component = (module[exportName] as WidgetComponent | undefined) ?? (module.default as WidgetComponent | undefined)
         if (!component) {
             console.error(`Widget export "${exportName}" not found.`)
             return { default: () => createElement(MissingWidget, { name: exportName }) }
@@ -52,6 +55,7 @@ const HospitalityNewsWidget = lazyWidget(() => import('./HospitalityNewsWidget')
 const TodaysBirthdaysWidget = lazyWidget(() => import('./TodaysBirthdaysWidget'), 'TodaysBirthdaysWidget')
 const OnlineUsersWidget = lazyWidget(() => import('./OnlineUsersWidget'), 'OnlineUsersWidget')
 const PinnedItemsWidget = lazyWidget(() => import('./PinnedItemsWidget'), 'PinnedItemsWidget')
+const RoleAwareInsights = lazyWidget(() => import('./RoleAwareInsights'), 'RoleAwareInsights')
 
 /**
  * WIDGET_REGISTRY
@@ -66,6 +70,14 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
+    },
+    roleAwareInsights: {
+        id: 'roleAwareInsights',
+        component: RoleAwareInsights,
+        title: 'Operational Overview',
+        requiredRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        defaultVisible: true,
+        sensitivity: 'high'
     },
     motivation: {
         id: 'motivation',
@@ -151,7 +163,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         id: 'hospitalityNews',
         component: HospitalityNewsWidget,
         title: 'Hospitality News',
-        requiredRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
+        requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
     },
@@ -159,7 +171,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         id: 'performanceChart',
         component: PerformanceChart,
         title: 'Performance Analytics',
-        requiredRoles: ['all'],
+        requiredRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         defaultVisible: true,
         sensitivity: 'high'
     },
@@ -175,7 +187,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         id: 'teamActivity',
         component: TeamWidget,
         title: 'Team Activity',
-        requiredRoles: ['all'],
+        requiredRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         defaultVisible: true,
         sensitivity: 'low'
     },

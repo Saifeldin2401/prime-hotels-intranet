@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { escapeSearchQuery } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export type RequestStatus =
   | 'draft'
@@ -376,10 +377,10 @@ export function useRequestsInbox(filters?: {
       }
 
       // 3. Strict Property Scoping (Global Filter)
-      if (currentProperty && currentProperty.id !== 'all') {
+      if (isRealPropertyId(currentProperty?.id)) {
         query = query.eq('property_id', currentProperty.id)
       } else if (!isRegionalAccess) {
-        const propIds = properties?.map(p => p.id) || []
+        const propIds = properties?.map(p => p.id).filter(isRealPropertyId) || []
         if (propIds.length > 0) {
           query = query.in('property_id', propIds)
         }

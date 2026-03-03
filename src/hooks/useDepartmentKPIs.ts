@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 // Types
 export interface DepartmentKPI {
@@ -27,21 +28,27 @@ export interface DepartmentComparisonData {
     }
 }
 
-// Get KPIs for all departments in a property
+// Get KPIs for all departments in a property (or cluster)
 export function useDepartmentKPIs(propertyId?: string) {
-    const { currentProperty } = useProperty()
+    const { currentProperty, propertyIds } = useProperty()
     const propId = propertyId || currentProperty?.id
+    const isScoped = isRealPropertyId(propId)
 
     return useQuery({
-        queryKey: ['department-kpis', propId],
+        queryKey: ['department-kpis', propId, propertyIds],
         queryFn: async (): Promise<DepartmentKPI[]> => {
-            if (!propId || propId === 'all') return []
-
             // Get departments
-            const { data: departments } = await supabase
-                .from('departments')
-                .select('id, name')
-                .eq('property_id', propId)
+            let query = supabase.from('departments').select('id, name, property_id')
+
+            if (isScoped) {
+                query = query.eq('property_id', propId)
+            } else if (propertyIds.length > 0) {
+                query = query.in('property_id', propertyIds)
+            } else {
+                return []
+            }
+
+            const { data: departments } = await query
 
             if (!departments || departments.length === 0) return []
 
@@ -158,7 +165,7 @@ export function useDepartmentKPIs(propertyId?: string) {
                 if (userIds.length > 0) {
                     const { data: completedTasksData } = await supabase
                         .from('tasks')
-                        .select('created_at, updated_at') // Using updated_at as proxy for completed_at if not present
+                        .select('created_at, updated_at')
                         .in('assigned_to_id', userIds)
                         .eq('status', 'completed')
                         .limit(50)
@@ -220,14 +227,14 @@ export function useDepartmentKPIs(propertyId?: string) {
 
             return kpis.sort((a, b) => b.overall_score - a.overall_score)
         },
-        enabled: !!propId && propId !== 'all',
+        enabled: propertyIds.length > 0 || isScoped,
         staleTime: 5 * 60 * 1000 // Cache for 5 minutes
     })
 }
 
 // Get department comparison data
 export function useDepartmentComparison(propertyId?: string) {
-    const { data: kpis, isLoading } = useDepartmentKPIs(propertyId)
+    const { data: kpis } = useDepartmentKPIs(propertyId)
 
     return useQuery({
         queryKey: ['department-comparison', propertyId, kpis],
@@ -266,8 +273,7 @@ export function useDepartmentKPITrend(departmentId: string) {
             const today = new Date()
             const trend = []
 
-            // Fetch completed tasks for the last 30 days for this department
-            // First get users in department
+            // Get users in department
             const { data: deptUsers } = await supabase
                 .from('user_departments')
                 .select('user_id')
@@ -288,8 +294,6 @@ export function useDepartmentKPITrend(departmentId: string) {
                 return trend
             }
 
-            // Real: Count completed tasks per day as a proxy for "Activity/Score"
-            // Since we don't have historical score snapshots, we use daily completed tasks
             const thirtyDaysAgo = new Date(today)
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -300,23 +304,18 @@ export function useDepartmentKPITrend(departmentId: string) {
                 .eq('status', 'completed')
                 .gte('updated_at', thirtyDaysAgo.toISOString())
 
-            // Group by date
             const tasksByDate: Record<string, number> = {}
             completedTasks?.forEach(task => {
                 const date = task.updated_at.split('T')[0]
                 tasksByDate[date] = (tasksByDate[date] || 0) + 1
             })
 
-            // Build trend array
             for (let i = 29; i >= 0; i--) {
                 const date = new Date(today)
                 date.setDate(date.getDate() - i)
                 const dateStr = date.toISOString().split('T')[0]
 
-                // Scale the count to make it look like a score (e.g., base 50 + tasks * 5) to visualize activity
-                // keeping it bounded to 100
                 const count = tasksByDate[dateStr] || 0
-                // Score proxy: 60 (base) + (count * 5)
                 const scoreProxy = Math.min(60 + (count * 5), 100)
 
                 trend.push({

@@ -1,34 +1,29 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-
 import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export function useMaintenanceStats(propertyId?: string) {
-  const { user, roles, properties, primaryRole } = useAuth()
-  const { currentProperty } = useProperty()
+  const { user, roles, primaryRole } = useAuth()
+  const { currentProperty, propertyIds } = useProperty()
+  const activePropertyId = propertyId || currentProperty?.id
 
   return useQuery({
-    queryKey: ['maintenance-stats', user?.id, properties, currentProperty?.id, propertyId],
+    queryKey: ['maintenance-stats', user?.id, activePropertyId, propertyIds],
     queryFn: async () => {
       if (!user?.id) return null
 
       const userRole = primaryRole || roles[0]?.role
-      const canManageAll = ['regional_admin', 'regional_hr'].includes(userRole || '')
+      const canManageAll = ['regional_admin', 'regional_hr', 'corporate_admin', 'super_admin'].includes(userRole || '')
+      const isScoped = isRealPropertyId(activePropertyId)
 
       let baseQuery = supabase.from('maintenance_tickets').select('*')
 
-      // 1. If propertyId is passed directly (e.g. from widget pro), use it
-      if (propertyId && propertyId !== 'all') {
-        baseQuery = baseQuery.eq('property_id', propertyId)
-      }
-      // 2. Fallback to context currentProperty if no prop passed
-      else if (currentProperty && currentProperty.id !== 'all') {
-        baseQuery = baseQuery.eq('property_id', currentProperty.id)
-      }
-      // 3. Last resort: if user can't manage all, filter by their assigned properties
-      else if (!canManageAll && properties.length > 0) {
-        baseQuery = baseQuery.in('property_id', properties.map(p => p.id))
+      if (isScoped) {
+        baseQuery = baseQuery.eq('property_id', activePropertyId)
+      } else if (!canManageAll && propertyIds.length > 0) {
+        baseQuery = baseQuery.in('property_id', propertyIds)
       }
 
       const { data: tickets, error } = await baseQuery
@@ -103,16 +98,18 @@ export function useMaintenanceStats(propertyId?: string) {
 }
 
 export function useMaintenanceTrends(days = 30) {
-  const { user, roles, properties, primaryRole } = useAuth()
-  const { currentProperty } = useProperty()
+  const { user, roles, primaryRole } = useAuth()
+  const { currentProperty, propertyIds } = useProperty()
 
   return useQuery({
-    queryKey: ['maintenance-trends', days, user?.id, properties, currentProperty?.id],
+    queryKey: ['maintenance-trends', days, user?.id, currentProperty?.id, propertyIds],
     queryFn: async () => {
       if (!user?.id) return null
 
       const userRole = primaryRole || roles[0]?.role
-      const canManageAll = ['regional_admin', 'regional_hr'].includes(userRole || '')
+      const canManageAll = ['regional_admin', 'regional_hr', 'corporate_admin', 'super_admin'].includes(userRole || '')
+      const activePropertyId = currentProperty?.id
+      const isScoped = isRealPropertyId(activePropertyId)
 
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - days)
@@ -122,11 +119,11 @@ export function useMaintenanceTrends(days = 30) {
         .select('*')
         .gte('created_at', startDate.toISOString())
 
-      // Filter by current property
-      if (currentProperty && currentProperty.id !== 'all') {
-        baseQuery = baseQuery.eq('property_id', currentProperty.id)
-      } else if (!canManageAll && properties.length > 0) {
-        baseQuery = baseQuery.in('property_id', properties.map(p => p.id))
+      // Filter by current property selection
+      if (isScoped) {
+        baseQuery = baseQuery.eq('property_id', activePropertyId)
+      } else if (!canManageAll && propertyIds.length > 0) {
+        baseQuery = baseQuery.in('property_id', propertyIds)
       }
 
       const { data: tickets, error } = await baseQuery

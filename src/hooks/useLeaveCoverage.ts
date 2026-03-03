@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useProperty } from '@/contexts/PropertyContext'
-import { useAuth } from '@/hooks/useAuth'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 // Types
 export interface LeaveEvent {
@@ -55,7 +55,7 @@ export function useLeaveEvents(startDate: Date, endDate: Date, departmentId?: st
                 .lte('start_date', endDate.toISOString().split('T')[0])
                 .in('status', ['approved', 'pending'])
 
-            if (currentProperty?.id && currentProperty.id !== 'all') {
+            if (isRealPropertyId(currentProperty?.id)) {
                 query = query.eq('property_id', currentProperty.id)
             }
 
@@ -109,7 +109,7 @@ export function useDepartmentCoverage(date?: Date) {
     return useQuery({
         queryKey: ['department-coverage', currentProperty?.id, targetDate.toISOString().split('T')[0]],
         queryFn: async (): Promise<DepartmentCoverage[]> => {
-            if (!currentProperty?.id || currentProperty.id === 'all') return []
+            if (!isRealPropertyId(currentProperty?.id)) return []
 
             // Get departments for this property
             const { data: departments } = await supabase
@@ -167,7 +167,7 @@ export function useDepartmentCoverage(date?: Date) {
 
             return coverage.sort((a, b) => a.coverage_percentage - b.coverage_percentage)
         },
-        enabled: !!currentProperty?.id && currentProperty.id !== 'all'
+        enabled: isRealPropertyId(currentProperty?.id)
     })
 }
 
@@ -178,7 +178,7 @@ export function useLeaveConflicts(startDate: Date, endDate: Date) {
     return useQuery({
         queryKey: ['leave-conflicts', currentProperty?.id, startDate.toISOString(), endDate.toISOString()],
         queryFn: async (): Promise<LeaveConflict[]> => {
-            if (!currentProperty?.id || currentProperty.id === 'all') return []
+            if (!isRealPropertyId(currentProperty?.id)) return []
 
             const conflicts: LeaveConflict[] = []
             const currentDate = new Date(startDate)
@@ -234,7 +234,7 @@ export function useLeaveConflicts(startDate: Date, endDate: Date) {
 
             return conflicts.sort((a, b) => a.coverage_percentage - b.coverage_percentage)
         },
-        enabled: !!currentProperty?.id && currentProperty.id !== 'all'
+        enabled: isRealPropertyId(currentProperty?.id)
     })
 }
 

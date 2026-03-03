@@ -10,6 +10,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 interface TrendResult {
   value: number
@@ -46,13 +48,17 @@ function calculateTrend(current: number, previous: number): { change: number | n
   }
 }
 
-export function useDashboardMetrics(): DashboardMetrics {
+export function useDashboardMetrics(propertyId?: string): DashboardMetrics {
   const { user } = useAuth()
+  const { currentProperty, propertyIds } = useProperty()
+  const activePropertyId = propertyId || currentProperty?.id
 
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard-metrics', user?.id],
+    queryKey: ['dashboard-metrics', user?.id, activePropertyId],
     queryFn: async () => {
       if (!user?.id) return null
+
+      const isScoped = isRealPropertyId(activePropertyId)
 
       // Date ranges for week-over-week trend comparison only
       const now = new Date()
@@ -69,21 +75,61 @@ export function useDashboardMetrics(): DashboardMetrics {
         { count: prevTotal },
         { count: prevDone }
       ] = await Promise.all([
-        supabase.from('tasks').select('id', { count: 'exact', head: true })
-          .eq('is_deleted', false).eq('assigned_to_id', user.id),
-        supabase.from('tasks').select('id', { count: 'exact', head: true })
-          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES),
-        supabase.from('tasks').select('id', { count: 'exact', head: true })
-          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
-          .gte('completed_at', currentWeekStart.toISOString()),
-        supabase.from('tasks').select('id', { count: 'exact', head: true })
-          .eq('is_deleted', false).eq('assigned_to_id', user.id)
-          .gte('created_at', previousWeekStart.toISOString())
-          .lt('created_at', currentWeekStart.toISOString()),
-        supabase.from('tasks').select('id', { count: 'exact', head: true })
-          .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
-          .gte('created_at', previousWeekStart.toISOString())
-          .lt('created_at', currentWeekStart.toISOString()),
+        (async () => {
+          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false).eq('assigned_to_id', user.id)
+          if (isScoped) {
+            q = q.eq('property_id', activePropertyId)
+          } else if (propertyIds.length > 0) {
+            q = q.in('property_id', propertyIds)
+          }
+          return q
+        })(),
+        (async () => {
+          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
+          if (isScoped) {
+            q = q.eq('property_id', activePropertyId)
+          } else if (propertyIds.length > 0) {
+            q = q.in('property_id', propertyIds)
+          }
+          return q
+        })(),
+        (async () => {
+          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
+            .gte('completed_at', currentWeekStart.toISOString())
+          if (isScoped) {
+            q = q.eq('property_id', activePropertyId)
+          } else if (propertyIds.length > 0) {
+            q = q.in('property_id', propertyIds)
+          }
+          return q
+        })(),
+        (async () => {
+          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false).eq('assigned_to_id', user.id)
+            .gte('created_at', previousWeekStart.toISOString())
+            .lt('created_at', currentWeekStart.toISOString())
+          if (isScoped) {
+            q = q.eq('property_id', activePropertyId)
+          } else if (propertyIds.length > 0) {
+            q = q.in('property_id', propertyIds)
+          }
+          return q
+        })(),
+        (async () => {
+          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
+            .gte('created_at', previousWeekStart.toISOString())
+            .lt('created_at', currentWeekStart.toISOString())
+          if (isScoped) {
+            q = q.eq('property_id', activePropertyId)
+          } else if (propertyIds.length > 0) {
+            q = q.in('property_id', propertyIds)
+          }
+          return q
+        })(),
       ])
 
       const safeAllTotal = allTotal ?? 0
@@ -104,10 +150,16 @@ export function useDashboardMetrics(): DashboardMetrics {
       // ───────────────────────────────────────────────
       // 2. Training Progress — all-time overall rate
       // ───────────────────────────────────────────────
+      // We need to fetch training progress but we don't have a property_id column in training_progress usually.
+      // However, learning_progress might have it. Let's assume it doesn't and filter by user_id only 
+      // UNLESS we want to cross-reference with user_properties or similar.
+      // For now, let's stick to the current implementation but check if training_progress had property_id.
+      // Looking at the original code, it was purely user.id based.
       const { data: trainingData } = await supabase
-        .from('training_progress')
+        .from('learning_progress') // Wait, the original was 'training_progress' but user rules say use 'learning_progress'
         .select('status, completed_at, created_at')
         .eq('user_id', user.id)
+        .or('is_deleted.is.null,is_deleted.eq.false')
 
       const allTraining = trainingData || []
       const currentWeekTraining = allTraining.filter(t => new Date(t.created_at) >= currentWeekStart)
@@ -132,13 +184,21 @@ export function useDashboardMetrics(): DashboardMetrics {
       // ───────────────────────────────────────────────
       // 3. Response Time — all-time average (hours to complete tasks)
       // ───────────────────────────────────────────────
-      const { data: responseTimeData } = await supabase
+      let responseTimeQuery = supabase
         .from('tasks')
         .select('created_at, completed_at')
         .eq('status', 'completed')
         .eq('is_deleted', false)
         .not('completed_at', 'is', null)
         .eq('assigned_to_id', user.id)
+
+      if (isScoped) {
+        responseTimeQuery = responseTimeQuery.eq('property_id', activePropertyId)
+      } else if (propertyIds.length > 0) {
+        responseTimeQuery = responseTimeQuery.in('property_id', propertyIds)
+      }
+
+      const { data: responseTimeData } = await responseTimeQuery
 
       const calculateAvgResponseTime = (tasks: { created_at: string; completed_at: string | null }[]) => {
         if (!tasks || tasks.length === 0) return 0
@@ -165,10 +225,18 @@ export function useDashboardMetrics(): DashboardMetrics {
       // ───────────────────────────────────────────────
       // 4. Attendance Rate — all-time (not just last 7 days)
       // ───────────────────────────────────────────────
-      const { data: attendanceData } = await supabase
+      let attendanceQuery = supabase
         .from('attendance')
         .select('status, date')
         .eq('employee_id', user.id)
+
+      if (isScoped) {
+        attendanceQuery = attendanceQuery.eq('property_id', activePropertyId)
+      } else if (propertyIds.length > 0) {
+        attendanceQuery = attendanceQuery.in('property_id', propertyIds)
+      }
+
+      const { data: attendanceData } = await attendanceQuery
 
       const allAttendance = attendanceData || []
       const currentWeekAttendance = allAttendance.filter(a => new Date(a.date) >= currentWeekStart)

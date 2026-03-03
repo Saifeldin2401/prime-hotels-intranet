@@ -5,6 +5,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import type { ExpenseClaim } from '@/lib/types'
 import { crudToasts } from '@/lib/toastHelpers'
 import { scanFile } from '@/hooks/useVirusScan'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export function useMyExpenseClaims() {
   const { user } = useAuth()
@@ -28,7 +29,7 @@ export function useMyExpenseClaims() {
         .eq('requester_id', user.id)
         .order('created_at', { ascending: false })
 
-      if (currentProperty && currentProperty.id !== 'all') {
+      if (isRealPropertyId(currentProperty?.id)) {
         query = query.eq('property_id', currentProperty.id)
       }
 
@@ -80,10 +81,19 @@ export function useSubmitExpenseClaim() {
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
-      const propertyId = payload.property_id
-        || (currentProperty && currentProperty.id !== 'all' ? currentProperty.id : null)
-        || properties?.[0]?.id
-        || null
+      const assignedPropertyIds = (properties || []).map((property) => property.id).filter(isRealPropertyId)
+      const propertyId = isRealPropertyId(payload.property_id)
+        ? payload.property_id
+        : (isRealPropertyId(currentProperty?.id)
+          ? currentProperty.id
+          : (assignedPropertyIds.length === 1 ? assignedPropertyIds[0] : null))
+
+      if (!propertyId && assignedPropertyIds.length > 1) {
+        throw new Error('Select a specific property before submitting an expense claim')
+      }
+      if (!propertyId && assignedPropertyIds.length === 0) {
+        throw new Error('No property access found for this account')
+      }
 
       const departmentId = payload.department_id
         || departments?.[0]?.id

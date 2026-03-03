@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export interface Event {
   id: string
@@ -36,7 +37,7 @@ export function useEvents(startDate?: Date, endDate?: Date) {
         .rpc('get_events_for_range', {
           start_date: start.toISOString(),
           end_date: end.toISOString(),
-          property_filter: currentProperty?.id === 'all' ? null : currentProperty?.id
+          property_filter: isRealPropertyId(currentProperty?.id) ? currentProperty.id : null
         })
 
       if (error) {

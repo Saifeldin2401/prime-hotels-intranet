@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { crudToasts } from '@/lib/toastHelpers'
 import { escapeSearchQuery } from '@/lib/utils'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 // Fetch tasks
 export function useTasks(filters?: {
@@ -53,10 +54,10 @@ export function useTasks(filters?: {
         query = query.eq('created_by_id', filters.createdBy)
       }
 
-      // Auto-filter by current property unless explicitly disabled, overridden, or set to 'all' (global view)
+      // Auto-filter by current property unless explicitly disabled or consolidated scope is selected.
       if (!filters?.ignorePropertyFilter) {
         const propertyIdToUse = filters?.propertyId || currentProperty?.id
-        if (propertyIdToUse && propertyIdToUse !== 'all') {
+        if (isRealPropertyId(propertyIdToUse)) {
           query = query.eq('property_id', propertyIdToUse)
         }
       }
@@ -112,7 +113,7 @@ export function useTasksPaginated(
       if (filters?.createdBy) countQuery = countQuery.eq('created_by_id', filters.createdBy)
       if (!filters?.ignorePropertyFilter) {
         const propertyIdToUse = filters?.propertyId || currentProperty?.id
-        if (propertyIdToUse && propertyIdToUse !== 'all') {
+        if (isRealPropertyId(propertyIdToUse)) {
           countQuery = countQuery.eq('property_id', propertyIdToUse)
         }
       }
@@ -147,7 +148,7 @@ export function useTasksPaginated(
       if (filters?.createdBy) query = query.eq('created_by_id', filters.createdBy)
       if (!filters?.ignorePropertyFilter) {
         const propertyIdToUse = filters?.propertyId || currentProperty?.id
-        if (propertyIdToUse && propertyIdToUse !== 'all') {
+        if (isRealPropertyId(propertyIdToUse)) {
           query = query.eq('property_id', propertyIdToUse)
         }
       }
@@ -227,7 +228,9 @@ export function useCreateTask() {
       const taskData = {
         ...task,
         created_by_id: user.id,
-        property_id: task.property_id || currentProperty?.id,
+        property_id: isRealPropertyId(task.property_id)
+          ? task.property_id
+          : (isRealPropertyId(currentProperty?.id) ? currentProperty.id : null),
         status: task.status || 'todo',
         priority: task.priority || 'medium'
       }

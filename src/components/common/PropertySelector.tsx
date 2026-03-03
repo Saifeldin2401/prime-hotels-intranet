@@ -4,12 +4,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Badge } from '@/components/ui/badge'
 import { Building, Lock, LayoutDashboard } from 'lucide-react'
 import { useTranslation } from "react-i18next";
+import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
 
 interface PropertySelectorProps {
   value?: string
   onValueChange?: (value: string) => void
   placeholder?: string
-  showAllProperties?: boolean
   disabled?: boolean
 }
 
@@ -17,16 +17,16 @@ export function PropertySelector({
   value,
   onValueChange,
   placeholder = "Select property",
-  showAllProperties = false,
   disabled = false
 }: PropertySelectorProps) {
   const { t: t_ext } = useTranslation('extracted')
-  const { properties, primaryRole } = useAuth()
+  const { properties } = useAuth()
   const { canAccessProperty } = usePermissions()
 
-  const accessibleProperties = showAllProperties && primaryRole === 'regional_admin'
-    ? properties // Admin can see all properties
-    : properties // Users can only see their assigned properties
+  const accessibleProperties = properties
+  const consolidatedProperties = accessibleProperties.filter((property) => isConsolidatedPropertyId(property.id))
+  const realProperties = accessibleProperties.filter((property) => isRealPropertyId(property.id))
+  const hasConsolidatedOption = consolidatedProperties.length > 0
 
   if (accessibleProperties.length === 0) {
     return (
@@ -53,10 +53,10 @@ export function PropertySelector({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {accessibleProperties.some(p => p.id === 'all') && (
+        {hasConsolidatedOption && (
           <SelectGroup>
             <SelectLabel>{t_ext('views', 'Views')}</SelectLabel>
-            {accessibleProperties.filter(p => p.id === 'all').map(property => (
+            {consolidatedProperties.map((property) => (
               <SelectItem key={property.id} value={property.id}>
                 <div className="flex items-center gap-2">
                   <LayoutDashboard className="w-4 h-4" />
@@ -67,14 +67,14 @@ export function PropertySelector({
           </SelectGroup>
         )}
 
-        {accessibleProperties.some(p => p.id === 'all') && accessibleProperties.some(p => p.id !== 'all') && (
+        {hasConsolidatedOption && realProperties.length > 0 && (
           <SelectSeparator />
         )}
 
-        {accessibleProperties.some(p => p.id !== 'all') && (
+        {realProperties.length > 0 && (
           <SelectGroup>
             <SelectLabel>{t_ext('properties', 'Properties')}</SelectLabel>
-            {accessibleProperties.filter(p => p.id !== 'all').map((property) => {
+            {realProperties.map((property) => {
               const hasAccess = canAccessProperty(property.id)
               return (
                 <SelectItem
@@ -107,7 +107,7 @@ export function PropertyAccessBadge({ propertyId, showDetails = false }: Propert
   const { properties } = useAuth()
   const { canAccessProperty } = usePermissions()
 
-  if (!propertyId || propertyId === 'all') {
+  if (!propertyId || isConsolidatedPropertyId(propertyId)) {
     return <Badge variant="outline">{t_ext('consolidated_view_all', 'Consolidated View (All)')}</Badge>
   }
 

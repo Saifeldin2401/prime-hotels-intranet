@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useTranslation } from 'react-i18next'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 const STATUS_OPTIONS = ['pending', 'in_progress', 'completed', 'cancelled']
 
@@ -32,7 +33,7 @@ export default function GoalsAdmin() {
   const { t } = useTranslation('hr')
   const queryClient = useQueryClient()
   const { currentProperty } = useProperty()
-  const propertyId = currentProperty?.id && currentProperty.id !== 'all' ? currentProperty.id : undefined
+  const propertyId = isRealPropertyId(currentProperty?.id) ? currentProperty.id : undefined
 
   const [departmentId, setDepartmentId] = useState('all')
   const [employeeFilter, setEmployeeFilter] = useState('all')

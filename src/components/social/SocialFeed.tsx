@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns' 
+import { ar } from 'date-fns/locale'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -48,7 +49,7 @@ interface SocialFeedProps {
 }
 
 export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: SocialFeedProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [newComment, setNewComment] = useState<Record<string, string>>({})
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
 
@@ -137,7 +138,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                     <div className="flex items-center space-x-2 text-xs font-semibold text-slate-400 mt-2">
                       <span>{item.author.department}</span>
                       <span className="w-1 h-1 rounded-full bg-slate-300" />
-                      <span>{formatDistanceToNow(item.timestamp)} {t('social.ago')}</span>
+                      <span>{formatDistanceToNow(item.timestamp, { addSuffix: true, locale: i18n.language === "ar" ? ar : undefined })}</span>
                     </div>
                   </div>
                 </div>
@@ -228,7 +229,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                       )}
                     >
                       <Icons.MessageCircle className="h-4 w-4" />
-                      <span>{item.comments.length} Comments</span>
+                      <span>{t('social.comments_count', { count: item.comments.length })}</span>
                     </button>
                   </div>
 
@@ -241,7 +242,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                       className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all"
                     >
                       <Icons.Share2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">Share</span>
+                      <span className="hidden sm:inline">{t('social.share')}</span>
                     </button>
 
                     <button className="flex items-center justify-center h-9 w-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all">
@@ -275,7 +276,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                                   <div className="flex items-center justify-between mb-1.5">
                                     <span className="font-bold text-[13px] text-slate-800">{comment.author.name}</span>
                                     <span className="text-[11px] font-semibold text-slate-400">
-                                      {formatDistanceToNow(comment.timestamp)} {t('social.ago')}
+                                      {formatDistanceToNow(comment.timestamp, { addSuffix: true, locale: i18n.language === "ar" ? ar : undefined })}
                                     </span>
                                   </div>
                                   <p className="text-[13px] font-medium text-slate-600 leading-relaxed">{comment.content}</p>
@@ -283,8 +284,8 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
 
                                 {/* Comment Reactions */}
                                 <div className="flex items-center gap-3 mt-2 px-2">
-                                  <button className="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors">Like</button>
-                                  <button className="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors">Reply</button>
+                                  <button className="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors">{t('social.like', 'Like')}</button>
+                                  <button className="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors">{t('social.reply', 'Reply')}</button>
                                   {Object.keys(comment.reactions).length > 0 && (
                                     <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm ml-auto">
                                       <Icons.ThumbsUp className="h-3 w-3 text-blue-500 fill-current" />
@@ -309,7 +310,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                       </Avatar>
                       <div className="flex-1 relative">
                         <Textarea
-                          placeholder="Write a comment..."
+                          placeholder={t('social.write_comment', 'Write a comment...')}
                           value={newComment[item.id] || ''}
                           onChange={(e) => setNewComment(prev => ({ ...prev, [item.id]: e.target.value }))}
                           className="min-h-[50px] resize-none pr-24 rounded-xl border-slate-200 focus-visible:ring-blue-500 shadow-sm bg-slate-50 focus:bg-white transition-colors"
@@ -342,3 +343,4 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
     </div>
   )
 }
+
