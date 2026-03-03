@@ -31,9 +31,9 @@ import { LoadingButton } from '@/components/loading'
 import { useTranslation } from "react-i18next";
 
 interface AnnouncementEditorProps {
-  initialData?: any
+  initialData?: Record<string, unknown>
   onClose?: () => void
-  onSave?: (announcement: any) => void
+  onSave?: (announcement: Record<string, unknown>) => void
 }
 
 interface TargetAudience {
@@ -88,7 +88,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         .order('name')
       if (error) throw error
       // Format with property name for disambiguation
-      return (data || []).map((d: any) => ({
+      return (data || []).map((d: unknown) => ({
         id: d.id,
         name: d.property?.name ? `${d.name} (${d.property.name})` : d.name
       }))
@@ -120,7 +120,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   }))
 
   const createAnnouncementMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       const { data: result, error } = await supabase
         .from('announcements')
         .insert({
@@ -284,7 +284,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   })
 
   const updateAnnouncementMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       const { data: result, error } = await supabase
         .from('announcements')
         .update({
@@ -387,7 +387,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       } else {
         createAnnouncementMutation.mutate(announcementData)
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       const errorDetails = getUserFriendlyError(e)
       toast.error(`Error submitting form: ${errorDetails.message}`)
     }
@@ -517,7 +517,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
                   <Button
                     key={value}
                     variant={targetAudience.type === value ? 'default' : 'outline'}
-                    onClick={() => setTargetAudience({ type: value as any, values: [] })}
+                    onClick={() => setTargetAudience({ type: value as unknown, values: [] })}
                     className="h-12"
                   >
                     <Icon className="h-4 w-4 mr-2" />
@@ -530,7 +530,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
                 <div className="space-y-2">
                   <Label>Select {targetAudience.type === 'role' ? 'Roles' : targetAudience.type === 'department' ? 'Departments' : 'Properties'}</Label>
                   <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                    {getAudienceOptions().map((option: any) => (
+                    {getAudienceOptions().map((option: unknown) => (
                       <div key={option.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={option.id}

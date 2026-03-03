@@ -250,7 +250,7 @@ export function useSubmitLeaveRequest() {
 
 export function useApproveLeaveRequest() {
   const queryClient = useQueryClient()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async ({ requestId }: { requestId: string }) => {
@@ -312,7 +312,7 @@ export function useApproveLeaveRequest() {
 
 export function useRejectLeaveRequest() {
   const queryClient = useQueryClient()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async ({

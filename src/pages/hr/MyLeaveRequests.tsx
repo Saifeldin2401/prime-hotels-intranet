@@ -262,7 +262,7 @@ export default function MyLeaveRequests() {
                           }}
                           initialFocus
                           disabled={(date) => {
-                            const startDate = form.watch('start_date')
+                            const startDate = form.getValues('start_date')
                             return startDate ? date < startDate : false
                           }}
                         />
