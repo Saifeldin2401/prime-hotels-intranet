@@ -1,211 +1,123 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from './useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { crudToasts } from '@/lib/toastHelpers'
-import type { LeaveRequest } from '@/lib/types'
-import { notifyApprovalOutcome } from '@/services/approvalNotificationService'
+import type { Database } from '@/types/supabase'
 
-/**
- * Smart Leave Request Hooks
- * 
- * ROUTING LOGIC:
- * - Regional Admin / Regional HR: Full access to ALL leave requests
- * - Property Manager / Property HR: See requests for their assigned properties
- * - Department Head: See requests for their managed departments
- * - Staff: See only their own requests
- * 
- * Property selector integration: All queries respect the currentProperty selection
- */
+export type LeaveRequest = Database['public']['Tables']['leave_requests']['Row'] & {
+  requester?: {
+    id: string
+    full_name: string
+    avatar_url: string | null
+    email?: string
+    phone?: string
+    job_title?: string
+    hire_date?: string
+    reporting_to?: string
+  }
+  workflow?: {
+    request_no: string
+  }
+}
 
-export function useMyLeaveRequests() {
+export type VacationBalance = Database['public']['Tables']['user_vacation_balance']['Row']
+
+export function useVacationBalance(userId?: string, year?: number) {
   const { user } = useAuth()
+  const targetUserId = userId || user?.id
+  const targetYear = year || new Date().getFullYear()
+
+  return useQuery({
+    queryKey: ['vacation-balance', targetUserId, targetYear],
+    queryFn: async () => {
+      if (!targetUserId) return null
+
+      const { data, error } = await supabase
+        .from('user_vacation_balance')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .eq('year', targetYear)
+        .maybeSingle()
+
+      if (error) throw error
+
+      if (!data) {
+        // Return a default balance if none exists yet
+        return {
+          user_id: targetUserId,
+          year: targetYear,
+          total_days: 25,
+          used_days: 0,
+          pending_days: 0,
+          carried_over: 0,
+          remaining_days: 25
+        }
+      }
+
+      return {
+        ...data,
+        remaining_days: (data.total_days || 0) + (data.carried_over || 0) - (data.used_days || 0) - (data.pending_days || 0)
+      }
+    },
+    enabled: !!targetUserId
+  })
+}
+
+export function useLeaveRequests() {
+  const { user, roles } = useAuth()
   const { currentProperty } = useProperty()
 
   return useQuery({
-    queryKey: ['leave-requests', 'my', user?.id, currentProperty?.id],
+    queryKey: ['leave-requests', user?.id, currentProperty?.id],
     queryFn: async () => {
       if (!user?.id) return []
 
-      let query = supabase
+      const userRoles = roles.map((r) => r.role)
+      const isHR = userRoles.some((role) =>
+        ['regional_admin', 'regional_hr', 'property_hr'].includes(role)
+      )
+
+      // Fetch workflow-based requests
+      let workflowQuery = supabase
         .from('leave_requests')
         .select(`
           *,
-          requester:profiles!requester_id(id, full_name, email),
-          property:properties(id, name),
-          department:departments(id, name),
-          approved_by:profiles!approved_by_id(id, full_name, email),
-          rejected_by:profiles!rejected_by_id(id, full_name, email),
-          workflow:requests!workflow_request_id(id, request_no)
+          requester:profiles!leave_requests_requester_id_fkey(id, full_name, avatar_url, email, phone, job_title, hire_date, reporting_to),
+          workflow:requests!leave_requests_workflow_request_id_fkey(request_no)
         `)
-        .eq('requester_id', user.id)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
-      // Filter by current property if selected
+      if (!isHR) {
+        workflowQuery = workflowQuery.eq('requester_id', user.id)
+      }
+
       if (currentProperty && currentProperty.id !== 'all') {
-        query = query.eq('property_id', currentProperty.id)
+        workflowQuery = workflowQuery.eq('property_id', currentProperty.id)
       }
 
-      const { data, error } = await query
-
-      if (error) throw error
-      return data as LeaveRequest[]
-    },
-    enabled: !!user?.id
-  })
-}
-
-export function useTeamLeaveRequests() {
-  const { user, roles, properties, departments, primaryRole } = useAuth()
-  const { currentProperty } = useProperty()
-
-  // Determine access level
-  const isRegionalAccess = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
-  const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
-  const isDepartmentHead = primaryRole === 'department_head'
-
-  return useQuery({
-    queryKey: ['leave-requests', 'team', primaryRole, properties?.map(p => p.id), departments?.map(d => d.id), currentProperty?.id],
-    queryFn: async () => {
-      if (!user?.id) return []
-
-      let query = supabase
-        .from('leave_requests')
-        .select(`
-          *,
-          requester:profiles!requester_id(id, full_name, email),
-          property:properties(id, name),
-          department:departments(id, name),
-          approved_by:profiles!approved_by_id(id, full_name, email),
-          rejected_by:profiles!rejected_by_id(id, full_name, email),
-          workflow:requests!workflow_request_id(id, request_no)
-        `)
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: false })
-
-      // SMART ROUTING based on role and context
-      if (isRegionalAccess) {
-        // Regional admin/hr sees ALL leave requests
-        // Optionally filter by selected property if not "all"
-        if (currentProperty && currentProperty.id !== 'all') {
-          query = query.eq('property_id', currentProperty.id)
-        }
-      } else if (isPropertyLevel) {
-        // Property manager/hr sees requests for their properties
-        if (currentProperty && currentProperty.id !== 'all') {
-          query = query.eq('property_id', currentProperty.id)
-        } else if (properties && properties.length > 0) {
-          query = query.in('property_id', properties.map(p => p.id))
-        } else {
-          // No properties assigned, see only own requests
-          query = query.eq('requester_id', user.id)
-        }
-      } else if (isDepartmentHead) {
-        // Department head sees requests for their departments
-        if (departments && departments.length > 0) {
-          query = query.in('department_id', departments.map(d => d.id))
-        } else {
-          query = query.eq('requester_id', user.id)
-        }
-        // Also filter by property if selected
-        if (currentProperty && currentProperty.id !== 'all') {
-          query = query.eq('property_id', currentProperty.id)
-        }
-      } else {
-        // Regular staff: only see their own requests
-        query = query.eq('requester_id', user.id)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      return data as LeaveRequest[]
-    },
-    enabled: !!user?.id
-  })
-}
-
-export function usePendingLeaveRequests() {
-  const { user, roles, properties, departments, primaryRole } = useAuth()
-  const { currentProperty } = useProperty()
-
-  // Determine access level - check both primaryRole and roles array
-  const rolesList = roles?.map(r => r.role) || []
-  const isRegionalAccess = ['regional_admin', 'regional_hr'].includes(primaryRole || '') ||
-    rolesList.some(r => ['regional_admin', 'regional_hr'].includes(r))
-  const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '') ||
-    (rolesList.some(r => ['property_manager', 'property_hr'].includes(r)) && !isRegionalAccess)
-  const isDepartmentHead = primaryRole === 'department_head' ||
-    (rolesList.includes('department_head') && !isRegionalAccess && !isPropertyLevel)
-  const canApprove = isRegionalAccess || isPropertyLevel || isDepartmentHead
-
-  return useQuery({
-    queryKey: ['leave-requests', 'pending', user?.id, currentProperty?.id],
-    queryFn: async () => {
-      if (!user?.id) return []
-      if (!canApprove) return []
-
-      // 1) Workflow-based pending approvals assigned to the current user
-      const { data: workflowRows, error: workflowError } = await supabase
-        .from('requests')
-        .select(`
-          id,
-          status,
-          created_at,
-          leave_request:leave_requests!workflow_request_id(
-            *,
-            requester:profiles!requester_id(id, full_name, email),
-            property:properties(id, name),
-            department:departments(id, name)
-          )
-        `)
-        .eq('entity_type', 'leave_request')
-        .in('status', ['pending_supervisor_approval', 'pending_hr_review'])
-        .eq('current_assignee_id', user.id)
-        .order('created_at', { ascending: false })
-
+      const { data: workflowItems, error: workflowError } = await workflowQuery
       if (workflowError) throw workflowError
 
-      const workflowItems = (workflowRows || [])
-        .map((row: any) => row.leave_request)
-        .filter(Boolean)
-
-      // 2) Legacy pending leave requests without workflow linkage (fallback)
+      // Fetch legacy requests (those without workflow_request_id)
       let legacyQuery = supabase
         .from('leave_requests')
         .select(`
           *,
-          requester:profiles!requester_id(id, full_name, email),
-          property:properties(id, name),
-          department:departments(id, name),
-          workflow:requests!workflow_request_id(id, request_no)
+          requester:profiles!leave_requests_requester_id_fkey(id, full_name, avatar_url, email, phone, job_title, hire_date, reporting_to)
         `)
-        .eq('status', 'pending')
         .eq('is_deleted', false)
         .is('workflow_request_id', null)
         .order('created_at', { ascending: false })
 
-      if (isRegionalAccess) {
-        if (currentProperty && currentProperty.id !== 'all') {
+      if (isHR) {
+        if (currentProperty && currentProperty.id === 'all') {
+          // No additional filter, HR sees all legacy
+        } else if (currentProperty) {
           legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
-        }
-      } else if (isPropertyLevel) {
-        if (currentProperty && currentProperty.id !== 'all') {
-          legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
-        } else if (properties && properties.length > 0) {
-          legacyQuery = legacyQuery.in('property_id', properties.map(p => p.id))
         } else {
           legacyQuery = legacyQuery.eq('requester_id', user.id)
-        }
-      } else if (isDepartmentHead) {
-        if (departments && departments.length > 0) {
-          legacyQuery = legacyQuery.in('department_id', departments.map(d => d.id))
-        } else {
-          legacyQuery = legacyQuery.eq('requester_id', user.id)
-        }
-        if (currentProperty && currentProperty.id !== 'all') {
-          legacyQuery = legacyQuery.eq('property_id', currentProperty.id)
         }
       } else {
         legacyQuery = legacyQuery.eq('requester_id', user.id)
@@ -258,6 +170,29 @@ export function useSubmitLeaveRequest() {
         )
       }
 
+      // Check vacation balance for annual leave
+      if (data.type === 'annual') {
+        const startDate = new Date(data.start_date)
+        const endDate = new Date(data.end_date)
+        const daysRequested = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        const year = startDate.getFullYear()
+
+        const { data: balance } = await supabase
+          .from('user_vacation_balance')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('year', year)
+          .maybeSingle()
+
+        const remaining = balance
+          ? (balance.total_days || 0) + (balance.carried_over || 0) - (balance.used_days || 0) - (balance.pending_days || 0)
+          : 25 // Default fallback
+
+        if (daysRequested > remaining) {
+          throw new Error(`Insufficient vacation balance. You have ${remaining} days remaining for ${year}, but you are requesting ${daysRequested} days.`)
+        }
+      }
+
       // Determine property for the request
       let propertyId: string | null = null
 
@@ -299,11 +234,16 @@ export function useSubmitLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['vacation-balance'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.submit.success('Leave request')
     },
-    onError: () => {
-      crudToasts.submit.error('leave request')
+    onError: (error: Error) => {
+      if (error.message.includes('Insufficient vacation balance')) {
+        crudToasts.submit.error(error.message)
+      } else {
+        crudToasts.submit.error('leave request')
+      }
     }
   })
 }
@@ -360,6 +300,7 @@ export function useApproveLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['vacation-balance'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.approve.success('Leave request')
     },
@@ -432,6 +373,7 @@ export function useRejectLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['vacation-balance'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.reject.success('Leave request')
     },
@@ -470,6 +412,7 @@ export function useCancelLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['vacation-balance'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.delete.success('Leave request')
     },
@@ -508,6 +451,7 @@ export function useDeleteLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['vacation-balance'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.delete.success('Leave request')
     },

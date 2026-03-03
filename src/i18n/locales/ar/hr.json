@@ -109,7 +109,9 @@
             "submitting": "جاري التقديم...",
             "error_title": "???",
             "success_message": "?? ????? Message",
-            "success_title": "?? ?????"
+            "success_title": "?? ?????",
+            "submit_btn": "تقديم طلب جديد",
+            "insufficient_balance": "رصيد غير كافٍ. لديك فقط {{remaining}} أيام متبقية."
         },
         "list": {
             "title": "طلبات الإجازة الخاصة بك",
@@ -123,7 +125,8 @@
             "approved_by": "تمت الموافقة بواسطة",
             "rejected_by": "تم الرفض بواسطة",
             "confirm_cancel": "هل أنت متأكد من إلغاء طلب الإجازة هذا؟",
-            "cancel_action": "إلغاء"
+            "cancel_action": "إلغاء",
+            "cancel_confirm": "هل أنت متأكد أنك تريد إلغاء طلب الإجازة هذا؟"
         },
         "types": {
             "annual": "إجازة سنوية",
@@ -133,6 +136,12 @@
             "paternity": "إجازة أبوة",
             "personal": "إجازة شخصية",
             "other": "أخرى"
+        },
+        "balance": {
+            "total": "إجمالي الرصيد",
+            "used": "مستخدم",
+            "pending": "قيد الانتظار",
+            "remaining": "متبقي"
         }
     },
     "status": {

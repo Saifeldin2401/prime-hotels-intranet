@@ -1,3 +1,4 @@
+import { useVacationBalance } from '@/hooks/useLeaveRequests';
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -85,9 +86,9 @@ export default function RequestDetail() {
   const commentsQuery = useRequestComments(id)
   const attachmentsQuery = useRequestAttachments(id)
 
-  const actionMutation = useRequestAction()
+  const request = requestQuery.data;
+  const actionMutation = useRequestAction();
 
-  const request = requestQuery.data
 
   const isHr = primaryRole === 'regional_hr' || primaryRole === 'property_hr'
   const isAdmin = primaryRole === 'regional_admin'
@@ -117,6 +118,9 @@ export default function RequestDetail() {
       return data as unknown as LeaveRequest
     },
   })
+  const requesterId = request?.requester_id || leaveQuery.data?.requester?.id;
+  const leaveYear = leaveQuery.data?.start_date ? new Date(leaveQuery.data.start_date).getFullYear() : new Date().getFullYear();
+  const requesterBalanceQuery = useVacationBalance(requesterId, leaveYear);
 
   const expenseQuery = useQuery({
     queryKey: ['expense-claim', request?.entity_id],
@@ -743,6 +747,41 @@ export default function RequestDetail() {
               ) : null}
             </CardContent>
           </Card>
+
+
+          {request.entity_type === 'leave_request' && (isHr || isAdmin) && (
+            <Card className="border-hotel-gold/30 bg-hotel-gold/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-hotel-navy">
+                  <CalendarIcon className="w-4 h-4" />
+                  Vacation Balance ({leaveYear})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Total</span>
+                  <span className="font-medium">{requesterBalanceQuery.isLoading ? '...' : requesterBalanceQuery.data?.total_days}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Used (Approved)</span>
+                  <span className="font-medium text-green-600">{requesterBalanceQuery.isLoading ? '...' : requesterBalanceQuery.data?.used_days}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Pending</span>
+                  <span className="font-medium text-yellow-600">{requesterBalanceQuery.isLoading ? '...' : requesterBalanceQuery.data?.pending_days}</span>
+                </div>
+                <div className="pt-2 border-t flex justify-between text-sm font-bold">
+                  <span className="text-hotel-navy">Remaining</span>
+                  <span className="text-hotel-navy">{requesterBalanceQuery.isLoading ? '...' : requesterBalanceQuery.data?.remaining_days}</span>
+                </div>
+                {requesterBalanceQuery.data && leaveQuery.data && (
+                   <div className="mt-3 p-2 bg-white rounded border border-hotel-gold/20 text-[10px] text-slate-600">
+                     This request: <strong>{Math.max(0, Math.ceil((new Date(leaveQuery.data.end_date).getTime() - new Date(leaveQuery.data.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)} days</strong>
+                   </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

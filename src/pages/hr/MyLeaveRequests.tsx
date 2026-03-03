@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
-import { useMyLeaveRequests, useSubmitLeaveRequest, useCancelLeaveRequest } from '@/hooks/useLeaveRequests'
+import { useLeaveRequests, useSubmitLeaveRequest, useCancelLeaveRequest, useVacationBalance } from '@/hooks/useLeaveRequests'
 import { PageHeader } from '@/components/layout/PageHeader'
-import type { LeaveRequest } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,14 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { format } from 'date-fns'
-import { CalendarIcon, Plus, X, Loader2 } from 'lucide-react'
+import { format, differenceInDays } from 'date-fns'
+import { CalendarIcon, Plus, X, Loader2, Info, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { leaveRequestSchema, type LeaveRequestFormData } from '@/lib/validationSchemas'
-import { getUserFriendlyError } from '@/lib/errorMessages'
 import { useToast } from '@/components/ui/use-toast'
 import { LoadingButton } from '@/components/loading'
 
@@ -37,147 +34,181 @@ const leaveTypeKeys = [
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
+  submitted: 'bg-blue-100 text-blue-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
-  cancelled: 'bg-gray-100 text-gray-800'
+  cancelled: 'bg-gray-100 text-gray-800',
+  draft: 'bg-slate-100 text-slate-800',
+  pending_supervisor_approval: 'bg-yellow-100 text-yellow-800',
+  pending_hr_review: 'bg-orange-100 text-orange-800',
+  closed: 'bg-gray-100 text-gray-800',
+  returned_for_correction: 'bg-purple-100 text-purple-800'
 } as const
 
 export default function MyLeaveRequests() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { t, i18n } = useTranslation('hr')
+  const { t } = useTranslation('hr')
   const { toast } = useToast()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const isRTL = i18n.dir() === 'rtl'
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
+
+  const { data: leaveRequests, isLoading } = useLeaveRequests()
+  const { data: balance, isLoading: isBalanceLoading } = useVacationBalance()
+  const submitMutation = useSubmitLeaveRequest()
+  const cancelMutation = useCancelLeaveRequest()
 
   const form = useForm<LeaveRequestFormData>({
     resolver: zodResolver(leaveRequestSchema),
     defaultValues: {
-      start_date: undefined,
-      end_date: undefined,
-      type: undefined,
-      reason: '',
-      property_id: undefined,
-      department_id: undefined
+      type: 'annual',
+      reason: ''
     }
   })
 
-  const { data: leaveRequests, isLoading } = useMyLeaveRequests()
-  const submitMutation = useSubmitLeaveRequest()
-  const cancelMutation = useCancelLeaveRequest()
+  const calculateDays = (start: Date, end: Date) => {
+    return Math.max(0, differenceInDays(end, start) + 1)
+  }
 
-  const handleSubmit = (data: LeaveRequestFormData) => {
-    submitMutation.mutate({
-      start_date: data.start_date instanceof Date
-        ? data.start_date.toISOString().split('T')[0]
-        : new Date(data.start_date).toISOString().split('T')[0],
-      end_date: data.end_date instanceof Date
-        ? data.end_date.toISOString().split('T')[0]
-        : new Date(data.end_date).toISOString().split('T')[0],
-      type: data.type,
-      reason: data.reason || undefined
-    }, {
-      onSuccess: () => {
-        setIsDialogOpen(false)
-        form.reset()
-        toast({
-          title: t('leave_requests.form.success_title', { defaultValue: 'Leave Request Submitted' }),
-          description: t('leave_requests.form.success_message', { defaultValue: 'Your leave request has been submitted for approval.' })
-        })
-      },
-      onError: (error) => {
-        const errorDetails = getUserFriendlyError(error)
-        toast({
-          title: t('leave_requests.form.error_title', { defaultValue: 'Submission Failed' }),
-          description: errorDetails.message,
-          variant: 'destructive'
-        })
+  const onSubmit = async (data: LeaveRequestFormData) => {
+    try {
+      await submitMutation.mutateAsync({
+        start_date: format(data.start_date, 'yyyy-MM-dd'),
+        end_date: format(data.end_date, 'yyyy-MM-dd'),
+        type: data.type,
+        reason: data.reason
+      })
+      setIsDialogOpen(false)
+      form.reset()
+    } catch (err: any) {
+      console.error(err)
+      // Error handled by mutation onError
+    }
+  }
+
+  const handleCancel = async (id: string) => {
+    if (window.confirm(t('leave_requests.list.cancel_confirm'))) {
+      try {
+        await cancelMutation.mutateAsync({ requestId: id })
+      } catch (err) {
+        console.error(err)
       }
-    })
-  }
-
-  const handleCancel = (requestId: string) => {
-    if (confirm(t('leave_requests.list.confirm_cancel'))) {
-      cancelMutation.mutate({ requestId })
     }
   }
 
-  const handleView = async (leaveRequestId: string) => {
-    const { data, error } = await supabase
-      .from('leave_requests')
-      .select('workflow_request_id')
-      .eq('id', leaveRequestId)
-      .single()
-
-    if (!error && data?.workflow_request_id) {
-      navigate(`/hr/request/${data.workflow_request_id}`)
-      return
-    }
-
-    const { data: reqData, error: reqError } = await supabase
-      .from('requests')
-      .select('id')
-      .eq('entity_type', 'leave_request')
-      .eq('entity_id', leaveRequestId)
-      .single()
-
-    if (!reqError && reqData?.id) {
-      navigate(`/hr/request/${reqData.id}`)
-      return
-    }
-
-    alert('Unable to open request details. Please try again.')
+  const handleView = (id: string) => {
+    navigate(`/hr/request/${id}`)
   }
 
-  const calculateDays = (startDate: Date, endDate: Date) => {
-    if (!startDate || !endDate) return 0
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
-    return diffDays
-  }
-
-  if (!user) return null
+  const selectedStartDate = form.watch('start_date')
+  const selectedEndDate = form.watch('end_date')
+  const requestedDays = selectedStartDate && selectedEndDate ? calculateDays(selectedStartDate, selectedEndDate) : 0
+  const isOverBalance = form.watch('type') === 'annual' && balance && requestedDays > (balance.remaining_days || 0)
 
   return (
-    <div className="space-y-8">
+    <div className="container mx-auto py-6 space-y-8 max-w-5xl">
       <PageHeader
         title={t('leave_requests.title')}
         description={t('leave_requests.description')}
       />
 
-      {/* Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="text-sm text-gray-600">
-          {t('leave_requests.total_requests', { count: leaveRequests?.length || 0 })}
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Vacation Balance Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-hotel-navy text-white border-none">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm font-medium">{t('leave_requests.balance.total')}</p>
+                <h3 className="text-3xl font-bold mt-1">
+                  {isBalanceLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : balance?.total_days || 25}
+                </h3>
+              </div>
+              <CalendarIcon className="w-8 h-8 text-blue-300 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-500 text-sm font-medium">{t('leave_requests.balance.used')}</p>
+                <h3 className="text-3xl font-bold mt-1 text-slate-900">
+                  {isBalanceLoading ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : balance?.used_days || 0}
+                </h3>
+              </div>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 uppercase text-[10px]">
+                {t('status.approved')}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-500 text-sm font-medium">{t('leave_requests.balance.pending')}</p>
+                <h3 className="text-3xl font-bold mt-1 text-slate-900">
+                  {isBalanceLoading ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : balance?.pending_days || 0}
+                </h3>
+              </div>
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 uppercase text-[10px]">
+                {t('status.pending')}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-hotel-gold bg-hotel-gold/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-hotel-gold-dark text-sm font-medium">{t('leave_requests.balance.remaining')}</p>
+                <h3 className="text-3xl font-bold mt-1 text-hotel-navy">
+                  {isBalanceLoading ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : balance?.remaining_days ?? 25}
+                </h3>
+              </div>
+              <div className="p-2 bg-hotel-gold/20 rounded-full">
+                <Info className="w-5 h-5 text-hotel-gold-dark" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-slate-900">{t('leave_requests.list.title')}</h2>
+
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) form.reset()
+        }}>
           <DialogTrigger asChild>
-            <Button className="bg-hotel-navy hover:bg-hotel-navy-light w-full sm:w-auto h-11">
-              <Plus className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-              {t('leave_requests.new_request')}
+            <Button className="bg-hotel-navy hover:bg-hotel-navy-light text-white shadow-md">
+              <Plus className="w-4 h-4 me-2" />
+              {t('leave_requests.form.submit_btn')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>{t('leave_requests.form.title')}</DialogTitle>
-              <DialogDescription className="text-slate-500">
-                {t('leave_requests.form.description')}
+              <DialogTitle className="text-xl">{t('leave_requests.form.submit_btn')}</DialogTitle>
+              <DialogDescription>
+                {t('leave_requests.form.description', 'Fill in the details for your leave request.')}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={form.handleSubmit(handleSubmit)}>
-              <div className="px-5 sm:px-6 py-5 space-y-5">
-                {/* Date Selection */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+              <div className="grid grid-cols-1 gap-6">
+                {/* Date Range Selection */}
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="start_date" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       {t('leave_requests.form.start_date')} *
                     </Label>
                     <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                       <PopoverTrigger asChild>
                         <Button
-                          type="button"
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-start font-normal h-11 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
@@ -187,34 +218,30 @@ export default function MyLeaveRequests() {
                         >
                           <CalendarIcon className="h-4 w-4 me-2 text-slate-400" />
                           {form.watch('start_date')
-                            ? format(form.watch('start_date') as Date, "PPP")
+                            ? format(form.watch('start_date'), "PPP")
                             : t('leave_requests.form.pick_date')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={form.watch('start_date') as Date | undefined}
+                          selected={form.watch('start_date')}
                           onSelect={(date) => {
-                            form.setValue('start_date', date, { shouldValidate: true })
+                            form.setValue('start_date', date as Date, { shouldValidate: true })
                             setStartDateOpen(false)
                           }}
                           initialFocus
                         />
                       </PopoverContent>
                     </Popover>
-                    {form.formState.errors.start_date && (
-                      <p className="text-sm text-red-600">{form.formState.errors.start_date.message}</p>
-                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="end_date" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       {t('leave_requests.form.end_date')} *
                     </Label>
                     <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                       <PopoverTrigger asChild>
                         <Button
-                          type="button"
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-start font-normal h-11 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
@@ -224,44 +251,48 @@ export default function MyLeaveRequests() {
                         >
                           <CalendarIcon className="h-4 w-4 me-2 text-slate-400" />
                           {form.watch('end_date')
-                            ? format(form.watch('end_date') as Date, "PPP")
+                            ? format(form.watch('end_date'), "PPP")
                             : t('leave_requests.form.pick_date')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={form.watch('end_date') as Date | undefined}
+                          selected={form.watch('end_date')}
                           onSelect={(date) => {
-                            form.setValue('end_date', date, { shouldValidate: true })
+                            form.setValue('end_date', date as Date, { shouldValidate: true })
                             setEndDateOpen(false)
                           }}
                           initialFocus
                           disabled={(date) => {
-                            const startDate = form.watch('start_date') as Date | undefined
+                            const startDate = form.watch('start_date')
                             return startDate ? date < startDate : false
                           }}
                         />
                       </PopoverContent>
                     </Popover>
-                    {form.formState.errors.end_date && (
-                      <p className="text-sm text-red-600">{form.formState.errors.end_date.message}</p>
-                    )}
                   </div>
                 </div>
 
-                {/* Duration Display */}
-                {form.watch('start_date') && form.watch('end_date') && (
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 rounded-lg">
-                    <CalendarIcon className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      {t('leave_requests.form.total_days', {
-                        count: calculateDays(
-                          form.watch('start_date') as Date,
-                          form.watch('end_date') as Date
-                        )
-                      })}
-                    </span>
+                {/* Balance & Duration Display */}
+                {(selectedStartDate && selectedEndDate || isOverBalance) && (
+                  <div className={cn(
+                    "flex flex-col gap-2 px-4 py-3 rounded-lg border",
+                    isOverBalance
+                      ? "bg-red-50 border-red-100 text-red-700"
+                      : "bg-blue-50 border-blue-100 text-blue-700"
+                  )}>
+                    <div className="flex items-center gap-2">
+                      {isOverBalance ? <AlertTriangle className="h-4 w-4" /> : <CalendarIcon className="h-4 w-4" />}
+                      <span className="text-sm font-semibold">
+                        {t('leave_requests.form.total_days', { count: requestedDays })}
+                      </span>
+                    </div>
+                    {isOverBalance && (
+                      <p className="text-xs font-medium">
+                        {t('leave_requests.form.insufficient_balance', 'Insufficient balance. You only have {{remaining}} days remaining.', { remaining: balance?.remaining_days })}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -288,9 +319,6 @@ export default function MyLeaveRequests() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {form.formState.errors.type && (
-                    <p className="text-sm text-red-600">{form.formState.errors.type.message}</p>
-                  )}
                 </div>
 
                 {/* Reason */}
@@ -307,9 +335,6 @@ export default function MyLeaveRequests() {
                       form.formState.errors.reason && "border-red-500"
                     )}
                   />
-                  {form.formState.errors.reason && (
-                    <p className="text-sm text-red-600">{form.formState.errors.reason.message}</p>
-                  )}
                 </div>
               </div>
 
@@ -321,14 +346,14 @@ export default function MyLeaveRequests() {
                     setIsDialogOpen(false)
                     form.reset()
                   }}
-                  className="border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="border-slate-200"
                   disabled={submitMutation.isPending}
                 >
                   {t('leave_requests.form.cancel')}
                 </Button>
                 <LoadingButton
                   type="submit"
-                  disabled={!form.formState.isValid}
+                  disabled={!form.formState.isValid || isOverBalance}
                   loading={submitMutation.isPending}
                   loadingText={t('leave_requests.form.submitting')}
                   className="bg-hotel-navy hover:bg-hotel-navy-light text-white shadow-sm"
@@ -342,74 +367,76 @@ export default function MyLeaveRequests() {
       </div>
 
       {/* Leave Requests List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('leave_requests.list.title')}</CardTitle>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+          <CardTitle className="text-lg font-semibold">{t('leave_requests.list.title')}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-gray-600">{t('leave_requests.list.loading')}</p>
+            <div className="text-center py-12">
+              <Loader2 className="animate-spin h-8 w-8 text-hotel-gold mx-auto" />
+              <p className="mt-4 text-slate-500 font-medium">{t('leave_requests.list.loading')}</p>
             </div>
           ) : !leaveRequests || leaveRequests.length === 0 ? (
-            <div className="text-center py-8">
-              <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">{t('leave_requests.list.empty_title')}</h3>
-              <p className="text-gray-600 mb-4">
+            <div className="text-center py-12">
+              <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CalendarIcon className="w-8 h-8 text-slate-300" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">{t('leave_requests.list.empty_title')}</h3>
+              <p className="text-slate-500 mb-6 max-w-sm mx-auto">
                 {t('leave_requests.list.empty_desc')}
               </p>
-              <Button onClick={() => setIsDialogOpen(true)} className="bg-hotel-navy hover:bg-hotel-navy-light">
+              <Button onClick={() => setIsDialogOpen(true)} variant="outline" className="border-hotel-navy text-hotel-navy hover:bg-hotel-navy hover:text-white">
                 <Plus className="w-4 h-4 me-2" />
                 {t('leave_requests.list.submit_first')}
               </Button>
             </div>
           ) : (
-            <div className="space-y-3 sm:space-y-4">
+            <div className="space-y-4">
               {leaveRequests.map((request) => (
-                <div key={request.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3">
+                <div key={request.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-slate-200 rounded-xl gap-4 hover:border-slate-300 transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       {request.workflow?.request_no && (
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono bg-slate-50 border-slate-300">
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono bg-slate-50 border-slate-300 text-slate-600">
                           #{request.workflow.request_no}
                         </Badge>
                       )}
-                      <h4 className="font-medium capitalize text-sm sm:text-base">
+                      <h4 className="font-bold text-slate-900">
                         {t(`leave_requests.types.${request.type}`)} - {calculateDays(new Date(request.start_date), new Date(request.end_date))} {t('leave_requests.list.days')}
                       </h4>
-                      <Badge className={`text-xs ${statusColors[request.status]}`}>
+                      <Badge className={cn("text-[10px] uppercase font-bold px-2 py-0.5", statusColors[request.status as keyof typeof statusColors])}>
                         {t(`status.${request.status}`)}
                       </Badge>
                     </div>
-                    <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                      <div>
-                        {format(new Date(request.start_date), 'MMM dd, yyyy')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
+                    <div className="text-sm text-slate-600 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{format(new Date(request.start_date), 'MMM dd, yyyy')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}</span>
                       </div>
                       {request.reason && (
-                        <div className="truncate">{t('leave_requests.list.reason')}: {request.reason}</div>
+                        <div className="truncate italic text-slate-500">"{request.reason}"</div>
                       )}
-                      <div>{t('leave_requests.list.submitted')}: {format(new Date(request.created_at), 'MMM dd, yyyy')}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleView(request.id)}
-                      className="h-9 text-xs sm:text-sm"
+                      className="text-hotel-navy hover:bg-slate-100 font-medium"
                     >
-                      View
+                      {t('leave_requests.list.view_details', 'View')}
                     </Button>
-                    {request.status === 'pending' && (
+                    {['pending', 'draft', 'pending_supervisor_approval'].includes(request.status) && (
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleCancel(request.id)}
                         disabled={cancelMutation.isPending}
-                        className="text-red-600 hover:text-red-700 h-9 text-xs sm:text-sm"
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700 font-medium"
                       >
-                        <X className="w-3.5 h-3.5 me-1" />
+                        <X className="w-4 h-4 me-1.5" />
                         {t('leave_requests.list.cancel_action')}
                       </Button>
                     )}

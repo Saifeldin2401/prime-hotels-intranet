@@ -109,7 +109,9 @@
             "submitting": "Submitting...",
             "error_title": "Error",
             "success_message": "Success Message",
-            "success_title": "Success"
+            "success_title": "Success",
+            "submit_btn": "Submit New Request",
+            "insufficient_balance": "Insufficient balance. You only have {{remaining}} days remaining."
         },
         "list": {
             "title": "Your Leave Requests",
@@ -123,7 +125,8 @@
             "approved_by": "Approved by",
             "rejected_by": "Rejected by",
             "confirm_cancel": "Are you sure you want to cancel this leave request?",
-            "cancel_action": "Cancel"
+            "cancel_action": "Cancel",
+            "cancel_confirm": "Are you sure you want to cancel this leave request?"
         },
         "types": {
             "annual": "Annual Leave",
@@ -133,6 +136,12 @@
             "paternity": "Paternity Leave",
             "personal": "Personal Leave",
             "other": "Other"
+        },
+        "balance": {
+            "total": "Total Balance",
+            "used": "Used",
+            "pending": "Pending",
+            "remaining": "Remaining"
         }
     },
     "status": {
