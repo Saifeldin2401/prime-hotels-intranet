@@ -20,7 +20,7 @@ import {
 } from '@/hooks/useAudits'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
-import { useTranslation } from "react-i18next";
+
 
 const SCOPE_TYPES = [
   { value: 'global', label: 'Global' },
@@ -79,7 +79,7 @@ export function AuditsControlCenter() {
     await createTemplate.mutateAsync({
       name: templateName.trim(),
       description: '',
-      scope_type: templateScope as any,
+      scope_type: templateScope as unknown,
       frequency: templateFrequency
     })
     setTemplateName('')
@@ -93,7 +93,7 @@ export function AuditsControlCenter() {
       id: selectedTemplateId,
       updates: {
         name: templateName.trim(),
-        scope_type: templateScope as any,
+        scope_type: templateScope as unknown,
         frequency: templateFrequency
       }
     })
@@ -123,7 +123,7 @@ export function AuditsControlCenter() {
         updates: {
           title: itemTitle.trim(),
           category: itemCategory,
-          severity: itemSeverity as any,
+          severity: itemSeverity as unknown,
           required: true
         }
       })
@@ -132,7 +132,7 @@ export function AuditsControlCenter() {
         template_id: selectedTemplateId,
         title: itemTitle.trim(),
         category: itemCategory,
-        severity: itemSeverity as any,
+        severity: itemSeverity as unknown,
         required: true,
         order_index: items.length
       })
@@ -143,7 +143,7 @@ export function AuditsControlCenter() {
     setEditingItemId(null)
   }
 
-  const startEditItem = (item: any) => {
+  const startEditItem = (item: unknown) => {
     setEditingItemId(item.id)
     setItemTitle(item.title || '')
     setItemCategory(item.category || '')

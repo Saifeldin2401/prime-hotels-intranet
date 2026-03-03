@@ -113,7 +113,8 @@ export function QuestionEditor() {
 
     // Update points/time defaults based on difficulty
     useEffect(() => {
-        const subscription = form.watch((value, { name }) => {
+        const { watch } = form;
+        const subscription = watch((value, { name }) => {
             if (name === 'difficulty_level') {
                 const difficulty = value.difficulty_level as QuestionDifficulty
                 if (difficulty) {

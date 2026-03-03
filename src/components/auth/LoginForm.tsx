@@ -278,7 +278,7 @@ export function LoginForm() {
         showSuccessToast(t('welcome_back'), t('redirecting'))
         // Redirect handled by AuthContext/AppRouter
       }
-    } catch (err) {
+    } catch (_err) {
       setErrorType('network')
       setError(t('errors.network_error'))
       showErrorToast(t('errors.title'), t('errors.network_error'))
