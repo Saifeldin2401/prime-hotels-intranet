@@ -1,4 +1,3 @@
-import { useVacationBalance } from '@/hooks/useLeaveRequests';
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -11,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, CalendarIcon } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -35,13 +34,23 @@ import {
   useRequestComments,
   useRequestEvents,
   useRequestSteps,
-  type RequestRow,
   type RequestStatus,
 } from '@/hooks/useRequests'
+import { useVacationBalance } from '@/hooks/useLeaveRequests'
 import type { LeaveRequest, Profile, ExpenseClaim } from '@/lib/types'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { openUrlInNewTab, resolveExpenseReceiptUrl } from '@/lib/secureFileAccess'
+import { cn } from '@/lib/utils'
+
+interface RequestMetadata {
+  property_id?: string;
+  new_role?: string;
+  effective_date?: string;
+  target_property?: string;
+  from?: string;
+  to?: string;
+}
 
 function StatusBadge({ status }: { status: RequestStatus }) {
   const { t } = useTranslation('extracted');
@@ -70,7 +79,13 @@ export default function RequestDetail() {
   const [visibility, setVisibility] = useState<'all' | 'internal'>('all')
 
   const [actionDialog, setActionDialog] = useState<
-    null | 'approve' | 'reject' | 'return' | 'forward' | 'close' | 'comment'
+    | null
+    | 'approve'
+    | 'reject'
+    | 'return'
+    | 'forward'
+    | 'close'
+    | 'comment'
   >(null)
   const [forwardTo, setForwardTo] = useState<string>('')
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
@@ -86,9 +101,9 @@ export default function RequestDetail() {
   const commentsQuery = useRequestComments(id)
   const attachmentsQuery = useRequestAttachments(id)
 
-  const request = requestQuery.data;
-  const actionMutation = useRequestAction();
+  const actionMutation = useRequestAction()
 
+  const request = requestQuery.data
 
   const isHr = primaryRole === 'regional_hr' || primaryRole === 'property_hr'
   const isAdmin = primaryRole === 'regional_admin'
@@ -118,6 +133,7 @@ export default function RequestDetail() {
       return data as unknown as LeaveRequest
     },
   })
+
   const requesterId = request?.requester_id || leaveQuery.data?.requester?.id;
   const leaveYear = leaveQuery.data?.start_date ? new Date(leaveQuery.data.start_date).getFullYear() : new Date().getFullYear();
   const requesterBalanceQuery = useVacationBalance(requesterId, leaveYear);
@@ -148,7 +164,8 @@ export default function RequestDetail() {
     queryKey: ['request-forward-targets', request?.id, request?.metadata],
     enabled: !!request && canAct,
     queryFn: async () => {
-      const propertyId = (request?.metadata as any)?.property_id as string | undefined
+      const metadata = request?.metadata as RequestMetadata | undefined
+      const propertyId = metadata?.property_id
 
       const { data, error } = await supabase
         .from('profiles')
@@ -164,13 +181,25 @@ export default function RequestDetail() {
 
       if (error) throw error
 
-      const mapped = (data || []).map((p: any) => ({
-        id: p.id as string,
-        full_name: p.full_name as string | null,
-        email: p.email as string,
-        role: p.user_roles?.role as string,
-        property_ids: (p.user_properties || []).map((up: any) => up.property_id as string),
-      }))
+      interface TargetProfile {
+        id: string;
+        full_name: string | null;
+        email: string;
+        role: string;
+        property_ids: string[];
+      }
+
+      const mapped: TargetProfile[] = (data || []).map((p) => {
+        const roles = p.user_roles as unknown as { role: string }[];
+        const props = p.user_properties as unknown as { property_id: string }[];
+        return {
+          id: p.id,
+          full_name: p.full_name,
+          email: p.email,
+          role: roles?.[0]?.role || 'staff',
+          property_ids: (props || []).map((up) => up.property_id),
+        };
+      })
 
       const filtered = propertyId
         ? mapped.filter((p) => p.role === 'regional_hr' || p.role === 'regional_admin' || p.property_ids.includes(propertyId))
@@ -196,8 +225,9 @@ export default function RequestDetail() {
         if (e.event_type === 'attachment_added') return 'Attachment added'
         if (e.event_type === 'comment_added') return 'Comment added'
         if (e.event_type === 'status_changed') {
-          const from = (e.payload as any)?.from
-          const to = (e.payload as any)?.to
+          const payload = e.payload as RequestMetadata | undefined
+          const from = payload?.from
+          const to = payload?.to
           return `Status changed: ${from} → ${to}`
         }
         return e.event_type
@@ -224,7 +254,7 @@ export default function RequestDetail() {
 
   const openManageDialog = () => {
     if (!request) return
-    setManagePriority(request.priority ?? 'normal')
+    setManagePriority(request.priority as 'low' | 'normal' | 'high' | 'urgent' ?? 'normal')
     setManageDueAt(toLocalInputValue(request.due_at))
     setManageAssignee(request.current_assignee_id || '')
     setManageNote('')
@@ -399,19 +429,19 @@ export default function RequestDetail() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <StatusBadge status={request.status} />
+        <StatusBadge status={request.status as RequestStatus} />
         {request.current_assignee && (
           <Badge variant="outline" className="text-[10px] xs:text-xs">
-            Assigned to: {request.current_assignee.full_name || request.current_assignee.email}
+            {request.current_assignee.full_name || request.current_assignee.email}
           </Badge>
         )}
         {request.priority && (
-          <Badge className={priorityClass[request.priority]}>
-            Priority: {priorityLabel[request.priority]}
+          <Badge className={cn("text-[10px] xs:text-xs capitalize", priorityClass[request.priority as keyof typeof priorityClass])}>
+            {priorityLabel[request.priority as keyof typeof priorityLabel]}
           </Badge>
         )}
         {request.due_at && (
-          <Badge className={isOverdue ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}>
+          <Badge variant="outline" className={cn("text-[10px] xs:text-xs", isOverdue && "text-red-600 border-red-200")}>
             Due: {format(new Date(request.due_at), 'MMM dd, yyyy')}
           </Badge>
         )}
@@ -524,12 +554,12 @@ export default function RequestDetail() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-xs text-gray-500">New Role</div>
-                          <div className="font-medium capitalize">{(request.metadata as any)?.new_role?.replace('_', ' ')}</div>
+                          <div className="font-medium capitalize">{(request.metadata as RequestMetadata | undefined)?.new_role?.replace('_', ' ')}</div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500">Effective Date</div>
                           <div className="font-medium">
-                            {(request.metadata as any)?.effective_date ? format(new Date((request.metadata as any).effective_date), 'MMM dd, yyyy') : '—'}
+                            {(request.metadata as RequestMetadata | undefined)?.effective_date ? format(new Date((request.metadata as RequestMetadata).effective_date!), 'MMM dd, yyyy') : '—'}
                           </div>
                         </div>
                       </div>
@@ -539,12 +569,12 @@ export default function RequestDetail() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-xs text-gray-500">Target Property</div>
-                          <div className="font-medium">{(request.metadata as any)?.target_property}</div>
+                          <div className="font-medium">{(request.metadata as RequestMetadata | undefined)?.target_property}</div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500">Effective Date</div>
                           <div className="font-medium">
-                            {(request.metadata as any)?.effective_date ? format(new Date((request.metadata as any).effective_date), 'MMM dd, yyyy') : '—'}
+                            {(request.metadata as RequestMetadata | undefined)?.effective_date ? format(new Date((request.metadata as RequestMetadata).effective_date!), 'MMM dd, yyyy') : '—'}
                           </div>
                         </div>
                       </div>
@@ -728,16 +758,16 @@ export default function RequestDetail() {
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">{t('common:phone')}</div>
-                  <div className="text-sm">{(requester as any)?.phone || '—'}</div>
+                  <div className="text-sm">{requester?.phone || '—'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Position</div>
-                  <div className="text-sm">{(requester as any)?.job_title || '—'}</div>
+                  <div className="text-sm">{requester?.job_title || '—'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Joining Date</div>
                   <div className="text-sm">
-                    {(requester as any)?.hire_date ? format(new Date((requester as any).hire_date), 'MMM dd, yyyy') : '—'}
+                    {requester?.hire_date ? format(new Date(requester.hire_date), 'MMM dd, yyyy') : '—'}
                   </div>
                 </div>
               </div>
@@ -747,7 +777,6 @@ export default function RequestDetail() {
               ) : null}
             </CardContent>
           </Card>
-
 
           {request.entity_type === 'leave_request' && (isHr || isAdmin) && (
             <Card className="border-hotel-gold/30 bg-hotel-gold/5">
@@ -791,8 +820,8 @@ export default function RequestDetail() {
               <div className="flex items-center justify-between">
                 <div className="text-xs text-gray-500">{t('common:priority')}</div>
                 {request.priority ? (
-                  <Badge className={priorityClass[request.priority]}>
-                    {priorityLabel[request.priority]}
+                  <Badge className={priorityClass[request.priority as keyof typeof priorityClass]}>
+                    {priorityLabel[request.priority as keyof typeof priorityLabel]}
                   </Badge>
                 ) : (
                   <span className="text-sm text-gray-600">—</span>
@@ -800,7 +829,7 @@ export default function RequestDetail() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="text-xs text-gray-500">Due Date</div>
-                <div className={isOverdue ? 'text-sm text-red-600 font-medium' : 'text-sm text-gray-700'}>
+                <div className="text-sm text-gray-700">
                   {request.due_at ? format(new Date(request.due_at), 'MMM dd, yyyy') : '—'}
                 </div>
               </div>

@@ -128,7 +128,7 @@ export function useLeaveRequests() {
 
       const combined = [...workflowItems, ...(legacyRows || [])]
       const seen = new Set<string>()
-      return combined.filter((item: any) => {
+      return combined.filter((item) => {
         if (!item?.id) return false
         if (seen.has(item.id)) return false
         seen.add(item.id)
@@ -274,7 +274,7 @@ export function useApproveLeaveRequest() {
         })
 
         if (error) throw error
-        const result = Array.isArray(data) ? data[0] : data
+        const result = (Array.isArray(data) ? data[0] : data) as { success: boolean, message: string }
         if (result && result.success === false) {
           throw new Error(result.message || 'Approval failed')
         }
@@ -346,7 +346,7 @@ export function useRejectLeaveRequest() {
         })
 
         if (error) throw error
-        const result = Array.isArray(data) ? data[0] : data
+        const result = (Array.isArray(data) ? data[0] : data) as { success: boolean, message: string }
         if (result && result.success === false) {
           throw new Error(result.message || 'Rejection failed')
         }

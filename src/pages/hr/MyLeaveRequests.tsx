@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { leaveRequestSchema, type LeaveRequestFormData } from '@/lib/validationSchemas'
-import { useToast } from '@/components/ui/use-toast'
 import { LoadingButton } from '@/components/loading'
 
 const leaveTypeKeys = [
@@ -46,10 +45,9 @@ const statusColors = {
 } as const
 
 export default function MyLeaveRequests() {
-  const { user } = useAuth()
+  const { user: _user } = useAuth()
   const navigate = useNavigate()
   const { t } = useTranslation('hr')
-  const { toast } = useToast()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
@@ -81,9 +79,8 @@ export default function MyLeaveRequests() {
       })
       setIsDialogOpen(false)
       form.reset()
-    } catch (err: any) {
-      console.error(err)
-      // Error handled by mutation onError
+    } catch (err) {
+      console.error('Submit leave request failed:', err)
     }
   }
 
@@ -92,7 +89,7 @@ export default function MyLeaveRequests() {
       try {
         await cancelMutation.mutateAsync({ requestId: id })
       } catch (err) {
-        console.error(err)
+        console.error('Cancel leave request failed:', err)
       }
     }
   }
