@@ -1,3 +1,9 @@
+## 2026-03-03 - Discrepancy between UI-managed Role Permissions and Application Logic
+**Issue:** The 'Role Management' UI allowed administrators to grant/revoke permissions in a `role_permissions` table, but the rest of the application relied on a hardcoded `PERMISSION_CONFIG` in the `usePermissions` hook, rendering UI changes ineffective.
+**Impact:** Administrators were unable to dynamically adjust access control, leading to potential security gaps or functional blockers that could only be resolved by code changes.
+**Resolution:** Updated `usePermissions.ts` to fetch and respect dynamic overrides from the `role_permissions` table, while maintaining the hardcoded config as a robust fallback and source for metadata (like property/department requirements).
+**Prevention:** Always ensure that UI-managed configuration tables have a corresponding consumer in the application logic, and provide a clear hierarchy between dynamic (DB) and static (Code) configuration.
+
 ## 2026-03-03 - Shift Scheduling Property Boundary Enforcement
 **Issue:** In consolidated (cluster) scope, HR Shift Scheduling could run without a concrete property context, leading to broad data reads and writes with `property_id = null`.
 **Impact:** This creates a data isolation and integrity risk in multi-property operations, where records can become orphaned or operational actions can be applied without clear property ownership.

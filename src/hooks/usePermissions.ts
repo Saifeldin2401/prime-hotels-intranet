@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { ROLES, type AppRole } from '@/lib/constants'
 import { isConsolidatedPropertyId, roleSupportsConsolidatedView } from '@/lib/propertyScope'
@@ -94,6 +96,27 @@ const PERMISSION_CONFIG: PermissionConfig = {
 
 export function usePermissions() {
   const { primaryRole, properties, departments } = useAuth()
+
+  // Fetch dynamic permissions from DB
+  const { data: dbPermissions } = useQuery({
+    queryKey: ['user-role-permissions', primaryRole],
+    queryFn: async () => {
+      if (!primaryRole) return []
+      const { data, error } = await supabase
+        .from('role_permissions')
+        .select('permission, granted')
+        .eq('role', primaryRole)
+
+      if (error) {
+        console.error('Error fetching role permissions:', error)
+        return []
+      }
+      return data || []
+    },
+    enabled: !!primaryRole,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  })
+
   const canAccessConsolidatedView = useMemo(() => {
     if (roleSupportsConsolidatedView(primaryRole)) return true
     return properties.length > 1
@@ -101,6 +124,35 @@ export function usePermissions() {
 
   const hasPermission = useMemo(() => {
     return (permission: Permission, propertyId?: string, departmentId?: string) => {
+      // 1. Check for DB override first
+      if (dbPermissions && dbPermissions.length > 0) {
+        const override = dbPermissions.find(p => p.permission === permission)
+        if (override !== undefined) {
+          // If explicitly granted or denied in DB, respect that
+          // But we still need to check property/department access if the config requires it
+          if (!override.granted) return false
+
+          // If granted in DB, we still respect property/department scoping rules
+          const config = PERMISSION_CONFIG[permission]
+          if (config) {
+            if (propertyId && config.requiresPropertyAccess) {
+              if (isConsolidatedPropertyId(propertyId)) {
+                if (!canAccessConsolidatedView) return false
+              } else {
+                const hasPropertyAccess = properties.some(p => p.id === propertyId)
+                if (!hasPropertyAccess) return false
+              }
+            }
+            if (departmentId && config.requiresDepartmentAccess) {
+              const hasDepartmentAccess = departments.some(d => d.id === departmentId)
+              if (!hasDepartmentAccess) return false
+            }
+          }
+          return true
+        }
+      }
+
+      // 2. Fallback to hardcoded logic if no DB entry exists
       const config = PERMISSION_CONFIG[permission]
       if (!config) return false
 
@@ -142,7 +194,7 @@ export function usePermissions() {
 
       return true
     }
-  }, [canAccessConsolidatedView, primaryRole, properties, departments])
+  }, [dbPermissions, canAccessConsolidatedView, primaryRole, properties, departments])
 
   const canAccessProperty = useMemo(() => {
     return (propertyId: string) => {
@@ -200,6 +252,7 @@ export function usePermissions() {
     getAccessibleDepartments,
     getPropertyScopedPermissions,
     getDepartmentScopedPermissions,
+    isLoading: !primaryRole || (!!primaryRole && dbPermissions === undefined)
   }
 }
 
