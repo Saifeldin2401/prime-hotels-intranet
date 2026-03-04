@@ -20,6 +20,7 @@ import {
 import { EmployeeCard } from '@/components/directory/EmployeeCard'
 import { OrgPyramid } from '@/components/directory/OrgPyramid'
 import { useOrgHierarchy } from '@/hooks/useOrgHierarchy'
+import { useDebounce } from '@/hooks/useDebounce'
 import {
   useEmployeeDirectory,
   exportMonthlyBirthdays,
@@ -78,12 +79,14 @@ export default function EmployeeDirectory() {
   const canExportBirthdays = HR_ADMIN_ROLES.includes((primaryRole || 'staff') as AppRole)
   const canEditOrgMap = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '')
 
+  const debouncedSearch = useDebounce(search, 300)
+
   const { data: properties = [] } = useProperties()
   const { departments = [] } = useDepartments(propertyFilter !== 'all' ? propertyFilter : undefined)
-  const { hierarchy, isLoading: isOrgLoading } = useOrgHierarchy(search)
+  const { hierarchy, isLoading: isOrgLoading } = useOrgHierarchy(debouncedSearch)
 
   const { data: employees = [], isLoading: isDirectoryLoading } = useEmployeeDirectory({
-    search,
+    search: debouncedSearch,
     propertyId: propertyFilter,
     departmentId: departmentFilter,
     role: roleFilter,
