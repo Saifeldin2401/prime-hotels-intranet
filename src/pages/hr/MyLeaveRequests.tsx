@@ -128,7 +128,11 @@ export default function MyLeaveRequests() {
       return
     }
 
-    alert('Unable to open request details. Please try again.')
+    toast({
+      title: t('leave_requests.view_error_title', { defaultValue: 'Unable to open request' }),
+      description: t('leave_requests.view_error_message', { defaultValue: 'Please try again.' }),
+      variant: 'destructive'
+    })
   }
 
   const calculateDays = (startDate: Date, endDate: Date) => {

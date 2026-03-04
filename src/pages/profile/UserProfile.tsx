@@ -77,7 +77,10 @@ interface PrivateProfileData {
   salary_grade: string | null
 }
 
-const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr']
+const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']
+
+const isValidUuid = (value?: string | null) =>
+  !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 
 function getInitials(name?: string | null) {
   return name
@@ -96,6 +99,7 @@ export default function UserProfile() {
   const navigate = useNavigate()
   const { t } = useTranslation(['profile', 'common'])
   const { user, primaryRole } = useAuth()
+  const isValidProfileId = isValidUuid(id)
 
   const canViewPrivate = useMemo(() => {
     if (!id || !user?.id) return false
@@ -116,7 +120,7 @@ export default function UserProfile() {
       if (!row) throw new Error('Profile not found')
       return row as PublicProfileData
     },
-    enabled: !!id
+    enabled: !!id && isValidProfileId
   })
 
   const { data: privateProfile } = useQuery({
@@ -132,8 +136,28 @@ export default function UserProfile() {
       const row = Array.isArray(data) ? data[0] : data
       return (row || null) as PrivateProfileData | null
     },
-    enabled: !!id && canViewPrivate
+    enabled: !!id && isValidProfileId && canViewPrivate
   })
+
+  if (id && !isValidProfileId) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
+            <Users className="h-12 w-12 mb-4 opacity-50" />
+            <p className="text-lg font-medium">{t('common:error', 'Error')}</p>
+            <p className="text-sm">{t('profile:invalid_user_id', 'Invalid user profile ID')}</p>
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-4 w-4 me-2" />
+                {t('common:go_back', 'Go Back')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const properties = profile?.property_names || []
   const departments = profile?.department_names || []
@@ -437,4 +461,3 @@ export default function UserProfile() {
     </div>
   )
 }
-

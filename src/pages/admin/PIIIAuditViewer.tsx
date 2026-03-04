@@ -17,9 +17,10 @@ import { usePIIAccessLogs, usePIIAccessSummary, useApprovePIIAccess, useDeletePI
 import type { PIIAccessLog } from '@/lib/types'
 import type { DateRange } from 'react-day-picker'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/hooks/useAuth'
 
 export function PIIAuditViewer() {
-    const { t: t_ext } = useTranslation('extracted');
+  const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation(['admin', 'common'])
   const [filters, setFilters] = useState({
     user_id: '',
@@ -33,28 +34,31 @@ export function PIIAuditViewer() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [approvalJustification, setApprovalJustification] = useState('')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const { user } = useAuth()
 
   const { data: logs, isLoading, error } = usePIIAccessLogs({
     ...filters,
-    date_from: dateRange?.from?.toISOString() || '',
-    date_to: dateRange?.to?.toISOString() || ''
+    date_from: dateRange?.from?.toISOString(),
+    date_to: dateRange?.to?.toISOString()
   })
 
-  const { data: summary } = usePIIAccessSummary({
-    from: dateRange?.from?.toISOString() || '',
-    to: dateRange?.to?.toISOString() || ''
-  })
+  const { data: summary } = usePIIAccessSummary(
+    dateRange?.from && dateRange?.to ? {
+      from: dateRange.from.toISOString(),
+      to: dateRange.to.toISOString()
+    } : undefined
+  )
 
   const approveMutation = useApprovePIIAccess()
   const deleteMutation = useDeletePIIAccessLog()
   const exportMutation = useExportPIIAccessLogs()
 
   const handleApprove = () => {
-    if (!selectedLog) return
+    if (!selectedLog || !user) return
 
     approveMutation.mutate({
       logId: selectedLog.id,
-      approvedBy: 'current-user-id', // Replace with actual user ID
+      approvedBy: user.id,
       justification: approvalJustification
     }, {
       onSuccess: () => {
@@ -79,8 +83,8 @@ export function PIIAuditViewer() {
   const handleExport = () => {
     exportMutation.mutate({
       ...filters,
-      date_from: dateRange?.from?.toISOString() || '',
-      date_to: dateRange?.to?.toISOString() || ''
+      date_from: dateRange?.from?.toISOString(),
+      date_to: dateRange?.to?.toISOString()
     })
   }
 
@@ -345,12 +349,12 @@ export function PIIAuditViewer() {
                     <TableCell>
                       <div className="max-w-xs">
                         <div className="flex flex-wrap gap-1">
-                          {log.pii_fields.slice(0, 3).map((field) => (
+                          {(log.pii_fields || []).slice(0, 3).map((field) => (
                             <Badge key={field} variant="outline" className="text-xs">
                               {field}
                             </Badge>
                           ))}
-                          {log.pii_fields.length > 3 && (
+                          {Array.isArray(log.pii_fields) && log.pii_fields.length > 3 && (
                             <Badge variant="outline" className="text-xs">
                               +{log.pii_fields.length - 3}
                             </Badge>
@@ -446,7 +450,7 @@ export function PIIAuditViewer() {
               <div>
                 <Label>{t('pii_audit.pii_fields')}</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedLog.pii_fields.map((field) => (
+                  {(selectedLog.pii_fields || []).map((field) => (
                     <Badge key={field} variant="outline">
                       {field}
                     </Badge>

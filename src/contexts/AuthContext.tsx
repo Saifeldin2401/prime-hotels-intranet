@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await clearLocalSession('Profile request returned auth/session error')
           return
         }
-        console.error('Error loading profile:', profileError)
+        console.warn('Error loading profile.')
 
         // Try alternative: use auth.users metadata
         const { data: { user } } = await supabase.auth.getUser()
@@ -235,10 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await clearLocalSession('Roles request returned auth/session error')
             return
           }
-          console.error('Error loading roles:', rolesError)
-          console.error('Roles error code:', rolesError.code)
-          console.error('Roles error message:', rolesError.message)
-          console.error('Roles error details:', rolesError.details)
+          console.warn('Error loading roles.')
           setRolesLoading(false) // Mark as done even on error
         } else {
           const rolesData = directRoles || []
@@ -246,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setRolesLoading(false)
         }
       } else {
-        console.error('Roles loading failed or timed out:', rolesResult.reason)
+        console.warn('Roles loading failed or timed out.')
         setRolesLoading(false) // Mark as done even on timeout
       }
 
@@ -258,16 +255,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await clearLocalSession('Properties request returned auth/session error')
             return
           }
-          console.error('Error loading properties:', propertiesError)
-          console.error('Properties error code:', propertiesError.code)
-          console.error('Properties error message:', propertiesError.message)
+          console.warn('Error loading properties.')
         } else {
           const props = directProps?.map((up: any) => up.properties).filter(Boolean) || []
           setProperties(props)
 
         }
       } else {
-        console.error('Properties loading failed or timed out:', propertiesResult.reason)
+        console.warn('Properties loading failed or timed out.')
       }
 
       // Handle departments
@@ -278,16 +273,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await clearLocalSession('Departments request returned auth/session error')
             return
           }
-          console.error('Error loading departments:', departmentsError)
-          console.error('Departments error code:', departmentsError.code)
-          console.error('Departments error message:', departmentsError.message)
+          console.warn('Error loading departments.')
         } else {
           const depts = directDepts?.map((ud: any) => ud.departments).filter(Boolean) || []
           setDepartments(depts)
 
         }
       } else {
-        console.error('Departments loading failed or timed out:', departmentsResult.reason)
+        console.warn('Departments loading failed or timed out.')
       }
 
       lastUserDataRefreshRef.current = Date.now()
@@ -296,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await clearLocalSession('User data load failed due to auth/session error')
         return
       }
-      console.error('Unexpected error loading user data:', error)
+      console.warn('Unexpected error loading user data.')
     }
   }, [clearLocalSession, isAuthError, withTimeout])
 
@@ -320,7 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return
 
       if (error) {
-        console.error('Error getting session:', error)
+        console.warn('Error getting session.')
         loadingState = false
         setLoading(false)
         clearTimeout(timeoutId)
@@ -338,7 +331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearTimeout(timeoutId)
         // Load user data asynchronously without blocking
         loadUserData(session.user.id).catch((err) => {
-          console.error('Error in loadUserData:', err)
+          console.warn('Error in loadUserData.')
         })
       } else {
         loadingState = false
@@ -346,7 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearTimeout(timeoutId)
       }
     }).catch((error) => {
-      console.error('Unexpected error in getSession:', error)
+      console.warn('Unexpected error in getSession.')
       if (mounted) {
         loadingState = false
         setLoading(false)
@@ -373,7 +366,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false)
           clearTimeout(timeoutId)
           loadUserData(session.user.id).catch((err) => {
-            console.error('Error in loadUserData (auth change):', err)
+            console.warn('Error in loadUserData (auth change).')
           })
         } else {
           loadingState = false
@@ -414,7 +407,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser((current) => (current?.id === verifiedUser.id ? current : verifiedUser))
         if (shouldRefreshUserData(verifiedUser.id)) {
           loadUserData(verifiedUser.id).catch((err) => {
-            console.error('Error in loadUserData (resume validation):', err)
+            console.warn('Error in loadUserData (resume validation).')
           })
         }
       } finally {
@@ -467,7 +460,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
         // Load user data asynchronously without blocking
         loadUserData(data.user.id).catch((err) => {
-          console.error('Error loading user data after sign in:', err)
+          console.warn('Error loading user data after sign in.')
           // Don't set loading to true again - app should continue
         })
       } else {

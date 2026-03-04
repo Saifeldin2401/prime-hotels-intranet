@@ -274,6 +274,10 @@ export function useUpdateTask() {
     mutationFn: async ({ id, ...updates }: Partial<Task> & { id: string }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
+      if (updates.property_id !== undefined && !isRealPropertyId(updates.property_id)) {
+        throw new Error('A valid property_id is required when updating task scope')
+      }
+
       // Get current task to check for changes
       const { data: currentTask } = await supabase
         .from('tasks')

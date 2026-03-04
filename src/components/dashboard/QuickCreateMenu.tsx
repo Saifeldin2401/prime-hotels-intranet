@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import { cn } from '@/lib/utils'
 
 // Modal imports
@@ -34,14 +35,14 @@ export function QuickCreateMenu({
 }: QuickCreateMenuProps) {
   const { t, i18n } = useTranslation('dashboard')
   const isRTL = i18n.dir() === 'rtl'
-  const { user, roles } = useAuth()
+  const { user } = useAuth()
+  const { hasPermission } = usePermissions()
   const [activeModal, setActiveModal] = useState<ModalType>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  // Check if user can post announcements
-  const canPostAnnouncement = roles.some(r =>
-    ['property_manager', 'property_hr', 'regional_hr', 'regional_admin'].includes(r.role)
-  )
+  // Use centralized permission system to check announcement access
+  // This respects role hierarchy (e.g., corporate_admin inherits all lower-level permissions)
+  const canPostAnnouncement = hasPermission('announcements.create')
 
   const menuItems = [
     {

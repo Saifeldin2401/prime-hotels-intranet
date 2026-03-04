@@ -85,6 +85,7 @@ export interface BulkNotificationParams {
   metadata?: Record<string, unknown>
   link?: string | null
   skipDbInsert?: boolean
+  sendEmail?: boolean
 }
 
 interface EmailNotificationPayload {
@@ -213,7 +214,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
  * Create notifications for multiple users (e.g., department-wide announcements)
  */
 export async function createBulkNotifications(params: BulkNotificationParams): Promise<void> {
-  const { userIds: rawUserIds, type, title, message, entityType, entityId, metadata, link, skipDbInsert } = params
+  const { userIds: rawUserIds, type, title, message, entityType, entityId, metadata, link, skipDbInsert, sendEmail = true } = params
   const userIds = [...new Set(rawUserIds)]
 
   if (userIds.length === 0) return
@@ -254,12 +255,12 @@ export async function createBulkNotifications(params: BulkNotificationParams): P
     'maintenance_assigned'
   ]
 
-  if (emailTypes.includes(type)) {
+  if (sendEmail && emailTypes.includes(type)) {
     try {
       const { data: session } = await supabase.auth.getSession()
       if (!session?.session?.access_token) return
 
-      await fetch(BULK_NOTIFICATION_EDGE_URL, {
+      const response = await fetch(BULK_NOTIFICATION_EDGE_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -281,8 +282,14 @@ export async function createBulkNotifications(params: BulkNotificationParams): P
           }
         })
       })
+
+      if (!response.ok) {
+        console.warn(`Bulk notification edge function returned ${response.status}. Background emails might be delayed.`);
+      }
     } catch (err) {
-      console.error('Failed to queue bulk email notifications:', err)
+      // Catch network/CORS errors when the edge function returns 500 without CORS headers
+      console.error('Failed to queue bulk email notifications (Network/CORS error):', err)
+      // We explicitly DO NOT throw here, so the main mutation (like creating an announcement) succeeds in the UI.
     }
   }
 }

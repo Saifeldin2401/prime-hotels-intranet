@@ -259,7 +259,7 @@ export default function TrainingAssignmentRules() {
                                     <p className="text-sm text-gray-500">{t('rules.auto_assigns_to')} {rule.job_title_id ? t('rules.by_job_title') : t('rules.by_role')}</p>
                                 </div>
                                 <Badge variant={rule.is_active ? 'default' : 'secondary'}>
-                                    {rule.is_active ? t('common:status.active') : t('common:status.inactive')}
+                                    {rule.is_active ? t('common:status_options.active') : t('common:status_options.inactive')}
                                 </Badge>
                             </div>
                         </CardHeader>
@@ -303,6 +303,6 @@ export default function TrainingAssignmentRules() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     )
 }

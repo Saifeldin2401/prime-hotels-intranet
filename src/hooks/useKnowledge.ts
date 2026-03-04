@@ -6,6 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
 import * as KnowledgeService from '@/services/knowledgeService'
 import type {
     KnowledgeSearchFilters,
@@ -14,15 +15,27 @@ import type {
 } from '@/types/knowledge'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 // ============================================================================
 // ARTICLES
 // ============================================================================
 
 export function useKnowledgeArticles(filters: KnowledgeSearchFilters, page = 1, pageSize = 20) {
+    const { currentProperty } = useProperty()
+
     return useQuery({
-        queryKey: ['knowledge-articles', filters, page, pageSize],
-        queryFn: () => KnowledgeService.getArticles(filters, page, pageSize)
+        queryKey: ['knowledge-articles', filters, page, pageSize, currentProperty?.id],
+        queryFn: () => {
+            const propertyFilter = isRealPropertyId(currentProperty?.id)
+                ? currentProperty.id
+                : undefined
+            const mergedFilters: KnowledgeSearchFilters = {
+                ...filters,
+                property_id: filters.property_id ?? propertyFilter
+            }
+            return KnowledgeService.getArticles(mergedFilters, page, pageSize)
+        }
     })
 }
 
@@ -34,14 +47,17 @@ export function useArticles(options?: {
     departmentId?: string
     required?: boolean
 }) {
+    const { currentProperty } = useProperty()
+
     return useQuery({
-        queryKey: ['knowledge-articles', options],
+        queryKey: ['knowledge-articles', options, currentProperty?.id],
         queryFn: async () => {
             const filters: KnowledgeSearchFilters = {
                 query: options?.search,
                 content_type: options?.type as KnowledgeContentType | undefined,
                 department_id: options?.departmentId,
-                requires_acknowledgment: options?.required
+                requires_acknowledgment: options?.required,
+                property_id: isRealPropertyId(currentProperty?.id) ? currentProperty.id : undefined
             }
             const result = await KnowledgeService.getArticles(filters, 1, options?.limit || 50)
             return result.articles
@@ -61,16 +77,20 @@ export function useKnowledgeArticle(id: string | undefined) {
 }
 
 export function useFeaturedArticles(limit = 5) {
+    const { currentProperty } = useProperty()
+
     return useQuery({
-        queryKey: ['knowledge-featured', limit],
-        queryFn: () => KnowledgeService.getFeaturedArticles(limit)
+        queryKey: ['knowledge-featured', limit, currentProperty?.id],
+        queryFn: () => KnowledgeService.getFeaturedArticles(limit, currentProperty?.id)
     })
 }
 
 export function useRecentArticles(limit = 10) {
+    const { currentProperty } = useProperty()
+
     return useQuery({
-        queryKey: ['knowledge-recent', limit],
-        queryFn: () => KnowledgeService.getRecentArticles(limit)
+        queryKey: ['knowledge-recent', limit, currentProperty?.id],
+        queryFn: () => KnowledgeService.getRecentArticles(limit, currentProperty?.id)
     })
 }
 
@@ -80,10 +100,11 @@ export function useRecentArticles(limit = 10) {
 
 export function useRequiredReading() {
     const { user } = useAuth()
+    const { currentProperty } = useProperty()
 
     return useQuery({
-        queryKey: ['knowledge-required', user?.id],
-        queryFn: () => KnowledgeService.getRequiredReading(user!.id),
+        queryKey: ['knowledge-required', user?.id, currentProperty?.id],
+        queryFn: () => KnowledgeService.getRequiredReading(user!.id, currentProperty?.id),
         enabled: !!user?.id
     })
 }
@@ -111,9 +132,11 @@ export function useAcknowledgeArticle() {
 // ============================================================================
 
 export function useContextualHelp(triggerType: string, triggerValue: string) {
+    const { currentProperty } = useProperty()
+
     return useQuery({
-        queryKey: ['knowledge-contextual', triggerType, triggerValue],
-        queryFn: () => KnowledgeService.getContextualHelp(triggerType, triggerValue),
+        queryKey: ['knowledge-contextual', triggerType, triggerValue, currentProperty?.id],
+        queryFn: () => KnowledgeService.getContextualHelp(triggerType, triggerValue, currentProperty?.id),
         enabled: !!triggerType && !!triggerValue,
         staleTime: 1000 * 60 * 5 // Cache for 5 minutes
     })
@@ -266,9 +289,11 @@ export function useCategories(departmentId?: string) {
 // ============================================================================
 
 export function useContentTypeCounts() {
+    const { currentProperty } = useProperty()
+
     return useQuery({
-        queryKey: ['knowledge-type-counts'],
-        queryFn: () => KnowledgeService.getContentTypeCounts(),
+        queryKey: ['knowledge-type-counts', currentProperty?.id],
+        queryFn: () => KnowledgeService.getContentTypeCounts(currentProperty?.id),
         staleTime: 1000 * 60, // Keep reasonably fresh for sidebar badges
         refetchOnWindowFocus: false,
     })
@@ -280,18 +305,25 @@ export function useContentTypeCounts() {
 
 export function useDepartmentContentCounts() {
     const { user } = useAuth()
+    const { currentProperty } = useProperty()
 
     return useQuery({
-        queryKey: ['knowledge-department-counts-global', user?.id],
+        queryKey: ['knowledge-department-counts-global', user?.id, currentProperty?.id],
         queryFn: async () => {
             if (!user?.id) return {}
 
             // Get counts by department and type for ALL visible documents (RLS applied)
-            const { data: documents, error: docsError } = await supabase
+            let documentsQuery = supabase
                 .from('documents')
                 .select('department_id, content_type, visibility, departments(id, name)')
                 .not('department_id', 'is', null)
                 .eq('is_deleted', false)
+
+            if (isRealPropertyId(currentProperty?.id)) {
+                documentsQuery = documentsQuery.or(`property_id.is.null,property_id.eq.${currentProperty.id}`)
+            }
+
+            const { data: documents, error: docsError } = await documentsQuery
 
             if (docsError || !documents || documents.length === 0) return {}
 

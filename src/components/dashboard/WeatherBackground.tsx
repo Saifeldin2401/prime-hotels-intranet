@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { m } from 'framer-motion'
 import { Sun, Cloud, Snowflake, Moon } from 'lucide-react'
 
@@ -14,21 +15,33 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
     if ((code >= 71 && code <= 77) || code === 85 || code === 86) mode = 'snow';
     if (code >= 95 && code <= 99) mode = 'storm';
 
-    // Generate stable random items based on mode
-    const count = 30; // 30 rain/snow particles
-    const particles = Array.from({ length: count }).map((_, i) => ({
-        id: i,
-        left: Math.random() * 100 + '%',
-        delay: Math.random() * 2,
-        duration: 1 + Math.random() // for rain
-    }))
+    // Generate deterministic particle values to keep render pure and avoid animation jitter on re-render.
+    const { particles, snowParticles } = useMemo(() => {
+        const count = 30
+        const seedSource = `${code}-${isDay ? 'd' : 'n'}-${mode}`
+        let seed = seedSource.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) || 1
 
-    const snowParticles = Array.from({ length: count }).map((_, i) => ({
-        id: i,
-        left: Math.random() * 100 + '%',
-        delay: Math.random() * 5,
-        duration: 4 + Math.random() * 4 // for snow
-    }))
+        const next = () => {
+            seed = (seed * 1664525 + 1013904223) >>> 0
+            return seed / 4294967296
+        }
+
+        const rain = Array.from({ length: count }).map((_, i) => ({
+            id: i,
+            left: `${next() * 100}%`,
+            delay: next() * 2,
+            duration: 1 + next()
+        }))
+
+        const snow = Array.from({ length: count }).map((_, i) => ({
+            id: i,
+            left: `${next() * 100}%`,
+            delay: next() * 5,
+            duration: 4 + next() * 4
+        }))
+
+        return { particles: rain, snowParticles: snow }
+    }, [code, isDay, mode])
 
     return (
         <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0 rounded-[20px]">

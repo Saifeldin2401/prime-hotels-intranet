@@ -2,6 +2,7 @@ import { createBrowserRouter, createRoutesFromElements, Route, Navigate, Outlet 
 import { lazy, Suspense } from 'react'
 import { RouteErrorBoundary } from '@/components/common'
 import { useAuth } from '@/hooks/useAuth'
+import { NotificationProvider } from '@/contexts/NotificationContext'
 
 import { AuthRoutes } from './modules/AuthRoutes'
 import { AdminRoutes } from './modules/AdminRoutes'
@@ -36,7 +37,7 @@ const RootLayout = () => {
     }
 
     return (
-        <>
+        <NotificationProvider>
             <PageTracker />
             <Suspense fallback={
                 <div className="flex items-center justify-center min-h-screen bg-background">
@@ -46,7 +47,7 @@ const RootLayout = () => {
                 <Outlet />
             </Suspense>
             <SessionTimeoutWarning />
-        </>
+        </NotificationProvider>
     )
 }
 

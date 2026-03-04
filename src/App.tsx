@@ -6,7 +6,6 @@ import { Analytics } from '@vercel/analytics/react'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
-import { NotificationProvider } from '@/contexts/NotificationContext'
 import { PresenceProvider } from '@/contexts/PresenceContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -124,9 +123,7 @@ function App() {
             <PropertyProvider>
               <UserSettingsProvider>
                 <PresenceProvider>
-                  <NotificationProvider>
-                    <RouterProvider router={router} />
-                  </NotificationProvider>
+                  <RouterProvider router={router} />
                 </PresenceProvider>
               </UserSettingsProvider>
             </PropertyProvider>

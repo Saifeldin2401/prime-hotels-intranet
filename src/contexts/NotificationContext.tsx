@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import type { Notification } from '@/lib/types'
 import { toast } from 'sonner'
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences'
+import { BrowserNotificationPrompt } from '@/components/notifications/BrowserNotificationPrompt'
 
 interface NotificationContextType {
     notifications: Notification[]
@@ -150,6 +151,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             }}
         >
             {children}
+            <BrowserNotificationPrompt />
         </NotificationContext.Provider>
     )
 }

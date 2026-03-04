@@ -211,6 +211,7 @@ export function ApprovalWorkflow({
   const canTakeAction = request.current_assignee_id === profile?.id &&
     !['approved', 'rejected', 'closed'].includes(request.status)
   const isCompleted = ['approved', 'rejected', 'closed'].includes(request.status)
+  const requiresDecisionComment = !comment.trim()
 
   // Sort steps by order
   const sortedSteps = [...(request.request_steps || [])].sort((a, b) => a.step_order - b.step_order)
@@ -349,8 +350,9 @@ export function ApprovalWorkflow({
                 <Button
                   onClick={() => applyActionMutation.mutate({ action: 'return' })}
                   variant="outline"
-                  disabled={applyActionMutation.isPending || !comment.trim()}
+                  disabled={applyActionMutation.isPending || requiresDecisionComment}
                   className="flex-1"
+                  title={requiresDecisionComment ? 'Comment required to return' : undefined}
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Return
@@ -358,8 +360,9 @@ export function ApprovalWorkflow({
                 <Button
                   onClick={() => applyActionMutation.mutate({ action: 'reject' })}
                   variant="destructive"
-                  disabled={applyActionMutation.isPending || !comment.trim()}
+                  disabled={applyActionMutation.isPending || requiresDecisionComment}
                   className="flex-1"
+                  title={requiresDecisionComment ? 'Comment required to reject' : undefined}
                 >
                   <XCircle className="w-4 h-4 mr-2" />
                   Reject

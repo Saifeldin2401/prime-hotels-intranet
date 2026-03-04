@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
 import type { Database } from '@/types/supabase'
+import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 type Goal = Database['public']['Tables']['goals']['Row'] & {
     training_module?: {
@@ -15,12 +17,27 @@ type Goal = Database['public']['Tables']['goals']['Row'] & {
 
 export function useGoals(employeeId?: string) {
     const { user } = useAuth()
+    const { currentProperty } = useProperty()
     const targetId = employeeId || user?.id
 
     return useQuery({
-        queryKey: ['goals', targetId],
+        queryKey: ['goals', targetId, currentProperty?.id],
         queryFn: async () => {
             if (!targetId) return []
+
+            if (isRealPropertyId(currentProperty?.id)) {
+                const { data: membership, error: membershipError } = await supabase
+                    .from('user_properties')
+                    .select('id')
+                    .eq('user_id', targetId)
+                    .eq('property_id', currentProperty.id)
+                    .limit(1)
+                    .maybeSingle()
+
+                if (membershipError) throw membershipError
+                if (!membership) return []
+            }
+
             const { data, error } = await supabase
                 .from('goals')
                 .select('*')

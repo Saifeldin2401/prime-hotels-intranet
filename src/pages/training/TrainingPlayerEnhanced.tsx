@@ -66,6 +66,7 @@ import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { getEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
 import type { TrainingContentBlock } from '@/lib/types'
 import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
 import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleViewer'
@@ -89,6 +90,9 @@ type Milestone = {
     icon: React.ReactNode
 }
 
+const isValidUuid = (value?: string | null) =>
+    !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+
 // --- Components ---
 
 export default function TrainingPlayerEnhanced() {
@@ -101,6 +105,18 @@ export default function TrainingPlayerEnhanced() {
     const navigate = useNavigate()
     const { toast } = useToast()
     const { user, profile } = useAuth()
+    const isValidModuleId = isValidUuid(id)
+
+    useEffect(() => {
+        if (id && !isValidModuleId) {
+            toast({
+                title: t('error', 'Error'),
+                description: t('invalidModuleId', 'Invalid training module ID.'),
+                variant: 'destructive'
+            })
+            navigate('/learning/my', { replace: true })
+        }
+    }, [id, isValidModuleId, navigate, t, toast])
 
     // Core state
     const [activeBlockIndex, setActiveBlockIndex] = useState(0)
@@ -153,7 +169,7 @@ export default function TrainingPlayerEnhanced() {
     const { data: moduleData, isLoading } = useQuery({
         queryKey: ['training-module-full', id],
         queryFn: async () => {
-            if (!id) throw new Error('No ID')
+            if (!id || !isValidModuleId) throw new Error('Invalid module ID')
 
             const { data: module, error: moduleError } = await supabase
                 .from('training_modules')
@@ -200,7 +216,7 @@ export default function TrainingPlayerEnhanced() {
                 }
             }
         },
-        enabled: !!id
+        enabled: !!id && isValidModuleId
     })
 
     const activeBlock = moduleData?.blocks[activeBlockIndex]
@@ -258,13 +274,18 @@ export default function TrainingPlayerEnhanced() {
 
     // Load saved notes from localStorage
     useEffect(() => {
-        if (user && id) {
-            const savedNotes = localStorage.getItem(`training-notes:${user.id}:${id}`)
-            if (savedNotes) {
-                try {
-                    setNotes(JSON.parse(savedNotes))
-                } catch {}
-            }
+        if (!user || !id) return
+        let isActive = true
+
+        const loadNotes = async () => {
+            const savedNotes = await getEncryptedLocalStorage<Record<string, Note>>(`training-notes:${user.id}:${id}`)
+            if (!isActive || !savedNotes) return
+            setNotes(savedNotes)
+        }
+
+        void loadNotes()
+        return () => {
+            isActive = false
         }
     }, [user, id])
 
@@ -280,7 +301,7 @@ export default function TrainingPlayerEnhanced() {
         }
         setNotes(newNotes)
         if (user && id) {
-            localStorage.setItem(`training-notes:${user.id}:${id}`, JSON.stringify(newNotes))
+            void setEncryptedLocalStorage(`training-notes:${user.id}:${id}`, newNotes)
         }
     }, [notes, user, id])
 

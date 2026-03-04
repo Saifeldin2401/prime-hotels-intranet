@@ -35,6 +35,7 @@ import type {
   TrainingModule
 } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 type PathType = 'new_hire' | 'department' | 'leadership' | 'compliance' | 'skills'
 
@@ -271,10 +272,10 @@ export default function TrainingPaths() {
       setShowPathDialog(false)
       setEditingPath(null)
       resetForm()
-      alert(editingPath ? t('pathUpdated') : t('pathCreated'))
+      toast.success(editingPath ? t('pathUpdated') : t('pathCreated'))
     },
     onError: (error) => {
-      alert(error.message)
+      toast.error(error instanceof Error ? error.message : t('error', 'Unexpected error'))
     }
   })
 
@@ -289,10 +290,10 @@ export default function TrainingPaths() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-paths'] })
-      alert(t('pathDeleted'))
+      toast.success(t('pathDeleted'))
     },
     onError: (error) => {
-      alert(error.message)
+      toast.error(error instanceof Error ? error.message : t('error', 'Unexpected error'))
     }
   })
 

@@ -47,10 +47,13 @@ import {
 } from '@/components/ui/select'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useDailyOccupancy, useDailyRevenue, useMarketSegments, usePMSSystems } from '@/hooks/useOperations'
 import { cn } from '@/lib/utils'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 import { ChartViewport } from '@/components/ui/ChartViewport'
+import { auditLog } from '@/lib/auditLog'
+import { toast } from 'sonner'
 import {
     CONSOLIDATED_PROPERTY_ID,
     getFirstRealPropertyId,
@@ -241,6 +244,7 @@ export default function DailyFlashReport() {
     const { t } = useTranslation(['operations', 'common'])
     const { currentProperty, availableProperties } = useProperty()
     const { user, profile } = useAuth()
+    const { hasPermission } = usePermissions()
     const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
     const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => currentProperty?.id ?? CONSOLIDATED_PROPERTY_ID)
     const canUseConsolidatedView = useMemo(
@@ -278,6 +282,7 @@ export default function DailyFlashReport() {
     )
 
     const isConsolidatedSelection = isConsolidatedPropertyId(effectivePropertyId)
+    const canExportOperations = hasPermission('operations.export', resolvedSelectedPropertyId)
 
     // Fetch data
     const { data: occupancyData } = useDailyOccupancy({
@@ -412,6 +417,12 @@ export default function DailyFlashReport() {
     }, [consolidated])
 
     const handlePrint = async () => {
+        // Defensive permission enforcement in the action handler.
+        if (!canExportOperations) {
+            toast.error('You do not have permission to export flash reports')
+            return
+        }
+
         if (!consolidated) return
 
         const logo = await loadLogoAsDataUrl()
@@ -509,9 +520,17 @@ export default function DailyFlashReport() {
             },
             logo || undefined
         )
+
+        void auditLog.dataExported('daily_flash_pdf', reportData.length)
     }
 
     const handleExport = () => {
+        // Defensive permission enforcement in the action handler.
+        if (!canExportOperations) {
+            toast.error('You do not have permission to export flash reports')
+            return
+        }
+
         if (!consolidated) return
 
         const data = [
@@ -548,6 +567,7 @@ export default function DailyFlashReport() {
         a.download = `flash_report_${selectedDate}.csv`
         a.click()
         URL.revokeObjectURL(url)
+        void auditLog.dataExported('daily_flash_csv', data.length)
     }
 
     return (
@@ -586,11 +606,23 @@ export default function DailyFlashReport() {
                         onChange={(e) => setSelectedDate(e.target.value)}
                         className="px-3 py-2 rounded-md border bg-background"
                     />
-                    <Button variant="outline" size="sm" onClick={handlePrint}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePrint}
+                        disabled={!canExportOperations}
+                        title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
+                    >
                         <Printer className="h-4 w-4 mr-2" />
                         Print
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleExport}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExport}
+                        disabled={!canExportOperations}
+                        title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
+                    >
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </Button>

@@ -34,14 +34,23 @@ import { useQuickCreateAnnouncement } from '@/hooks/useQuickCreate'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 const announcementSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  content: z.string().min(1, 'Content is required'),
+  title: z.string().trim().min(1, 'Title is required'),
+  content: z.string().trim().min(1, 'Content is required'),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   target_type: z.enum(['all', 'role', 'department', 'property', 'individual']),
-  target_value: z.string().optional(),
+  target_value: z.string().trim().optional(),
   pinned: z.boolean(),
+}).superRefine((values, ctx) => {
+  if (values.target_type !== 'all' && !values.target_value) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['target_value'],
+      message: 'Please select a target value'
+    })
+  }
 })
 
 type AnnouncementFormValues = z.infer<typeof announcementSchema>
@@ -65,6 +74,7 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
       content: '',
       priority: 'medium',
       target_type: 'all',
+      target_value: '',
       pinned: false,
     },
   })
@@ -82,15 +92,19 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
       targetAudience.values = [values.target_value]
     }
 
-    await createAnnouncement.mutateAsync({
-      title: values.title,
-      content: values.content,
-      priority: values.priority,
-      target_audience: targetAudience,
-      pinned: values.pinned,
-    })
-    form.reset()
-    onOpenChange(false)
+    try {
+      await createAnnouncement.mutateAsync({
+        title: values.title,
+        content: values.content,
+        priority: values.priority,
+        target_audience: targetAudience,
+        pinned: values.pinned,
+      })
+      form.reset()
+      onOpenChange(false)
+    } catch (error) {
+      toast.error(t('quick_create.post_failed', 'Failed to post announcement'))
+    }
   }
 
   const priorityOptions = [

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -43,6 +44,7 @@ const statusLabels: Record<string, string> = {
 export default function EmployeeReferrals() {
   const { t } = useTranslation('hr')
   const { user, roles } = useAuth()
+  const { hasPermission } = usePermissions()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [jobFilter, setJobFilter] = useState('all')
@@ -68,9 +70,7 @@ export default function EmployeeReferrals() {
         query = query.eq('job_posting_id', jobFilter)
       }
 
-      const canViewAll = roles?.some(r =>
-        ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(r.role)
-      )
+      const canViewAll = hasPermission('hr.manage_referrals')
 
       if (!canViewAll && user?.id) {
         query = query.eq('referred_by', user.id)
@@ -125,7 +125,7 @@ export default function EmployeeReferrals() {
   }
 
   // Check if user is HR
-  const isHR = roles?.some(r => ['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'corporate_admin'].includes(r.role))
+  const isHR = hasPermission('hr.manage_referrals')
 
   const jobOptions = useMemo(() => {
     if (!jobPostings) return []

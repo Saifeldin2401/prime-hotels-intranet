@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,14 +40,12 @@ export function UndoToast({
 }: UndoToastProps) {
   const { t, i18n } = useTranslation('common');
   const isRTL = i18n.dir() === 'rtl';
-  
-  const [progress, setProgress] = useState(100);
-  
-  useEffect(() => {
-    const percentage = Math.max(0, Math.min(100, (timeRemaining / delay) * 100));
-    setProgress(percentage);
-  }, [timeRemaining, delay]);
-  
+
+  const progress = useMemo(
+    () => Math.max(0, Math.min(100, (timeRemaining / delay) * 100)),
+    [timeRemaining, delay]
+  );
+
   const secondsRemaining = Math.ceil(timeRemaining / 1000);
   
   return (

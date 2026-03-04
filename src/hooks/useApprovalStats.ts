@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export interface ApprovalStats {
     total_pending: number
@@ -13,10 +14,9 @@ export interface ApprovalStats {
 
 export function useApprovalStats() {
     const { user, roles, properties, departments, primaryRole } = useAuth()
+    const { hasPermission } = usePermissions()
 
-    const isApprover = roles.some(r =>
-        ['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head'].includes(r.role)
-    )
+    const isApprover = hasPermission('approvals.view')
 
     return useQuery({
         queryKey: ['approval-stats', user?.id, primaryRole, properties?.map(p => p.id), departments?.map(d => d.id)],

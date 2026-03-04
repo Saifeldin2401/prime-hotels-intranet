@@ -54,6 +54,7 @@ import { cn } from '@/lib/utils'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { getUserFriendlyError } from '@/lib/errorMessages'
+import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
 
 type PersistedModuleProgress = {
     last_block_index?: number
@@ -75,6 +76,9 @@ type RichTextBlockContentProps = {
     originalLabel: string
     translatedLabel: string
 }
+
+const isValidUuid = (value?: string | null) =>
+    !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 
 function RichTextBlockContent({
     originalHtml,
@@ -135,6 +139,18 @@ export default function TrainingPlayer() {
     const navigate = useNavigate()
     const { toast } = useToast()
     const { user, profile, properties, departments } = useAuth()
+    const isValidModuleId = isValidUuid(id)
+
+    useEffect(() => {
+        if (id && !isValidModuleId) {
+            toast({
+                title: t('error', 'Error'),
+                description: t('invalidModuleId', 'Invalid training module ID.'),
+                variant: 'destructive'
+            })
+            navigate('/learning/my', { replace: true })
+        }
+    }, [id, isValidModuleId, navigate, t, toast])
 
     const [activeBlockIndex, setActiveBlockIndex] = useState(0)
     const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -253,7 +269,7 @@ export default function TrainingPlayer() {
     const { data: moduleData, isLoading } = useQuery({
         queryKey: ['training-module-full', id],
         queryFn: async () => {
-            if (!id) throw new Error('No ID')
+            if (!id || !isValidModuleId) throw new Error('Invalid module ID')
 
             const { data: module, error: moduleError } = await supabase
                 .from('training_modules')
@@ -328,7 +344,7 @@ export default function TrainingPlayer() {
                 referencedTitles
             }
         },
-        enabled: !!id
+        enabled: !!id && isValidModuleId
     })
 
     const activeBlock = moduleData?.blocks[activeBlockIndex]
@@ -630,13 +646,13 @@ export default function TrainingPlayer() {
             })
 
             if (storageKey) {
-                localStorage.removeItem(storageKey)
+                removeEncryptedLocalStorage(storageKey)
             }
         } catch (_error) {
-            // Progress persistence failure is non-critical - continue silently
-            // Progress is saved to localStorage as fallback
+            // Progress persistence failure is non-critical - continue silently.
+            // Keep a local encrypted fallback to preserve learner context.
             if (storageKey) {
-                localStorage.setItem(storageKey, JSON.stringify({
+                await setEncryptedLocalStorage(storageKey, {
                     assignment_id: assignmentId || null,
                     content_id: moduleData.module.id,
                     content_type: 'module',
@@ -650,7 +666,7 @@ export default function TrainingPlayer() {
                     time_spent_seconds: timeSpent,
                     metadata,
                     saved_at: nowIso
-                }))
+                })
             }
         }
     }, [
@@ -780,15 +796,9 @@ export default function TrainingPlayer() {
 
         let isActive = true
         const restoreProgress = async () => {
-            const localPayload = storageKey ? localStorage.getItem(storageKey) : null
-            let localData: PersistedModuleProgress | null = null
-            if (localPayload) {
-                try {
-                    localData = JSON.parse(localPayload) as PersistedModuleProgress
-                } catch {
-                    localData = null
-                }
-            }
+            const localData = storageKey
+                ? await getEncryptedLocalStorage<PersistedModuleProgress>(storageKey)
+                : null
 
             if (localData && isActive) {
                 applyRestoredProgress(localData, moduleData.blocks)

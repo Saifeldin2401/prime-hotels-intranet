@@ -93,7 +93,7 @@ export async function renderMermaidDiagrams(container: HTMLElement | null): Prom
                 const { svg } = await mermaid.render(id, code, host)
 
                 if (svg) {
-                    host.innerHTML = svg
+                    host.innerHTML = sanitizeSvg(svg)
                     host.classList.add('mermaid-rendered')
 
                     // CRITICAL: Overwrite any parent styles that might hide the diagram
@@ -134,3 +134,4 @@ export async function renderMermaidDiagrams(container: HTMLElement | null): Prom
         renderLocks.delete(container)
     }
 }
+import { sanitizeSvg } from '@/lib/sanitize'

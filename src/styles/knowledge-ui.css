@@ -399,23 +399,33 @@
 /* Mobile Responsive Overrides */
 @media (max-width: 640px) {
     .kb-reader-card {
-        padding: 1.25rem !important;
-        border-radius: 1rem !important;
+        padding: 0.75rem !important;
+        border-radius: 0.75rem !important;
     }
 
     .kb-prose h1 {
-        font-size: 1.85em !important;
+        font-size: 1.6em !important;
     }
 
     .kb-prose h2 {
-        font-size: 1.5em !important;
+        font-size: 1.3em !important;
+    }
+
+    .kb-prose h3 {
+        font-size: 1.15em !important;
     }
 
     .kb-floating-toolbar {
         width: 90vw;
         justify-content: space-around;
         bottom: 7rem !important;
-        /* Secondary safeguard */
+    }
+
+    /* Tighter prose on mobile */
+    .kb-prose,
+    .prose {
+        font-size: 0.9375rem !important;
+        line-height: 1.65 !important;
     }
 }
 
@@ -433,10 +443,42 @@
     display: block;
 }
 
-/* Prevent any wide content from causing horizontal scroll */
+/* Allow wide content (e.g. Arabic tables) to scroll instead of clipping */
 .prose,
 .kb-prose {
-    overflow-x: hidden;
+    overflow-x: auto;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* RTL / Arabic specific prose improvements */
+.prose[dir="rtl"],
+.kb-prose[dir="rtl"],
+.prose .font-arabic,
+.kb-prose .font-arabic {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.9;
+}
+
+/* Tables inside prose: scrollable wrapper for wide content */
+.prose table,
+.kb-prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* RTL table cell improvements */
+.prose[dir="rtl"] table td,
+.prose[dir="rtl"] table th,
+.kb-prose[dir="rtl"] table td,
+.kb-prose[dir="rtl"] table th {
+    padding: 0.875rem 1.25rem;
+    text-align: right;
+    line-height: 1.8;
+    word-break: break-word;
 }
 
 /* Iframes (YouTube, Vimeo embeds) */
@@ -480,12 +522,27 @@
         height: auto;
     }
 
-    /* Tables remain horizontally scrollable on mobile */
+    /* Tables: scrollable and readable on mobile */
     .prose table,
     .kb-prose table {
         display: block;
         max-width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        font-size: 0.85rem;
+    }
+
+    .prose table td,
+    .prose table th,
+    .kb-prose table td,
+    .kb-prose table th {
+        padding: 0.5rem 0.625rem;
+        min-width: 100px;
+    }
+
+    /* Article header compact on mobile */
+    .kb-article-header {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.5rem !important;
     }
 }

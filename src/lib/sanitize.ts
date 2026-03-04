@@ -107,3 +107,19 @@ export const sanitizeHtml = (html: string | null | undefined): string => {
         ADD_ATTR: ['allowfullscreen', 'allow', 'loading'],
     });
 };
+
+/**
+ * Sanitizes SVG content (used for Mermaid output).
+ * Keeps the SVG profile while stripping scripts/foreignObject.
+ */
+export const sanitizeSvg = (svg: string | null | undefined): string => {
+    if (!svg) return ''
+
+    ensureHooksInitialized()
+
+    return DOMPurify.sanitize(svg, {
+        USE_PROFILES: { svg: true, svgFilters: true },
+        FORBID_TAGS: ['foreignObject', 'script'],
+        ADD_ATTR: ['class', 'style', 'xlink:href'],
+    })
+}

@@ -177,7 +177,7 @@ export const documentSchema = z.object({
       path: ['department_id']
     })
   }
-  
+
   if (data.visibility === 'property' && !data.property_id) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -226,10 +226,10 @@ export type MaintenanceTicketFormData = z.infer<typeof maintenanceTicketSchema>
 export const announcementSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(200, 'Title is too long'),
   content: z.string().min(10, 'Content must be at least 10 characters').max(5000, 'Content is too long'),
-  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  priority: z.enum(['normal', 'important', 'critical']).default('normal'),
   property_id: uuidSchema.optional(),
   department_id: uuidSchema.optional(),
-  target_audience: z.enum(['all', 'property', 'department', 'role']).default('all'),
+  target_audience: z.enum(['all', 'property', 'department', 'role', 'individual']).default('all'),
   scheduled_at: z.date().optional(),
   expires_at: z.date().optional()
 }).refine((data) => {

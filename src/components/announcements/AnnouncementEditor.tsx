@@ -200,72 +200,21 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user?.id)
 
       // Create notifications for target users
-      if (uniqueUserIds.length > 0) {
-        if (uniqueUserIds.length > 10) {
-          // Use bulk notification system for > 10 users
-          try {
-            const { data: session } = await supabase.auth.getSession()
-            const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`
-
-            const response = await fetch(EDGE_FUNCTION_URL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.session?.access_token}`
-              },
-              body: JSON.stringify({
-                action: 'create_batch',
-                userIds: uniqueUserIds,
-                notificationType: 'announcement_new',
-                businessDomain: 'management',
-                templateKey: 'management_kpi_alert',
-                channels: data.send_email ? ['in_app', 'email'] : ['in_app'],
-                sendEmail: Boolean(data.send_email),
-                notificationData: {
-                  title: announcementTitle,
-                  message: `A new announcement has been posted: "${announcementTitle}"`,
-                  link: `/announcements/${result.id}`,
-                  announcement_id: result.id,
-                  creator_id: user?.id
-                }
-              })
-            })
-
-            if (!response.ok) {
-              console.error('Bulk notification batch creation failed')
-              // Fallback: try direct insert anyway for critical notifications
-              const notifications = uniqueUserIds.slice(0, 50).map(userId => ({
-                user_id: userId,
-                type: 'announcement_new',
-                title: announcementTitle,
-                message: `A new announcement has been posted: "${announcementTitle}"`,
-                link: `/announcements/${result.id}`,
-                data: { announcement_id: result.id, creator_id: user?.id }
-              }))
-              await supabase.from('notifications').insert(notifications)
-            } else {
-              await response.json()
-            }
-          } catch (bulkError) {
-            const errorDetails = getUserFriendlyError(bulkError)
-            toast.error(`Bulk notification error: ${errorDetails.message}`)
-          }
-        } else {
-          // Direct insert for <= 10 users
-          // use createBulkNotifications from service to ensure side-effects (like emails) run
-          await import('@/lib/notificationService').then(({ createBulkNotifications }) =>
-            createBulkNotifications({
-              userIds: uniqueUserIds,
-              type: 'announcement_new',
-              title: announcementTitle,
-              message: `A new announcement has been posted: "${announcementTitle}"`,
-              link: `/announcements/${result.id}`,
-              metadata: { announcement_id: result.id, creator_id: user?.id }
-            })
-          ).catch(err => {
-            const errorDetails = getUserFriendlyError(err)
-            toast.error(`Failed to send notifications: ${errorDetails.message}`)
+      if (data.send_push_notification && uniqueUserIds.length > 0) {
+        try {
+          const { createBulkNotifications } = await import('@/lib/notificationService')
+          await createBulkNotifications({
+            userIds: uniqueUserIds,
+            type: 'announcement_new',
+            title: announcementTitle,
+            message: `A new announcement has been posted: "${announcementTitle}"`,
+            link: `/announcements/${result.id}`,
+            metadata: { announcement_id: result.id, creator_id: user?.id },
+            sendEmail: data.send_email
           })
+        } catch (err) {
+          console.error('Failed to create bulk notifications:', err)
+          // We do not throw here to avoid failing the announcement creation if notifications fail
         }
       }
 
@@ -285,10 +234,13 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
   const updateAnnouncementMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Extract send_push_notification and send_email from data before passing to update
+      const { send_push_notification, send_email, ...updateData } = data;
+
       const { data: result, error } = await supabase
         .from('announcements')
         .update({
-          ...data,
+          ...updateData,
 
         })
         .eq('id', initialData.id)
@@ -296,6 +248,69 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         .single()
 
       if (error) throw error
+
+      // Send notifications to target audience if toggle is checked
+      if (send_push_notification) {
+        const targetUserIds: string[] = []
+        const audience = updateData.target_audience
+        const announcementTitle = updateData.title || 'Updated Announcement'
+
+        if (audience && audience.type !== 'all') {
+          const values = audience.values || []
+          switch (audience.type) {
+            case 'role':
+              for (const role of values) {
+                const { data: roleUsers } = await supabase
+                  .from('user_roles')
+                  .select('user_id')
+                  .eq('role', role)
+                if (roleUsers) targetUserIds.push(...roleUsers.map(u => u.user_id))
+              }
+              break
+            case 'department':
+              for (const deptId of values) {
+                const { data: deptUsers } = await supabase
+                  .from('user_departments')
+                  .select('user_id')
+                  .eq('department_id', deptId)
+                if (deptUsers) targetUserIds.push(...deptUsers.map(u => u.user_id))
+              }
+              break
+            case 'property':
+              for (const propId of values) {
+                const { data: propUsers } = await supabase
+                  .from('user_properties')
+                  .select('user_id')
+                  .eq('property_id', propId)
+                if (propUsers) targetUserIds.push(...propUsers.map(u => u.user_id))
+              }
+              break
+            case 'individual':
+              targetUserIds.push(...values)
+              break
+          }
+        }
+
+        const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user?.id)
+
+        if (uniqueUserIds.length > 0) {
+          try {
+            const { createBulkNotifications } = await import('@/lib/notificationService')
+            await createBulkNotifications({
+              userIds: uniqueUserIds,
+              type: 'announcement_new',
+              title: announcementTitle,
+              message: `A new announcement has been posted: "${announcementTitle}"`,
+              link: `/announcements/${result.id}`,
+              metadata: { announcement_id: result.id, creator_id: user?.id },
+              sendEmail: send_email
+            })
+          } catch (err) {
+            console.error('Failed to create bulk notifications:', err)
+          }
+        }
+      }
+
       return result
     },
     onSuccess: (data) => {
@@ -356,19 +371,12 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       const validationData = {
         title: formData.title,
         content: formData.content,
-        priority: formData.priority as 'low' | 'medium' | 'high' | 'urgent',
-        status: 'published' as const,
-        targetType: targetAudience.type === 'all' ? 'all' : 
-                   targetAudience.type === 'property' ? 'property' :
-                   targetAudience.type === 'department' ? 'department' : 'role',
-        propertyId: targetAudience.type === 'property' && targetAudience.values.length > 0 ? targetAudience.values[0] : undefined,
-        departmentId: targetAudience.type === 'department' && targetAudience.values.length > 0 ? targetAudience.values[0] : undefined,
-        role: targetAudience.type === 'role' && targetAudience.values.length > 0 ? targetAudience.values[0] : undefined,
-        publishedAt: formData.is_scheduled && formData.scheduled_at ? new Date(formData.scheduled_at) : new Date(),
-        expiresAt: formData.expires_at ? new Date(formData.expires_at) : undefined,
-        attachments: attachments.map(a => a.url)
+        priority: formData.priority as 'normal' | 'important' | 'critical',
+        target_audience: targetAudience.type,
+        scheduled_at: formData.is_scheduled && formData.scheduled_at ? new Date(formData.scheduled_at) : undefined,
+        expires_at: formData.expires_at ? new Date(formData.expires_at) : undefined
       }
-      
+
       announcementSchema.parse(validationData)
 
       const { is_pinned, is_scheduled, ...restFormData } = formData

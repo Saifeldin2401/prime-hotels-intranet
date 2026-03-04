@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import {
     User, Mail, Phone, Building2, FileText, Link2,
     Clock, MessageSquare, CalendarPlus, ExternalLink, Loader2, History
@@ -74,6 +75,7 @@ export function CandidateProfileDialog({
     departmentName
 }: CandidateProfileDialogProps) {
     const { roles } = useAuth()
+    const { hasPermission } = usePermissions()
     const queryClient = useQueryClient()
     const [hrNotes, setHrNotes] = useState('')
     const [interviewDate, setInterviewDate] = useState('')
@@ -83,7 +85,7 @@ export function CandidateProfileDialog({
     const [cvLoading, setCvLoading] = useState(false)
 
     const referralId = referral?.id || null
-    const isHR = roles?.some(r => ['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'corporate_admin'].includes(r.role))
+    const isHR = hasPermission('hr.manage_candidates')
 
     const { data: history = [] } = useQuery({
         queryKey: ['referral-history', referralId],

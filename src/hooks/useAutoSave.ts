@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
 
 export function useAutoSave(
     uniqueKey: string,
@@ -13,16 +14,18 @@ export function useAutoSave(
 
     // Load initial draft
     useEffect(() => {
-        const savedData = localStorage.getItem(`draft_${uniqueKey}`)
-        if (savedData) {
-            try {
-                const parsed = JSON.parse(savedData)
-                // We don't automatically overwrite to avoid conflicts, 
-                // but we return it so the component can decide.
-                // For now, we mainly use this hook to SAVE.
-            } catch (e) {
-                console.error("Failed to parse draft", e)
-            }
+        let isActive = true
+        const loadDraft = async () => {
+            const savedData = await getEncryptedLocalStorage<{ content: string; metadata: any }>(`draft_${uniqueKey}`)
+            if (!isActive || !savedData) return
+            // We don't automatically overwrite to avoid conflicts,
+            // but we return it so the component can decide.
+            // For now, we mainly use this hook to SAVE.
+        }
+        void loadDraft()
+
+        return () => {
+            isActive = false
         }
     }, [uniqueKey])
 
@@ -32,7 +35,7 @@ export function useAutoSave(
     }, [content, metadata])
 
     // Save function
-    const saveDraft = useCallback(() => {
+    const saveDraft = useCallback(async () => {
         if (!content && !metadata) return
 
         const dataToSave = {
@@ -41,7 +44,7 @@ export function useAutoSave(
             timestamp: new Date().toISOString()
         }
 
-        localStorage.setItem(`draft_${uniqueKey}`, JSON.stringify(dataToSave))
+        await setEncryptedLocalStorage(`draft_${uniqueKey}`, dataToSave)
         setLastSaved(new Date())
         setHasUnsavedChanges(false)
     }, [uniqueKey, content, metadata])
@@ -50,7 +53,7 @@ export function useAutoSave(
     useEffect(() => {
         const timer = setInterval(() => {
             if (hasUnsavedChanges) {
-                saveDraft()
+                void saveDraft()
             }
         }, interval)
 
@@ -58,13 +61,13 @@ export function useAutoSave(
     }, [interval, hasUnsavedChanges, saveDraft])
 
     // Manual trigger
-    const triggerSave = () => {
-        saveDraft()
+    const triggerSave = async () => {
+        await saveDraft()
         toast.success("Draft saved locally")
     }
 
     const clearDraft = useCallback(() => {
-        localStorage.removeItem(`draft_${uniqueKey}`)
+        removeEncryptedLocalStorage(`draft_${uniqueKey}`)
         setLastSaved(null)
         setHasUnsavedChanges(false)
     }, [uniqueKey])

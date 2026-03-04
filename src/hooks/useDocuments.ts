@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
 import { escapeSearchQuery } from '@/lib/utils'
 import type { Document, DocumentApproval, DocumentVersion } from '@/lib/types'
 import { crudToasts } from '@/lib/toastHelpers'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 const DOCS_RECENTLY_VIEWED_KEY = 'docs_recently_viewed'
 const MAX_RECENT_DOCS = 20
@@ -527,15 +529,29 @@ export function useDocument(documentId: string) {
 export function useCreateDocument() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useMutation({
     mutationFn: async (document: Partial<Document>) => {
       if (!user) throw new Error('User must be authenticated')
 
+      if (document.property_id !== undefined && !isRealPropertyId(document.property_id)) {
+        throw new Error('A valid property_id is required to create a document')
+      }
+
+      const resolvedPropertyId = isRealPropertyId(document.property_id)
+        ? document.property_id
+        : (isRealPropertyId(currentProperty?.id) ? currentProperty.id : null)
+
+      if (!resolvedPropertyId && document.visibility && document.visibility !== 'all_properties') {
+        throw new Error('A valid property_id is required for non-global documents')
+      }
+
       const { data, error } = await supabase
         .from('documents')
         .insert({
           ...document,
+          property_id: resolvedPropertyId ?? document.property_id ?? null,
           created_by: user.id,
           status: 'DRAFT',
         })
@@ -562,6 +578,16 @@ export function useUpdateDocument() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Document> & { id: string }) => {
+      if (updates.property_id !== undefined) {
+        if (updates.property_id === null) {
+          if (updates.visibility && updates.visibility !== 'all_properties') {
+            throw new Error('property_id can only be cleared for global documents')
+          }
+        } else if (!isRealPropertyId(updates.property_id)) {
+          throw new Error('A valid property_id is required when updating document scope')
+        }
+      }
+
       const { data, error } = await supabase
         .from('documents')
         .update({

@@ -35,6 +35,12 @@ export type Permission =
   | 'tasks.escalate'
   // HR permissions
   | 'hr.export'
+  | 'hr.manage_referrals'
+  | 'hr.manage_candidates'
+  // Operations permissions
+  | 'operations.export'
+  // Approval permissions
+  | 'approvals.view'
   // System permissions
   | 'system.view_logs'
   | 'system.manage_settings'
@@ -85,6 +91,14 @@ const PERMISSION_CONFIG: PermissionConfig = {
 
   // HR permissions
   'hr.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'], requiresPropertyAccess: true },
+  'hr.manage_referrals': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'] },
+  'hr.manage_candidates': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'] },
+
+  // Operations permissions
+  'operations.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
+
+  // Approval permissions
+  'approvals.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head'] },
 
   // System permissions
   'system.view_logs': { roles: ['corporate_admin', 'regional_admin'] },

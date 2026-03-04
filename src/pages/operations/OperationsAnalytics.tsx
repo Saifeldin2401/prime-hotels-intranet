@@ -33,8 +33,11 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { useProperty } from '@/contexts/PropertyContext'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useDailyOccupancy, useDailyRevenue, useMarketSegments } from '@/hooks/useOperations'
 import { cn } from '@/lib/utils'
+import { auditLog } from '@/lib/auditLog'
+import { toast } from 'sonner'
 import {
     CONSOLIDATED_PROPERTY_ID,
     getFirstRealPropertyId,
@@ -367,6 +370,7 @@ import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
 export default function OperationsAnalytics() {
     const { t } = useTranslation(['operations', 'common'])
     const { currentProperty, availableProperties } = useProperty()
+    const { hasPermission } = usePermissions()
     const [dateRange, setDateRange] = useState<'7d' | '30d' | 'mtd' | 'ytd'>('30d')
     const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => currentProperty?.id ?? CONSOLIDATED_PROPERTY_ID)
     const canUseConsolidatedView = useMemo(
@@ -404,6 +408,7 @@ export default function OperationsAnalytics() {
     )
 
     const isConsolidatedSelection = isConsolidatedPropertyId(effectivePropertyId)
+    const canExportOperations = hasPermission('operations.export', resolvedSelectedPropertyId)
 
     // Calculate date range
     const { startDate, endDate } = useMemo(() => {
@@ -450,73 +455,225 @@ export default function OperationsAnalytics() {
         propertyId: effectivePropertyId
     })
 
-    // Prepare chart data
+    // Prepare chart data.
+    // In consolidated scope, multiple properties can share the same date; aggregate using
+    // operational denominators (rooms sold / rooms available, room revenue / rooms sold).
     const chartData: ChartDataPoint[] = useMemo(() => {
         if (!occupancyData?.length && !revenueData?.length) return []
 
-        const dataMap = new Map<string, ChartDataPoint>()
+        type DailyAccumulator = {
+            date: string
+            label: string
+            roomsAvailable: number
+            roomsSold: number
+            revenueRoomsSold: number
+            roomRevenue: number
+            fbRevenue: number
+            totalRevenue: number
+            occupancyFallbackSum: number
+            occupancyFallbackCount: number
+            adrFallbackSum: number
+            adrFallbackCount: number
+            revparFallbackSum: number
+            revparFallbackCount: number
+        }
 
-        occupancyData?.forEach(occ => {
+        const dataMap = new Map<string, DailyAccumulator>()
+
+        const getOrInitDay = (date: string): DailyAccumulator => {
+            const existing = dataMap.get(date)
+            if (existing) return existing
+            const created: DailyAccumulator = {
+                date,
+                label: format(new Date(date), 'MM/dd'),
+                roomsAvailable: 0,
+                roomsSold: 0,
+                revenueRoomsSold: 0,
+                roomRevenue: 0,
+                fbRevenue: 0,
+                totalRevenue: 0,
+                occupancyFallbackSum: 0,
+                occupancyFallbackCount: 0,
+                adrFallbackSum: 0,
+                adrFallbackCount: 0,
+                revparFallbackSum: 0,
+                revparFallbackCount: 0
+            }
+            dataMap.set(date, created)
+            return created
+        }
+
+        occupancyData?.forEach((occ) => {
             const date = occ.business_date
-            const existing = dataMap.get(date) || { date, label: format(new Date(date), 'MM/dd') }
-            existing.occupancy = occ.occupancy_rate
-            dataMap.set(date, existing)
+            const existing = getOrInitDay(date)
+            existing.roomsAvailable += Number(occ.rooms_available || 0)
+            existing.roomsSold += Number(occ.rooms_sold || 0)
+            if (Number.isFinite(occ.occupancy_rate)) {
+                existing.occupancyFallbackSum += Number(occ.occupancy_rate)
+                existing.occupancyFallbackCount += 1
+            }
         })
 
-        revenueData?.forEach(rev => {
+        revenueData?.forEach((rev) => {
             const date = rev.business_date
-            const existing = dataMap.get(date) || { date, label: format(new Date(date), 'MM/dd') }
-            existing.adr = rev.adr
-            existing.revpar = rev.revpar || (existing.occupancy ? (existing.occupancy * rev.adr / 100) : 0)
-            existing.roomRevenue = rev.room_revenue
-            existing.fbRevenue = rev.fb_revenue
-            existing.totalRevenue = rev.total_revenue
-            dataMap.set(date, existing)
+            const existing = getOrInitDay(date)
+            existing.revenueRoomsSold += Number(rev.rooms_sold || 0)
+            existing.roomRevenue += Number(rev.room_revenue || 0)
+            existing.fbRevenue += Number(rev.fb_revenue || 0)
+            existing.totalRevenue += Number(rev.total_revenue || 0)
+            if (Number.isFinite(rev.adr)) {
+                existing.adrFallbackSum += Number(rev.adr)
+                existing.adrFallbackCount += 1
+            }
+            if (Number.isFinite(rev.revpar)) {
+                existing.revparFallbackSum += Number(rev.revpar)
+                existing.revparFallbackCount += 1
+            }
         })
 
-        return Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date))
+        return Array.from(dataMap.values())
+            .map((day): ChartDataPoint => {
+                const occupancy =
+                    day.roomsAvailable > 0
+                        ? (day.roomsSold / day.roomsAvailable) * 100
+                        : (day.occupancyFallbackCount > 0
+                            ? day.occupancyFallbackSum / day.occupancyFallbackCount
+                            : undefined)
+
+                const adr =
+                    day.revenueRoomsSold > 0
+                        ? day.roomRevenue / day.revenueRoomsSold
+                        : (day.adrFallbackCount > 0
+                            ? day.adrFallbackSum / day.adrFallbackCount
+                            : undefined)
+
+                const revpar =
+                    day.roomsAvailable > 0
+                        ? day.roomRevenue / day.roomsAvailable
+                        : (day.revparFallbackCount > 0
+                            ? day.revparFallbackSum / day.revparFallbackCount
+                            : (occupancy !== undefined && adr !== undefined
+                                ? (occupancy / 100) * adr
+                                : undefined))
+
+                return {
+                    date: day.date,
+                    label: day.label,
+                    occupancy,
+                    adr,
+                    revpar,
+                    roomRevenue: day.roomRevenue,
+                    fbRevenue: day.fbRevenue,
+                    totalRevenue: day.totalRevenue
+                }
+            })
+            .sort((a, b) => a.date.localeCompare(b.date))
     }, [occupancyData, revenueData])
 
     // Multi-property comparison data
     const propertyComparison: PropertyComparisonData[] = useMemo(() => {
         if (!occupancyData?.length || !revenueData?.length) return []
 
-        const propertyMap = new Map<string, PropertyComparisonData>()
+        type PropertyAccumulator = {
+            propertyId: string
+            propertyName: string
+            roomsAvailable: number
+            roomsSold: number
+            revenueRoomsSold: number
+            roomRevenue: number
+            totalRevenue: number
+            occupancyFallbackSum: number
+            occupancyFallbackCount: number
+            adrFallbackSum: number
+            adrFallbackCount: number
+            revparFallbackSum: number
+            revparFallbackCount: number
+        }
+
+        const propertyMap = new Map<string, PropertyAccumulator>()
+
+        const getOrInitProperty = (propertyId: string, propertyName: string): PropertyAccumulator => {
+            const existing = propertyMap.get(propertyId)
+            if (existing) return existing
+            const created: PropertyAccumulator = {
+                propertyId,
+                propertyName,
+                roomsAvailable: 0,
+                roomsSold: 0,
+                revenueRoomsSold: 0,
+                roomRevenue: 0,
+                totalRevenue: 0,
+                occupancyFallbackSum: 0,
+                occupancyFallbackCount: 0,
+                adrFallbackSum: 0,
+                adrFallbackCount: 0,
+                revparFallbackSum: 0,
+                revparFallbackCount: 0
+            }
+            propertyMap.set(propertyId, created)
+            return created
+        }
 
         occupancyData.forEach(occ => {
-            const propId = occ.property_id
+            const propId = occ.property_id || 'unknown'
             const propName = occ.property?.name || 'Unknown'
-            const existing = propertyMap.get(propId) || {
-                propertyId: propId,
-                propertyName: propName,
-                occupancy: 0,
-                adr: 0,
-                revpar: 0,
-                totalRevenue: 0
+            const existing = getOrInitProperty(propId, propName)
+            existing.roomsAvailable += Number(occ.rooms_available || 0)
+            existing.roomsSold += Number(occ.rooms_sold || 0)
+            if (Number.isFinite(occ.occupancy_rate)) {
+                existing.occupancyFallbackSum += Number(occ.occupancy_rate)
+                existing.occupancyFallbackCount += 1
             }
-            existing.occupancy = (existing.occupancy + occ.occupancy_rate) / 2
-            propertyMap.set(propId, existing)
         })
 
         revenueData.forEach(rev => {
-            const propId = rev.property_id
+            const propId = rev.property_id || 'unknown'
             const propName = rev.property?.name || 'Unknown'
-            const existing = propertyMap.get(propId) || {
-                propertyId: propId,
-                propertyName: propName,
-                occupancy: 0,
-                adr: 0,
-                revpar: 0,
-                totalRevenue: 0
+            const existing = getOrInitProperty(propId, propName)
+            existing.revenueRoomsSold += Number(rev.rooms_sold || 0)
+            existing.roomRevenue += Number(rev.room_revenue || 0)
+            existing.totalRevenue += Number(rev.total_revenue || 0)
+            if (Number.isFinite(rev.adr)) {
+                existing.adrFallbackSum += Number(rev.adr)
+                existing.adrFallbackCount += 1
             }
-            existing.adr = rev.adr
-            // Derive RevPAR if DB field is 0
-            existing.revpar = rev.revpar || (existing.occupancy * rev.adr / 100)
-            existing.totalRevenue += rev.total_revenue
-            propertyMap.set(propId, existing)
+            if (Number.isFinite(rev.revpar)) {
+                existing.revparFallbackSum += Number(rev.revpar)
+                existing.revparFallbackCount += 1
+            }
         })
 
-        return Array.from(propertyMap.values())
+        return Array.from(propertyMap.values()).map((prop): PropertyComparisonData => {
+            const occupancy =
+                prop.roomsAvailable > 0
+                    ? (prop.roomsSold / prop.roomsAvailable) * 100
+                    : (prop.occupancyFallbackCount > 0
+                        ? prop.occupancyFallbackSum / prop.occupancyFallbackCount
+                        : 0)
+
+            const adr =
+                prop.revenueRoomsSold > 0
+                    ? prop.roomRevenue / prop.revenueRoomsSold
+                    : (prop.adrFallbackCount > 0
+                        ? prop.adrFallbackSum / prop.adrFallbackCount
+                        : 0)
+
+            const revpar =
+                prop.roomsAvailable > 0
+                    ? prop.roomRevenue / prop.roomsAvailable
+                    : (prop.revparFallbackCount > 0
+                        ? prop.revparFallbackSum / prop.revparFallbackCount
+                        : ((occupancy / 100) * adr))
+
+            return {
+                propertyId: prop.propertyId,
+                propertyName: prop.propertyName,
+                occupancy,
+                adr,
+                revpar,
+                totalRevenue: prop.totalRevenue
+            }
+        })
     }, [occupancyData, revenueData])
 
     // Market segment chart data
@@ -563,11 +720,31 @@ export default function OperationsAnalytics() {
     const summaryKPIs = useMemo(() => {
         if (!occupancyData?.length || !revenueData?.length) return null
 
-        const avgOccupancy = occupancyData.reduce((sum, o) => sum + o.occupancy_rate, 0) / occupancyData.length
-        const avgADR = revenueData.reduce((sum, r) => sum + (r.adr || 0), 0) / revenueData.length
-        // RevPAR = Occupancy * ADR
-        const avgRevPAR = (avgOccupancy / 100) * avgADR
-        const totalRevenue = revenueData.reduce((sum, r) => sum + (r.total_revenue || 0), 0)
+        const totalRoomsAvailable = occupancyData.reduce((sum, o) => sum + Number(o.rooms_available || 0), 0)
+        const totalRoomsSold = occupancyData.reduce((sum, o) => sum + Number(o.rooms_sold || 0), 0)
+        const occupancyFallbackAverage = occupancyData.length > 0
+            ? occupancyData.reduce((sum, o) => sum + Number(o.occupancy_rate || 0), 0) / occupancyData.length
+            : 0
+
+        const totalRoomRevenue = revenueData.reduce((sum, r) => sum + Number(r.room_revenue || 0), 0)
+        const totalRevenueRoomsSold = revenueData.reduce((sum, r) => sum + Number(r.rooms_sold || 0), 0)
+        const adrFallbackAverage = revenueData.length > 0
+            ? revenueData.reduce((sum, r) => sum + Number(r.adr || 0), 0) / revenueData.length
+            : 0
+        const revparFallbackAverage = revenueData.length > 0
+            ? revenueData.reduce((sum, r) => sum + Number(r.revpar || 0), 0) / revenueData.length
+            : 0
+
+        const avgOccupancy = totalRoomsAvailable > 0
+            ? (totalRoomsSold / totalRoomsAvailable) * 100
+            : occupancyFallbackAverage
+        const avgADR = totalRevenueRoomsSold > 0
+            ? totalRoomRevenue / totalRevenueRoomsSold
+            : adrFallbackAverage
+        const avgRevPAR = totalRoomsAvailable > 0
+            ? totalRoomRevenue / totalRoomsAvailable
+            : (revparFallbackAverage || ((avgOccupancy / 100) * avgADR))
+        const totalRevenue = revenueData.reduce((sum, r) => sum + Number(r.total_revenue || 0), 0)
 
         return { avgOccupancy, avgADR, avgRevPAR, totalRevenue }
     }, [occupancyData, revenueData])
@@ -582,6 +759,12 @@ export default function OperationsAnalytics() {
 
     // Export handler
     const handleExport = (type: 'csv' | 'pdf') => {
+        // Defensive permission enforcement in handler to prevent bypass via DevTools.
+        if (!canExportOperations) {
+            toast.error('You do not have permission to export operations reports')
+            return
+        }
+
         if (type === 'csv') {
             const headers = ['Date', 'Occupancy %', 'ADR (SAR)', 'RevPAR (SAR)', 'Total Revenue (SAR)']
             const rows = chartData.map(d => [
@@ -600,9 +783,11 @@ export default function OperationsAnalytics() {
             a.download = `operations_report_${format(new Date(), 'yyyyMMdd')}.csv`
             a.click()
             URL.revokeObjectURL(url)
+            void auditLog.dataExported('operations_analytics_csv', rows.length)
         } else {
             // For PDF, we'd need a library like jsPDF - for now, print-friendly view
             window.print()
+            void auditLog.dataExported('operations_analytics_pdf', chartData.length)
         }
     }
 
@@ -649,7 +834,13 @@ export default function OperationsAnalytics() {
                             <SelectItem value="ytd">Year to Date</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExport('csv')}
+                        disabled={!canExportOperations}
+                        title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
+                    >
                         <Download className="h-4 w-4 mr-2" />
                         Export CSV
                     </Button>

@@ -776,7 +776,10 @@ export default function TrainingModules() {
                     size="sm"
                     onClick={() => {
                       if (module.status !== 'published') {
-                        alert(t('onlyPublishedModulesCanBeAssigned'));
+                        showErrorToast(
+                          t('onlyPublishedModulesCanBeAssigned'),
+                          t('publishBeforeAssign', 'Publish the module before assigning it.')
+                        )
                         return;
                       }
                       handleAssign(module.id);

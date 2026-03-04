@@ -57,6 +57,7 @@ import { useTranslation } from 'react-i18next'
 import { openUrlInNewTab, resolveDocumentUrl, resolveDocumentVersionUrl } from '@/lib/secureFileAccess'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import { cn, formatFileSize } from '@/lib/utils'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -69,6 +70,7 @@ export default function DocumentDetail() {
   const { t } = useTranslation('documents')
   const { toast } = useToast()
   const { user, profile } = useAuth()
+  const { hasPermission } = usePermissions()
 
   const [viewerOpen, setViewerOpen] = useState(false)
   const [secureDocumentUrl, setSecureDocumentUrl] = useState<string | null>(null)
@@ -208,7 +210,7 @@ export default function DocumentDetail() {
   const activeVersion = versions.find(v => (v as any).is_current) || versions[0]
   const folder = folders.find(f => f.id === document.folder_id)
   const isOwner = user?.id === document.created_by
-  const canEdit = isOwner || profile?.roles?.some(r => ['regional_admin', 'property_manager'].includes(r))
+  const canEdit = isOwner || hasPermission('documents.edit')
 
   // Expiry status
   const isExpired = document.expires_at && new Date(document.expires_at) < new Date()

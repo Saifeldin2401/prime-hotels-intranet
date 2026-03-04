@@ -5,7 +5,7 @@
  * Redesigned with glassmorphism and floating action button.
  */
 
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Menu, Home, MessageSquare, GraduationCap, LayoutDashboard } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +22,7 @@ interface MobileNavigationProps {
 export function MobileNavigation({ onMenuClick, className }: MobileNavigationProps) {
   const { t } = useTranslation('nav')
   const location = useLocation()
+  const navigate = useNavigate()
   const { quickActions, isPathActive } = useNavigation()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
@@ -82,9 +83,11 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
             onOpenChange={setIsSheetOpen}
             trigger={
               <button
-                onClick={() => {
+                onClick={(event) => {
                   handleHaptic()
                   setIsSheetOpen(true)
+                  // Blur the button to prevent aria-hidden conflict
+                  event.currentTarget.blur()
                 }}
                 className="w-14 h-14 rounded-full bg-hotel-gold text-white shadow-lg shadow-hotel-gold/40 flex items-center justify-center transform active:scale-95 transition-transform border-4 border-gray-50"
               >
@@ -97,13 +100,27 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
             description={t('quickActionsDesc', 'Access common tasks instantly')}
           >
             <div className="grid grid-cols-2 gap-3 py-4">
-              <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100">
+              <button 
+                onClick={() => {
+                  handleHaptic()
+                  setIsSheetOpen(false)
+                  navigate('/hr/leave-requests')
+                }}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100"
+              >
                 <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <span className="text-xs font-medium">{t('newRequest', 'New Request')}</span>
               </button>
-              <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100">
+              <button 
+                onClick={() => {
+                  handleHaptic()
+                  setIsSheetOpen(false)
+                  navigate('/maintenance/submit')
+                }}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100"
+              >
                 <div className="h-10 w-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
                   <LayoutDashboard className="w-5 h-5" />
                 </div>

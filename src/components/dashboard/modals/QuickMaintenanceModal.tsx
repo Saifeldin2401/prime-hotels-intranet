@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select'
 import { useQuickCreateMaintenanceTicket } from '@/hooks/useQuickCreate'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 const maintenanceSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -66,16 +67,20 @@ export function QuickMaintenanceModal({ open, onOpenChange }: QuickMaintenanceMo
   })
 
   const onSubmit = async (values: MaintenanceFormValues) => {
-    await createTicket.mutateAsync({
-      title: values.title,
-      description: values.description,
-      category: values.category,
-      priority: values.priority,
-      location: values.location,
-      room_number: values.room_number,
-    })
-    form.reset()
-    onOpenChange(false)
+    try {
+      await createTicket.mutateAsync({
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        priority: values.priority,
+        location: values.location,
+        room_number: values.room_number,
+      })
+      form.reset()
+      onOpenChange(false)
+    } catch (error) {
+      toast.error(t('quick_create.maintenance_failed', 'Failed to create maintenance ticket'))
+    }
   }
 
   const categories = [

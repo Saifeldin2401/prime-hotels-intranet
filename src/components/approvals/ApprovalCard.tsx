@@ -13,7 +13,8 @@ import {
     Building,
     Eye,
     Inbox,
-    MessageSquare
+    MessageSquare,
+    Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
@@ -173,8 +174,13 @@ export function ApprovalCard({
                                 className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 rounded-full"
                                 disabled={isActionPending}
                                 title={t('reject')}
+                                aria-busy={isActionPending}
                             >
-                                <XCircle className="w-4 h-4" />
+                                {isActionPending ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <XCircle className="w-4 h-4" />
+                                )}
                             </Button>
                         )}
                         {onApprove && (
@@ -184,8 +190,13 @@ export function ApprovalCard({
                                 onClick={onApprove}
                                 className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white shadow-sm rounded-full"
                                 disabled={isActionPending}
+                                aria-busy={isActionPending}
                             >
-                                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                                {isActionPending ? (
+                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                ) : (
+                                    <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                                )}
                                 {t('approve')}
                             </Button>
                         )}

@@ -842,18 +842,29 @@ export default function KnowledgeViewer() {
                     width: 100%;
                     border: 1px solid #e5e7eb;
                     border-radius: 0.5rem;
-                    overflow: hidden;
+                    overflow-x: auto;
+                    display: block;
                 }
                 .prose table td,
                 .prose table th {
                     border: 1px solid #e5e7eb;
-                    padding: 0.75rem 1rem;
+                    padding: 0.875rem 1.25rem;
+                    word-break: break-word;
+                    overflow-wrap: break-word;
+                    min-width: 120px;
                 }
                 .prose table th {
                     background: #f8fafc;
                     font-weight: 600;
                     color: #475569;
                     text-align: left;
+                }
+
+                /* RTL table alignment */
+                .prose[dir="rtl"] table td,
+                .prose[dir="rtl"] table th {
+                    text-align: right;
+                    line-height: 1.85;
                 }
 
                 /* ========================================
@@ -1193,7 +1204,7 @@ export default function KnowledgeViewer() {
                         {/* Title & Description */}
                         <div className="max-w-4xl space-y-4">
                             <h1 className={cn(
-                                "text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.15] tracking-tight",
+                                "text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.15] tracking-tight",
                                 shouldUseRtl && "font-arabic"
                             )}>
                                 {translatedData && !showBilingual ? translatedData.title : article.title}
@@ -1398,7 +1409,7 @@ export default function KnowledgeViewer() {
                             readerTheme === 'dark' && "kb-theme-dark"
                         )}>
                             <CardContent className={cn(
-                                "p-6 md:p-10 lg:p-14 transition-all duration-500",
+                                "p-3 sm:p-5 md:p-10 lg:p-14 transition-all duration-500",
                                 isFocusMode && "px-0"
                             )}>
                                 {translatedData || article.content_ar ? (
@@ -1435,12 +1446,13 @@ export default function KnowledgeViewer() {
                                                 dir={shouldUseRtl ? 'rtl' : 'ltr'}
                                                 className={cn(
                                                     "prose md:prose-lg max-w-none transition-all duration-300",
-                                                    shouldUseRtl ? "text-right font-arabic" : "text-left",
+                                                    shouldUseRtl ? "text-right font-arabic break-words" : "text-left",
                                                     fontSize === 'sm' && "text-kb-sm",
                                                     fontSize === 'base' && "text-kb-base",
                                                     fontSize === 'lg' && "text-kb-lg",
                                                     fontSize === 'xl' && "text-kb-xl",
                                                 )}
+                                                style={shouldUseRtl ? { wordBreak: 'break-word', overflowWrap: 'break-word' } : undefined}
                                                 dangerouslySetInnerHTML={translatedHtmlSanitized}
                                             />
                                         </div>

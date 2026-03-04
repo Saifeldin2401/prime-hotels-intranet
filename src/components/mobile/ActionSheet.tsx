@@ -31,10 +31,15 @@ export function ActionSheet({
     const { t } = useTranslation('common');
 
     return (
-        <Drawer open={open} onOpenChange={onOpenChange}>
+        <Drawer 
+            open={open} 
+            onOpenChange={onOpenChange}
+            // Prevent focus trapping issues by disabling modal behavior
+            modal={false}
+        >
             {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
             <DrawerContent>
-                <div className="mx-auto w-full max-w-sm">
+                <div className="mx-auto w-full max-w-sm bg-white border-0 shadow-2xl">
                     {(title || description) && (
                         <DrawerHeader>
                             {title && <DrawerTitle>{title}</DrawerTitle>}

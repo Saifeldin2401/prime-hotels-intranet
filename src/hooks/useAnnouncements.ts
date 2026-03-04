@@ -4,23 +4,30 @@ import { useAuth } from '@/hooks/useAuth'
 import type { Announcement } from '@/lib/types'
 import { createNotification } from '@/lib/notificationService'
 import { crudToasts } from '@/lib/toastHelpers'
+import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export function useAnnouncements(options?: {
     includePinned?: boolean
     limit?: number
 }) {
     const { user, roles, departments, properties } = useAuth()
+    const { currentProperty } = useProperty()
 
     return useQuery({
-        queryKey: ['announcements', user?.id, options],
+        queryKey: ['announcements', user?.id, options, currentProperty?.id],
         queryFn: async () => {
             if (!user?.id) return []
 
-            const query = supabase
+            let query = supabase
                 .from('announcements')
                 .select(`*`)
                 .order('pinned', { ascending: false })
                 .order('created_at', { ascending: false })
+
+            if (isRealPropertyId(currentProperty?.id)) {
+                query = query.or(`property_id.is.null,property_id.eq.${currentProperty.id}`)
+            }
 
             if (options?.limit) {
                 query.limit(options.limit)
@@ -127,90 +134,12 @@ export function useCreateAnnouncement() {
 
             if (error) throw error
 
-            // Send notifications to target audience
-            const audience = announcement.target_audience
-            const announcementTitle = announcement.title || 'New Announcement'
-
-            if (!audience || audience.type === 'all') {
-                // For 'all', we could notify everyone, but that might be too many notifications
-                // Instead, we'll skip bulk notifications for 'all' to avoid spam
-                // Announcement created for all users - skipping bulk notification
-            } else {
-                const targetUserIds: string[] = []
-                const values = audience.values || []
-
-                switch (audience.type) {
-                    case 'role':
-                        // Get all users with these roles
-                        for (const role of values) {
-                            const { data: roleUsers } = await supabase
-                                .from('user_roles')
-                                .select('user_id')
-                                .eq('role', role)
-                            if (roleUsers) {
-                                targetUserIds.push(...roleUsers.map(u => u.user_id))
-                            }
-                        }
-                        break
-
-                    case 'department':
-                        // Get all users in these departments
-                        for (const deptId of values) {
-                            const { data: deptUsers } = await supabase
-                                .from('user_departments')
-                                .select('user_id')
-                                .eq('department_id', deptId)
-                            if (deptUsers) {
-                                targetUserIds.push(...deptUsers.map(u => u.user_id))
-                            }
-                        }
-                        break
-
-                    case 'property':
-                        // Get all users in these properties
-                        for (const propId of values) {
-                            const { data: propUsers } = await supabase
-                                .from('user_properties')
-                                .select('user_id')
-                                .eq('property_id', propId)
-                            if (propUsers) {
-                                targetUserIds.push(...propUsers.map(u => u.user_id))
-                            }
-                        }
-                        break
-
-                    case 'individual':
-                        // Direct user IDs
-                        targetUserIds.push(...values)
-                        break
-                }
-
-                // Remove duplicates and exclude the creator
-                const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user.id)
-
-                // Send notifications to all target users
-                for (const userId of uniqueUserIds) {
-                    await createNotification({
-                        userId,
-                        type: 'announcement_new',
-                        title: announcementTitle,
-                        message: `A new announcement has been posted: "${announcementTitle}"`,
-                        entityType: 'announcement',
-                        entityId: data.id,
-                        link: '/announcements',
-                        metadata: { creator_id: user.id }
-                    })
-                }
-            }
-
+            // Notification logic has been moved to AnnouncementEditor.tsx's handleSubmit 
+            // so that it respects the `send_push_notification` toggle from the form.
             return data
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['announcements'] })
-            crudToasts.create.success('Announcement')
-        },
-        onError: () => {
-            crudToasts.create.error('announcement')
         }
     })
 }

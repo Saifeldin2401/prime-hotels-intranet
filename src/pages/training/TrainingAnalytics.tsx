@@ -339,7 +339,7 @@ export default function TrainingAnalytics() {
                     color="red"
                 />
                 <StatCard
-                    title={t_ext('onboarding_sourced', 'Onboarding Sourced')}
+                    title={t('analytics.onboarding_sourced', 'Onboarding Sourced')}
                     value={summary?.onboardingAssignments || 0}
                     icon={Target}
                     color="orange"

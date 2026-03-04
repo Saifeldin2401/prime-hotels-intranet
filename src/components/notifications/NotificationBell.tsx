@@ -14,11 +14,13 @@ import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from 'date-fns'
 import type { Notification } from '@/lib/types'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from "react-i18next";
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingRead } = useNotifications()
   const { roles } = useAuth()
+  const { hasPermission } = usePermissions()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const controls = useAnimation()
@@ -46,16 +48,14 @@ export function NotificationBell() {
         return notification.entity_id ? `/learning/training/${notification.entity_id}` : '/learning/assignments'
       case 'document_published':
       case 'document_acknowledgment_required':
-        return '/knowledge' // Default to KB root if specific link missing
+        return '/knowledge'
       case 'announcement_new':
         return '/announcements'
       case 'maintenance_assigned':
       case 'maintenance_resolved':
         return '/maintenance'
       case 'referral_status_update': {
-        const isHR = roles?.some(r =>
-          ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(r.role)
-        )
+        const isHR = hasPermission('hr.manage_referrals')
         return isHR ? '/hr/referrals' : '/jobs/referrals'
       }
       case 'message_received':

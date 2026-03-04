@@ -6,6 +6,7 @@ import {
   useVerifyCertificate
 } from '@/hooks/useCertificates'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,6 +35,7 @@ import type { Certificate } from '@/lib/certificateService'
 
 export default function TrainingCertificates() {
   const { profile } = useAuth()
+  const { hasPermission } = usePermissions()
   const { t, i18n } = useTranslation(['training', 'public', 'common'])
   const { toast } = useToast()
   const isRTL = i18n.language === 'ar'
@@ -96,7 +98,7 @@ export default function TrainingCertificates() {
     c.certificateNumber.toLowerCase().includes(search.toLowerCase())
   ) || []
 
-  const isAdmin = profile?.roles?.some(r => ['corporate_admin', 'regional_admin', 'admin', 'property_manager'].includes(r))
+  const isAdmin = hasPermission('training.report')
 
   return (
     <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>

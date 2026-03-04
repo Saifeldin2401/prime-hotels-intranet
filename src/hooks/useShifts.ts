@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { useProperty } from '@/contexts/PropertyContext'
 
 export interface Shift {
     id: string
@@ -37,13 +38,19 @@ export interface CreateShiftInput {
  * Hook to fetch shifts for a user, optionally filtered by department
  */
 export function useShifts(userId?: string, dateRange?: { start: Date; end: Date }, departmentId?: string) {
+    const { currentProperty } = useProperty()
+
     return useQuery({
-        queryKey: ['shifts', userId, dateRange, departmentId],
+        queryKey: ['shifts', userId, dateRange, departmentId, currentProperty?.id],
         queryFn: async () => {
             let query = supabase
                 .from('shifts')
                 .select('*')
                 .order('start_time', { ascending: true })
+
+            if (isRealPropertyId(currentProperty?.id)) {
+                query = query.eq('property_id', currentProperty.id)
+            }
 
             if (userId) {
                 query = query.eq('user_id', userId)
@@ -64,7 +71,7 @@ export function useShifts(userId?: string, dateRange?: { start: Date; end: Date 
             if (error) throw error
             return data as Shift[]
         },
-        enabled: !!userId || !!departmentId
+        enabled: !!userId || !!departmentId || isRealPropertyId(currentProperty?.id)
     })
 }
 
@@ -159,12 +166,18 @@ export function useDeleteShift() {
  * Hook to get shift statistics
  */
 export function useShiftStats(userId?: string) {
+    const { currentProperty } = useProperty()
+
     return useQuery({
-        queryKey: ['shift-stats', userId],
+        queryKey: ['shift-stats', userId, currentProperty?.id],
         queryFn: async () => {
             let query = supabase
                 .from('shifts')
                 .select('status, start_time, end_time')
+
+            if (isRealPropertyId(currentProperty?.id)) {
+                query = query.eq('property_id', currentProperty.id)
+            }
 
             if (userId) {
                 query = query.eq('user_id', userId)
@@ -196,6 +209,6 @@ export function useShiftStats(userId?: string) {
 
             return stats
         },
-        enabled: !!userId
+        enabled: !!userId || isRealPropertyId(currentProperty?.id)
     })
 }

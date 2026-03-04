@@ -35,7 +35,7 @@ import { toast } from 'sonner'
 type ViewMode = 'grid' | 'org'
 type StatusFilter = 'all' | 'active' | 'inactive'
 
-const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr']
+const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']
 
 const EXECUTIVE_TITLE_RANK: Record<string, number> = {
   'founder': 1,

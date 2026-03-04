@@ -844,6 +844,15 @@ export const ROUTES: RouteConfig[] = [
         order: 5.5
     },
     {
+        path: '/admin/compliance',
+        title: 'compliance_center',
+        icon: Shield,
+        description: 'Enterprise audit exports, compliance monitoring, and regulatory reporting',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'compliance_officer'],
+        group: 'administration',
+        order: 4.9
+    },
+    {
         path: '/admin/escalation',
         title: 'escalation_rules',
         icon: Bell,

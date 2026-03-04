@@ -239,7 +239,11 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                         onChange={(e) => {
                                             try {
                                                 handleStepChange(index, 'config', JSON.parse(e.target.value))
-                                            } catch (err) { }
+                                            } catch (err) {
+                                                // Keep raw text so user can see and correct invalid JSON
+                                                // The config will be validated again on save via handleSave
+                                                handleStepChange(index, 'config', e.target.value)
+                                            }
                                         }}
                                     />
                                 </div>

@@ -55,19 +55,25 @@ export function useEvents(startDate?: Date, endDate?: Date) {
 
 export function useUpcomingEvents(limit: number = 5) {
   const { user } = useAuth()
+  const { currentProperty } = useProperty()
 
   const { data: events, isLoading } = useQuery({
-    queryKey: ['events-upcoming', limit],
+    queryKey: ['events-upcoming', limit, currentProperty?.id],
     queryFn: async (): Promise<Event[]> => {
       if (!user?.id) return []
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('events')
         .select('*')
         .gte('start_date', new Date().toISOString())
         .eq('is_public', true)
         .order('start_date', { ascending: true })
-        .limit(limit)
+
+      if (isRealPropertyId(currentProperty?.id)) {
+        query = query.or(`property_id.is.null,property_id.eq.${currentProperty.id}`)
+      }
+
+      const { data, error } = await query.limit(limit)
 
       if (error) {
         console.error('Error fetching upcoming events:', error)
@@ -84,22 +90,29 @@ export function useUpcomingEvents(limit: number = 5) {
 
 export function useEventsByMonth(months: Date[]) {
   const { user } = useAuth()
+  const { currentProperty } = useProperty()
 
   const { data: eventsByMonth, isLoading } = useQuery({
-    queryKey: ['events-by-month', months.map(m => m.toISOString())],
+    queryKey: ['events-by-month', months.map(m => m.toISOString()), currentProperty?.id],
     queryFn: async (): Promise<Map<string, Event[]>> => {
       if (!user?.id || months.length === 0) return new Map()
 
       const start = new Date(months[0].getFullYear(), months[0].getMonth(), 1)
       const end = new Date(months[months.length - 1].getFullYear(), months[months.length - 1].getMonth() + 1, 0)
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('events')
         .select('*')
         .gte('start_date', start.toISOString())
         .lte('start_date', end.toISOString())
         .eq('is_public', true)
         .order('start_date', { ascending: true })
+
+      if (isRealPropertyId(currentProperty?.id)) {
+        query = query.or(`property_id.is.null,property_id.eq.${currentProperty.id}`)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         console.error('Error fetching events by month:', error)
@@ -128,13 +141,29 @@ export function useEventsByMonth(months: Date[]) {
 export function useCreateEvent() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useMutation({
     mutationFn: async (event: Omit<Event, 'id' | 'created_by' | 'created_at'>) => {
+      if (!user?.id) throw new Error('User must be authenticated')
+
+      if (event.property_id !== undefined && !isRealPropertyId(event.property_id)) {
+        throw new Error('A valid property_id is required to create an event')
+      }
+
+      const resolvedPropertyId = isRealPropertyId(event.property_id)
+        ? event.property_id
+        : (isRealPropertyId(currentProperty?.id) ? currentProperty.id : null)
+
+      if (!resolvedPropertyId) {
+        throw new Error('A valid property_id is required to create an event')
+      }
+
       const { data, error } = await supabase
         .from('events')
         .insert({
           ...event,
+          property_id: resolvedPropertyId,
           created_by: user?.id
         })
         .select()
@@ -154,6 +183,10 @@ export function useUpdateEvent() {
 
   return useMutation({
     mutationFn: async ({ id, ...event }: Partial<Event> & { id: string }) => {
+      if (event.property_id !== undefined && !isRealPropertyId(event.property_id)) {
+        throw new Error('A valid property_id is required when updating event scope')
+      }
+
       const { data, error } = await supabase
         .from('events')
         .update(event)

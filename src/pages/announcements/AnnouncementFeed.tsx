@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +18,7 @@ import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 
 export default function AnnouncementFeed() {
   const { user, profile, primaryRole, roles, properties, departments } = useAuth()
+  const { hasPermission } = usePermissions()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { t, i18n } = useTranslation('announcements')
@@ -143,7 +145,11 @@ export default function AnnouncementFeed() {
     }
   }
 
-  const isAdmin = primaryRole && ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole)
+  // Use centralized permission system for announcement action visibility
+  // This respects role hierarchy and includes property_manager (previously excluded by bespoke check)
+  const canCreate = hasPermission('announcements.create')
+  const canEdit = hasPermission('announcements.edit')
+  const canDelete = hasPermission('announcements.delete')
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['announcements'] })
@@ -159,7 +165,7 @@ export default function AnnouncementFeed() {
           title={t('title')}
           description={t('description')}
           actions={
-            isAdmin && (
+            canCreate && (
               <Button onClick={handleCreate}>
                 <Plus className="w-4 h-4 mr-2" />
                 {t('create')}
@@ -219,23 +225,23 @@ export default function AnnouncementFeed() {
                                   {t('actions.markRead')}
                                 </Button>
                               )}
-                              {isAdmin && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                    onClick={(e) => { e.stopPropagation(); handleEdit(announcement) }}
-                                  >
-                                    {t('actions.edit')}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="bg-white border border-gray-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 rounded-md transition-colors"
-                                    onClick={(e) => { e.stopPropagation(); setDeleteData(announcement) }}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </>
+                              {canEdit && (
+                                <Button
+                                  size="sm"
+                                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                  onClick={(e) => { e.stopPropagation(); handleEdit(announcement) }}
+                                >
+                                  {t('actions.edit')}
+                                </Button>
+                              )}
+                              {canDelete && (
+                                <Button
+                                  size="sm"
+                                  className="bg-white border border-gray-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 rounded-md transition-colors"
+                                  onClick={(e) => { e.stopPropagation(); setDeleteData(announcement) }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               )}
                             </div>
                           </div>

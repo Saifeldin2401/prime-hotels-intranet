@@ -164,7 +164,13 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
       // Copy password to clipboard automatically
       if (tempPwd) {
-        navigator.clipboard.writeText(tempPwd).catch(() => console.warn('Clipboard failed'))
+        navigator.clipboard.writeText(tempPwd).catch(() => {
+          toast({
+            title: t('form.error.clipboard_failed', 'Copy failed'),
+            description: t('form.error.clipboard_failed_desc', 'Please copy the password manually.'),
+            variant: "destructive"
+          })
+        })
       }
 
       // Show credentials in a persistent toast - NO auto-download needed
@@ -204,7 +210,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
   })
 
 
-  const { data: properties } = useQuery({
+  const { data: properties, isLoading: propertiesLoading } = useQuery({
     queryKey: ['properties'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -222,10 +228,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
     Updated to use useDepartments hook which includes fallback data handling 
     for persistent 400 Bad Request API errors.
   */
-  const { departments } = useDepartments()
+  const { departments, isLoading: departmentsLoading } = useDepartments()
 
   // Fetch Job Titles from DB
-  const { data: jobTitlesList } = useQuery({
+  const { data: jobTitlesList, isLoading: jobTitlesLoading } = useQuery({
     queryKey: ['job_titles'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -881,7 +887,9 @@ export function UserForm({ user, onClose }: UserFormProps) {
                   <Command>
                     <CommandInput placeholder={t('form.search_job_title')} />
                     <CommandList id={jobTitleListId}>
-                      <CommandEmpty>{t('form.no_job_title')}</CommandEmpty>
+                      <CommandEmpty>
+                        {jobTitlesLoading ? t('form.loading_job_titles', 'Loading job titles...') : t('form.no_job_title')}
+                      </CommandEmpty>
                       <CommandGroup>
                         {jobTitlesList?.map((item) => (
                           <CommandItem
@@ -969,7 +977,9 @@ export function UserForm({ user, onClose }: UserFormProps) {
             <div className="space-y-2">
               <Label>{t('form.properties')}</Label>
               <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
-                {properties?.map((property) => (
+                {propertiesLoading ? (
+                  <p className="text-sm text-muted-foreground">{t('form.loading_properties', 'Loading properties...')}</p>
+                ) : properties?.map((property) => (
                   <label key={property.id} className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -992,6 +1002,9 @@ export function UserForm({ user, onClose }: UserFormProps) {
               <Label>{t('form.departments')}</Label>
               <div className="max-h-60 overflow-y-auto border rounded-md p-4 space-y-4">
                 {selectedProperties.length > 0 ? (
+                  departmentsLoading ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">{t('form.loading_departments', 'Loading departments...')}</p>
+                  ) : (
                   properties?.filter(p => selectedProperties.includes(p.id)).map((property) => {
                     const propertyDepts = departments?.filter(d => d.property_id === property.id)
 
@@ -1025,13 +1038,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
                       </div>
                     )
                   })
+                  )
                 ) : (
                   <div className="text-sm text-muted-foreground text-center py-8 bg-muted/50 rounded-lg flex flex-col items-center justify-center border border-dashed">
                     <span className="mb-1 text-2xl">🏢</span>
                     <p>{t('form.select_property_helper')}</p>
                   </div>
                 )}
-                {selectedProperties.length > 0 && (!departments || departments.length === 0) && (
+                {selectedProperties.length > 0 && !departmentsLoading && (!departments || departments.length === 0) && (
                   <p className="text-sm text-muted-foreground text-center py-4">{t('form.no_departments')}</p>
                 )}
               </div>

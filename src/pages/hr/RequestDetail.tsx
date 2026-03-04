@@ -90,7 +90,7 @@ export default function RequestDetail() {
   const request = requestQuery.data
 
   const isHr = primaryRole === 'regional_hr' || primaryRole === 'property_hr'
-  const isAdmin = primaryRole === 'regional_admin'
+  const isAdmin = primaryRole === 'regional_admin' || primaryRole === 'corporate_admin'
   const isAssignee = !!user?.id && request?.current_assignee_id === user.id
   const canAct = isAssignee || isHr || isAdmin
 

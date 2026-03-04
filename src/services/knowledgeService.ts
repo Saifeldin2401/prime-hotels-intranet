@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import { isRealPropertyId } from '@/lib/propertyScope'
 import type {
     KnowledgeArticle,
     KnowledgeComment,
@@ -45,6 +46,15 @@ const SEARCH_SYNONYMS: Record<string, string[]> = {
     // Arabic abbreviations
     'مغادرة متأخرة': ['late checkout'],
     'صيانة': ['maintenance', 'preventive maintenance'],
+}
+
+const toErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) return error.message
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+        const message = (error as { message?: unknown }).message
+        return typeof message === 'string' ? message : 'Unknown error'
+    }
+    return 'Unknown error'
 }
 
 /**
@@ -201,19 +211,19 @@ export async function getArticleById(id: string, userId?: string): Promise<Knowl
 
         return article
     } catch (e) {
-        console.error('Article fetch exception:', e)
+        console.error('Article fetch exception:', toErrorMessage(e))
         return null
     }
 }
 
 export async function incrementViewCount(id: string): Promise<void> {
     const { error } = await supabase.rpc('increment_article_view_count', { doc_id: id })
-    if (error) console.warn('Failed to increment view count:', error)
+    if (error) console.warn('Failed to increment view count:', error.message)
 }
 
-export async function getFeaturedArticles(limit = 5): Promise<KnowledgeArticle[]> {
+export async function getFeaturedArticles(limit = 5, propertyId?: string): Promise<KnowledgeArticle[]> {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('documents')
             .select(`
                 id, title, description,
@@ -230,7 +240,12 @@ export async function getFeaturedArticles(limit = 5): Promise<KnowledgeArticle[]
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
             .order('updated_at', { ascending: false })
-            .limit(limit)
+
+        if (isRealPropertyId(propertyId)) {
+            query = query.or(`property_id.is.null,property_id.eq.${propertyId}`)
+        }
+
+        const { data, error } = await query.limit(limit)
 
         if (error) {
             console.warn('getFeaturedArticles error:', error.message)
@@ -239,14 +254,14 @@ export async function getFeaturedArticles(limit = 5): Promise<KnowledgeArticle[]
         const hydrated = await hydratePublishedSnapshotsForList(data || [])
         return hydrated.map(formatArticle)
     } catch (e) {
-        console.error('getFeaturedArticles exception:', e)
+        console.error('getFeaturedArticles exception:', toErrorMessage(e))
         return []
     }
 }
 
-export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]> {
+export async function getRecentArticles(limit = 10, propertyId?: string): Promise<KnowledgeArticle[]> {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('documents')
             .select(`
                 id, title, description,
@@ -263,7 +278,12 @@ export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]>
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
             .order('updated_at', { ascending: false })
-            .limit(limit)
+
+        if (isRealPropertyId(propertyId)) {
+            query = query.or(`property_id.is.null,property_id.eq.${propertyId}`)
+        }
+
+        const { data, error } = await query.limit(limit)
 
         if (error) {
             console.warn('getRecentArticles error:', error.message)
@@ -272,7 +292,7 @@ export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]>
         const hydrated = await hydratePublishedSnapshotsForList(data || [])
         return hydrated.map(formatArticle)
     } catch (e) {
-        console.error('getRecentArticles exception:', e)
+        console.error('getRecentArticles exception:', toErrorMessage(e))
         return []
     }
 }
@@ -281,16 +301,22 @@ export async function getRecentArticles(limit = 10): Promise<KnowledgeArticle[]>
 // REQUIRED READING
 // ============================================================================
 
-export async function getRequiredReading(userId: string): Promise<RequiredReading[]> {
+export async function getRequiredReading(userId: string, propertyId?: string): Promise<RequiredReading[]> {
     try {
         // 1. Get published documents that require acknowledgment
-        const { data: requiredDocs, error } = await supabase
+        let requiredDocsQuery = supabase
             .from('documents')
             .select('*')
             .eq('requires_acknowledgment', true)
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
             .limit(50)
+
+        if (isRealPropertyId(propertyId)) {
+            requiredDocsQuery = requiredDocsQuery.or(`property_id.is.null,property_id.eq.${propertyId}`)
+        }
+
+        const { data: requiredDocs, error } = await requiredDocsQuery
 
         if (error || !requiredDocs) return []
 
@@ -323,7 +349,7 @@ export async function getRequiredReading(userId: string): Promise<RequiredReadin
             }
         })
     } catch (e) {
-        console.error('getRequiredReading error:', e)
+        console.error('getRequiredReading error:', toErrorMessage(e))
         return []
     }
 }
@@ -344,7 +370,7 @@ export async function acknowledgeArticle(documentId: string, userId: string): Pr
 // CONTEXTUAL HELP - Real Implementation
 // ============================================================================
 
-export async function getContextualHelp(triggerType: string, triggerValue: string): Promise<ContextualHelp[]> {
+export async function getContextualHelp(triggerType: string, triggerValue: string, propertyId?: string): Promise<ContextualHelp[]> {
     // Map trigger types to relevant content types
     const contentTypeMap: Record<string, string[]> = {
         'task': ['sop', 'guide', 'checklist'],
@@ -357,10 +383,9 @@ export async function getContextualHelp(triggerType: string, triggerValue: strin
 
     const relevantTypes = contentTypeMap[triggerType] || ['guide', 'reference']
 
-    // Search for relevant documents
-    const { data, error } = await supabase
+    const baseQuery = () => supabase
         .from('documents')
-        .select('id, title, description, content_type, status, current_version, published_version_number, last_published_at')
+        .select('id, title, description, content_type, status, current_version, published_version_number, last_published_at, view_count')
         .in('content_type', relevantTypes)
         .eq('status', 'PUBLISHED')
         .eq('is_deleted', false)
@@ -368,11 +393,31 @@ export async function getContextualHelp(triggerType: string, triggerValue: strin
         .order('view_count', { ascending: false })
         .limit(5)
 
-    if (error || !data) {
+    const scopedQueries = isRealPropertyId(propertyId)
+        ? [
+            baseQuery().eq('property_id', propertyId),
+            baseQuery().is('property_id', null)
+        ]
+        : [baseQuery()]
+
+    const scopedResults = await Promise.all(scopedQueries)
+    const scopedDocs: any[] = []
+    for (const result of scopedResults) {
+        if (result.error || !result.data) {
+            continue
+        }
+        scopedDocs.push(...result.data)
+    }
+
+    if (scopedDocs.length === 0) {
         return []
     }
 
-    const hydratedDocs = await hydratePublishedSnapshotsForList(data)
+    const dedupedDocs = Array.from(new Map(scopedDocs.map(doc => [doc.id, doc])).values())
+        .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
+        .slice(0, 5)
+
+    const hydratedDocs = await hydratePublishedSnapshotsForList(dedupedDocs)
 
     return hydratedDocs.map(doc => ({
         document_id: doc.id,
@@ -428,7 +473,7 @@ export async function createComment(documentId: string, userId: string, content:
         .single()
 
     if (error) {
-        console.error('Create comment failed:', error)
+        console.error('Create comment failed:', toErrorMessage(error))
         throw error
     }
 
@@ -450,7 +495,7 @@ export async function voteComment(commentId: string, userId: string, voteType: '
         }, { onConflict: 'comment_id,user_id' })
 
     if (error) {
-        console.error('Vote comment failed:', error)
+        console.error('Vote comment failed:', toErrorMessage(error))
         throw error
     }
 }
@@ -533,7 +578,7 @@ export async function getFeedbackStats(): Promise<{ helpful: number, unhelpful: 
         .select('helpful')
 
     if (error) {
-        console.error('getFeedbackStats error:', error)
+        console.error('getFeedbackStats error:', toErrorMessage(error))
         return { helpful: 0, unhelpful: 0, total: 0 }
     }
 
@@ -561,7 +606,7 @@ export async function getRecentFeedback(limit = 10): Promise<any[]> {
         .limit(limit)
 
     if (error) {
-        console.error('getRecentFeedback error:', error)
+        console.error('getRecentFeedback error:', toErrorMessage(error))
         return []
     }
     return data || []
@@ -581,7 +626,7 @@ export async function getFeedbackTrends(days = 30): Promise<{ date: string; help
         .order('created_at', { ascending: true })
 
     if (error) {
-        console.error('getFeedbackTrends error:', error)
+        console.error('getFeedbackTrends error:', toErrorMessage(error))
         return []
     }
 
@@ -629,13 +674,19 @@ export async function getCategories(departmentId?: string) {
     return data
 }
 
-export async function getContentTypeCounts(): Promise<Record<string, number>> {
+export async function getContentTypeCounts(propertyId?: string): Promise<Record<string, number>> {
     try {
         // Count all visible, non-deleted documents (status can vary by role and RLS).
-        const { data, error } = await supabase
+        let query = supabase
             .from('documents')
             .select('content_type')
             .eq('is_deleted', false)
+
+        if (isRealPropertyId(propertyId)) {
+            query = query.or(`property_id.is.null,property_id.eq.${propertyId}`)
+        }
+
+        const { data, error } = await query
 
         if (error || !data) return {}
 
@@ -696,7 +747,7 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
             }
         })
     } catch (e) {
-        console.error('getRelatedArticles exception:', e)
+        console.error('getRelatedArticles exception:', toErrorMessage(e))
         return []
     }
 }
@@ -714,7 +765,7 @@ export async function trackRelatedClick(sourceId: string, relatedId: string, use
         })
         if (error) throw error
     } catch (e) {
-        console.error('Failed to track related click:', e)
+        console.error('Failed to track related click:', toErrorMessage(e))
     }
 }
 
@@ -729,7 +780,7 @@ export async function trackRelatedImpressions(sourceId: string, relatedIds: stri
         })
         if (error) throw error
     } catch (e) {
-        console.error('Failed to track related impressions:', e)
+        console.error('Failed to track related impressions:', toErrorMessage(e))
     }
 }
 

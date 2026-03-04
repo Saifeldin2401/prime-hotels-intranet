@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import { toast } from 'sonner'
 import {
     AreaChart,
@@ -68,6 +69,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import type { DateRange } from 'react-day-picker'
+import { auditLog } from '@/lib/auditLog'
 
 import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
 import { isConsolidatedPropertyId } from '@/lib/propertyScope'
@@ -115,6 +117,7 @@ export default function OperationsDashboard() {
     const { t } = useTranslation(['operations', 'common'])
     const { currentProperty } = useProperty()
     const { user, profile } = useAuth()
+    const { hasPermission } = usePermissions()
     const [selectedDate] = useState(new Date().toISOString().split('T')[0])
     const [dateRange] = useState<DateRange | undefined>({
         from: subDays(new Date(), 7),
@@ -136,6 +139,7 @@ export default function OperationsDashboard() {
     const { data: importLogs } = useDataImportLogs()
     const deleteImportLog = useDeleteImportLog()
     const [logToDelete, setLogToDelete] = useState<string | null>(null)
+    const canExportOperations = hasPermission('operations.export', currentProperty?.id)
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('en-SA', {
@@ -146,6 +150,13 @@ export default function OperationsDashboard() {
     }
 
     const handleExportPdf = async (type: 'occupancy' | 'revenue') => {
+        // Defensive guard: always enforce export permission in the action handler,
+        // even if the UI control is disabled.
+        if (!canExportOperations) {
+            toast.error('You do not have permission to export operations reports')
+            return
+        }
+
         const logo = await loadLogoAsDataUrl()
         const isOccupancy = type === 'occupancy'
         const data = isOccupancy ? occupancyData : revenueData
@@ -212,6 +223,8 @@ export default function OperationsDashboard() {
             },
             logo || undefined
         )
+
+        void auditLog.dataExported(`operations_${type}_pdf`, data.length)
     }
 
     const handleDeleteLog = async (id: string) => {
@@ -514,7 +527,13 @@ export default function OperationsDashboard() {
                             <div>
                                 <CardTitle>{t('operations:occupancy.title', 'Occupancy Details')}</CardTitle>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => handleExportPdf('occupancy')}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleExportPdf('occupancy')}
+                                disabled={!canExportOperations}
+                                title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
+                            >
                                 <Printer className="h-4 w-4 mr-2" />
                                 Export PDF
                             </Button>
@@ -711,7 +730,13 @@ export default function OperationsDashboard() {
                             <div>
                                 <CardTitle>{t('operations:revenue.title', 'Revenue Details')}</CardTitle>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => handleExportPdf('revenue')}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleExportPdf('revenue')}
+                                disabled={!canExportOperations}
+                                title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
+                            >
                                 <Printer className="h-4 w-4 mr-2" />
                                 Export PDF
                             </Button>

@@ -369,7 +369,7 @@ export function ModuleCreationWizard({
                         isRTL ? "flex-row-reverse" : ""
                       )}
                     >
-                      {data.certificateEnabled ? t('common:status.enabled') : t('common:status.disabled')}
+                      {data.certificateEnabled ? t('common:status_options.enabled') : t('common:status_options.disabled')}
                     </Button>
                   </Label>
                 </div>
@@ -423,7 +423,7 @@ export function ModuleCreationWizard({
                   <div className={cn("flex justify-between", isRTL ? "flex-row-reverse" : "")}>
                     <span className="text-muted-foreground">{t('certificateEnabled')}:</span>
                     <span className="font-medium">
-                      {data.certificateEnabled ? t('common:status.enabled') : t('common:status.disabled')}
+                      {data.certificateEnabled ? t('common:status_options.enabled') : t('common:status_options.disabled')}
                     </span>
                   </div>
                 </div>

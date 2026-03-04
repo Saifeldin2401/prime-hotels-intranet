@@ -43,10 +43,15 @@ import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
 import { BuilderCanvas } from '@/components/training/builder/BuilderCanvas'
 import { BuilderPreview } from '@/components/training/builder/BuilderPreview'
 import { analytics } from '@/services/analyticsService'
+import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
 
 type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference'
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank'
 type BuilderStep = 'setup' | 'structure' | 'content' | 'rules' | 'preview' | 'publish'
+type RecentUpload = { url: string; name: string; type: 'image' | 'audio' | 'document' }
+
+const TRAINING_BUILDER_SAVED_BLOCKS_KEY = 'training_builder_saved_blocks_v1'
+const TRAINING_BUILDER_RECENT_UPLOADS_KEY = 'training_builder_recent_uploads_v1'
 
 interface ContentBlockForm {
   id: string
@@ -336,28 +341,24 @@ export function TrainingBuilder() {
   }, [moduleData])
 
   useEffect(() => {
-    try {
-      const storedBlocks = localStorage.getItem(savedBlocksKey)
-      if (storedBlocks) {
-        const parsed = JSON.parse(storedBlocks)
-        if (Array.isArray(parsed)) {
-          setSavedBlocks(parsed)
-        }
+    let isActive = true
+
+    const restoreBuilderLibrary = async () => {
+      const storedBlocks = await getEncryptedLocalStorage<ContentBlockForm[]>(TRAINING_BUILDER_SAVED_BLOCKS_KEY)
+      if (isActive && Array.isArray(storedBlocks)) {
+        setSavedBlocks(storedBlocks)
       }
-    } catch {
-      // ignore storage issues
+
+      const storedUploads = await getEncryptedLocalStorage<RecentUpload[]>(TRAINING_BUILDER_RECENT_UPLOADS_KEY)
+      if (isActive && Array.isArray(storedUploads)) {
+        setRecentUploads(storedUploads)
+      }
     }
 
-    try {
-      const storedUploads = localStorage.getItem(recentUploadsKey)
-      if (storedUploads) {
-        const parsed = JSON.parse(storedUploads)
-        if (Array.isArray(parsed)) {
-          setRecentUploads(parsed)
-        }
-      }
-    } catch {
-      // ignore storage issues
+    void restoreBuilderLibrary()
+
+    return () => {
+      isActive = false
     }
   }, [])
 
@@ -419,7 +420,7 @@ export function TrainingBuilder() {
   const [showAdvancedBlockOptions, setShowAdvancedBlockOptions] = useState(false)
   const [mediaInputMode, setMediaInputMode] = useState<'upload' | 'link'>('upload')
   const [savedBlocks, setSavedBlocks] = useState<ContentBlockForm[]>([])
-  const [recentUploads, setRecentUploads] = useState<Array<{ url: string; name: string; type: 'image' | 'audio' | 'document' }>>([])
+  const [recentUploads, setRecentUploads] = useState<RecentUpload[]>([])
   const [showTemplatePreview, setShowTemplatePreview] = useState(false)
   const [showTemplateApplyConfirm, setShowTemplateApplyConfirm] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<TrainingTemplate | null>(null)
@@ -737,22 +738,13 @@ export function TrainingBuilder() {
   const formatTime = (date: Date) =>
     date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-  const savedBlocksKey = 'training_builder_saved_blocks_v1'
-  const recentUploadsKey = 'training_builder_recent_uploads_v1'
-
-  // No changes needed here, just removing the old definitions
-
   // getBlockValidation moved outside
 
-  const addRecentUpload = (upload: { url: string; name: string; type: 'image' | 'audio' | 'document' }) => {
+  const addRecentUpload = (upload: RecentUpload) => {
     setRecentUploads(prev => {
       const next = [upload, ...prev.filter(item => item.url !== upload.url)]
       const trimmed = next.slice(0, 8)
-      try {
-        localStorage.setItem(recentUploadsKey, JSON.stringify(trimmed))
-      } catch {
-        // ignore storage issues
-      }
+      void setEncryptedLocalStorage(TRAINING_BUILDER_RECENT_UPLOADS_KEY, trimmed)
       return trimmed
     })
   }
@@ -784,11 +776,15 @@ export function TrainingBuilder() {
       skipAutosaveRef.current = false
       return
     }
+    let isActive = true
 
-    const stored = localStorage.getItem(draftKey)
-    if (stored) {
+    const restoreDraft = async () => {
       try {
-        const draft = JSON.parse(stored)
+        const draft = await getEncryptedLocalStorage<any>(draftKey)
+        if (!isActive || !draft) {
+          return
+        }
+
         setTitle(draft.title || '')
         setDescription(draft.description || '')
         setCategory(draft.category || '')
@@ -808,12 +804,19 @@ export function TrainingBuilder() {
           description: t('builder.draftRestoredDesc')
         })
       } catch (error) {
-        console.error('Failed to restore draft:', error)
+        const errorDetails = getUserFriendlyError(error)
+        console.warn('Failed to restore training draft:', errorDetails.message)
+      } finally {
+        draftRestoreRef.current = true
+        skipAutosaveRef.current = false
       }
     }
 
-    draftRestoreRef.current = true
-    skipAutosaveRef.current = false
+    void restoreDraft()
+
+    return () => {
+      isActive = false
+    }
   }, [draftKey, isNewRoute, moduleId, t, toast])
 
   useEffect(() => {
@@ -841,15 +844,17 @@ export function TrainingBuilder() {
         sections,
         activeSection
       }
-
-      try {
-        localStorage.setItem(draftKey, JSON.stringify(draftPayload))
-        setAutosaveStatus('saved')
-        setLastAutosaveAt(new Date())
-      } catch (error) {
-        console.error('Failed to autosave draft:', error)
-        setAutosaveStatus('idle')
-      }
+      void (async () => {
+        try {
+          await setEncryptedLocalStorage(draftKey, draftPayload)
+          setAutosaveStatus('saved')
+          setLastAutosaveAt(new Date())
+        } catch (error) {
+          const errorDetails = getUserFriendlyError(error)
+          console.warn('Failed to autosave training draft:', errorDetails.message)
+          setAutosaveStatus('idle')
+        }
+      })()
     }, 1200)
 
     return () => {
@@ -974,11 +979,7 @@ export function TrainingBuilder() {
 
   const persistSavedBlocks = (blocks: ContentBlockForm[]) => {
     setSavedBlocks(blocks)
-    try {
-      localStorage.setItem(savedBlocksKey, JSON.stringify(blocks))
-    } catch {
-      // ignore storage issues
-    }
+    void setEncryptedLocalStorage(TRAINING_BUILDER_SAVED_BLOCKS_KEY, blocks)
   }
 
   const handleSaveBlockToLibrary = () => {
@@ -1183,7 +1184,11 @@ export function TrainingBuilder() {
 
   const saveTraining = async () => {
     if (!title.trim()) {
-      alert(`${t('title')} ${t('isRequired')}`)
+      toast({
+        title: t('error'),
+        description: `${t('title')} ${t('isRequired')}`,
+        variant: 'destructive'
+      })
       return
     }
 
@@ -1311,7 +1316,9 @@ export function TrainingBuilder() {
           description: t('moduleSavedDescription', { count: count || 0, defaultValue: `${count || 0} items saved` })
         })
       } else {
-        alert(t('moduleSaved'))
+        toast({
+          title: t('moduleSaved')
+        })
       }
     } catch (error: unknown) {
       const errorDetails = getUserFriendlyError(error)
@@ -1350,7 +1357,7 @@ export function TrainingBuilder() {
         if (error) throw error
       }
 
-      localStorage.removeItem(draftKey)
+      removeEncryptedLocalStorage(draftKey)
 
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
       queryClient.invalidateQueries({ queryKey: ['training-content-blocks', savedModuleId] })
