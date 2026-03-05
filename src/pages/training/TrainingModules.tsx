@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { createBulkNotifications } from '@/lib/notificationService'
 import { useAuth } from '@/hooks/useAuth'
+import { useDebounce } from '@/hooks/useDebounce'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -81,7 +82,8 @@ export default function TrainingModules() {
   const [assigningModuleId, setAssigningModuleId] = useState<string | null>(null)
 
   // Data fetching
-  const modulesQueryKey = ['training-modules', statusFilter, categoryFilter, search, sortBy, sortOrder]
+  const debouncedSearch = useDebounce(search, 300)
+  const modulesQueryKey = ['training-modules', statusFilter, categoryFilter, debouncedSearch, sortBy, sortOrder]
 
   const { data: modules, isLoading } = useQuery({
     queryKey: modulesQueryKey,
@@ -99,8 +101,8 @@ export default function TrainingModules() {
         query = query.eq('category', categoryFilter)
       }
 
-      if (search) {
-        query = query.ilike('title', `%${search}%`)
+      if (debouncedSearch) {
+        query = query.ilike('title', `%${debouncedSearch}%`)
       }
 
       const { data, error } = await query
