@@ -88,7 +88,9 @@ export const securityConfig = {
         "https://date.nager.at",
         "https://o4508792767840256.ingest.de.sentry.io",
         "https://*.sentry.io",
-        "https://va.vercel-scripts.com"
+        "https://va.vercel-scripts.com",
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com"
       ],
       // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
       'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com", "https://*.supabase.co"],
