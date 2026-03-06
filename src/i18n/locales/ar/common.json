@@ -106,7 +106,10 @@
         "escalation_rules": "قواعد التصعيد",
         "audit_logs": "سجل التدقيق",
         "onboarding_templates": "التهيئة",
-        "logout": "تسجيل الخروج"
+        "logout": "تسجيل الخروج",
+        "home": "الرئيسية",
+        "back_to_list": "العودة للقائمة",
+        "view_details": "عرض التفاصيل"
     },
     "dashboard": {
         "title": "لوحة التحكم",
@@ -482,5 +485,84 @@
         "enabled_success": "تم تفعيل إشعارات المتصفح! ستتلقى الآن تنبيهات للتحديثات المهمة.",
         "denied_message": "تم رفض إذن الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات المتصفح.",
         "error": "فشل طلب إذن الإشعارات. يرجى المحاولة مرة أخرى."
+    },
+    "placeholder": {
+        "select": "اختر...",
+        "search": "بحث...",
+        "enter_title": "أدخل العنوان",
+        "enter_description": "أدخل الوصف (اختياري)",
+        "select_property": "اختر العقار",
+        "select_department": "اختر القسم",
+        "select_employee": "اختر الموظف",
+        "select_user": "اختر مستخدم",
+        "reason": "أدخل السبب...",
+        "notes": "أضف ملاحظات...",
+        "comment": "أضف تعليقاً..."
+    },
+    "button": {
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "delete": "حذف",
+        "edit": "تعديل",
+        "create": "إنشاء",
+        "submit": "إرسال",
+        "close": "إغلاق",
+        "back": "رجوع",
+        "next": "التالي",
+        "confirm": "تأكيد",
+        "approve": "موافقة",
+        "reject": "رفض",
+        "download": "تحميل",
+        "upload": "رفع",
+        "refresh": "تحديث",
+        "filter": "تصفية",
+        "clear": "مسح",
+        "view": "عرض",
+        "add": "إضافة",
+        "remove": "إزالة"
+    },
+    "table": {
+        "name": "الاسم",
+        "status": "الحالة",
+        "actions": "الإجراءات",
+        "date": "التاريخ",
+        "type": "النوع",
+        "description": "الوصف",
+        "title": "العنوان",
+        "email": "البريد الإلكتروني",
+        "department": "القسم",
+        "role": "الدور",
+        "created": "تاريخ الإنشاء",
+        "updated": "تاريخ التحديث"
+    },
+    "message": {
+        "loading": "جاري التحميل...",
+        "no_data": "لا توجد بيانات متاحة",
+        "no_results": "لم يتم العثور على نتائج",
+        "error": "حدث خطأ",
+        "success": "تمت العملية بنجاح",
+        "confirm_delete": "هل أنت متأكد من حذف هذا العنصر؟",
+        "required": "هذا الحقل مطلوب"
+    },
+    "form": {
+        "title": "العنوان",
+        "description": "الوصف",
+        "status": "الحالة",
+        "type": "النوع",
+        "category": "الفئة",
+        "priority": "الأولوية",
+        "due_date": "تاريخ الاستحقاق",
+        "assigned_to": "مخصص لـ",
+        "notes": "ملاحظات",
+        "reason": "السبب"
+    },
+    "misc": {
+        "optional": "(اختياري)",
+        "required": "*",
+        "show_more": "عرض المزيد",
+        "show_less": "عرض أقل",
+        "read_more": "قراءة المزيد",
+        "view_all": "عرض الكل",
+        "see_all": "مشاهدة الكل"
     }
 }

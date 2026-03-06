@@ -65,8 +65,8 @@
             "hired": "تم تعيينهم",
             "bonuses_paid": "إجمالي المكافآت المدفوعة",
             "pending_bonuses": "مكافآت معلقة",
-            "pending": "????",
-            "ratio": "???? ???????"
+            "pending": "قيد الانتظار",
+            "ratio": "معدل التوظيف"
         },
         "search_placeholder": "بحث في الإحالات...",
         "referred_by": "تمت الإحالة بواسطة {{referrer}} لوظيفة {{position}}",
@@ -77,16 +77,16 @@
             "mark_hired": "تعيين كموظف",
             "reject": "رفض"
         },
-        "export_excel": "????? ????",
-        "export_pdf": "????? PDF",
-        "filter_job": "?? ???????",
-        "filter_referrer": "?? ?????????",
-        "top_referrers": "???? ?????????",
-        "top_jobs": "??? ???????",
-        "trends": "??????? ????????",
-        "no_referrers": "?? ???? ?????? ?????? ???.",
-        "no_jobs": "?? ???? ?????? ?????? ???.",
-        "no_trends": "?? ???? ?????? ??????? ???."
+        "export_excel": "تصدير إلى Excel",
+        "export_pdf": "تصدير إلى PDF",
+        "filter_job": "كل الوظائف",
+        "filter_referrer": "كل المحيلين",
+        "top_referrers": "أعلى المحيلين",
+        "top_jobs": "أعلى الوظائف",
+        "trends": "اتجاهات الإحالة",
+        "no_referrers": "لا توجد بيانات إحالة حتى الآن.",
+        "no_jobs": "لا توجد بيانات إحالة حتى الآن.",
+        "no_trends": "لا توجد بيانات اتجاهات حتى الآن."
     },
     "leave_requests": {
         "title": "طلبات الإجازة الخاصة بي",
@@ -107,9 +107,9 @@
             "cancel": "إلغاء",
             "submit": "تقديم الطلب",
             "submitting": "جاري التقديم...",
-            "error_title": "???",
-            "success_message": "?? ????? Message",
-            "success_title": "?? ?????"
+            "error_title": "خطأ",
+            "success_message": "رسالة النجاح",
+            "success_title": "نجاح"
         },
         "list": {
             "title": "طلبات الإجازة الخاصة بك",
@@ -150,8 +150,8 @@
         "review": "مراجعة",
         "pending_approval": "بانتظار الموافقة",
         "pending_hr_review": "بانتظار مراجعة الموارد البشرية",
-        "shortlisted": "????? ???????",
-        "offer": "??? ?????"
+        "shortlisted": "القائمة المختصرة",
+        "offer": "عرض وظيفي"
     },
     "history": {
         "title": "سجل الترقيات والنقل",

@@ -26,18 +26,18 @@
         "acknowledge": "تأكيد الاستلام",
         "comment": "تعليق"
     },
-    "allStaff": "???? ????????",
+    "allStaff": "كل الموظفين",
     "cancel": "إلغاء",
-    "complianceMandatory": "???????? Mandatory",
+    "complianceMandatory": "الامتثال الإلزامي",
     "content": "المحتوى",
     "createAssignment": "إنشاء تعيين",
     "creating": "Creating",
-    "dateAssigned": "????? Assigned",
-    "dueDate": "????? ?????",
+    "dateAssigned": "تاريخ التعيين",
+    "dueDate": "تاريخ الاستحقاق",
     "high": "مرتفع",
     "low": "منخفض",
     "medium": "متوسط",
-    "noActiveAssignments": "?? ??? Assignments",
+    "noActiveAssignments": "لا توجد مهام نشطة",
     "noUserFound": "?? User Found",
     "priority": {
         "normal": "عادي",
@@ -45,13 +45,13 @@
         "critical": "حرج"
     },
     "searchUser": "Search User",
-    "selectDepartment": "???? ?????",
-    "selectRole": "???? Role",
-    "selectUser": "???? User",
+    "selectDepartment": "اختر القسم",
+    "selectRole": "اختر الدور",
+    "selectUser": "اختر المستخدم",
     "target": "Target",
-    "targetType": "Target ?????",
+    "targetType": "النوع المستهدف",
     "targetValue": "Target Value",
     "type": "النوع",
-    "viewProgress": "??? ??????",
-    "priority_label": "????????"
+    "viewProgress": "عرض التقدم",
+    "priority_label": "الأولوية"
 }

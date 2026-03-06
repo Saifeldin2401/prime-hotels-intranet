@@ -14,7 +14,7 @@
         "resume_url": "رابط LinkedIn / معرض الأعمال (اختياري)",
         "notes": "ملاحظات / توصية",
         "submit": "تقديم الإحالة",
-        "my_referrals": "???????",
+        "my_referrals": "إحالاتي",
         "refer_candidate": "Refer Candidate"
     },
     "create_new": "إنشاء وظيفة جديدة",
@@ -42,7 +42,7 @@
         "draft": "مسودة",
         "filled": "تم ملؤها",
         "cancelled": "ملغاة",
-        "status": "??????"
+        "status": "الحالة"
     },
     "sections": {
         "basic_info": "المعلومات الأساسية",
@@ -104,7 +104,7 @@
         "loading": "جاري تحميل بيانات الوظيفة...",
         "not_found_title": "الوظيفة غير موجودة",
         "not_found_desc": "إعلان الوظيفة الذي تبحث عنه غير موجود.",
-        "department_auto_selected": "????? Auto Selected"
+        "department_auto_selected": "تم اختيار القسم تلقائياً"
     },
     "description": "إدارة الوظائف الشاغرة والتوظيف",
     "allStatus": "جميع الحالات",
@@ -133,11 +133,11 @@
     "noApplications": "لا يوجد متقدمين بعد",
     "noApplicationsDesc": "ستظهر الطلبات هنا بمجرد تقدم المرشحين.",
     "edit": "تعديل الإعلان",
-    "employmentType": "Employment ?????",
-    "jobDescription": "????? ?????",
-    "jobDetails": "????? ????????",
-    "posted": "?????",
+    "employmentType": "نوع التوظيف",
+    "jobDescription": "الوصف الوظيفي",
+    "jobDetails": "تفاصيل الوظيفة",
+    "posted": "نُشر",
     "publish": "نشر",
-    "requirements": "?????????",
-    "responsibilities": "??????????"
+    "requirements": "المتطلبات",
+    "responsibilities": "المسؤوليات"
 }

@@ -74,7 +74,12 @@ serve(async (req) => {
       return jsonResponse({ error: "Missing required field: to" }, 400, corsHeaders);
     }
 
-    const isServiceRoleCall = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+    const isServiceRoleCall = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      || req.headers.get("apikey") === SUPABASE_SERVICE_ROLE_KEY;
+
+    console.log("SEND-EMAIL DEBUG: authHeader starts with", authHeader?.substring(0, 15));
+    console.log("SEND-EMAIL DEBUG: isServiceRole?", isServiceRoleCall);
+    console.log("SEND-EMAIL DEBUG: apikey present?", !!req.headers.get("apikey"));
 
     let user: { id: string; email?: string | null } | null = null;
     if (!isServiceRoleCall) {
@@ -87,6 +92,7 @@ serve(async (req) => {
       } = await userClient.auth.getUser();
 
       if (userError || !authUser) {
+        console.error("SEND-EMAIL DEBUG: userError", userError?.message);
         return jsonResponse({ error: "Unauthorized", details: userError?.message }, 401, corsHeaders);
       }
       user = authUser;
@@ -141,9 +147,9 @@ serve(async (req) => {
     const template = await resolveTemplate(serviceClient, body.templateKey);
     const sanitizedTemplate = template
       ? {
-          ...template,
-          html_template: sanitizeHtmlTemplate(template.html_template),
-        }
+        ...template,
+        html_template: sanitizeHtmlTemplate(template.html_template),
+      }
       : null;
     const context = buildContext(
       body,
@@ -250,7 +256,12 @@ function buildContext(
       ? "\u0625\u0634\u0639\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A \u0645\u0646 PHG Connect. \u062A\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0625\u062C\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u0642\u0633\u0645 \u0623\u0648 \u0645\u0647\u0645\u0629/\u0627\u0639\u062A\u0645\u0627\u062F \u0645\u0631\u062A\u0628\u0637 \u0628\u0643."
       : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
     has_data_box: body.variables?.data_box ? "true" : "false",
-    data_box_content: asText(body.variables?.data_box, "")
+    data_box_content: asText(body.variables?.data_box, ""),
+    greeting_hello: isAr ? "\u0645\u0631\u062D\u0628\u0627\u064B " : "Hello ",
+    trouble_clicking: isAr ? "\u0625\u0630\u0627 \u0648\u0627\u062C\u0647\u062A \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631\u060C \u0642\u0645 \u0628\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0648\u0644\u0635\u0642\u0647 \u0641\u064A \u0645\u062A\u0635\u0641\u062D\u0643:" : "If you're having trouble clicking the button, copy and paste the URL below into your web browser:",
+    dashboard_link_text: isAr ? "\u0644\u0648\u062D\u0629 \u0627\u0644\u0642\u064A\u0627\u062F\u0629" : "Dashboard",
+    help_link_text: isAr ? "\u0645\u0631\u0643\u0632 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629" : "Help Center",
+    rights_reserved: isAr ? "\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0642 \u0645\u062D\u0641\u0648\u0638\u0629." : "All rights reserved.",
   };
 
   for (const [key, value] of Object.entries(body.variables || {})) {
@@ -353,7 +364,179 @@ function sanitizeHtmlTemplate(html: string): string {
 }
 
 function defaultHtmlTemplate(): string {
-  return "<h1><img src=\"{{logo_url}}\" alt=\"PRIME\" height=\"32\"></h1><p>{{message}}</p><p><a href=\"{{action_url}}\">Open PHG Connect</a></p><p>phg-connect.com</p>";
+  return `<!DOCTYPE html>
+<html lang="{{lang}}" dir="{{dir}}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f8fafc;
+            color: #334155;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #f8fafc;
+            padding: 40px 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+        .header {
+            background: {{brand_gradient}};
+            padding: 32px 40px;
+            text-align: center;
+        }
+        .header img {
+            max-height: 48px;
+            width: auto;
+        }
+        .business-unit {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 4px 12px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 9999px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .content {
+            padding: 40px;
+            text-align: {{align}};
+        }
+        .title {
+            color: #0f172a;
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+        .greeting {
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: #475569;
+        }
+        .message {
+            font-size: 16px;
+            color: #475569;
+            margin-bottom: 32px;
+        }
+        .button-wrapper {
+            margin: 32px 0;
+            text-align: {{align}};
+        }
+        .button {
+            display: inline-block;
+            background-color: {{brand_color}};
+            color: #ffffff !important;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: opacity 0.2s;
+        }
+        .button:hover {
+            opacity: 0.9;
+        }
+        .footer {
+            background-color: #f1f5f9;
+            padding: 32px 40px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+        .footer p {
+            margin: 0;
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        .footer-links {
+            margin-top: 16px;
+        }
+        .footer-links a {
+            color: {{brand_color}};
+            text-decoration: none;
+            font-size: 13px;
+            margin: 0 8px;
+        }
+        .data-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 32px;
+            font-size: 15px;
+            color: #334155;
+            text-align: {{align}};
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .wrapper { padding: 20px 10px; }
+            .content { padding: 30px 20px; }
+            .header { padding: 30px 20px; }
+            .footer { padding: 24px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <img src="{{logo_url}}" alt="PRIME Connect Logo">
+                <br>
+                <div class="business-unit">{{business_unit_label}}</div>
+            </div>
+            
+            <div class="content">
+                <h1 class="title">{{title}}</h1>
+                
+                <p class="greeting">{{greeting_hello}}{{recipient_name}},</p>
+                
+                <p class="message">{{message}}</p>
+                
+                {{#if has_data_box}}
+                <div class="data-box">
+                    {{data_box_content}}
+                </div>
+                {{/if}}
+                
+                <div class="button-wrapper">
+                    <a href="{{action_url}}" class="button">{{action_label}}</a>
+                </div>
+                
+                <p style="font-size: 14px; color: #64748b; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 24px;">
+                    {{trouble_clicking}}<br>
+                    <a href="{{action_url}}" style="color: {{brand_color}}; word-break: break-all; text-decoration: underline; margin-top: 8px; display: inline-block;">{{action_url}}</a>
+                </p>
+            </div>
+            
+            <div class="footer">
+                <p>{{footer_text}}</p>
+                <div class="footer-links">
+                    <a href="{{app_url}}">{{dashboard_link_text}}</a> &bull; 
+                    <a href="{{app_url}}/knowledge-base">{{help_link_text}}</a>
+                </div>
+                <p style="margin-top: 16px;">&copy; {{year}} PRIME Hotels. {{rights_reserved}}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
 }
 
 function defaultTextTemplate(): string {

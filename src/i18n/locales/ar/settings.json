@@ -98,7 +98,7 @@
         "loading": "جاري تحميل الإعدادات..."
     },
     "messages": {
-        "language_updated": "????? Updated",
-        "language_updated_desc": "????? Updated ?????"
+        "language_updated": "تم تحديث اللغة",
+        "language_updated_desc": "تم تحديث اللغة بنجاح."
     }
 }

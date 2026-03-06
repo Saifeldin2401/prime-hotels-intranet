@@ -53,8 +53,8 @@
         "reject_error_doc": "فشل في رفض المستند.",
         "reject_error_leave": "فشل في رفض طلب الإجازة.",
         "assign_error": "فشل في تعيين التذكرة.",
-        "request_approved": "Request ?????",
-        "request_rejected": "Request ?????"
+        "request_approved": "تمت الموافقة على الطلب",
+        "request_rejected": "تم رفض الطلب"
     },
     "unknown_user": "مستخدم غير معروف",
     "no_reason": "لم يتم تقديم سبب",
@@ -92,9 +92,9 @@
         }
     },
     "request": "Request",
-    "search_placeholder": "??? by name, ???, or ???...",
+    "search_placeholder": "ابحث بالاسم، دور، أو القسم...",
     "action": {
-        "cancel": "?????"
+        "cancel": "إلغاء"
     },
-    "all": "????"
+    "all": "الكل"
 }
