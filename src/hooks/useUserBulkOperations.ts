@@ -258,15 +258,18 @@ export function useUserBulkOperations() {
 
             for (const userId of userIds) {
                 try {
-                    const { error } = await supabase
-                        .from('profiles')
-                        .update({
-                            force_password_reset: true,
-                            is_temp_password: true,
-                        })
-                        .eq('id', userId)
+                    // Call the edge function which sets the flag, generates recovery link, and sends email
+                    const response = await supabase.functions.invoke('admin-account-actions', {
+                        body: {
+                            action: 'force_password_reset',
+                            user_id: userId,
+                            reason: note || 'Bulk force password reset',
+                        },
+                    })
 
-                    if (error) throw error
+                    if (response.error) {
+                        throw new Error(response.error.message || 'Edge function failed')
+                    }
 
                     if (note && note.trim()) {
                         const { error: noteError } = await supabase
