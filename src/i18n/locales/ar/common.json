@@ -79,7 +79,9 @@
         "updating": "جاري التحديث...",
         "password": "كلمة المرور",
         "ksa": "المملكة العربية السعودية",
-        "post": "نشر"
+        "post": "نشر",
+        "inactive": "غير نشط",
+        "no_data": "لا توجد بيانات"
     },
     "nav": {
         "dashboard": "لوحة التحكم",
@@ -151,19 +153,7 @@
         "justification": "التبرير",
         "effective_date": "تاريخ السريان"
     },
-    "profile": {
-        "personal_info": "المعلومات الشخصية",
-        "employment_details": "تفاصيل التوظيف",
-        "documents": "المستندات",
-        "emergency_contact": "جهة اتصال الطوارئ",
-        "skills": "المهارات والخبرات",
-        "full_name": "الاسم الكامل",
-        "email": "البريد الإلكتروني",
-        "phone": "رقم الهاتف",
-        "address": "العنوان",
-        "employee_id": "رقم الموظف",
-        "join_date": "تاريخ الانضمام"
-    },
+    "profile": "الملف الشخصي",
     "settings": {
         "general": "الإعدادات العامة",
         "notifications": "تنبيهات الإشعارات",
@@ -200,7 +190,8 @@
         "save_failed": "فشل الحفظ",
         "validation_failed": "فشل التحقق",
         "operation_failed": "فشلت العملية",
-        "load_failed": "فشل التحميل"
+        "load_failed": "فشل التحميل",
+        "delete_failed": "فشل الحذف"
     },
     "ui": {
         "board": "لوحة",
@@ -334,13 +325,7 @@
         "view": "عرض",
         "more": "المزيد"
     },
-    "priority": {
-        "critical": "حرج",
-        "urgent": "عاجل",
-        "high": "مرتفع",
-        "medium": "متوسط",
-        "low": "منخفض"
-    },
+    "priority": "الأولوية",
     "schedule_types": {
         "shift": "دوام",
         "meeting": "اجتماع",
@@ -363,7 +348,13 @@
         "save_success": "تم الحفظ بنجاح",
         "undo": "تراجع",
         "acknowledge": "إقرار",
-        "acknowledged": "تم الإقرار"
+        "acknowledged": "تم الإقرار",
+        "close": "إغلاق",
+        "delete_success": "تم الحذف بنجاح",
+        "retry": "إعادة المحاولة",
+        "copy_success": "تم النسخ بنجاح",
+        "link_copied_desc": "تم نسخ الرابط إلى الحافظة",
+        "processing": "جاري المعالجة..."
     },
     "undo": {
         "seconds_remaining": "{{count}} ث",
@@ -389,7 +380,8 @@
     "messages": {
         "error_action_failed": "فشل الإجراء",
         "comment_posted": "تم نشر التعليق",
-        "link_copied": "تم نسخ الرابط"
+        "link_copied": "تم نسخ الرابط",
+        "success_action": "تمت العملية بنجاح"
     },
     "optional": "(اختياري)",
     "category": "الفئة",
@@ -564,5 +556,40 @@
         "read_more": "قراءة المزيد",
         "view_all": "عرض الكل",
         "see_all": "مشاهدة الكل"
-    }
+    },
+    "loading": "جاري التحميل...",
+    "cancel": "إلغاء",
+    "no_description_provided": "لم يتم تقديم وصف",
+    "department": "القسم",
+    "select_department": "اختر القسم",
+    "select_type": "اختر النوع",
+    "error": "خطأ",
+    "status_label": "الحالة",
+    "notifications_label": "الإشعارات",
+    "no_results": "لا توجد نتائج",
+    "try_different_search": "جرب بحثاً مختلفاً",
+    "of": "من",
+    "refresh": "تحديث",
+    "search_users": "البحث عن مستخدمين",
+    "labels": {
+        "typing_search": "ابدأ الكتابة للبحث...",
+        "property": "العقار"
+    },
+    "my_team": "فريقي",
+    "active": "نشط",
+    "search": "بحث",
+    "not_specified": "غير محدد",
+    "inactive": "غير نشط",
+    "error_occurred": "حدث خطأ",
+    "save": "حفظ",
+    "phone": "الهاتف",
+    "user": "المستخدم",
+    "go_back": "رجوع",
+    "saving": "جاري الحفظ...",
+    "yes": "نعم",
+    "no": "لا",
+    "priority.low": "منخفض",
+    "priority.medium": "متوسط",
+    "priority.high": "عالي",
+    "priority.urgent": "عاجل"
 }

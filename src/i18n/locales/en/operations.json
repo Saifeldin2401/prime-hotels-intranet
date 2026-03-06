@@ -132,7 +132,8 @@
             "delete_permanently": "Delete Permanently"
         },
         "errors": {
-            "no_data_extracted": "No data extracted"
+            "no_data_extracted": "No data extracted",
+            "xls_not_supported": "XLS files are not supported. Please convert to XLSX."
         },
         "badges": {
             "pms_daily": "PMS Daily",
@@ -203,5 +204,25 @@
     },
     "no_data": "No data available",
     "no_imports": "No import history available",
-    "coming_soon": "Coming soon..."
+    "coming_soon": "Coming soon...",
+    "flash": {
+        "title": "Flash Report"
+    },
+    "analytics": {
+        "title": "Analytics",
+        "subtitle": "Performance analytics and insights",
+        "trends": "Trends",
+        "comparison": "Comparison",
+        "segments": "Segments"
+    },
+    "nav": {
+        "analytics": "Analytics",
+        "flash_report": "Flash Report",
+        "import": "Import Data",
+        "pms_config": "PMS Config"
+    },
+    "config": {
+        "title": "Configuration",
+        "subtitle": "System configuration settings"
+    }
 }

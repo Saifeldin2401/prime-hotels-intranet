@@ -81,5 +81,16 @@
         "profile_updated": "تم تحديث الملف الشخصي",
         "avatar_updated": "تم تحديث الصورة الرمزية",
         "avatar_updated_desc": "تم تحديث صورتك الشخصية بنجاح"
-    }
+    },
+    "invalid_user_id": "معرف مستخدم غير صالح",
+    "overview": "نظرة عامة",
+    "staff_id": "رقم الموظف",
+    "bio": "نبذة",
+    "team_members": "أعضاء الفريق",
+    "private_info": "معلومات خاصة",
+    "date_of_birth": "تاريخ الميلاد",
+    "national_id": "الهوية الوطنية",
+    "salary_grade": "الدرجة الوظيفية",
+    "certifications": "الشهادات",
+    "no_certifications": "لا توجد شهادات بعد"
 }

@@ -808,7 +808,12 @@
             "next": "التالي",
             "submit": "إرسال الاختبار",
             "back_to_learning": "العودة للتعلم",
-            "invalid_id": "Invalid Id"
+            "invalid_id": "Invalid Id",
+            "limit_reached_title": "تم الوصول إلى الحد الأقصى للمحاولات",
+            "limit_reached_desc": "لقد وصلت إلى الحد الأقصى لعدد المحاولات لهذا الاختبار.",
+            "source": "المصدر",
+            "time_up": "انتهى الوقت!",
+            "auto_submitting": "جاري تسليم إجاباتك تلقائياً..."
         },
         "builder": {
             "edit_title": "تعديل الاختبار",

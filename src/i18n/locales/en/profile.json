@@ -81,5 +81,16 @@
         "profile_updated": "Profile Updated",
         "avatar_updated": "Avatar Updated",
         "avatar_updated_desc": "Avatar Updated Description"
-    }
+    },
+    "invalid_user_id": "Invalid user ID",
+    "overview": "Overview",
+    "staff_id": "Staff ID",
+    "bio": "Bio",
+    "team_members": "Team Members",
+    "private_info": "Private Information",
+    "date_of_birth": "Date of Birth",
+    "national_id": "National ID",
+    "salary_grade": "Salary Grade",
+    "certifications": "Certifications",
+    "no_certifications": "No certifications yet"
 }

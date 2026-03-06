@@ -342,13 +342,17 @@
             "created_desc": "Successfully added the property.",
             "dept_added": "Department Added",
             "dept_added_desc": "{{name}} has been added to {{propertyName}}.",
-            "dept_deleted": "Department Deleted"
+            "dept_deleted": "Department Deleted",
+            "deleted": "Property deleted successfully"
         },
         "errors": {
             "delete_failed": "Failed to delete",
             "exists": "Department already exists for this property"
         },
-        "confirm_dept_delete": "Are you sure? This will remove the department."
+        "confirm_dept_delete": "Are you sure? This will remove the department.",
+        "confirm_delete_title": "Delete Property",
+        "property": "Property",
+        "confirm_delete_desc": "Are you sure you want to delete this property? This action cannot be undone."
     },
     "job_titles": {
         "title": "Job Titles",
@@ -521,7 +525,7 @@
         "metrics": {
             "title": "Latest Metrics",
             "description": "Most recent telemetry snapshot",
-            "window": "Window: {{start}} \u2192 {{end}}",
+            "window": "Window: {{start}} → {{end}}",
             "tracked": "{{count}} metrics tracked",
             "empty": "No metrics snapshot yet."
         },

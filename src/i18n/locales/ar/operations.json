@@ -132,7 +132,8 @@
             "delete_permanently": "حذف نهائياً"
         },
         "errors": {
-            "no_data_extracted": "لم يتم استخراج بيانات"
+            "no_data_extracted": "لم يتم استخراج بيانات",
+            "xls_not_supported": "ملفات XLS غير مدعومة. يرجى التحويل إلى XLSX."
         },
         "badges": {
             "pms_daily": "PMS يومي",
@@ -203,5 +204,25 @@
     },
     "no_data": "لا توجد بيانات متاحة",
     "no_imports": "لا يوجد سجل استيراد",
-    "coming_soon": "قريباً..."
+    "coming_soon": "قريباً...",
+    "flash": {
+        "title": "تقرير فلاش"
+    },
+    "analytics": {
+        "title": "التحليلات",
+        "subtitle": "تحليلات الأداء والرؤى",
+        "trends": "الاتجاهات",
+        "comparison": "المقارنة",
+        "segments": "الشرائح"
+    },
+    "nav": {
+        "analytics": "التحليلات",
+        "flash_report": "تقرير فلاش",
+        "import": "استيراد البيانات",
+        "pms_config": "إعدادات نظام إدارة الممتلكات"
+    },
+    "config": {
+        "title": "الإعدادات",
+        "subtitle": "إعدادات تهيئة النظام"
+    }
 }

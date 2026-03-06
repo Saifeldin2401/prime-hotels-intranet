@@ -342,13 +342,17 @@
             "created_desc": "تم إضافة الفندق بنجاح.",
             "dept_added": "تم إضافة القسم",
             "dept_added_desc": "تم إضافة {{name}} إلى {{propertyName}}.",
-            "dept_deleted": "تم حذف القسم"
+            "dept_deleted": "تم حذف القسم",
+            "deleted": "تم حذف العقار بنجاح"
         },
         "errors": {
             "delete_failed": "فشل الحذف",
             "exists": "هذا القسم موجود بالفعل لهذا الفندق"
         },
-        "confirm_dept_delete": "هل أنت متأكد؟ سيؤدي هذا إلى إزالة القسم."
+        "confirm_dept_delete": "هل أنت متأكد؟ سيؤدي هذا إلى إزالة القسم.",
+        "confirm_delete_title": "حذف العقار",
+        "property": "العقار",
+        "confirm_delete_desc": "هل أنت متأكد من حذف هذا العقار؟ لا يمكن التراجع عن هذا الإجراء."
     },
     "job_titles": {
         "title": "المسميات الوظيفية",

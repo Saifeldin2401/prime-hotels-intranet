@@ -808,7 +808,12 @@
             "next": "Next",
             "submit": "Submit Quiz",
             "back_to_learning": "Back to Learning",
-            "invalid_id": "Invalid Id"
+            "invalid_id": "Invalid Id",
+            "limit_reached_title": "Attempt Limit Reached",
+            "limit_reached_desc": "You have reached the maximum number of attempts for this quiz.",
+            "source": "Source",
+            "time_up": "Time's Up!",
+            "auto_submitting": "Auto-submitting your answers..."
         },
         "builder": {
             "edit_title": "Edit Quiz",

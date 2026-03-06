@@ -79,7 +79,9 @@
         "updating": "Updating...",
         "password": "Password",
         "ksa": "Kingdom of Saudi Arabia",
-        "post": "Post"
+        "post": "Post",
+        "inactive": "Inactive",
+        "no_data": "No data"
     },
     "nav": {
         "dashboard": "Dashboard",
@@ -151,19 +153,7 @@
         "justification": "Justification",
         "effective_date": "Effective Date"
     },
-    "profile": {
-        "personal_info": "Personal Information",
-        "employment_details": "Employment Details",
-        "documents": "Documents",
-        "emergency_contact": "Emergency Contact",
-        "skills": "Skills & Expertise",
-        "full_name": "Full Name",
-        "email": "Email Address",
-        "phone": "Phone Number",
-        "address": "Address",
-        "employee_id": "Employee ID",
-        "join_date": "Join Date"
-    },
+    "profile": "Profile",
     "settings": {
         "general": "General Settings",
         "notifications": "Notifications",
@@ -200,7 +190,8 @@
         "save_failed": "Save Failed",
         "validation_failed": "Validation Failed",
         "operation_failed": "Operation Failed",
-        "load_failed": "Load Failed"
+        "load_failed": "Load Failed",
+        "delete_failed": "Failed to delete"
     },
     "ui": {
         "board": "Board",
@@ -334,13 +325,7 @@
         "view": "View",
         "more": "More"
     },
-    "priority": {
-        "critical": "Critical",
-        "urgent": "Urgent",
-        "high": "High",
-        "medium": "Medium",
-        "low": "Low"
-    },
+    "priority": "Priority",
     "schedule_types": {
         "shift": "Shift",
         "meeting": "Meeting",
@@ -363,7 +348,13 @@
         "save_success": "Saved successfully",
         "undo": "Undo",
         "acknowledge": "Acknowledge",
-        "acknowledged": "Acknowledged"
+        "acknowledged": "Acknowledged",
+        "close": "Close",
+        "delete_success": "Deleted successfully",
+        "retry": "Retry",
+        "copy_success": "Copied successfully",
+        "link_copied_desc": "Link copied to clipboard",
+        "processing": "Processing..."
     },
     "undo": {
         "seconds_remaining": "{{count}}s",
@@ -389,7 +380,8 @@
     "messages": {
         "error_action_failed": "Action failed",
         "comment_posted": "Comment posted",
-        "link_copied": "Link copied"
+        "link_copied": "Link copied",
+        "success_action": "Action completed successfully"
     },
     "optional": "(Optional)",
     "category": "Category",
@@ -564,5 +556,40 @@
         "read_more": "Read more",
         "view_all": "View All",
         "see_all": "See All"
-    }
+    },
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "no_description_provided": "No description provided",
+    "department": "Department",
+    "select_department": "Select department",
+    "select_type": "Select type",
+    "error": "Error",
+    "status_label": "Status",
+    "notifications_label": "Notifications",
+    "no_results": "No results",
+    "try_different_search": "Try a different search",
+    "of": "of",
+    "refresh": "Refresh",
+    "search_users": "Search users",
+    "labels": {
+        "typing_search": "Start typing to search...",
+        "property": "Property"
+    },
+    "my_team": "My Team",
+    "active": "Active",
+    "search": "Search",
+    "not_specified": "Not specified",
+    "inactive": "Inactive",
+    "error_occurred": "An error occurred",
+    "save": "Save",
+    "phone": "Phone",
+    "user": "User",
+    "go_back": "Go Back",
+    "saving": "Saving...",
+    "yes": "Yes",
+    "no": "No",
+    "priority.low": "Low",
+    "priority.medium": "Medium",
+    "priority.high": "High",
+    "priority.urgent": "Urgent"
 }
