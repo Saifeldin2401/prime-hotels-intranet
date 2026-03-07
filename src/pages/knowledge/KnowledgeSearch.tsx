@@ -5,6 +5,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -110,6 +111,7 @@ export default function KnowledgeSearch() {
 
     /* State */
     const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+    const debouncedSearchQuery = useDebounce(searchQuery, 300)
     const [selectedTypes, setSelectedTypes] = useState<KnowledgeContentType[]>(
         searchParams.get('type') ? [searchParams.get('type') as KnowledgeContentType] : []
     )
@@ -129,7 +131,7 @@ export default function KnowledgeSearch() {
 
     /* Data */
     const { data: articles, isLoading } = useArticles({
-        search: searchQuery || undefined,
+        search: debouncedSearchQuery || undefined,
         type: selectedTypes.length === 1 ? selectedTypes[0] : undefined,
         limit: 50
     })

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Loader2, FileText, User, GraduationCap, Megaphone, BookOpen, AlertCircle, X, CheckSquare, Wrench, Briefcase } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useSearch, useSearchSuggestions, useRecentSearches } from '@/hooks/useSearch'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -26,11 +27,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
     }, [])
 
     // Debounce query for hook
-    const [debouncedQuery, setDebouncedQuery] = useState('')
-    useEffect(() => {
-        const timer = setTimeout(() => setDebouncedQuery(query), 300)
-        return () => clearTimeout(timer)
-    }, [query])
+    const debouncedQuery = useDebounce(query, 300)
 
     const { results, isLoading, hasResults } = useSearch(debouncedQuery, {
         limit: 10,
