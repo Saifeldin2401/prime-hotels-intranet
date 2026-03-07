@@ -19,6 +19,11 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
     const [isOpen, setIsOpen] = useState(false)
     const wrapperRef = useRef<HTMLDivElement>(null)
     const queryRef = useRef('')
+    const [isMac, setIsMac] = useState(false)
+
+    useEffect(() => {
+        setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0)
+    }, [])
 
     // Debounce query for hook
     const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -159,6 +164,13 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                     onKeyDown={handleKeyDown}
                     className="w-full bg-hotel-navy-light border border-hotel-navy-dark rounded-full py-2 ps-10 pe-10 text-sm text-white placeholder-gray-400 focus:bg-hotel-navy-light focus:border-hotel-gold focus:ring-1 focus:ring-hotel-gold focus:outline-none transition-all duration-300"
                 />
+                {!query && (
+                    <div className="absolute inset-y-0 end-3 flex items-center pointer-events-none group-focus-within:opacity-0 transition-opacity duration-200">
+                        <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-hotel-gold/30 bg-hotel-navy-dark/50 px-1.5 font-mono text-[10px] font-medium text-hotel-gold/80 opacity-100" aria-hidden="true">
+                            <span className="text-xs">{isMac ? '⌘' : 'Ctrl'}</span>K
+                        </kbd>
+                    </div>
+                )}
                 {query && (
                     <button
                         type="button"
