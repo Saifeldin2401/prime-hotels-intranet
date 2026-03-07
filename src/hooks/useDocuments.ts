@@ -563,6 +563,7 @@ export function useCreateDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
       crudToasts.create.success('Document')
     },
@@ -603,6 +604,7 @@ export function useUpdateDocument() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document', data.id] })
       crudToasts.update.success('Document')
     },
@@ -630,6 +632,7 @@ export function useDeleteDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
       crudToasts.delete.success('Document')
     },
@@ -1031,6 +1034,7 @@ export function useAssignDocumentTags() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['document', variables.documentId] })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-tags'] })
     },
   })
@@ -1232,6 +1236,7 @@ export function useRestoreDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-trash'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
       crudToasts.update.success('Document restored')
@@ -1271,6 +1276,7 @@ export function usePermanentDeleteDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-trash'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
       crudToasts.delete.success('Document permanently deleted')
@@ -1359,6 +1365,7 @@ export function useExtendDocumentExpiry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-expiry'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
       crudToasts.update.success('Expiry date extended')
@@ -1407,6 +1414,7 @@ export function useDocumentBulkDelete() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
 
       if (result.failed.length === 0) {
@@ -1451,6 +1459,7 @@ export function useDocumentBulkRestore() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-trash'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
 
@@ -1501,6 +1510,7 @@ export function useDocumentBulkMove() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-folders'] })
 
       if (result.success.length > 0) {
@@ -1547,6 +1557,7 @@ export function useDocumentBulkAddTags() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-tags'] })
 
       if (result.success.length > 0) {
@@ -1589,6 +1600,7 @@ export function useDocumentBulkArchive() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
 
       if (result.success.length > 0) {
@@ -1637,6 +1649,7 @@ export function useDocumentBulkChangeConfidentiality() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
 
       if (result.success.length > 0) {
         crudToasts.update.success(`Updated confidentiality for ${result.success.length} documents`)
@@ -1704,7 +1717,7 @@ export function useDocumentAnalytics(documentId: string) {
       if (uniqueError) throw uniqueError
 
       // Get viewers by department – try RPC first, fall back gracefully
-      let viewersByDepartment: Array<{ department_name: string; count: number }> = []
+      let viewersByDepartment: Array<{ department_id: string; department_name: string; count: number }> = []
       try {
         const { data: deptData, error: deptError } = await supabase.rpc('get_document_viewers_by_department', {
           p_document_id: documentId
@@ -1864,7 +1877,8 @@ Return as JSON array: [{"value": "tag-name", "confidence": "high|medium|low", "r
           if (jsonMatch) {
             parsedSuggestions = JSON.parse(jsonMatch[0])
           }
-        } catch {
+        } catch (e) {
+          console.warn('AI tag suggestions parsing failed:', e)
           // Fallback to keyword extraction
           parsedSuggestions = extractTagKeywords(doc.title, doc.content, doc.description)
         }
@@ -1941,7 +1955,8 @@ Suggest the best folder ID and explain why. Return as JSON:
           if (jsonMatch) {
             result = JSON.parse(jsonMatch[0])
           }
-        } catch {
+        } catch (e) {
+          console.warn('AI folder classification parsing failed:', e)
           // No fallback for classification
         }
       }
@@ -2016,7 +2031,8 @@ Return IDs of likely duplicates with confidence scores as JSON array:
               setDuplicates(aiResults)
               return aiResults
             }
-          } catch {
+          } catch (e) {
+            console.warn('AI duplicates parsing failed:', e)
             // Fall through to simple comparison
           }
         }
@@ -2214,6 +2230,7 @@ export function useSubmitForApproval() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
     },
   })
@@ -2221,6 +2238,11 @@ export function useSubmitForApproval() {
 
 export function useDocumentVersions(documentId: string) {
   const { user } = useAuth()
+  type VersionCreator = {
+    id: string
+    full_name: string | null
+    avatar_url: string | null
+  }
 
   return useQuery({
     queryKey: ['document-versions', documentId],
@@ -2236,8 +2258,7 @@ export function useDocumentVersions(documentId: string) {
         .order('version_number', { ascending: false })
 
       if (error) throw error
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return data as (DocumentVersion & { creator: any })[]
+      return data as (DocumentVersion & { creator: VersionCreator | null })[]
     },
   })
 }
@@ -2296,6 +2317,7 @@ export function useApproveDocument() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
     },
@@ -2326,6 +2348,7 @@ export function useRejectDocument() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
     },
   })

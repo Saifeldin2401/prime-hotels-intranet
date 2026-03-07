@@ -57,6 +57,37 @@ type TrainingProgressSnapshot = {
     quiz_score: number | null
 }
 
+type CertificateRecord = {
+    id: string
+    certificate_number: string
+    verification_code: string
+    user_id: string
+    recipient_name: string
+    recipient_email?: string | null
+    certificate_type: string
+    title: string
+    description?: string | null
+    completion_date: string
+    expiry_date?: string | null
+    score?: number | null
+    passing_score?: number | null
+    training_module_id?: string | null
+    training_progress_id?: string | null
+    sop_id?: string | null
+    quiz_attempt_id?: string | null
+    property_id?: string | null
+    department_id?: string | null
+    issued_by?: string | null
+    status: string
+    pdf_url?: string | null
+    created_at: string
+    metadata?: {
+        propertyName?: string
+        departmentName?: string
+        issuedByName?: string
+    } | null
+}
+
 // Brand colors for Prime Hotels
 const BRAND_COLORS = {
     navy: '#1a365d',
@@ -321,7 +352,7 @@ function formatDate(date: Date | string): string {
 function generateCertificateNumber(): string {
     const date = new Date()
     const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '')
-    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase()
+    const randomPart = crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()
     return `CERT-${dateStr}-${randomPart}`
 }
 
@@ -329,7 +360,7 @@ function generateCertificateNumber(): string {
  * Generate unique verification code
  */
 function generateVerificationCode(): string {
-    return Math.random().toString(36).substring(2, 10).toUpperCase()
+    return crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
 }
 
 /**
@@ -612,12 +643,7 @@ export async function revokeCertificate(
 /**
  * Map database record to Certificate type
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-/**
- * Map database record to Certificate type
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mapCertificateFromDb(record: any): Certificate {
+export function mapCertificateFromDb(record: CertificateRecord): Certificate {
     return {
         id: record.id,
         certificateNumber: record.certificate_number,
@@ -625,7 +651,7 @@ export function mapCertificateFromDb(record: any): Certificate {
         userId: record.user_id,
         recipientName: record.recipient_name,
         recipientEmail: record.recipient_email,
-        certificateType: record.certificate_type,
+        certificateType: record.certificate_type as CertificateData['certificateType'],
         title: record.title,
         description: record.description,
         completionDate: new Date(record.completion_date),
@@ -642,7 +668,7 @@ export function mapCertificateFromDb(record: any): Certificate {
         departmentName: record.metadata?.departmentName,
         issuedBy: record.issued_by,
         issuedByName: record.metadata?.issuedByName,
-        status: record.status,
+        status: record.status as Certificate['status'],
         pdfUrl: record.pdf_url,
         createdAt: new Date(record.created_at)
     }

@@ -27,12 +27,12 @@ const MissingWidget = ({ name }: { name: string }) =>
     )
 
 const lazyWidget = (loader: () => Promise<Record<string, unknown>>, exportName: string) =>
-    lazy(async () => {
+    lazy<WidgetComponent>(async () => {
         const module = await loader()
         const component = (module[exportName] as WidgetComponent | undefined) ?? (module.default as WidgetComponent | undefined)
         if (!component) {
             console.error(`Widget export "${exportName}" not found.`)
-            return { default: () => createElement(MissingWidget, { name: exportName }) }
+            return { default: (() => createElement(MissingWidget, { name: exportName })) as unknown as WidgetComponent }
         }
         return { default: component }
     })
@@ -56,6 +56,8 @@ const TodaysBirthdaysWidget = lazyWidget(() => import('./TodaysBirthdaysWidget')
 const OnlineUsersWidget = lazyWidget(() => import('./OnlineUsersWidget'), 'OnlineUsersWidget')
 const PinnedItemsWidget = lazyWidget(() => import('./PinnedItemsWidget'), 'PinnedItemsWidget')
 const RoleAwareInsights = lazyWidget(() => import('./RoleAwareInsights'), 'RoleAwareInsights')
+const ShiftHandoverWidget = lazyWidget(() => import('./ShiftHandoverWidget'), 'ShiftHandoverWidget')
+const EliteSpotlightWidget = lazyWidget(() => import('./EliteSpotlightWidget'), 'EliteSpotlightWidget')
 
 /**
  * WIDGET_REGISTRY
@@ -207,7 +209,109 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         defaultVisible: true,
         sensitivity: 'low',
         gridSize: { w: 2, h: 2 }
+    },
+    shiftHandover: {
+        id: 'shiftHandover',
+        component: ShiftHandoverWidget,
+        title: 'Shift Handover',
+        requiredRoles: ['property_manager', 'department_head', 'manager', 'corporate_admin'],
+        defaultVisible: true,
+        sensitivity: 'medium'
+    },
+    eliteSpotlight: {
+        id: 'eliteSpotlight',
+        component: EliteSpotlightWidget,
+        title: 'Elite Spotlight',
+        requiredRoles: ['all'],
+        defaultVisible: true,
+        sensitivity: 'low'
     }
 }
 
 export type WidgetId = keyof typeof WIDGET_REGISTRY
+
+export type DashboardWidgetId = WidgetId | 'socialFeed'
+
+export interface LayoutProfile {
+    mainColumn: (DashboardWidgetId | DashboardWidgetId[])[]
+    sidebar: DashboardWidgetId[]
+    bottomFullWidth?: DashboardWidgetId[]
+}
+
+export const LAYOUT_PROFILES: Record<'corporate' | 'manager' | 'staff', LayoutProfile> = {
+    corporate: {
+        mainColumn: [
+            'quickInsights',
+            'roleAwareInsights',
+            'performanceChart',
+            'eliteSpotlight',
+            'quickActions',
+            'hospitalityNews'
+        ],
+        sidebar: [
+            'motivation',
+            'announcements',
+            'pinnedItems',
+            'knowledgeBase',
+            'onlineUsers'
+        ],
+        bottomFullWidth: [
+            'socialFeed' // Internal Activity
+        ]
+    },
+    manager: {
+        mainColumn: [
+            'quickInsights',
+            'roleAwareInsights',
+            ['tasks', 'calendar'],
+            'shiftHandover',
+            'quickActions',
+            'hospitalityNews'
+        ],
+        sidebar: [
+            'motivation',
+            'maintenance',
+            'announcements',
+            'eliteSpotlight',
+            'todaysBirthdays',
+            'knowledgeBase'
+        ],
+        bottomFullWidth: [
+            'socialFeed'
+        ]
+    },
+    staff: {
+        mainColumn: [
+            'motivation',
+            ['tasks', 'calendar'],
+            'training',
+            'quickActions',
+            'hospitalityNews'
+        ],
+        sidebar: [
+            'announcements',
+            'pinnedItems',
+            'employeeOfMonth',
+            'eliteSpotlight',
+            'todaysBirthdays',
+            'knowledgeBase'
+        ],
+        bottomFullWidth: [
+            'socialFeed'
+        ]
+    }
+}
+
+export const getLayoutProfile = (role: AppRole | null | undefined): LayoutProfile => {
+    if (!role) return LAYOUT_PROFILES.staff
+
+    if (['corporate_admin', 'regional_admin', 'super_admin'].includes(role)) {
+        return LAYOUT_PROFILES.corporate
+    }
+
+    if (['property_manager', 'property_hr', 'department_head', 'manager'].includes(role)) {
+        return LAYOUT_PROFILES.manager
+    }
+
+    return LAYOUT_PROFILES.staff
+}

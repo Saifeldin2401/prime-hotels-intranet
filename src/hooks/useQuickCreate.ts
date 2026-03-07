@@ -56,6 +56,7 @@ export function useQuickCreateTask() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.create.success('Task')
@@ -100,6 +101,18 @@ export function useQuickCreateEvent() {
         .single()
 
       if (error) throw error
+
+      // Audit log
+      supabase.from('audit_logs').insert({
+        entity_type: 'event',
+        entity_id: data.id,
+        action: 'create',
+        user_id: user.id,
+        details: { title: event.title, property_id: data.property_id }
+      }).then(({ error: auditError }) => {
+        if (auditError) console.error('Failed to write audit log:', auditError)
+      })
+
       return data as Event
     },
     onSuccess: () => {
@@ -114,6 +127,7 @@ export function useQuickCreateEvent() {
 export function useQuickCreateMaintenanceTicket() {
   const queryClient = useQueryClient()
   const { user, properties } = useAuth()
+  const { currentProperty } = useProperty()
 
   return useMutation({
     mutationFn: async (data: {
@@ -126,7 +140,7 @@ export function useQuickCreateMaintenanceTicket() {
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
 
-      const propertyId = properties.length > 0 ? properties[0].id : null
+      const propertyId = currentProperty?.id || (properties.length > 0 ? properties[0].id : null)
 
       const { data: result, error } = await supabase
         .from('maintenance_tickets')
@@ -145,6 +159,17 @@ export function useQuickCreateMaintenanceTicket() {
 
       if (error) throw error
 
+      // Audit log
+      supabase.from('audit_logs').insert({
+        entity_type: 'maintenance_ticket',
+        entity_id: result.id,
+        action: 'create',
+        user_id: user.id,
+        details: { title: data.title, property_id: propertyId }
+      }).then(({ error: auditError }) => {
+        if (auditError) console.error('Failed to write audit log:', auditError)
+      })
+
       // Trigger AI triage in background
       if (result && data.description && data.description.length > 20) {
         await supabase
@@ -154,8 +179,8 @@ export function useQuickCreateMaintenanceTicket() {
 
         supabase.functions.invoke('auto-triage-ticket', {
           body: { ticket_id: result.id }
-        }).catch(() => {
-          // Silently fail for quick create
+        }).catch((error) => {
+          console.error('AI triage failed for maintenance ticket:', error)
         })
       }
 
@@ -201,6 +226,17 @@ export function useQuickCreateAnnouncement() {
         .single()
 
       if (error) throw error
+
+      // Audit log
+      supabase.from('audit_logs').insert({
+        entity_type: 'announcement',
+        entity_id: data.id,
+        action: 'create',
+        user_id: user.id,
+        details: { title: announcement.title, target_audience: announcement.target_audience }
+      }).then(({ error: auditError }) => {
+        if (auditError) console.error('Failed to write audit log:', auditError)
+      })
 
       // Send notifications to target audience (if not 'all')
       const audience = announcement.target_audience

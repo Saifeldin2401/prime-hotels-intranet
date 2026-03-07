@@ -70,7 +70,7 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
         closes_at: job?.closes_at ? new Date(job.closes_at).toISOString().split('T')[0] : ''
     })
 
-    const isRegionalRole = (roles || []).some((userRole) => ['regional_admin', 'regional_hr'].includes(userRole.role))
+    const isRegionalRole = (roles || []).some((userRole) => ['corporate_admin', 'regional_admin', 'regional_hr'].includes(userRole.role))
 
     // Fetch properties
     const { data: properties } = useQuery({
@@ -239,8 +239,33 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
                                                 >
                                                     <div
                                                         className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                        role="button"
+                                                        tabIndex={0}
                                                         onPointerDown={(e) => {
                                                             e.preventDefault()
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key !== 'Enter' && e.key !== ' ') return
+                                                            e.preventDefault()
+                                                            let newDeptId = formData.department_id
+
+                                                            if (formData.property_id && departments) {
+                                                                const match = departments.find(d => d.name === item.category)
+                                                                if (match) {
+                                                                    newDeptId = match.id
+                                                                    toast({
+                                                                        title: t('messages.department_auto_selected') || "Department Auto-Selected",
+                                                                        description: match.name
+                                                                    })
+                                                                }
+                                                            }
+
+                                                            setFormData({
+                                                                ...formData,
+                                                                title: item.title,
+                                                                department_id: newDeptId
+                                                            })
+                                                            setOpenJobTitle(false)
                                                         }}
                                                         onClick={(e) => {
                                                             e.stopPropagation()

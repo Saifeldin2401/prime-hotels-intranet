@@ -28,6 +28,23 @@ const auditKeys = {
   anomalies: () => [...auditKeys.all, 'anomalies'] as const,
 }
 
+const AUDIT_EXPORT_TIMEOUT_MS = 15000
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  let timeoutId: number | undefined
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+  })
+
+  try {
+    return await Promise.race([promise, timeoutPromise]) as T
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId)
+    }
+  }
+}
+
 // =============================================================================
 // CREATE EXPORT
 // =============================================================================
@@ -46,13 +63,17 @@ export function useCreateAuditExport() {
 
   return useMutation({
     mutationFn: async (params: CreateExportParams): Promise<CreateExportResponse> => {
-      const { data, error } = await supabase.rpc('create_audit_export', {
-        p_export_name: params.exportName,
-        p_description: params.description || '',
-        p_scope: params.scope,
-        p_format: params.format,
-        p_retention_days: params.retentionDays || 90,
-      })
+      const { data, error } = await withTimeout(
+        supabase.rpc('create_audit_export', {
+          p_export_name: params.exportName,
+          p_description: params.description || '',
+          p_scope: params.scope,
+          p_format: params.format,
+          p_retention_days: params.retentionDays || 90,
+        }),
+        AUDIT_EXPORT_TIMEOUT_MS,
+        `Audit export request timed out after ${Math.floor(AUDIT_EXPORT_TIMEOUT_MS / 1000)}s`
+      )
 
       if (error) throw error
       return data as CreateExportResponse

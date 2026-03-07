@@ -283,8 +283,10 @@ export default function CompleteInvite() {
             )
 
             if (completeInviteError) {
-                const maybeContext = completeInviteError as unknown as { context?: { response?: Response } }
-                const response = maybeContext?.context?.response
+                const maybeContext = completeInviteError as unknown as { context?: Response | { response?: Response } }
+                const response = maybeContext?.context instanceof Response
+                    ? maybeContext.context
+                    : maybeContext?.context?.response
                 if (response) {
                     const text = await response.text().catch(() => '')
                     let parsedError: string | undefined

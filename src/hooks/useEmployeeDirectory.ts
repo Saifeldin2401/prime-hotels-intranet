@@ -59,6 +59,15 @@ export interface BirthdayRecord {
   age: number
 }
 
+type BirthdayExportRow = {
+  full_name: string | null
+  job_title: string | null
+  hotel: string | null
+  department: string | null
+  birthday_date: string | null
+  age: number | null
+}
+
 export function useEmployeeDirectory(filters: EmployeeDirectoryFilters) {
   return useQuery({
     queryKey: ['employee-directory-rpc', filters],
@@ -107,7 +116,7 @@ export async function exportMonthlyBirthdays(params: {
 
   if (error) throw error
 
-  const rows = (data || []).map((row: any) => ({
+  const rows = ((data || []) as BirthdayExportRow[]).map((row) => ({
     Name: row.full_name || '',
     JobTitle: row.job_title || '',
     Hotel: row.hotel || '',

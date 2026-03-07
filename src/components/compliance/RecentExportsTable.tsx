@@ -57,7 +57,7 @@ export function RecentExportsTable({ exports, isLoading = false, showAll = false
 
     // Get secure URL and download
     const { data, error } = await supabase.storage
-      .from('audit-exports')
+      .from('reports-exports')
       .createSignedUrl(exportItem.storage_path, 60)
 
     if (error) {

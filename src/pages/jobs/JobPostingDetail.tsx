@@ -51,7 +51,7 @@ export default function JobPostingDetail() {
     const isRTL = i18n.dir() === 'rtl'
 
     const canManageJobs = (roles || []).some((userRole) =>
-        ['regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(userRole.role)
+        ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(userRole.role)
     )
 
     const { data: job, isLoading } = useQuery({

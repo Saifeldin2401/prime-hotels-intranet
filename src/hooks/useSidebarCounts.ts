@@ -41,7 +41,7 @@ export function useSidebarCounts() {
     const currentPropertyId = currentProperty?.id
 
     // Determine access level
-    const isRegionalAccess = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
+    const isRegionalAccess = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
     const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
     const isDepartmentHead = primaryRole === 'department_head'
 

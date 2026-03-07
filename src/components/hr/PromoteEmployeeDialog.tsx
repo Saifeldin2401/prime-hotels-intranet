@@ -24,7 +24,6 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
     Select,
     SelectContent,
@@ -69,6 +68,20 @@ const formSchema = z.object({
     effectiveDate: z.date(),
     notes: z.string().optional(),
 });
+
+type PromotionRole = z.infer<typeof formSchema>["newRole"]
+const PROMOTION_ROLES: PromotionRole[] = [
+    "regional_admin",
+    "property_manager",
+    "property_hr",
+    "regional_hr",
+    "department_head",
+    "staff",
+]
+
+function isPromotionRole(role: string): role is PromotionRole {
+    return PROMOTION_ROLES.includes(role as PromotionRole)
+}
 
 interface Profile {
     id: string;
@@ -220,11 +233,12 @@ export function PromoteEmployeeDialog({
         }
     }, [user?.id]);
 
-    useEffect(() => {
-        if (open) {
-            loadData();
+    const handleOpenChange = useCallback((nextOpen: boolean) => {
+        setOpen(nextOpen);
+        if (nextOpen) {
+            void loadData();
         }
-    }, [open, loadData]);
+    }, [loadData]);
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         if (!user) return;
@@ -274,7 +288,7 @@ export function PromoteEmployeeDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 {children || <Button>{t('promotion.title')}</Button>}
             </DialogTrigger>
@@ -391,8 +405,7 @@ export function PromoteEmployeeDialog({
                                                             key={item.id}
                                                             onSelect={() => {
                                                                 form.setValue("newJobTitle", item.title)
-                                                                if (item.default_role && !form.getValues("newRole")) {
-                                                                    // @ts-ignore
+                                                                if (item.default_role && !form.getValues("newRole") && isPromotionRole(item.default_role)) {
                                                                     form.setValue("newRole", item.default_role)
                                                                 }
                                                                 setOpenJobTitle(false)
@@ -401,12 +414,22 @@ export function PromoteEmployeeDialog({
                                                         >
                                                             <div
                                                                 className="w-full flex items-center px-2 py-1.5 cursor-pointer"
+                                                                role="button"
+                                                                tabIndex={0}
                                                                 onPointerDown={(e) => e.preventDefault()}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key !== 'Enter' && e.key !== ' ') return
+                                                                    e.preventDefault()
+                                                                    form.setValue("newJobTitle", item.title)
+                                                                    if (item.default_role && !form.getValues("newRole") && isPromotionRole(item.default_role)) {
+                                                                        form.setValue("newRole", item.default_role)
+                                                                    }
+                                                                    setOpenJobTitle(false)
+                                                                }}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation()
                                                                     form.setValue("newJobTitle", item.title)
-                                                                    if (item.default_role && !form.getValues("newRole")) {
-                                                                        // @ts-ignore
+                                                                    if (item.default_role && !form.getValues("newRole") && isPromotionRole(item.default_role)) {
                                                                         form.setValue("newRole", item.default_role)
                                                                     }
                                                                     setOpenJobTitle(false)

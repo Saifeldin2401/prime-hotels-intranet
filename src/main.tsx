@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { Fragment, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './rtl.css'
@@ -63,7 +63,7 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // Vite emits this event when a preloaded chunk/dependency fails to load.
 window.addEventListener('vite:preloadError', (event) => {
-  const detail = (event as CustomEvent<{ payload?: unknown; message?: unknown }>).detail
+  const detail = (event as unknown as CustomEvent<{ payload?: unknown; message?: unknown }>).detail
   const candidate = detail?.payload ?? detail?.message ?? event
   if (recoverFromStaleModuleLoad(candidate)) {
     event.preventDefault()
@@ -136,10 +136,12 @@ if (redirectPath) {
   window.history.replaceState(null, '', redirectPath)
 }
 
+const Wrapper = import.meta.env.DEV ? StrictMode : Fragment
+
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  <Wrapper>
     <App />
-  </StrictMode>,
+  </Wrapper>
 )
 
 // If the app stays up, allow future one-time recoveries in this tab.

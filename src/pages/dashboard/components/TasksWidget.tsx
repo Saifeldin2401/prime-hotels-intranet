@@ -13,12 +13,14 @@ import { isToday, isTomorrow, format, differenceInDays } from 'date-fns'
 import { ar } from 'date-fns/locale'
 import { useTranslation } from "react-i18next";
 import { useAuth } from '@/hooks/useAuth'
+import type { DashboardFocusMode } from '@/hooks/useDashboardFocus'
 
-export function TasksWidget() {
+export function TasksWidget({ focusMode = 'my_work' }: { focusMode?: DashboardFocusMode }) {
   const { user } = useAuth()
   const { data: tasks, isLoading } = useTasks({
     statuses: ['open', 'todo', 'in_progress', 'pending'],
-    assignedTo: user?.id,
+    assignedTo: focusMode === 'my_work' ? user?.id : undefined,
+    createdBy: focusMode === 'my_team' ? user?.id : undefined,
     limit: 6,
     ignorePropertyFilter: true
   })
@@ -81,10 +83,10 @@ export function TasksWidget() {
               <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
                 <CheckSquare className="w-5 h-5" />
               </div>
-              {t('widgets.my_tasks_title', 'My Tasks')}
+              {focusMode === 'my_work' ? t('widgets.my_tasks_title', 'My Tasks') : t('widgets.team_tasks_title', 'Delegated Tasks')}
             </CardTitle>
             <CardDescription className="text-sm font-medium text-slate-500 mt-1">
-              {t('widgets.my_tasks_desc', 'Your pending assignments')}
+              {focusMode === 'my_work' ? t('widgets.my_tasks_desc', 'Your pending assignments') : t('widgets.team_tasks_desc', 'Tasks you assigned to others')}
             </CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm" className="gap-1 text-slate-500 hover:text-slate-900 font-semibold h-8 rounded-full px-4 hover:bg-slate-100 transition-colors">

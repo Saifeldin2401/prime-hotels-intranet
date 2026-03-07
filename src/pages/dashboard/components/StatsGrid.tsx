@@ -15,7 +15,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 15, scale: 0.98 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
 }
 
 const skeletonCardKeys = ['stats-skeleton-1', 'stats-skeleton-2', 'stats-skeleton-3', 'stats-skeleton-4']
@@ -71,7 +71,7 @@ export function StatsGrid({ stats, isLoading }: StatsGridProps) {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6"
       >
         {stats.map((stat) => {
           const Icon = stat.icon
@@ -101,33 +101,33 @@ export function StatsGrid({ stats, isLoading }: StatsGridProps) {
                   style.glow
                 )} />
 
-                <CardContent className="relative p-6 pt-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 pr-4">
-                      <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-1.5">{stat.title}</p>
-                      <h3 className="text-4xl font-extrabold tracking-tight text-slate-800 mb-1">{stat.value}</h3>
-
-                      {stat.subtitle && (
-                        <p className="text-sm font-medium text-slate-500 leading-snug">{stat.subtitle}</p>
-                      )}
-
-                      {stat.trend && (
-                        <div className={cn(
-                          "inline-flex items-center gap-1 mt-3 px-2 py-0.5 rounded-md text-xs font-bold border",
-                          stat.trendUp ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
-                        )}>
-                          {stat.trendUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                          {stat.trend}
-                        </div>
-                      )}
-                    </div>
-
+                <CardContent className="relative p-3 sm:p-5 h-full flex flex-col">
+                  <div className="flex items-start justify-between gap-1 mb-2">
+                    <p className="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase leading-tight line-clamp-2 min-h-[2.5em]">{stat.title}</p>
                     <div className={cn(
-                      "p-3 rounded-2xl transition-transform duration-300 group-hover:scale-110 shadow-sm border",
+                      "p-1.5 sm:p-3 rounded-lg sm:rounded-2xl transition-transform duration-300 group-hover:scale-110 shadow-sm border shrink-0",
                       style.iconBg, style.text, style.border
                     )}>
-                      <Icon className="w-6 h-6 stroke-[2.5]" />
+                      <Icon className="w-3.5 h-3.5 sm:w-6 sm:h-6 stroke-[2.5]" />
                     </div>
+                  </div>
+
+                  <div className="mt-auto space-y-1">
+                    <h3 className="text-xl sm:text-3xl xl:text-4xl font-extrabold tracking-tight text-slate-800 leading-none">{stat.value}</h3>
+
+                    {stat.subtitle && (
+                      <p className="text-[10px] sm:text-sm font-medium text-slate-500 leading-snug line-clamp-2">{stat.subtitle}</p>
+                    )}
+
+                    {stat.trend && (
+                      <div className={cn(
+                        "inline-flex items-center gap-1 mt-1 sm:mt-2 px-1.5 py-0.5 rounded text-[10px] font-bold border",
+                        stat.trendUp ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
+                      )}>
+                        {stat.trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                        {stat.trend}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

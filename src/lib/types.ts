@@ -68,6 +68,8 @@ export interface Property {
   address: string | null
   phone: string | null
   is_active: boolean
+  latitude: number | null
+  longitude: number | null
   created_at: string
 }
 

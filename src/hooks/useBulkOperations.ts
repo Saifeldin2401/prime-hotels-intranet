@@ -72,6 +72,7 @@ export function useBulkUpdateTasks() {
         },
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
             queryClient.invalidateQueries({ queryKey: ['task-stats'] })
 
             if (result.failed.length === 0) {
@@ -121,6 +122,7 @@ export function useBulkAssignTasks() {
         },
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
 
             if (result.success.length > 0) {
                 crudToasts.update.success(`Assigned ${result.success.length} tasks`)
@@ -195,6 +197,7 @@ export function useBulkUpdateTaskStatus() {
         },
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
             queryClient.invalidateQueries({ queryKey: ['task-stats'] })
 
             if (result.failed.length === 0) {
@@ -241,6 +244,7 @@ export function useBulkDeleteTasks() {
         },
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
             queryClient.invalidateQueries({ queryKey: ['task-stats'] })
             queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
 

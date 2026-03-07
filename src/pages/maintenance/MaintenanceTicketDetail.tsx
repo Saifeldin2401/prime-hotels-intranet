@@ -79,7 +79,7 @@ export default function MaintenanceTicketDetail() {
     const [manageSaving, setManageSaving] = useState(false)
 
     const userRole = primaryRole || roles[0]?.role
-    const canManageTickets = ['regional_admin', 'regional_hr', 'property_manager', 'department_head', 'staff'].includes(userRole || '')
+    const canManageTickets = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head', 'staff'].includes(userRole || '')
 
     const assignableUsersQuery = useQuery({
         queryKey: ['maintenance-assignable-users', ticket?.property_id],
@@ -95,7 +95,7 @@ export default function MaintenanceTicketDetail() {
                     user_properties(property_id)
                 `)
                 .eq('is_active', true)
-                .in('user_roles.role', ['property_manager', 'department_head', 'staff', 'property_hr', 'regional_hr', 'regional_admin'])
+                .in('user_roles.role', ['corporate_admin', 'property_manager', 'department_head', 'staff', 'property_hr', 'regional_hr', 'regional_admin'])
 
             if (error) throw error
 
@@ -108,7 +108,7 @@ export default function MaintenanceTicketDetail() {
             }))
 
             return ticket?.property_id
-                ? mapped.filter((p: any) => p.role === 'regional_hr' || p.role === 'regional_admin' || p.property_ids.includes(ticket.property_id))
+                ? mapped.filter((p: any) => p.role === 'corporate_admin' || p.role === 'regional_hr' || p.role === 'regional_admin' || p.property_ids.includes(ticket.property_id))
                 : mapped
         }
     })

@@ -266,7 +266,7 @@ export function useOrgHierarchy(searchTerm?: string) {
     const { primaryRole, properties: userProperties, departments: userDepartments } = useAuth()
 
     // Determine access level for RBAC filtering
-    const isCorpLevel = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
+    const isCorpLevel = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
     const isPropLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
     const isDeptLevel = primaryRole === 'department_head'
 
@@ -352,20 +352,21 @@ export function useOrgHierarchy(searchTerm?: string) {
                 .filter((id: any): id is string => !!id)
 
             return ({
-            id: p.id,
-            full_name: p.full_name || 'Unknown',
-            job_title: p.job_title,
-            email: p.email,
-            phone: p.phone,
-            avatar_url: p.avatar_url,
-            staff_id: p.staff_id,
-            roles: p.user_roles?.map((r: any) => r.role) || [],
-            propertyId: propertyIds[0] || null,
-            propertyIds,
-            departmentId: departmentIds[0] || null,
-            departmentIds,
-            reporting_to: p.reporting_to
-        })})
+                id: p.id,
+                full_name: p.full_name || 'Unknown',
+                job_title: p.job_title,
+                email: p.email,
+                phone: p.phone,
+                avatar_url: p.avatar_url,
+                staff_id: p.staff_id,
+                roles: p.user_roles?.map((r: any) => r.role) || [],
+                propertyId: propertyIds[0] || null,
+                propertyIds,
+                departmentId: departmentIds[0] || null,
+                departmentIds,
+                reporting_to: p.reporting_to
+            })
+        })
 
         // Find HQ property
         const hqProperty = properties.find((p: any) => p.is_headquarters)

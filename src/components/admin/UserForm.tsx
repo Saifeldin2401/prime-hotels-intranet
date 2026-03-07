@@ -131,8 +131,10 @@ export function UserForm({ user, onClose }: UserFormProps) {
       })
 
       if (fnError) {
-        const maybeContext = fnError as unknown as { context?: { response?: Response } }
-        const response = maybeContext?.context?.response
+        const maybeContext = fnError as unknown as { context?: Response | { response?: Response } }
+        const response = maybeContext?.context instanceof Response
+          ? maybeContext.context
+          : maybeContext?.context?.response
         if (response) {
           try {
             const text = await response.text()

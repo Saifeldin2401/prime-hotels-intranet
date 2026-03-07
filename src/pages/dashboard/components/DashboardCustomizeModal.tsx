@@ -21,7 +21,9 @@ import {
     Users,
     Wrench,
     Book,
-    Quote
+    Quote,
+    MessageCircle,
+    Star as LucideStar
 } from 'lucide-react'
 
 interface DashboardCustomizeModalProps {
@@ -57,6 +59,8 @@ export function DashboardCustomizeModal({
         { key: 'performanceChart', label: 'Performance Analytics', icon: BarChart3 },
         { key: 'maintenance', label: 'Maintenance Requests', icon: Wrench },
         { key: 'hospitalityNews', label: 'Hospitality News', icon: Newspaper },
+        { key: 'shiftHandover', label: 'Shift Handover', icon: MessageCircle },
+        { key: 'eliteSpotlight', label: 'Elite Spotlight', icon: Star },
     ]
 
     // Filter out any widgets that might not be relevant for specific roles if needed
@@ -108,8 +112,8 @@ export function DashboardCustomizeModal({
                 </div>
 
                 <div className="flex justify-end gap-3">
-                    <Button 
-                        variant="outline" 
+                    <Button
+                        variant="outline"
                         onClick={onReset}
                         disabled={isSaving}
                     >
@@ -122,7 +126,7 @@ export function DashboardCustomizeModal({
                             'Reset to Default'
                         )}
                     </Button>
-                    <Button 
+                    <Button
                         onClick={() => onOpenChange(false)}
                         disabled={isSaving}
                     >

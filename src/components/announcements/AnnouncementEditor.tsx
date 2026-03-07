@@ -328,7 +328,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   const handleFileUpload = async (files: FileList) => {
     const uploadPromises = Array.from(files).map(async (file) => {
       const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
       const filePath = `announcements/${fileName}`
 
       const { error: uploadError } = await supabase.storage
@@ -342,7 +342,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         .getPublicUrl(filePath)
 
       return {
-        id: Math.random().toString(36),
+        id: crypto.randomUUID(),
         type: file.type.startsWith('image/') ? 'image' :
           file.type.startsWith('video/') ? 'video' : 'document',
         url: publicUrl,

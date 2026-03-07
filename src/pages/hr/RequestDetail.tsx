@@ -91,8 +91,10 @@ export default function RequestDetail() {
 
   const isHr = primaryRole === 'regional_hr' || primaryRole === 'property_hr'
   const isAdmin = primaryRole === 'regional_admin' || primaryRole === 'corporate_admin'
+  const isPropertyMgr = primaryRole === 'property_manager'
   const isAssignee = !!user?.id && request?.current_assignee_id === user.id
-  const canAct = isAssignee || isHr || isAdmin
+  // Property managers have HR management capabilities and should be able to act on requests for their property
+  const canAct = isAssignee || isHr || isAdmin || isPropertyMgr
 
   const leaveQuery = useQuery({
     queryKey: ['leave-request', request?.entity_id],
@@ -178,6 +180,7 @@ export default function RequestDetail() {
 
   const timelineItems = useMemo(() => {
     const events = (eventsQuery.data || []).map((e) => ({
+      key: `event-${e.id || e.created_at}`,
       kind: 'event' as const,
       created_at: e.created_at,
       actor: e.actor?.full_name || e.actor?.email || 'System',
@@ -201,6 +204,7 @@ export default function RequestDetail() {
     }))
 
     const comments = (commentsQuery.data || []).map((c) => ({
+      key: `comment-${c.id || c.created_at}`,
       kind: 'comment' as const,
       created_at: c.created_at,
       actor: c.author?.full_name || c.author?.email || 'User',
@@ -640,8 +644,8 @@ export default function RequestDetail() {
                     <div className="text-sm text-gray-600">No activity yet.</div>
                   ) : (
                     <div className="space-y-3">
-                      {timelineItems.map((item, idx) => (
-                        <div key={`${item.kind}-${idx}-${item.created_at}`} className="border rounded-md p-3">
+                      {timelineItems.map((item) => (
+                        <div key={item.key} className="border rounded-md p-3">
                           <div className="flex items-center justify-between gap-3">
                             <div className="font-medium truncate">{item.actor}</div>
                             <div className="text-xs text-gray-600">
@@ -738,7 +742,7 @@ export default function RequestDetail() {
                 </div>
               </div>
 
-              {isHr && leaveQuery.data?.requester?.reporting_to ? (
+              {(isHr || isAdmin || isPropertyMgr) && leaveQuery.data?.requester?.reporting_to ? (
                 <SupervisorCard supervisorId={leaveQuery.data.requester.reporting_to} />
               ) : null}
             </CardContent>
@@ -915,9 +919,9 @@ export default function RequestDetail() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('common:priority')}</label>
+              <label htmlFor="manage-priority" className="block text-sm font-medium text-gray-700 mb-1">{t('common:priority')}</label>
               <Select value={managePriority} onValueChange={(value) => setManagePriority(value as 'low' | 'normal' | 'high' | 'urgent')}>
-                <SelectTrigger>
+                <SelectTrigger id="manage-priority">
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -931,8 +935,9 @@ export default function RequestDetail() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <label htmlFor="manage-due-date" className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
               <Input
+                id="manage-due-date"
                 type="datetime-local"
                 value={manageDueAt}
                 onChange={(e) => setManageDueAt(e.target.value)}
@@ -940,9 +945,9 @@ export default function RequestDetail() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reassign Current Step</label>
+              <label htmlFor="manage-assignee" className="block text-sm font-medium text-gray-700 mb-1">Reassign Current Step</label>
               <Select value={manageAssignee} onValueChange={setManageAssignee}>
-                <SelectTrigger>
+                <SelectTrigger id="manage-assignee">
                   <SelectValue placeholder="Select a user" />
                 </SelectTrigger>
                 <SelectContent>
@@ -956,8 +961,9 @@ export default function RequestDetail() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Internal Note</label>
+              <label htmlFor="manage-note" className="block text-sm font-medium text-gray-700 mb-1">Internal Note</label>
               <Textarea
+                id="manage-note"
                 value={manageNote}
                 onChange={(e) => setManageNote(e.target.value)}
                 rows={3}

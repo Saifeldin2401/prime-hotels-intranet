@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { UserForm } from '@/components/admin/UserForm'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { Plus, Users, Loader2, Trash2, Edit, MoreVertical, ShieldOff, ShieldCheck, KeyRound, Unlock, AlertTriangle, Clock, CheckSquare, Square, MailPlus, UserX } from 'lucide-react'
+import { Plus, Users, Loader2, Trash2, Edit, MoreVertical, ShieldOff, ShieldCheck, KeyRound, Unlock, AlertTriangle, Clock, CheckSquare, Square, MailPlus, UserX, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
@@ -134,8 +135,10 @@ export default function UserManagement() {
       })
 
       if (fnError) {
-        const maybeContext = fnError as unknown as { context?: { response?: Response } }
-        const response = maybeContext?.context?.response
+        const maybeContext = fnError as unknown as { context?: Response | { response?: Response } }
+        const response = maybeContext?.context instanceof Response
+          ? maybeContext.context
+          : maybeContext?.context?.response
         if (response) {
           const text = await response.text().catch(() => '')
           let parsedError: string | undefined
@@ -206,8 +209,10 @@ export default function UserManagement() {
       })
 
       if (fnError) {
-        const maybeContext = fnError as unknown as { context?: { response?: Response } }
-        const response = maybeContext?.context?.response
+        const maybeContext = fnError as unknown as { context?: Response | { response?: Response } }
+        const response = maybeContext?.context instanceof Response
+          ? maybeContext.context
+          : maybeContext?.context?.response
         if (response) {
           const text = await response.text().catch(() => '')
           let parsedError: string | undefined
@@ -423,6 +428,13 @@ export default function UserManagement() {
         description={t('description')}
         actions={
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Link
+              to="/admin/users/bulk"
+              className="border border-hotel-navy text-hotel-navy px-4 py-2.5 rounded-md text-sm hover:bg-hotel-navy/10 transition-colors flex items-center gap-2 min-h-touch w-full sm:w-auto justify-center"
+            >
+              <Upload className="w-4 h-4" />
+              {t('form.bulk_provisioning', 'Bulk Provisioning')}
+            </Link>
             <button
               onClick={() => setInviteDialogOpen(true)}
               className="border border-hotel-gold text-hotel-gold px-4 py-2.5 rounded-md text-sm hover:bg-hotel-gold/10 transition-colors flex items-center gap-2 min-h-touch w-full sm:w-auto justify-center"

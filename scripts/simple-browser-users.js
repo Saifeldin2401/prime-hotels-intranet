@@ -1,14 +1,27 @@
 /**
- * Simple Browser Console Script for Bulk User Creation
- * Run this in browser console while logged in as admin
- * 
+ * Prime Hotels Intranet - Bulk User Creation (Browser Console)
+ *
+ * Safe mode:
+ * - Uses Edge Function `create-user` (no raw SQL / no auth.users direct insert)
+ * - Uses invite provisioning by default
+ * - Idempotent handling for existing users
+ *
  * Instructions:
- * 1. Login to Prime Hotels Intranet as admin
- * 2. Open browser console (F12)
- * 3. Copy-paste this entire script
- * 4. Press Enter
- * 5. Wait for completion
+ * 1) Login to Prime Hotels Intranet with a privileged account
+ *    (corporate_admin / regional_admin / regional_hr).
+ * 2) Open browser console (F12).
+ * 3) Copy-paste this entire script and press Enter.
  */
+
+const CONFIG = {
+  provisioningMethod: 'invite', // 'invite' | 'temporary_password'
+  createMissingDepartments: true,
+  dryRun: false,
+  delayMs: 250,
+  requestTimeoutMs: 20000,
+  maxRetries: 2,
+  retryDelayMs: 800
+};
 
 // Users from Riyadh User Forum.xlsx and PHG user creation forum1.xlsx
 const users = [
@@ -42,204 +55,399 @@ const users = [
   { email: 'Play.com99874@gmail.com', name: 'Nasser musa mahdey alzharani', phone: '569379893', property: 'Prime Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'staff' }
 ];
 
-// Main function
+const VALID_ROLES = new Set([
+  'corporate_admin',
+  'regional_admin',
+  'regional_hr',
+  'property_manager',
+  'property_hr',
+  'department_head',
+  'manager',
+  'staff'
+]);
+
+function normalizeText(value) {
+  return (value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function normalizeEmail(value) {
+  return (value || '').trim().toLowerCase();
+}
+
+function normalizePhone(value) {
+  const digits = String(value || '').replace(/\D+/g, '');
+  return digits || undefined;
+}
+
+function validateUserRow(row) {
+  const email = normalizeEmail(row?.email);
+  if (!email) return 'Missing email';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return `Invalid email "${row?.email}"`;
+  if (!String(row?.name || '').trim()) return 'Missing full name';
+  if (!String(row?.property || '').trim()) return 'Missing property';
+  if (!String(row?.dept || '').trim()) return 'Missing department';
+  if (!String(row?.role || '').trim()) return 'Missing role';
+  return null;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTimeout(promise, timeoutMs, label) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error(`${label} timed out after ${Math.floor(timeoutMs / 1000)}s`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+}
+
+function isRetryableErrorMessage(message) {
+  const text = normalizeText(message);
+  return (
+    text.includes('timeout') ||
+    text.includes('timed out') ||
+    text.includes('network') ||
+    text.includes('failed to fetch') ||
+    text.includes('503') ||
+    text.includes('502') ||
+    text.includes('504') ||
+    text.includes('rate limit') ||
+    text.includes('too many requests')
+  );
+}
+
+async function withRetry(operationName, task) {
+  let attempt = 0;
+  while (attempt <= CONFIG.maxRetries) {
+    try {
+      return await task();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const canRetry = attempt < CONFIG.maxRetries && isRetryableErrorMessage(message);
+      if (!canRetry) throw error;
+      const waitMs = CONFIG.retryDelayMs * (attempt + 1);
+      console.warn(`  ! ${operationName} failed (attempt ${attempt + 1}), retrying in ${waitMs}ms`);
+      await sleep(waitMs);
+      attempt += 1;
+    }
+  }
+  throw new Error(`${operationName} failed after retries`);
+}
+
+async function parseInvokeError(fnError) {
+  const message = fnError?.message || 'Unknown function invocation error';
+  const response =
+    fnError?.context instanceof Response
+      ? fnError.context
+      : fnError?.context?.response;
+  if (!response) return message;
+
+  try {
+    const text = await response.text();
+    if (!text) return message;
+    const parsed = JSON.parse(text);
+    return parsed?.error || text || message;
+  } catch {
+    return message;
+  }
+}
+
+async function assertPrerequisites(supabase) {
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('No active session found. Please log in first.');
+  }
+
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('Unable to resolve current authenticated user.');
+  }
+
+  const { data: roleRows, error: roleError } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id);
+
+  if (roleError) {
+    throw new Error(`Unable to verify roles: ${roleError.message}`);
+  }
+
+  const roles = (roleRows || []).map((r) => r.role);
+  const hasPermission = roles.some((r) =>
+    ['corporate_admin', 'regional_admin', 'regional_hr'].includes(r)
+  );
+
+  if (!hasPermission) {
+    throw new Error(
+      `Insufficient privileges. Current roles: ${roles.join(', ') || 'none'}`
+    );
+  }
+
+  return { user, roles };
+}
+
+async function loadMaps(supabase) {
+  const { data: properties, error: propError } = await supabase
+    .from('properties')
+    .select('id,name,is_active')
+    .eq('is_active', true);
+
+  if (propError) {
+    throw new Error(`Failed to load properties: ${propError.message}`);
+  }
+
+  const { data: departments, error: deptError } = await supabase
+    .from('departments')
+    .select('id,name,property_id,is_active')
+    .eq('is_active', true);
+
+  if (deptError) {
+    throw new Error(`Failed to load departments: ${deptError.message}`);
+  }
+
+  const propertyByName = new Map();
+  for (const p of properties || []) {
+    propertyByName.set(normalizeText(p.name), p);
+  }
+
+  const departmentByPropertyAndName = new Map();
+  for (const d of departments || []) {
+    const key = `${d.property_id}::${normalizeText(d.name)}`;
+    departmentByPropertyAndName.set(key, d);
+  }
+
+  return { propertyByName, departmentByPropertyAndName };
+}
+
+async function ensureDepartment(supabase, maps, propertyId, deptName) {
+  const key = `${propertyId}::${normalizeText(deptName)}`;
+  const existing = maps.departmentByPropertyAndName.get(key);
+  if (existing) return existing.id;
+
+  if (!CONFIG.createMissingDepartments) {
+    throw new Error(`Department not found: "${deptName}" for property ${propertyId}`);
+  }
+
+  if (CONFIG.dryRun) {
+    const simulatedId = `dryrun:${key}`;
+    maps.departmentByPropertyAndName.set(key, { id: simulatedId, name: deptName, property_id: propertyId });
+    console.log(`  ~ [dry-run] Would create department: ${deptName}`);
+    return simulatedId;
+  }
+
+  const { data: created, error } = await withRetry(
+    `create department ${deptName}`,
+    () => withTimeout(
+      supabase
+        .from('departments')
+        .insert({
+          property_id: propertyId,
+          name: deptName,
+          is_active: true
+        })
+        .select('id,name,property_id,is_active')
+        .single(),
+      CONFIG.requestTimeoutMs,
+      `Department create (${deptName})`
+    )
+  );
+
+  if (error) {
+    throw new Error(`Failed creating department "${deptName}": ${error.message}`);
+  }
+
+  maps.departmentByPropertyAndName.set(key, created);
+  console.log(`  + Created department: ${deptName}`);
+  return created.id;
+}
+
+async function createSingleUser(supabase, maps, row) {
+  const normalizedRole = normalizeText(row.role).replace(/\s+/g, '_');
+  if (!VALID_ROLES.has(normalizedRole)) {
+    throw new Error(`Invalid role "${row.role}"`);
+  }
+
+  const property = maps.propertyByName.get(normalizeText(row.property));
+  if (!property) {
+    throw new Error(`Property not found: "${row.property}"`);
+  }
+
+  const departmentId = await ensureDepartment(
+    supabase,
+    maps,
+    property.id,
+    row.dept
+  );
+
+  const payload = {
+    email: normalizeEmail(row.email),
+    fullName: row.name,
+    phone: normalizePhone(row.phone),
+    role: normalizedRole,
+    propertyIds: [property.id],
+    departmentIds: [departmentId],
+    provisioningMethod: CONFIG.provisioningMethod,
+    appUrl: window.location.origin
+  };
+
+  if (CONFIG.dryRun) {
+    console.log(`  ~ [dry-run] Would create/invite user: ${payload.email} (${normalizedRole})`);
+    return { dryRun: true };
+  }
+
+  const { data, error } = await withRetry(
+    `create-user for ${payload.email}`,
+    () => withTimeout(
+      supabase.functions.invoke('create-user', {
+        body: payload
+      }),
+      CONFIG.requestTimeoutMs,
+      `create-user (${payload.email})`
+    )
+  );
+
+  if (error) {
+    const detailed = await parseInvokeError(error);
+    throw new Error(detailed);
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  return data || {};
+}
+
+function isAlreadyExistsError(message) {
+  const text = normalizeText(message);
+  return (
+    text.includes('already registered') ||
+    text.includes('already exists') ||
+    text.includes('duplicate') ||
+    text.includes('email address has already')
+  );
+}
+
 async function createBulkUsers() {
-  console.log('🚀 Prime Hotels Intranet - Bulk User Creation');
-  console.log(`📋 Processing ${users.length} users...\n`);
-  
   const { supabase } = window;
   if (!supabase) {
-    console.error('❌ Supabase client not found! Make sure you are on the intranet site.');
+    console.error('Supabase client not found. Open this on the intranet app.');
     return;
   }
-  
-  let successCount = 0;
-  let failureCount = 0;
-  
-  for (let i = 0; i < users.length; i++) {
-    const user = users[i];
-    console.log(`📧 [${i + 1}/${users.length}] ${user.email}`);
-    
-    try {
-      // Step 1: Get property
-      const { data: propData, error: propError } = await supabase
-        .from('properties')
-        .select('id')
-        .eq('name', user.property)
-        .eq('is_active', true)
-        .single();
-      
-      if (propError) {
-        console.error(`❌ Property not found: ${user.property}`);
-        failureCount++;
-        continue;
-      }
-      
-      // Step 2: Get or create department
-      let { data: deptData, error: deptError } = await supabase
-        .from('departments')
-        .select('id')
-        .eq('property_id', propData.id)
-        .eq('name', user.dept)
-        .eq('is_active', true)
-        .single();
-      
-      if (deptError && deptError.code !== 'PGRST116') {
-        console.error(`❌ Department error: ${deptError.message}`);
-        failureCount++;
-        continue;
-      }
-      
-      let deptId = deptData?.id;
-      if (!deptId) {
-        // Create department
-        const { data: newDept, error: createError } = await supabase
-          .from('departments')
-          .insert({ property_id: propData.id, name: user.dept, is_active: true })
-          .select('id')
-          .single();
-        
-        if (createError) {
-          console.error(`❌ Department creation failed: ${createError.message}`);
-          failureCount++;
-          continue;
-        }
-        deptId = newDept.id;
-        console.log(`  ✅ Created department: ${user.dept}`);
-      }
-      
-      // Step 3: Create user using SQL function
-      const sql = `
-        INSERT INTO auth.users (email, phone) 
-        VALUES ('${user.email}', '${user.phone}')
-        ON CONFLICT (email) DO NOTHING
-        RETURNING id;
-      `;
-      
-      const { data: authResult, error: authError } = await supabase
-        .rpc('exec', { sql });
-      
-      if (authError) {
-        if (authError.message.includes('duplicate') || authError.message.includes('conflict')) {
-          console.log(`  ⚠️  User already exists`);
-          successCount++;
-        } else {
-          console.error(`❌ Auth creation failed: ${authError.message}`);
-          failureCount++;
-        }
-        continue;
-      }
-      
-      const userId = authResult?.[0]?.id;
-      if (!userId) {
-        console.log(`  ⚠️  User already exists: ${user.email}`);
-        successCount++;
-        continue;
-      }
-      
-      // Step 4: Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          email: user.email,
-          full_name: user.name,
-          phone: user.phone,
-          hire_date: new Date().toISOString().split('T')[0],
-          is_active: true
-        });
-      
-      if (profileError) {
-        console.error(`❌ Profile creation failed: ${profileError.message}`);
-        failureCount++;
-        continue;
-      }
-      
-      // Step 5: Assign role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({ user_id: userId, role: user.role });
-      
-      if (roleError) {
-        console.error(`❌ Role assignment failed: ${roleError.message}`);
-        failureCount++;
-        continue;
-      }
-      
-      // Step 6: Assign to property
-      const { error: propAssignError } = await supabase
-        .from('user_properties')
-        .insert({ user_id: userId, property_id: propData.id });
-      
-      if (propAssignError) {
-        console.error(`❌ Property assignment failed: ${propAssignError.message}`);
-        failureCount++;
-        continue;
-      }
-      
-      // Step 7: Assign to department
-      const { error: deptAssignError } = await supabase
-        .from('user_departments')
-        .insert({ user_id: userId, department_id: deptId });
-      
-      if (deptAssignError) {
-        console.error(`❌ Department assignment failed: ${deptAssignError.message}`);
-        failureCount++;
-        continue;
-      }
-      
-      console.log(`  ✅ Created: ${user.name}`);
-      successCount++;
-      
-    } catch (error) {
-      console.error(`❌ Unexpected error: ${error.message}`);
-      failureCount++;
-    }
-    
-    // Delay between users
-    await new Promise(resolve => setTimeout(resolve, 800));
-  }
-  
-  // Summary
-  console.log('\n📊 SUMMARY:');
-  console.log(`✅ Successfully created: ${successCount} users`);
-  console.log(`❌ Failed to create: ${failureCount} users`);
-  console.log(`📈 Success rate: ${((successCount / users.length) * 100).toFixed(1)}%`);
-  
-  if (failureCount === 0) {
-    console.log('\n🎉 ALL USERS CREATED SUCCESSFULLY!');
-    console.log('💡 Users will need to set passwords via email invitations');
-  } else {
-    console.log('\n⚠️  Some users failed. Check errors above.');
-  }
-}
 
-// Create exec function if it doesn't exist
-async function ensureExecFunction() {
-  const { supabase } = window;
-  
-  const createExecSQL = `
-    CREATE OR REPLACE FUNCTION exec(sql text)
-    RETURNS TABLE (id UUID, result TEXT)
-    LANGUAGE plpgsql
-    SECURITY DEFINER
-    AS $$
-    BEGIN
-      RETURN QUERY EXECUTE sql;
-    END;
-    $$;
-  `;
-  
+  console.log('Prime Hotels Intranet - Bulk User Creation');
+  console.log(`Users to process: ${users.length}`);
+  console.log(`Provisioning method: ${CONFIG.provisioningMethod}`);
+  console.log(`Dry run: ${CONFIG.dryRun ? 'ON (no writes)' : 'OFF'}`);
+
   try {
-    await supabase.rpc('exec', { sql: createExecSQL });
-    console.log('✅ Exec function ready');
-  } catch (error) {
-    console.log('⚠️  Exec function may already exist');
+    const authInfo = await assertPrerequisites(supabase);
+    console.log(`Authenticated as: ${authInfo.user.email}`);
+    console.log(`Roles: ${authInfo.roles.join(', ')}`);
+  } catch (err) {
+    console.error(`Pre-check failed: ${err instanceof Error ? err.message : String(err)}`);
+    return;
   }
+
+  let maps;
+  try {
+    maps = await loadMaps(supabase);
+  } catch (err) {
+    console.error(`Failed loading reference data: ${err instanceof Error ? err.message : String(err)}`);
+    return;
+  }
+
+  const report = {
+    created: 0,
+    skippedInputDuplicates: 0,
+    skippedExisting: 0,
+    failed: 0,
+    errors: []
+  };
+  const seenInputEmails = new Set();
+
+  for (let i = 0; i < users.length; i += 1) {
+    const row = users[i];
+    const normalizedEmail = normalizeEmail(row.email);
+    console.log(`[${i + 1}/${users.length}] ${normalizedEmail || row.email}`);
+
+    const rowValidationError = validateUserRow(row);
+    if (rowValidationError) {
+      report.failed += 1;
+      report.errors.push({ email: row.email || '(missing-email)', error: rowValidationError });
+      console.error(`  x Failed validation: ${rowValidationError}`);
+      await sleep(CONFIG.delayMs);
+      continue;
+    }
+
+    if (seenInputEmails.has(normalizedEmail)) {
+      report.skippedInputDuplicates += 1;
+      console.log(`  - Duplicate in input list, skipped`);
+      await sleep(CONFIG.delayMs);
+      continue;
+    }
+    seenInputEmails.add(normalizedEmail);
+
+    try {
+      const result = await createSingleUser(supabase, maps, row);
+      report.created += 1;
+
+      if (CONFIG.provisioningMethod === 'temporary_password' && result?.tempPassword) {
+        console.log(`  + Created user (temporary password generated)`);
+      } else if (CONFIG.dryRun) {
+        console.log(`  ~ Dry-run check passed`);
+      } else {
+        console.log(`  + Invited user`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+
+      if (isAlreadyExistsError(msg)) {
+        report.skippedExisting += 1;
+        console.log(`  - Already exists, skipped`);
+      } else {
+        report.failed += 1;
+        report.errors.push({ email: row.email, error: msg });
+        console.error(`  x Failed: ${msg}`);
+      }
+    }
+
+    await sleep(CONFIG.delayMs);
+  }
+
+  console.log('\nSUMMARY');
+  console.log(`Created: ${report.created}`);
+  console.log(`Skipped (input duplicates): ${report.skippedInputDuplicates}`);
+  console.log(`Skipped (already exists): ${report.skippedExisting}`);
+  console.log(`Failed: ${report.failed}`);
+
+  if (report.errors.length > 0) {
+    console.log('\nFAILED ROWS');
+    report.errors.forEach((e) => {
+      console.log(`- ${e.email}: ${e.error}`);
+    });
+  }
+
+  const completed = report.created + report.skippedExisting + report.failed;
+  const successLike = report.created + report.skippedExisting;
+  const rate = completed > 0 ? ((successLike / completed) * 100).toFixed(1) : '0.0';
+  console.log(`Success-like rate: ${rate}%`);
 }
 
-// Run the script
-(async () => {
-  await ensureExecFunction();
-  await createBulkUsers();
-})();
+void createBulkUsers();

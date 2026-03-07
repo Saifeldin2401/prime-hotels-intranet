@@ -43,7 +43,8 @@ export default function SystemWiki() {
     }, [])
 
     const role = primaryRole || 'staff'
-    const isAdmin = ['corporate_admin', 'regional_admin'].includes(role)
+    // Property managers have document/knowledge management capabilities per PERMISSION_CONFIG
+    const isAdmin = ['corporate_admin', 'regional_admin', 'property_manager'].includes(role)
     const currentLang = i18n.language === 'ar' ? 'ar' : 'en'
 
     // Filter articles based on role

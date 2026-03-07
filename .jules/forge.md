@@ -59,3 +59,45 @@
 **Issue:** `DocumentDetail.tsx:211` `canEdit` check only included `['regional_admin', 'property_manager']`, excluding `corporate_admin`.
 **Impact:** Corporate admins could not edit document metadata despite being the highest-level role.
 **Resolution:** Added `'corporate_admin'` to the `canEdit` role array.
+
+## 2026-03-07 - RequestDetail Property Manager Exclusion from Request Management
+**Issue:** `RequestDetail.tsx:92-95` defined `isHr` (regional_hr, property_hr) and `isAdmin` (regional_admin, corporate_admin), but `property_manager` was in neither. `canAct = isAssignee || isHr || isAdmin` meant property managers who weren't the current assignee had zero request management capabilities. Additionally, the supervisor card (line 741) was gated on `isHr` only, hiding it from admins and property managers.
+**Impact:** Property managers — who have `hr.manage_referrals`, `hr.manage_candidates`, and `approvals.view` in the centralized permission system — could not approve, reject, forward, close, or manage requests for their properties. Admins couldn't see supervisor context when reviewing leave requests.
+**Resolution:** Added `isPropertyMgr` boolean and included it in `canAct` and supervisor card visibility check.
+**Prevention:** Always cross-reference bespoke role checks against `PERMISSION_CONFIG` in `usePermissions.ts`. If a role has management permissions centrally, it must be represented in all component-level action guards.
+
+## 2026-03-07 - SystemWiki Bespoke isAdmin Excluding Property Manager
+**Issue:** `SystemWiki.tsx:46` used `['corporate_admin', 'regional_admin'].includes(role)` to gate wiki create/edit actions, excluding `property_manager`.
+**Impact:** Property managers — who manage documents and knowledge at their properties — couldn't create or edit wiki sections, despite having `documents.create` and `documents.edit` permissions centrally.
+**Resolution:** Added `'property_manager'` to the hardcoded admin array.
+**Prevention:** Same as above — periodically audit for hardcoded role arrays that don't include all roles with relevant centralized permissions.
+
+## 2026-03-07 - Corporate Admin Excluded from 5 Bespoke Role Checks
+**Issue:** Five files used hardcoded role arrays that excluded `corporate_admin` (level 1, highest privilege):
+- `TrainingPaths.tsx` (3 locations, lines 388/401/462): Create button, "All Paths" tab, tab content
+- `JobPostings.tsx` (line 46) + `JobPostingDetail.tsx` (line 54): `canManageJobs` check
+- `useApprovalAuthority.ts` (line 182): `canApproveGlobally` flag
+- `useSidebarCounts.ts` (line 44): `isRegionalAccess` flag for data fetching scope
+**Impact:** Corporate admins couldn't create training paths, manage job postings, approve globally, or see correct sidebar counts.
+**Resolution:** Added `'corporate_admin'` to all 5 hardcoded role arrays.
+**Pattern:** `['regional_admin', 'regional_hr', ...]` without `'corporate_admin'` — this pattern recurs across the codebase. Future audits should specifically search for role arrays that include `regional_admin` but not `corporate_admin`.
+
+## 2026-03-07 - Comprehensive Audit: 15+ Issues Across 8 Files
+**Category 1 — Corporate Admin Gaps (6 new locations):**
+- `useLeaveRequests.ts`: 3 locations (isRegionalAccess ×2, canDelete ×1)
+- `useRequests.ts`: isRegionalAccess in inbox routing
+- `useOrgHierarchy.ts`: isCorpLevel for RBAC filtering
+- `useMessagingPermissions.ts`: missing switch case, roleHierarchy array, validateMessageContent check
+
+**Category 2 — Silent Error Handling (4 locations):**
+- `TrainingPlayerEnhanced.tsx`: 3 empty catch blocks (certificate linkage, skill awarding, certificate creation) → now log via console.error
+- `useQuickCreate.ts`: AI triage silent catch → now logs error
+
+**Category 3 — Property Scoping (1 location):**
+- `useQuickCreate.ts`: maintenance ticket used `properties[0]` instead of `currentProperty` from context → fixed to prefer selected property
+
+**Category 4 — False Positives:**
+- `useAnnouncements.ts` and `useDashboardStats.ts` reported as using `roles.some()` — verified these patterns do not exist in the files. No changes needed.
+
+**Prevention:** Recommend a codebase-wide search for `['regional_admin'` patterns that exclude `corporate_admin` as part of CI/CD or periodic audit.
+

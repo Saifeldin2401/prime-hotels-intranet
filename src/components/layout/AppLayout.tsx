@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { PageTransition } from '@/components/layout/PageTransition'
 import { WizardTrigger } from '@/components/common/WizardTrigger'
 import { CommandPalette } from '@/components/common/CommandPalette'
+import { KeyboardShortcutsModal } from '@/components/common/KeyboardShortcutsModal'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -20,12 +21,21 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
-  // Global ⌘K / Ctrl+K shortcut
+  // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      // Don't trigger if typing in an input or textarea
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         setCommandPaletteOpen(prev => !prev)
+      }
+
+      if (e.key === '/') {
+        e.preventDefault()
+        setCommandPaletteOpen(true)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -104,6 +114,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Global Command Palette (⌘K) */}
       <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
 
+      {/* Global Keyboard Shortcuts (?) */}
+      <KeyboardShortcutsModal />
     </div>
   )
 }

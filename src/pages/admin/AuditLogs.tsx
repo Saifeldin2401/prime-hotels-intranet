@@ -36,6 +36,8 @@ const actionColors = {
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+type AuditUser = { full_name?: string | null; email?: string | null }
+type AuditLogWithUser = AuditLog & { user?: AuditUser | AuditUser[] | null }
 
 export default function AuditLogs() {
   const { t } = useTranslation('admin')
@@ -49,7 +51,7 @@ export default function AuditLogs() {
   const [pageSize, setPageSize] = useState(20)
 
   // Reset page when filters change
-  const handleFilterChange = (setter: (val: any) => void, val: any) => {
+  const handleFilterChange = <T,>(setter: (val: T) => void, val: T) => {
     setter(val)
     setPage(1)
   }
@@ -199,6 +201,7 @@ export default function AuditLogs() {
       const { data: exportData, error } = await query
       if (error) throw error
       if (!exportData) return
+      const exportRows = exportData as AuditLogWithUser[]
 
       const csvContent = [
         [
@@ -210,10 +213,9 @@ export default function AuditLogs() {
           t('audit_logs.export_headers.details'),
           t('audit_logs.export_headers.ip_address')
         ],
-        ...exportData.map(log => [
+        ...exportRows.map(log => [
           new Date(log.created_at).toLocaleString(),
-          // @ts-ignore
-          log.user?.full_name || 'System',
+          (Array.isArray(log.user) ? log.user[0]?.full_name : log.user?.full_name) || 'System',
           log.action,
           log.entity_type,
           log.entity_id,

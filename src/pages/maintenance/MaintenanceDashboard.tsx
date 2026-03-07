@@ -188,7 +188,7 @@ export default function MaintenanceDashboard() {
   const completeMutation = useCompleteMaintenanceTicket()
 
   const userRole = primaryRole || roles[0]?.role
-  const canManageTickets = ['regional_admin', 'regional_hr', 'property_manager', 'department_head'].includes(userRole || '')
+  const canManageTickets = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head'].includes(userRole || '')
 
   const filteredTickets = (tickets: MaintenanceTicket[]) => {
     return tickets?.filter(ticket => {

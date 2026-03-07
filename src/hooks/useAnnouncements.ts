@@ -134,6 +134,17 @@ export function useCreateAnnouncement() {
 
             if (error) throw error
 
+            // Audit log
+            supabase.from('audit_logs').insert({
+                entity_type: 'announcement',
+                entity_id: data.id,
+                action: 'create',
+                user_id: user.id,
+                details: { title: announcement.title, target_audience: announcement.target_audience }
+            }).then(({ error: auditError }) => {
+                if (auditError) console.error('Failed to write audit log:', auditError)
+            })
+
             // Notification logic has been moved to AnnouncementEditor.tsx's handleSubmit 
             // so that it respects the `send_push_notification` toggle from the form.
             return data

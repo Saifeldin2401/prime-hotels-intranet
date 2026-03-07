@@ -193,7 +193,7 @@ export function CreateReferralDialog({
                     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 }
                 const safeFileName = sanitizeFileName(file.name)
-                const fileName = `referrals/${user.id}/${jobId}/${Date.now()}_${Math.random().toString(36).slice(2, 9)}_${safeFileName}`
+                const fileName = `referrals/${user.id}/${jobId}/${Date.now()}_${crypto.randomUUID()}_${safeFileName}`
 
                 const { error: uploadError } = await supabase.storage
                     .from('referral-cvs')

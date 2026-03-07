@@ -62,7 +62,7 @@ export function useTeamLeaveRequests() {
   const { currentProperty } = useProperty()
 
   // Determine access level
-  const isRegionalAccess = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
+  const isRegionalAccess = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
   const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
   const isDepartmentHead = primaryRole === 'department_head'
 
@@ -133,8 +133,8 @@ export function usePendingLeaveRequests() {
 
   // Determine access level - check both primaryRole and roles array
   const rolesList = roles?.map(r => r.role) || []
-  const isRegionalAccess = ['regional_admin', 'regional_hr'].includes(primaryRole || '') ||
-    rolesList.some(r => ['regional_admin', 'regional_hr'].includes(r))
+  const isRegionalAccess = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '') ||
+    rolesList.some(r => ['corporate_admin', 'regional_admin', 'regional_hr'].includes(r))
   const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '') ||
     (rolesList.some(r => ['property_manager', 'property_hr'].includes(r)) && !isRegionalAccess)
   const isDepartmentHead = primaryRole === 'department_head' ||
@@ -488,7 +488,7 @@ export function useDeleteLeaveRequest() {
 
       const userRoles = roles.map(r => r.role)
       const canDelete = userRoles.some(role =>
-        ['regional_admin', 'regional_hr', 'property_hr'].includes(role)
+        ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'].includes(role)
       )
 
       if (!canDelete) {

@@ -11,9 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  Clock,
   Save,
-  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -30,13 +28,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +72,11 @@ interface DocumentSearchAdvancedProps {
   resultCount?: number;
   className?: string;
 }
+
+const EMPTY_FILE_TYPES: string[] = [];
+const EMPTY_AUTHORS: Array<{ id: string; name: string; avatar?: string }> = [];
+const EMPTY_TAGS: DocumentTag[] = [];
+const EMPTY_SAVED_SEARCHES: SavedSearch[] = [];
 
 const FILE_TYPE_OPTIONS = [
   { value: "pdf", label: "PDF", icon: "📄" },
@@ -131,10 +127,10 @@ export function DocumentSearchAdvanced({
   filters,
   onFiltersChange,
   onSearch,
-  availableFileTypes = [],
-  availableAuthors = [],
-  availableTags = [],
-  savedSearches = [],
+  availableFileTypes = EMPTY_FILE_TYPES,
+  availableAuthors = EMPTY_AUTHORS,
+  availableTags = EMPTY_TAGS,
+  savedSearches = EMPTY_SAVED_SEARCHES,
   onSaveSearch,
   onDeleteSavedSearch,
   onLoadSavedSearch,
@@ -144,6 +140,7 @@ export function DocumentSearchAdvanced({
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
   const [saveName, setSaveName] = React.useState("");
+  const [queryInput, setQueryInput] = React.useState(filters.query || "");
   const [activeFiltersCount, setActiveFiltersCount] = React.useState(0);
 
   // Count active filters
@@ -158,6 +155,23 @@ export function DocumentSearchAdvanced({
     if (filters.folderId) count++;
     setActiveFiltersCount(count);
   }, [filters]);
+
+  React.useEffect(() => {
+    setQueryInput(filters.query || "");
+  }, [filters.query]);
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const nextQuery = queryInput.trim();
+      const currentQuery = (filters.query || "").trim();
+      if (nextQuery === currentQuery) {
+        return;
+      }
+      onFiltersChange({ ...filters, query: nextQuery || undefined });
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [queryInput, filters, onFiltersChange]);
 
   const updateFilter = <K extends keyof SearchFilters>(
     key: K,
@@ -179,7 +193,7 @@ export function DocumentSearchAdvanced({
 
   const clearFilters = () => {
     onFiltersChange({
-      query: filters.query,
+      query: queryInput.trim() || undefined,
     });
   };
 
@@ -201,17 +215,26 @@ export function DocumentSearchAdvanced({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search documents..."
-            value={filters.query || ""}
-            onChange={(e) => updateFilter("query", e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onSearch()}
+            value={queryInput}
+            onChange={(e) => setQueryInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const nextQuery = queryInput.trim();
+                onFiltersChange({ ...filters, query: nextQuery || undefined });
+                onSearch();
+              }
+            }}
             className="pl-10"
           />
-          {filters.query && (
+          {queryInput && (
             <Button
               variant="ghost"
               size="icon"
               className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-              onClick={() => updateFilter("query", "")}
+              onClick={() => {
+                setQueryInput("");
+                onFiltersChange({ ...filters, query: undefined });
+              }}
             >
               <X className="w-4 h-4" />
             </Button>

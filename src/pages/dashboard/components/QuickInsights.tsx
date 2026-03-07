@@ -70,7 +70,7 @@ export function QuickInsights() {
     const skeletonCards = ['s1', 's2', 's3', 's4']
 
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
         {skeletonCards.map((id) => (
           <Card key={id} className="border-0 shadow-sm rounded-2xl bg-white">
             <CardContent className="p-5">
@@ -85,7 +85,7 @@ export function QuickInsights() {
 
   return (
     <LazyMotion features={domAnimation}>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
         {insights.map((insight, index) => {
           const Icon = insight.icon
           const TrendIcon = insight.direction === 'flat' ? Minus : insight.positive ? TrendingUp : TrendingDown
@@ -112,8 +112,8 @@ export function QuickInsights() {
                       <Icon className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="flex items-end justify-between">
-                    <span className="text-3xl font-extrabold text-slate-800 tracking-tight">{insight.value}</span>
+                  <div className="flex items-end justify-between gap-1">
+                    <span className="text-xl sm:text-2xl xl:text-3xl font-extrabold text-slate-800 tracking-tight">{insight.value}</span>
                     {insight.showTrend && insight.change !== null && insight.change >= 1 && (
                       <div className={cn(
                         "flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full mb-1 border",

@@ -18,6 +18,22 @@ export interface ScanOptions {
 }
 
 const SAMPLE_BYTES = 256 * 1024
+const SERVER_SCAN_TIMEOUT_MS = 12000
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+    let timeoutId: number | undefined
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+    })
+
+    try {
+        return await Promise.race([promise, timeoutPromise]) as T
+    } finally {
+        if (timeoutId !== undefined) {
+            clearTimeout(timeoutId)
+        }
+    }
+}
 
 const BLOCKED_EXTENSIONS = new Set([
     'exe',
@@ -103,7 +119,7 @@ async function runServerScan(file: File, options?: ScanOptions): Promise<ScanRes
             hashFileSha256(file),
         ])
 
-        const { data, error } = await supabase.functions.invoke('scan-file', {
+        const invokePromise = supabase.functions.invoke('scan-file', {
             body: {
                 file_name: file.name,
                 file_size: file.size,
@@ -115,6 +131,12 @@ async function runServerScan(file: File, options?: ScanOptions): Promise<ScanRes
                 context: options?.context || null,
             }
         })
+
+        const { data, error } = await withTimeout(
+            invokePromise,
+            SERVER_SCAN_TIMEOUT_MS,
+            `scan-file timed out after ${Math.floor(SERVER_SCAN_TIMEOUT_MS / 1000)}s`
+        )
 
         if (error || !data) {
             return null

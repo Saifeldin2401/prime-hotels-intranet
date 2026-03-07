@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
@@ -63,6 +64,7 @@ export default function EmployeeDirectory() {
   const { primaryRole } = useAuth()
 
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [propertyFilter, setPropertyFilter] = useState('all')
   const [departmentFilter, setDepartmentFilter] = useState('all')
@@ -70,8 +72,8 @@ export default function EmployeeDirectory() {
   const [managementLevel, setManagementLevel] = useState<ManagementLevelFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
   const [sortBy, setSortBy] = useState<DirectorySort>('job_title_asc')
-  const [exportMonth, setExportMonth] = useState<number>(new Date().getMonth() + 1)
-  const [exportYear, setExportYear] = useState<number>(new Date().getFullYear())
+  const [exportMonth, setExportMonth] = useState<number>(() => new Date().getMonth() + 1)
+  const [exportYear, setExportYear] = useState<number>(() => new Date().getFullYear())
   const [exportingBirthdays, setExportingBirthdays] = useState(false)
   const [orgEditMode, setOrgEditMode] = useState(false)
 
@@ -80,10 +82,18 @@ export default function EmployeeDirectory() {
 
   const { data: properties = [] } = useProperties()
   const { departments = [] } = useDepartments(propertyFilter !== 'all' ? propertyFilter : undefined)
-  const { hierarchy, isLoading: isOrgLoading } = useOrgHierarchy(search)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim())
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const { hierarchy, isLoading: isOrgLoading } = useOrgHierarchy(debouncedSearch)
 
   const { data: employees = [], isLoading: isDirectoryLoading } = useEmployeeDirectory({
-    search,
+    search: debouncedSearch,
     propertyId: propertyFilter,
     departmentId: departmentFilter,
     role: roleFilter,
@@ -97,6 +107,14 @@ export default function EmployeeDirectory() {
     if (statusFilter === 'inactive') return employees.filter((e) => !e.is_active)
     return employees.filter((e) => e.is_active)
   }, [employees, statusFilter])
+  const virtualEmployeeParentRef = useRef<HTMLDivElement | null>(null)
+  const shouldVirtualizeEmployees = viewMode === 'grid' && filteredEmployees.length > 300
+  const employeeVirtualizer = useVirtualizer({
+    count: shouldVirtualizeEmployees ? filteredEmployees.length : 0,
+    getScrollElement: () => virtualEmployeeParentRef.current,
+    estimateSize: () => 220,
+    overscan: 8,
+  })
 
   const ceoEmployee = useMemo(() => {
     const normalize = (value?: string | null) => (value || '').toLowerCase().trim()
@@ -263,8 +281,12 @@ export default function EmployeeDirectory() {
         propertyId: propertyFilter !== 'all' ? propertyFilter : undefined
       })
       toast.success('Birthday list exported')
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to export birthdays')
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message) {
+        toast.error(error.message)
+      } else {
+        toast.error('Failed to export birthdays')
+      }
     } finally {
       setExportingBirthdays(false)
     }
@@ -467,7 +489,7 @@ export default function EmployeeDirectory() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : viewMode === 'org' ? (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto content-contain">
           <OrgPyramid
             hierarchy={hierarchy}
             isRTL={isRTL}
@@ -481,8 +503,55 @@ export default function EmployeeDirectory() {
           <User className="h-12 w-12 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-medium">{t('no_results')}</h3>
         </div>
+      ) : shouldVirtualizeEmployees ? (
+        <Card className="border-slate-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center justify-between">
+              <span>{t('employees', 'Employees')}</span>
+              <Badge variant="outline">{filteredEmployees.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div ref={virtualEmployeeParentRef} className="h-[72vh] overflow-auto">
+              <div
+                className="relative w-full"
+                style={{ height: `${employeeVirtualizer.getTotalSize()}px` }}
+              >
+                {employeeVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const employee = filteredEmployees[virtualRow.index]
+                  if (!employee) return null
+
+                  return (
+                    <div
+                      key={employee.id}
+                      className="absolute left-0 top-0 w-full pb-3"
+                      style={{ transform: `translateY(${virtualRow.start}px)` }}
+                    >
+                      <EmployeeCard
+                        isRTL={isRTL}
+                        profile={{
+                          id: employee.id,
+                          full_name: employee.full_name,
+                          avatar_url: employee.avatar_url,
+                          job_title: employee.job_title,
+                          email: employee.work_email,
+                          phone: employee.phone_extension ? `Ext. ${employee.phone_extension}` : null,
+                          staff_id: employee.staff_id,
+                          manager_name: employee.manager_name,
+                          properties: employee.primary_property_name ? [{ name: employee.primary_property_name }] : [],
+                          departments: employee.primary_department_name ? [{ name: employee.primary_department_name }] : [],
+                          is_active: employee.is_active
+                        }}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 content-contain">
           <Badge variant="secondary" className="text-sm">
             {gridDisplayCount} {t('employees', 'Employees')}
           </Badge>

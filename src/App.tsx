@@ -13,17 +13,21 @@ import { router } from '@/routes/router'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 
 const QUERY_CACHE_KEY = 'prime_query_cache_v1'
-const QUERY_CACHE_TTL_MS = 1000 * 60 * 30 // 30 minutes
+const QUERY_CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutes
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
+      refetchOnReconnect: true,
       refetchOnMount: false,
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 30,
-      retry: 1,
+      staleTime: 1000 * 60 * 2,
+      gcTime: 1000 * 60 * 5,
+      retry: (failureCount, error) => {
+        if (failureCount >= 2) return false
+        const status = Number((error as { status?: number })?.status ?? 0)
+        return status === 0 || status >= 500
+      },
     },
   },
 })
@@ -63,7 +67,12 @@ const persistQueryCache = () => {
       JSON.stringify({ timestamp: Date.now(), state })
     )
   } catch {
-    // Ignore cache persistence errors
+    // Clear oversized cache entries to avoid repeated quota failures.
+    try {
+      window.sessionStorage.removeItem(QUERY_CACHE_KEY)
+    } catch {
+      // Ignore storage cleanup errors.
+    }
   }
 }
 

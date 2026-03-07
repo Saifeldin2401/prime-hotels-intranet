@@ -14,6 +14,18 @@ import { Link } from 'react-router-dom'
 import { useRequestsInbox } from '@/hooks/useRequests'
 import { useTasks } from '@/hooks/useTasks'
 
+interface TeamMember {
+    id: string
+    full_name: string | null
+    email: string | null
+    job_title: string | null
+    avatar_url: string | null
+    staff_id: string | null
+    phone: string | null
+    is_active: boolean
+    department?: Array<{ departments?: { name?: string | null } | null }> | null
+}
+
 export default function MyTeam() {
     const { t } = useTranslation(['hr', 'common'])
     const { user } = useAuth()
@@ -43,7 +55,7 @@ export default function MyTeam() {
                 .order('full_name')
 
             if (error) throw error
-            return data
+            return (data || []) as TeamMember[]
         },
         enabled: !!user?.id
     })
@@ -232,7 +244,6 @@ export default function MyTeam() {
                                     <div className="flex items-center text-sm text-gray-600">
                                         <Users className="h-4 w-4 mr-2 text-gray-400" />
                                         <span className="truncate">
-                                            {/* @ts-ignore - Supabase nested array typing */}
                                             {member.department?.[0]?.departments?.name || t('team.no_department', 'No Department')}
                                         </span>
                                     </div>

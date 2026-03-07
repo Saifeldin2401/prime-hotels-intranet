@@ -260,10 +260,13 @@ export function useTypewriterAnimation(
   const { speed = 50, delay = 0 } = options
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    let timer: ReturnType<typeof setTimeout>
+    let interval: ReturnType<typeof setInterval>
+
+    timer = setTimeout(() => {
       let currentIndex = 0
 
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         if (currentIndex <= text.length) {
           setDisplayedText(text.slice(0, currentIndex))
           currentIndex++
@@ -272,11 +275,12 @@ export function useTypewriterAnimation(
           setIsComplete(true)
         }
       }, speed)
-
-      return () => clearInterval(interval)
     }, delay)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      if (interval) clearInterval(interval)
+    }
   }, [text, speed, delay])
 
   return { displayedText, isComplete }
@@ -297,7 +301,10 @@ export function useCounterAnimation(
   } = options
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    let timer: ReturnType<typeof setTimeout>
+    let rafId: number
+
+    timer = setTimeout(() => {
       setIsAnimating(true)
       const startTime = Date.now()
       const startValue = current
@@ -314,16 +321,19 @@ export function useCounterAnimation(
         setCurrent(Math.round(newValue))
 
         if (progress < 1) {
-          requestAnimationFrame(animate)
+          rafId = requestAnimationFrame(animate)
         } else {
           setIsAnimating(false)
         }
       }
 
-      requestAnimationFrame(animate)
+      rafId = requestAnimationFrame(animate)
     }, delay)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      if (rafId) cancelAnimationFrame(rafId)
+    }
   }, [target, duration, delay, current])
 
   const displayValue = `${prefix}${current.toLocaleString()}${suffix}`

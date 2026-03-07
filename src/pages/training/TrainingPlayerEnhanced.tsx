@@ -10,14 +10,12 @@
  * - Social proof nudges
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import {
     DropdownMenu,
@@ -27,14 +25,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { AnimatePresence, LazyMotion, domAnimation, m, motion } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import {
     ChevronLeft,
     ChevronRight,
     CheckCircle,
-    FileText,
     Video as VideoIcon,
     ArrowLeft,
     Trophy,
@@ -42,8 +39,6 @@ import {
     BookOpen,
     Languages,
     Loader2,
-    Headphones,
-    Eye,
     Maximize2,
     Minimize2,
     StickyNote,
@@ -52,19 +47,13 @@ import {
     PartyPopper,
     Target,
     Flame,
-    Zap,
     Bookmark,
-    MoreHorizontal,
-    Play,
-    Pause,
-    Volume2,
-    Settings
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
-import { createCertificate, type CertificateData } from '@/lib/certificateService'
+import { createCertificate } from '@/lib/certificateService'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { getEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
 import type { TrainingContentBlock } from '@/lib/types'
@@ -97,8 +86,7 @@ const isValidUuid = (value?: string | null) =>
 
 export default function TrainingPlayerEnhanced() {
     const { t: t_ext } = useTranslation('extracted');
-    const { t, i18n } = useTranslation('training')
-    const isRTL = i18n.dir() === 'rtl'
+    const { t } = useTranslation('training')
     const { id } = useParams()
     const [searchParams] = useSearchParams()
     const assignmentId = searchParams.get('assignment')
@@ -133,7 +121,7 @@ export default function TrainingPlayerEnhanced() {
     const [celebratedMilestones, setCelebratedMilestones] = useState<Set<number>>(new Set())
     const [showMilestone, setShowMilestone] = useState<Milestone | null>(null)
     const [estimatedReadTime, setEstimatedReadTime] = useState<number>(0)
-    const [readingSpeed, setReadingSpeed] = useState<number>(200) // words per minute
+    const [readingSpeed] = useState<number>(200) // words per minute
 
     // Translation
     const [translationTarget, setTranslationTarget] = useState<TranslationTargetLanguage | null>(null)
@@ -144,11 +132,9 @@ export default function TrainingPlayerEnhanced() {
 
     // Time tracking
     const [timeSpentSeconds, setTimeSpentSeconds] = useState(0)
-    const [sessionStartTime] = useState<number>(Date.now())
+    const [sessionStartTime] = useState<number>(() => Date.now())
 
     // Refs
-    const bottomRef = useRef<HTMLDivElement>(null)
-    const scrollObserver = useRef<IntersectionObserver | null>(null)
     const totalTimeRef = useRef<number>(0)
 
     const translateAI = useTranslationAI()
@@ -227,7 +213,7 @@ export default function TrainingPlayerEnhanced() {
     // Calculate reading time for text blocks
     useEffect(() => {
         if (!activeBlock) return
-        
+
         const mediaDurationSeconds = (activeBlock as TrainingContentBlock & { duration_seconds?: number }).duration_seconds
 
         if (['text', 'sop_reference', 'document_link'].includes(activeBlock.type)) {
@@ -252,9 +238,9 @@ export default function TrainingPlayerEnhanced() {
 
         const currentMilestone = milestones.find(m => {
             const prevPercentage = Math.min(100, Math.round((activeBlockIndex / totalBlocks) * 100))
-            return progressPercentage >= m.percentage && 
-                   prevPercentage < m.percentage && 
-                   !celebratedMilestones.has(m.percentage)
+            return progressPercentage >= m.percentage &&
+                prevPercentage < m.percentage &&
+                !celebratedMilestones.has(m.percentage)
         })
 
         if (currentMilestone && !focusMode) {
@@ -267,7 +253,7 @@ export default function TrainingPlayerEnhanced() {
     useEffect(() => {
         const interval = setInterval(() => {
             const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000)
-            setTimeSpentSeconds(elapsed + totalTimeRef.current)
+            setTimeSpentSeconds(() => elapsed + totalTimeRef.current)
         }, 1000)
         return () => clearInterval(interval)
     }, [sessionStartTime])
@@ -352,14 +338,17 @@ export default function TrainingPlayerEnhanced() {
                 if (typeof syncedTrainingProgress?.quiz_score === 'number') {
                     linkedTrainingQuizScore = syncedTrainingProgress.quiz_score
                 }
-            } catch {
-                // Certificate generation can continue without this linkage.
+            } catch (error) {
+                // Certificate generation can continue without training_progress linkage
+                console.error('Failed to link training progress for certificate:', error)
             }
 
             // Award skills
             try {
                 await skillsService.awardModuleSkills(user.id, moduleData.module.id)
-            } catch {}
+            } catch (error) {
+                console.error('Failed to award module skills:', error)
+            }
 
             const passingScore = moduleData.module.passing_score_percentage || 80
             const effectiveScore = quizScore ?? linkedTrainingQuizScore
@@ -407,7 +396,9 @@ export default function TrainingPlayerEnhanced() {
                         title: '🎉 Certificate Earned!',
                         description: 'You can view it in your profile.',
                     })
-                } catch {}
+                } catch (error) {
+                    console.error('Failed to create certificate:', error)
+                }
             }
 
             setIsFinished(true)
@@ -480,45 +471,41 @@ export default function TrainingPlayerEnhanced() {
         return blockTranslations[block.id]?.[translationTarget]
     }
 
-    // Milestone celebration overlay
-    const renderMilestoneCelebration = () => {
-        if (!showMilestone) return null
-
-        return (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                onClick={() => setShowMilestone(null)}
+    const milestoneCelebration = showMilestone ? (
+        <m.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowMilestone(null)}
+        >
+            <m.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.5, opacity: 0 }}
+                className="bg-gradient-to-br from-hotel-gold to-hotel-gold-dark text-white p-8 rounded-3xl text-center max-w-sm shadow-2xl"
+                onClick={e => e.stopPropagation()}
             >
-                <motion.div
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.5, opacity: 0 }}
-                    className="bg-gradient-to-br from-hotel-gold to-hotel-gold-dark text-white p-8 rounded-3xl text-center max-w-sm shadow-2xl"
-                    onClick={e => e.stopPropagation()}
+                <m.div
+                    initial={{ rotate: -180, scale: 0.95, opacity: 0 }}
+                    animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 200 }}
+                    className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4"
                 >
-                    <motion.div
-                        initial={{ rotate: -180, scale: 0 }}
-                        animate={{ rotate: 0, scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200 }}
-                        className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4"
-                    >
-                        {showMilestone.icon}
-                    </motion.div>
-                    <h3 className="text-2xl font-bold mb-2">{showMilestone.title}</h3>
-                    <p className="text-white/80 mb-6">{showMilestone.message}</p>
-                    <div className="text-4xl font-bold mb-6">{showMilestone.percentage}%</div>
-                    <Button
-                        onClick={() => setShowMilestone(null)}
-                        className="bg-white text-hotel-gold-dark hover:bg-white/90 px-8"
-                    >
-                        {t_ext('continue', 'Continue')}</Button>
-                </motion.div>
-            </motion.div>
-        )
-    }
+                    {showMilestone.icon}
+                </m.div>
+                <h3 className="text-2xl font-bold mb-2">{showMilestone.title}</h3>
+                <p className="text-white/80 mb-6">{showMilestone.message}</p>
+                <div className="text-4xl font-bold mb-6">{showMilestone.percentage}%</div>
+                <Button
+                    onClick={() => setShowMilestone(null)}
+                    className="bg-white text-hotel-gold-dark hover:bg-white/90 px-8"
+                >
+                    {t_ext('continue', 'Continue')}
+                </Button>
+            </m.div>
+        </m.div>
+    ) : null
 
     if (isLoading) {
         return (
@@ -545,159 +532,162 @@ export default function TrainingPlayerEnhanced() {
 
     if (isFinished) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="max-w-md w-full text-center space-y-6"
-                >
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200 }}
-                        className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto"
+            <LazyMotion features={domAnimation}>
+                <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white flex items-center justify-center p-4">
+                    <m.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="max-w-md w-full text-center space-y-6"
                     >
-                        <Trophy className="h-12 w-12 text-emerald-600" />
-                    </motion.div>
-                    <div>
-                        <h1 className="text-3xl font-bold text-hotel-navy mb-2">{t_ext('module_complete', 'Module Complete!')}</h1>
-                        <p className="text-slate-600">{t_ext('you_ve_successfully_completed', 'You\'ve successfully completed')}{displayModuleTitle}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white p-4 rounded-xl border border-slate-200">
-                            <Clock className="h-5 w-5 text-hotel-gold mx-auto mb-2" />
-                            <div className="text-2xl font-bold">{formatDuration(timeSpentSeconds)}</div>
-                            <div className="text-xs text-slate-500">{t_ext('time_spent', 'Time spent')}</div>
+                        <m.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 200 }}
+                            className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto"
+                        >
+                            <Trophy className="h-12 w-12 text-emerald-600" />
+                        </m.div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-hotel-navy mb-2">{t_ext('module_complete', 'Module Complete!')}</h1>
+                            <p className="text-slate-600">{t_ext('you_ve_successfully_completed', 'You\'ve successfully completed')}{displayModuleTitle}</p>
                         </div>
-                        <div className="bg-white p-4 rounded-xl border border-slate-200">
-                            <CheckCircle className="h-5 w-5 text-emerald-500 mx-auto mb-2" />
-                            <div className="text-2xl font-bold">{totalBlocks}</div>
-                            <div className="text-xs text-slate-500">{t_ext('blocks_completed', 'Blocks completed')}</div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white p-4 rounded-xl border border-slate-200">
+                                <Clock className="h-5 w-5 text-hotel-gold mx-auto mb-2" />
+                                <div className="text-2xl font-bold">{formatDuration(timeSpentSeconds)}</div>
+                                <div className="text-xs text-slate-500">{t_ext('time_spent', 'Time spent')}</div>
+                            </div>
+                            <div className="bg-white p-4 rounded-xl border border-slate-200">
+                                <CheckCircle className="h-5 w-5 text-emerald-500 mx-auto mb-2" />
+                                <div className="text-2xl font-bold">{totalBlocks}</div>
+                                <div className="text-xs text-slate-500">{t_ext('blocks_completed', 'Blocks completed')}</div>
+                            </div>
                         </div>
-                    </div>
-                    <Button onClick={() => navigate('/training')} className="w-full bg-hotel-navy">
-                        {t_ext('continue_learning', 'Continue Learning')}</Button>
-                </motion.div>
-            </div>
+                        <Button onClick={() => navigate('/training')} className="w-full bg-hotel-navy">
+                            {t_ext('continue_learning', 'Continue Learning')}</Button>
+                    </m.div>
+                </div>
+            </LazyMotion>
         )
     }
 
     return (
-        <div className={cn(
-            "min-h-screen transition-colors duration-300",
-            focusMode ? "bg-slate-950" : "bg-slate-50"
-        )}>
-            {/* Header */}
-            <header className={cn(
-                "sticky top-0 z-40 border-b transition-colors duration-300",
-                focusMode 
-                    ? "bg-slate-900/95 border-slate-800 text-white" 
-                    : "bg-white/95 border-slate-200 backdrop-blur"
+        <LazyMotion features={domAnimation}>
+            <div className={cn(
+                "min-h-screen transition-colors duration-300",
+                focusMode ? "bg-slate-950" : "bg-slate-50"
             )}>
-                <div className="flex items-center justify-between h-14 px-4">
-                    {/* Left: Back & Title */}
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate('/training')}
-                            className={focusMode ? "text-white hover:bg-slate-800" : ""}
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            {!focusMode && 'Back'}
-                        </Button>
-                        
-                        {!focusMode && (
-                            <div className="hidden md:block min-w-0">
-                                <h1 className="font-semibold truncate">{displayModuleTitle}</h1>
-                                {estimatedReadTime > 0 && (
-                                    <p className="text-xs text-slate-500 flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        {estimatedReadTime} {t_ext('min_read', 'min read')}</p>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                {/* Header */}
+                <header className={cn(
+                    "sticky top-0 z-40 border-b transition-colors duration-300",
+                    focusMode
+                        ? "bg-slate-900/95 border-slate-800 text-white"
+                        : "bg-white/95 border-slate-200 backdrop-blur"
+                )}>
+                    <div className="flex items-center justify-between h-14 px-4">
+                        {/* Left: Back & Title */}
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate('/training')}
+                                className={focusMode ? "text-white hover:bg-slate-800" : ""}
+                            >
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                {!focusMode && 'Back'}
+                            </Button>
 
-                    {/* Center: Progress */}
-                    <div className="flex-1 max-w-md mx-4">
-                        <div className="flex items-center justify-between text-xs mb-1">
-                            <span className={focusMode ? "text-slate-400" : "text-slate-500"}>
-                                {progressPercentage}%
-                            </span>
-                            <span className={focusMode ? "text-slate-400" : "text-slate-500"}>
-                                {t_ext('block', 'Block')}{activeBlockIndex + 1} of {totalBlocks}
-                            </span>
+                            {!focusMode && (
+                                <div className="hidden md:block min-w-0">
+                                    <h1 className="font-semibold truncate">{displayModuleTitle}</h1>
+                                    {estimatedReadTime > 0 && (
+                                        <p className="text-xs text-slate-500 flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            {estimatedReadTime} {t_ext('min_read', 'min read')}</p>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                        <Progress value={progressPercentage} className="h-2" />
-                    </div>
 
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-2 flex-1 justify-end">
-                        {/* Focus Mode Toggle */}
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setFocusMode(!focusMode)}
-                            className={focusMode ? "text-white hover:bg-slate-800" : ""}
-                        >
-                            {focusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                        </Button>
+                        {/* Center: Progress */}
+                        <div className="flex-1 max-w-md mx-4">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                                <span className={focusMode ? "text-slate-400" : "text-slate-500"}>
+                                    {progressPercentage}%
+                                </span>
+                                <span className={focusMode ? "text-slate-400" : "text-slate-500"}>
+                                    {t_ext('block', 'Block')}{activeBlockIndex + 1} of {totalBlocks}
+                                </span>
+                            </div>
+                            <Progress value={progressPercentage} className="h-2" />
+                        </div>
 
-                        {/* Notes Toggle */}
-                        {!focusMode && (
+                        {/* Right: Actions */}
+                        <div className="flex items-center gap-2 flex-1 justify-end">
+                            {/* Focus Mode Toggle */}
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setShowNotePanel(!showNotePanel)}
-                                className={notes[activeBlock?.id || ''] ? "text-hotel-gold" : ""}
+                                onClick={() => setFocusMode(!focusMode)}
+                                className={focusMode ? "text-white hover:bg-slate-800" : ""}
                             >
-                                <Bookmark className="h-4 w-4" />
+                                {focusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                             </Button>
-                        )}
 
-                        {/* Translation */}
-                        {!focusMode && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" disabled={isTranslating}>
-                                        {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    {SUPPORTED_TRANSLATION_LANGUAGES.map(lang => (
-                                        <DropdownMenuItem key={lang.code} onClick={() => handleTranslate(lang.code)}>
-                                            {lang.label}
-                                        </DropdownMenuItem>
-                                    ))}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuCheckboxItem checked={showBilingual} onCheckedChange={setShowBilingual}>
-                                        {t_ext('show_bilingual', 'Show Bilingual')}</DropdownMenuCheckboxItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
+                            {/* Notes Toggle */}
+                            {!focusMode && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowNotePanel(!showNotePanel)}
+                                    className={notes[activeBlock?.id || ''] ? "text-hotel-gold" : ""}
+                                >
+                                    <Bookmark className="h-4 w-4" />
+                                </Button>
+                            )}
 
-                        {/* Sidebar Toggle */}
-                        {!focusMode && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSidebarOpen(!sidebarOpen)}
-                                className="lg:hidden"
-                            >
-                                <BookOpen className="h-4 w-4" />
-                            </Button>
-                        )}
+                            {/* Translation */}
+                            {!focusMode && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" disabled={isTranslating}>
+                                            {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        {SUPPORTED_TRANSLATION_LANGUAGES.map(lang => (
+                                            <DropdownMenuItem key={lang.code} onClick={() => handleTranslate(lang.code)}>
+                                                {lang.label}
+                                            </DropdownMenuItem>
+                                        ))}
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuCheckboxItem checked={showBilingual} onCheckedChange={setShowBilingual}>
+                                            {t_ext('show_bilingual', 'Show Bilingual')}</DropdownMenuCheckboxItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+
+                            {/* Sidebar Toggle */}
+                            {!focusMode && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                                    className="lg:hidden"
+                                >
+                                    <BookOpen className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                </div>
-            </header>
+                </header>
 
             {/* Main Content */}
-            <div className="flex">
+            <div className="flex content-contain">
                 {/* Sidebar */}
                 <AnimatePresence>
                     {sidebarOpen && !focusMode && (
-                        <motion.aside
+                        <m.aside
                             initial={{ width: 0, opacity: 0 }}
                             animate={{ width: 280, opacity: 1 }}
                             exit={{ width: 0, opacity: 0 }}
@@ -710,15 +700,15 @@ export default function TrainingPlayerEnhanced() {
                                     {moduleData.blocks.map((block, idx) => {
                                         const isActive = idx === activeBlockIndex
                                         const isCompleted = completedBlocks.has(block.id) || completedMediaBlocks.has(block.id)
-                                        
+
                                         return (
                                             <button
                                                 key={block.id}
                                                 onClick={() => setActiveBlockIndex(idx)}
                                                 className={cn(
                                                     "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2",
-                                                    isActive 
-                                                        ? "bg-hotel-navy text-white" 
+                                                    isActive
+                                                        ? "bg-hotel-navy text-white"
                                                         : isCompleted
                                                             ? "text-emerald-600 hover:bg-emerald-50"
                                                             : "text-slate-600 hover:bg-slate-100"
@@ -758,7 +748,7 @@ export default function TrainingPlayerEnhanced() {
                                     </div>
                                 )}
                             </div>
-                        </motion.aside>
+                        </m.aside>
                     )}
                 </AnimatePresence>
 
@@ -774,7 +764,7 @@ export default function TrainingPlayerEnhanced() {
                         {/* Block Content */}
                         <AnimatePresence mode="wait">
                             {activeBlock && (
-                                <motion.div
+                                <m.div
                                     key={activeBlock.id}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -787,12 +777,12 @@ export default function TrainingPlayerEnhanced() {
                                             "prose max-w-none",
                                             focusMode ? "prose-invert" : ""
                                         )}>
-                                            <div 
-                                                dangerouslySetInnerHTML={{ 
+                                            <div
+                                                dangerouslySetInnerHTML={{
                                                     __html: sanitizeHtml(
                                                         getTranslatedBlockContent(activeBlock) || activeBlock.content
-                                                    ) 
-                                                }} 
+                                                    )
+                                                }}
                                             />
                                         </div>
                                     )}
@@ -871,7 +861,7 @@ export default function TrainingPlayerEnhanced() {
                                                     setQuizScore(result.score)
                                                     handleMarkWatched(activeBlock.id)
                                                 }}
-                                                onExit={() => {}}
+                                                onExit={() => { }}
                                             />
                                         </div>
                                     )}
@@ -893,14 +883,14 @@ export default function TrainingPlayerEnhanced() {
                                     {activeBlock.type === 'document_link' && (
                                         <DocumentBlockRenderer block={activeBlock} />
                                     )}
-                                </motion.div>
+                                </m.div>
                             )}
                         </AnimatePresence>
 
                         {/* Note Panel */}
                         <AnimatePresence>
                             {showNotePanel && !focusMode && (
-                                <motion.div
+                                <m.div
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
                                     exit={{ opacity: 0, height: 0 }}
@@ -916,7 +906,7 @@ export default function TrainingPlayerEnhanced() {
                                         onChange={(e) => saveNote(activeBlock?.id || '', e.target.value)}
                                         className="min-h-[120px]"
                                     />
-                                </motion.div>
+                                </m.div>
                             )}
                         </AnimatePresence>
 
@@ -946,8 +936,10 @@ export default function TrainingPlayerEnhanced() {
 
             {/* Milestone Celebration */}
             <AnimatePresence>
-                {renderMilestoneCelebration()}
+                {milestoneCelebration}
             </AnimatePresence>
-        </div>
+            </div>
+        </LazyMotion>
     )
 }
+

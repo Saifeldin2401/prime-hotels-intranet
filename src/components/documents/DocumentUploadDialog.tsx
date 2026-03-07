@@ -84,7 +84,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
       // Upload file to Supabase Storage under the current user's folder
       const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+      const fileName = `${Date.now()}_${crypto.randomUUID()}.${fileExt}`
       const filePath = `${profile.id}/${fileName}`
 
       const { error: uploadError } = await supabase.storage

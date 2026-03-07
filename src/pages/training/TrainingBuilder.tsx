@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useMemo, useRef, lazy, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -88,7 +88,98 @@ interface TrainingTemplate {
   name: string
   description?: string | null
   category?: string | null
-  template_structure?: any
+  template_structure?: unknown
+}
+
+interface TemplateStructureItem {
+  type?: ContentType | string
+  title?: string
+  content?: string
+  content_url?: string
+  content_data?: Record<string, unknown>
+  is_mandatory?: boolean
+  duration?: number
+  duration_seconds?: number
+  points?: number
+}
+
+interface TemplateStructureSection {
+  title?: string
+  description?: string
+  items?: TemplateStructureItem[]
+  content?: TemplateStructureItem[]
+  blocks?: TemplateStructureItem[]
+}
+
+interface TemplateStructure {
+  sections?: TemplateStructureSection[]
+  blocks?: TemplateStructureItem[]
+}
+
+interface BuilderDraftPayload {
+  title?: string
+  description?: string
+  category?: string
+  difficultyLevel?: string
+  estimatedDuration?: string | number
+  useEstimatedDuration?: boolean
+  validityPeriod?: string | number
+  passingScore?: string | number
+  certificateEnabled?: boolean
+  audience?: string
+  contentLanguage?: string
+  templatePreset?: string
+  sections?: TrainingSection[]
+  activeSection?: string | null
+}
+
+interface TrainingContentBlockInsert {
+  training_module_id: string
+  type: ContentType
+  title?: string | null
+  content: string
+  content_url: string | null
+  content_data: Record<string, unknown>
+  source_document_id?: string | null
+  order: number
+  is_mandatory: boolean
+  duration_seconds: number | null
+  points?: number
+}
+
+const deepClone = <T,>(input: T, seen = new WeakMap<object, unknown>()): T => {
+  if (input === null || typeof input !== 'object') {
+    return input
+  }
+
+  if (input instanceof Date) {
+    return new Date(input.getTime()) as T
+  }
+
+  if (Array.isArray(input)) {
+    return input.map((item) => deepClone(item, seen)) as T
+  }
+
+  const obj = input as Record<string, unknown>
+  if (seen.has(obj)) {
+    return seen.get(obj) as T
+  }
+
+  const output: Record<string, unknown> = {}
+  seen.set(obj, output)
+
+  for (const [key, value] of Object.entries(obj)) {
+    output[key] = deepClone(value, seen)
+  }
+
+  return output as T
+}
+
+const cloneSections = (value: TrainingSection[]): TrainingSection[] => {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value)
+  }
+  return deepClone(value)
 }
 
 // Reusable utility functions moved outside of component to avoid hoisting issues
@@ -192,11 +283,12 @@ const buildModuleSourceText = (sections: TrainingSection[]) => {
     .slice(0, 8000)
 }
 
-function getBlockValidation(block: ContentBlockForm, t: (key: string, options?: any) => string) {
-  if (block.type === 'quiz' && !(block.content_data as any)?.quiz_id) {
+function getBlockValidation(block: ContentBlockForm, t: (key: string, options?: Record<string, unknown>) => string) {
+  const contentData = block.content_data as { quiz_id?: string; sop_id?: string }
+  if (block.type === 'quiz' && !contentData.quiz_id) {
     return { ok: false, message: t('builder.missingQuiz') }
   }
-  if (block.type === 'sop_reference' && !(block.content_data as any)?.sop_id) {
+  if (block.type === 'sop_reference' && !contentData.sop_id) {
     return { ok: false, message: t('builder.missingSop') }
   }
   if (['video', 'audio', 'image', 'document_link', 'interactive'].includes(block.type) && !block.content_url) {
@@ -289,17 +381,48 @@ export function TrainingBuilder() {
   const [contentLanguage, setContentLanguage] = useState('bilingual')
   const [templatePreset, setTemplatePreset] = useState('none')
   const [certificateEnabled, setCertificateEnabled] = useState(true)
+  const [timeLimit, setTimeLimit] = useState<number | null>(null)
+  const [showFeedback, setShowFeedback] = useState(true)
+  const [autoAdvance, setAutoAdvance] = useState(false)
+  const [randomizeQuestions, setRandomizeQuestions] = useState(false)
+  const [showAnswers, setShowAnswers] = useState(false)
   const templateFromQuery = searchParams.get('template')
   const templateAppliedRef = useRef(false)
+  const hydratedModuleRef = useRef<string | null>(null)
+
+  const hydrateModuleState = useCallback((loadedModule: TrainingModule) => {
+    setTitle(loadedModule.title)
+    setDescription(loadedModule.description || '')
+    const normalizedEstimate = normalizeEstimatedDuration(loadedModule.estimated_duration_minutes)
+    setEstimatedDuration(normalizedEstimate ? normalizedEstimate.toString() : '')
+    setUseEstimatedDuration(!!normalizedEstimate)
+    setValidityPeriod(loadedModule.validity_period_days?.toString() || '')
+    setCategory(loadedModule.category || '')
+    setDifficultyLevel(loadedModule.difficulty_level || 'beginner')
+    setCertificateEnabled(loadedModule.certificate_enabled ?? true)
+    setPassingScore(loadedModule.passing_score_percentage?.toString() || '80')
+    setAllowRetake(loadedModule.allow_retake ?? true)
+    setMaxAttempts(loadedModule.max_attempts?.toString() || '3')
+    setAutoAdvance(loadedModule.auto_advance ?? false)
+    setShowFeedback(loadedModule.show_feedback ?? true)
+    setRandomizeQuestions(loadedModule.randomize_questions ?? false)
+    setShowAnswers(loadedModule.show_answers ?? false)
+    setTimeLimit(loadedModule.time_limit_minutes ?? null)
+    setAudience(loadedModule.audience || 'all')
+    setContentLanguage(loadedModule.content_language || 'bilingual')
+    setTemplatePreset(loadedModule.template_id || 'none')
+  }, [])
 
   useEffect(() => {
-    if (!isNewRoute) {
-      setCreatedModuleId(null)
+    if (isNewRoute) {
+      hydratedModuleRef.current = null
+      return
     }
+    setCreatedModuleId(null)
   }, [isNewRoute])
 
-  // Load module data if editing (moved up and assigned)
-  const { data: moduleData } = useQuery({
+  // Load module data if editing
+  useQuery({
     queryKey: ['training-module', moduleId],
     queryFn: async () => {
       if (!moduleId) return null
@@ -309,36 +432,15 @@ export function TrainingBuilder() {
         .eq('id', moduleId)
         .single()
       if (error) throw error
-      return data as TrainingModule
+      const loadedModule = data as TrainingModule
+      if (hydratedModuleRef.current !== loadedModule.id) {
+        hydrateModuleState(loadedModule)
+        hydratedModuleRef.current = loadedModule.id
+      }
+      return loadedModule
     },
     enabled: !!moduleId
   })
-
-  // Sync state with loaded module data
-  useEffect(() => {
-    if (moduleData) {
-      setTitle(moduleData.title)
-      setDescription(moduleData.description || '')
-      const normalizedEstimate = normalizeEstimatedDuration(moduleData.estimated_duration_minutes)
-      setEstimatedDuration(normalizedEstimate ? normalizedEstimate.toString() : '')
-      setUseEstimatedDuration(!!normalizedEstimate)
-      setValidityPeriod(moduleData.validity_period_days?.toString() || '')
-      setCategory(moduleData.category || '')
-      setDifficultyLevel(moduleData.difficulty_level || 'beginner')
-      setCertificateEnabled(moduleData.certificate_enabled ?? true)
-      setPassingScore(moduleData.passing_score_percentage?.toString() || '80')
-      setAllowRetake(moduleData.allow_retake ?? true)
-      setMaxAttempts(moduleData.max_attempts?.toString() || '3')
-      setAutoAdvance(moduleData.auto_advance ?? false)
-      setShowFeedback(moduleData.show_feedback ?? true)
-      setRandomizeQuestions(moduleData.randomize_questions ?? false)
-      setShowAnswers(moduleData.show_answers ?? false)
-      setTimeLimit(moduleData.time_limit_minutes ?? null)
-      setAudience(moduleData.audience || 'all')
-      setContentLanguage(moduleData.content_language || 'bilingual')
-      setTemplatePreset(moduleData.template_id || 'none')
-    }
-  }, [moduleData])
 
   useEffect(() => {
     let isActive = true
@@ -409,7 +511,7 @@ export function TrainingBuilder() {
       setContentBlocks(blocks)
       isLoadedRef.current = true
     }
-  }, [contentBlocksData])
+  }, [contentBlocksData, t])
 
   // Enhanced state for drag-and-drop
   const [sections, setSections] = useState<TrainingSection[]>([])
@@ -425,27 +527,17 @@ export function TrainingBuilder() {
   const [showTemplateApplyConfirm, setShowTemplateApplyConfirm] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<TrainingTemplate | null>(null)
 
-  // Training settings
-  const [timeLimit, setTimeLimit] = useState<number | null>(null)
-  const [showFeedback, setShowFeedback] = useState(true)
-  const [autoAdvance, setAutoAdvance] = useState(false)
-  const [randomizeQuestions, setRandomizeQuestions] = useState(false)
-  const [showAnswers, setShowAnswers] = useState(false)
-
   // Content blocks state (legacy - will be migrated to sections)
   const [contentBlocks, setContentBlocks] = useState<ContentBlockForm[]>([])
-  const [editingBlockIndex, setEditingBlockIndex] = useState<number | null>(null)
   const [showContentDialog, setShowContentDialog] = useState(false)
 
   // Quiz state
-  const [questions, setQuestions] = useState<QuestionForm[]>([])
-  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
-  const [showQuestionDialog, setShowQuestionDialog] = useState(false)
+  const [questions, _setQuestions] = useState<QuestionForm[]>([])
   const [showAIDialog, setShowAIDialog] = useState(false)
   const [aiPrefillContent, setAiPrefillContent] = useState('')
   const [aiPrefillTitle, setAiPrefillTitle] = useState('')
   const [aiTargetSectionId, setAiTargetSectionId] = useState<string | null>(null)
-  const [showKBSidebar, setShowKBSidebar] = useState(false)
+  const [showKBSidebar, _setShowKBSidebar] = useState(false)
   const [showSmartWizard, setShowSmartWizard] = useState(false)
 
   // Current form states
@@ -458,14 +550,6 @@ export function TrainingBuilder() {
     is_mandatory: true,
     title: '',
     order: 0
-  })
-
-  const [currentQuestion, setCurrentQuestion] = useState<QuestionForm>({
-    question: '',
-    type: 'mcq',
-    options: ['', ''],
-    correct_answer: '',
-    points: 1
   })
 
   // Calculate total stats
@@ -534,16 +618,19 @@ export function TrainingBuilder() {
     { key: 'publish', label: t('builder.steps.publish'), description: t('builder.steps.publishDesc') }
   ] as const
 
-  const blockLibrary: Array<{ type: ContentType; label: string; hint: string }> = [
-    { type: 'text', label: t('wizard.type_text', 'Text'), hint: t('builder.blockHints.text') },
-    { type: 'video', label: t('wizard.type_video', 'Video'), hint: t('builder.blockHints.video') },
-    { type: 'quiz', label: t('wizard.type_quiz', 'Quiz'), hint: t('builder.blockHints.quiz') },
-    { type: 'document_link', label: t('wizard.type_document_link', 'Document'), hint: t('builder.blockHints.document') },
-    { type: 'sop_reference', label: t('wizard.type_sop_reference', 'Policy'), hint: t('builder.blockHints.policy') },
-    { type: 'image', label: t('wizard.type_image', 'Image'), hint: t('builder.blockHints.image') },
-    { type: 'audio', label: t('wizard.type_audio', 'Audio'), hint: t('builder.blockHints.audio') },
-    { type: 'interactive', label: t('wizard.type_interactive', 'Interactive'), hint: t('builder.blockHints.interactive') }
-  ]
+  const blockLibrary = useMemo<Array<{ type: ContentType; label: string; hint: string }>>(
+    () => [
+      { type: 'text', label: t('wizard.type_text', 'Text'), hint: t('builder.blockHints.text') },
+      { type: 'video', label: t('wizard.type_video', 'Video'), hint: t('builder.blockHints.video') },
+      { type: 'quiz', label: t('wizard.type_quiz', 'Quiz'), hint: t('builder.blockHints.quiz') },
+      { type: 'document_link', label: t('wizard.type_document_link', 'Document'), hint: t('builder.blockHints.document') },
+      { type: 'sop_reference', label: t('wizard.type_sop_reference', 'Policy'), hint: t('builder.blockHints.policy') },
+      { type: 'image', label: t('wizard.type_image', 'Image'), hint: t('builder.blockHints.image') },
+      { type: 'audio', label: t('wizard.type_audio', 'Audio'), hint: t('builder.blockHints.audio') },
+      { type: 'interactive', label: t('wizard.type_interactive', 'Interactive'), hint: t('builder.blockHints.interactive') }
+    ],
+    [t]
+  )
   const contentTypeLabelMap = useMemo(() => {
     return blockLibrary.reduce((acc, block) => {
       acc[block.type] = block.label
@@ -551,9 +638,13 @@ export function TrainingBuilder() {
     }, {} as Record<ContentType, string>)
   }, [blockLibrary])
 
-  const applyTemplateToSections = (template: TrainingTemplate) => {
-    const structure = template?.template_structure || {}
-    const templateSections = Array.isArray(structure.sections)
+  const applyTemplateToSections = useCallback((template: TrainingTemplate) => {
+    const structure = (
+      template?.template_structure && typeof template.template_structure === 'object'
+        ? template.template_structure
+        : {}
+    ) as TemplateStructure
+    const templateSections: TemplateStructureSection[] = Array.isArray(structure.sections)
       ? structure.sections
       : Array.isArray(structure.blocks)
         ? [{ title: template.name, items: structure.blocks }]
@@ -569,8 +660,16 @@ export function TrainingBuilder() {
     }
 
     const timestamp = Date.now()
-    const mappedSections: TrainingSection[] = templateSections.map((section: any, sectionIndex: number) => {
-      const items = (section.items || section.content || section.blocks || []).map((item: any, itemIndex: number) => ({
+    const mappedSections: TrainingSection[] = templateSections.map((section, sectionIndex) => {
+      const rawItems = Array.isArray(section.items)
+        ? section.items
+        : Array.isArray(section.content)
+          ? section.content
+          : Array.isArray(section.blocks)
+            ? section.blocks
+            : []
+
+      const items = rawItems.map((item, itemIndex) => ({
         id: `content-${timestamp}-${sectionIndex}-${itemIndex}`,
         type: (item.type || 'text') as ContentType,
         title: item.title || '',
@@ -609,20 +708,28 @@ export function TrainingBuilder() {
       title: t('builder.templateApplied'),
       description: t('builder.templateAppliedDesc')
     })
-  }
+  }, [category, description, t, title, toast])
 
   function getTemplateStats(template?: TrainingTemplate | null) {
     if (!template) return { sectionsCount: 0, itemsCount: 0, sections: [] as Array<{ title: string; count: number }> }
-    const structure = template?.template_structure || {}
-    const templateSections = Array.isArray(structure.sections)
+    const structure = (
+      template?.template_structure && typeof template.template_structure === 'object'
+        ? template.template_structure
+        : {}
+    ) as TemplateStructure
+    const templateSections: TemplateStructureSection[] = Array.isArray(structure.sections)
       ? structure.sections
       : Array.isArray(structure.blocks)
         ? [{ title: template.name, items: structure.blocks }]
         : []
-    const sections = templateSections.map((section: any, index: number) => ({
+    const sections = templateSections.map((section, index: number) => ({
       title: section.title || t('builder.sectionLabel', { number: index + 1 }),
-      count: Array.isArray(section.items || section.content || section.blocks)
-        ? (section.items || section.content || section.blocks).length
+      count: Array.isArray(section.items)
+        ? section.items.length
+        : Array.isArray(section.content)
+          ? section.content.length
+          : Array.isArray(section.blocks)
+            ? section.blocks.length
         : 0
     }))
     const itemsCount = sections.reduce((acc, s) => acc + s.count, 0)
@@ -751,19 +858,6 @@ export function TrainingBuilder() {
 
   // deriveTitleFromUrl moved outside
 
-  useEffect(() => {
-    if (!showContentDialog) return
-    setShowAdvancedBlockOptions(false)
-    setShowTitleField(currentBlock.type === 'text')
-    if (currentBlock.type === 'video' || currentBlock.type === 'interactive') {
-      setMediaInputMode('link')
-      return
-    }
-    if (currentBlock.type === 'image' || currentBlock.type === 'audio' || currentBlock.type === 'document_link') {
-      setMediaInputMode(currentBlock.content_url ? 'link' : 'upload')
-    }
-  }, [showContentDialog, currentBlock.type])
-
   const draftKey = moduleId ? `training_builder_draft_${moduleId}` : 'training_builder_draft_new'
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
@@ -780,7 +874,7 @@ export function TrainingBuilder() {
 
     const restoreDraft = async () => {
       try {
-        const draft = await getEncryptedLocalStorage<any>(draftKey)
+        const draft = await getEncryptedLocalStorage<BuilderDraftPayload>(draftKey)
         if (!isActive || !draft) {
           return
         }
@@ -817,7 +911,7 @@ export function TrainingBuilder() {
     return () => {
       isActive = false
     }
-  }, [draftKey, isNewRoute, moduleId, t, toast])
+  }, [draftKey, isNewRoute, moduleId, templateFromQuery, t, toast])
 
   useEffect(() => {
     if (skipAutosaveRef.current) return
@@ -889,7 +983,7 @@ export function TrainingBuilder() {
       applyTemplateToSections(template)
       templateAppliedRef.current = true
     }
-  }, [templateOptions, moduleId, templateFromQuery, sections.length])
+  }, [applyTemplateToSections, templateOptions, moduleId, templateFromQuery, sections.length])
 
   const lastStepRef = useRef<BuilderStep | null>(null)
 
@@ -905,7 +999,7 @@ export function TrainingBuilder() {
         last_step: lastStepRef.current
       })
     }
-  }, [])
+  }, [moduleId])
 
   useEffect(() => {
     if (lastStepRef.current === builderStep) return
@@ -928,7 +1022,7 @@ export function TrainingBuilder() {
       skipHistoryRef.current = false
       return
     }
-    const snapshot = JSON.parse(JSON.stringify(sections)) as TrainingSection[]
+    const snapshot = cloneSections(sections)
     const history = historyRef.current.slice(0, historyIndexRef.current + 1)
     history.push(snapshot)
     if (history.length > 30) history.shift()
@@ -1040,14 +1134,34 @@ export function TrainingBuilder() {
     setActiveSection(targetSectionId || null)
   }
 
+  const openContentDialogForBlock = useCallback(
+    (block: ContentBlockForm, options?: { selected?: ContentBlockForm | null; sectionId?: string | null }) => {
+      setShowAdvancedBlockOptions(false)
+      setShowTitleField(block.type === 'text')
+      if (block.type === 'video' || block.type === 'interactive') {
+        setMediaInputMode('link')
+      } else if (block.type === 'image' || block.type === 'audio' || block.type === 'document_link') {
+        setMediaInputMode(block.content_url ? 'link' : 'upload')
+      } else {
+        setMediaInputMode('upload')
+      }
+      setSelectedContent(options?.selected ?? null)
+      setCurrentBlock(block)
+      if (options?.sectionId !== undefined) {
+        setActiveSection(options.sectionId || null)
+      }
+      setShowContentDialog(true)
+    },
+    []
+  )
+
   const addContent = (type: ContentType, sectionId?: string) => {
     let targetSection = sectionId || activeSection
     if (!targetSection) {
       targetSection = addSection()
     }
 
-    setSelectedContent(null)
-    setCurrentBlock({
+    const newBlock: ContentBlockForm = {
       id: '',
       type,
       content: '',
@@ -1056,9 +1170,8 @@ export function TrainingBuilder() {
       is_mandatory: true,
       title: '',
       order: 0
-    })
-    setActiveSection(targetSection || null)
-    setShowContentDialog(true)
+    }
+    openContentDialogForBlock(newBlock, { selected: null, sectionId: targetSection || null })
   }
 
   const saveContent = () => {
@@ -1131,7 +1244,7 @@ export function TrainingBuilder() {
     try {
       setUploading(true)
       const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
+      const fileName = `${crypto.randomUUID()}.${fileExt}`
       const filePath = `training/${type === 'audio' ? 'audios' : `${type}s`}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
@@ -1182,7 +1295,7 @@ export function TrainingBuilder() {
     }))
   }
 
-  const saveTraining = async () => {
+  const _saveTraining = async () => {
     if (!title.trim()) {
       toast({
         title: t('error'),
@@ -1246,7 +1359,7 @@ export function TrainingBuilder() {
           .delete()
           .eq('training_module_id', currentModuleId)
         // Flatten sections into content blocks
-        const allBlocks: any[] = []
+        const allBlocks: TrainingContentBlockInsert[] = []
         let orderIndex = 0
 
         for (const section of sections) {
@@ -1342,8 +1455,10 @@ export function TrainingBuilder() {
 
     try {
       const savedModuleId = await saveModuleMutation.mutateAsync()
-      await saveContentBlocksMutation.mutateAsync(savedModuleId)
-      await saveQuestionsMutation.mutateAsync(savedModuleId)
+      await Promise.all([
+        saveContentBlocksMutation.mutateAsync(savedModuleId),
+        saveQuestionsMutation.mutateAsync(savedModuleId)
+      ])
 
       if (savedModuleId) {
         const { error } = await supabase
@@ -1475,7 +1590,7 @@ export function TrainingBuilder() {
 
       // Insert new blocks
       // Use sections to build the blocks list to ensure we capture the current UI state
-      const blocksToInsert: any[] = []
+      const blocksToInsert: TrainingContentBlockInsert[] = []
       let orderIndex = 0
 
       for (const section of sections) {
@@ -1560,11 +1675,11 @@ export function TrainingBuilder() {
       // First save the module
       const savedModuleId = await saveModuleMutation.mutateAsync()
 
-      // Then save content blocks using the NEW ID
-      await saveContentBlocksMutation.mutateAsync(savedModuleId)
-
-      // Then save questions using the NEW ID
-      await saveQuestionsMutation.mutateAsync(savedModuleId)
+      // Save blocks and questions using the NEW ID in parallel
+      await Promise.all([
+        saveContentBlocksMutation.mutateAsync(savedModuleId),
+        saveQuestionsMutation.mutateAsync(savedModuleId)
+      ])
 
       toast({
         title: t('moduleSaved'),
@@ -1580,117 +1695,10 @@ export function TrainingBuilder() {
     }
   }
 
-  const handleAddContentBlock = () => {
-    setEditingBlockIndex(null)
-    setCurrentBlock({
-      id: '',
-      type: 'text',
-      content: '',
-      content_url: '',
-      content_data: {},
-      is_mandatory: true,
-      title: '',
-      order: contentBlocks.length
-    })
-    setShowContentDialog(true)
-  }
-
   const handleEditContentBlock = (index: number) => {
     const block = contentBlocks[index]
-    setCurrentBlock({ ...block })
-    setEditingBlockIndex(index)
-    setShowContentDialog(true)
+    openContentDialogForBlock({ ...block }, { selected: block })
   }
-
-  const handleSaveContentBlock = () => {
-    if (!currentBlock.content.trim()) return
-
-    if (editingBlockIndex !== null) {
-      const updated = [...contentBlocks]
-      updated[editingBlockIndex] = currentBlock
-      setContentBlocks(updated)
-    } else {
-      setContentBlocks([...contentBlocks, currentBlock])
-    }
-
-    setShowContentDialog(false)
-    setCurrentBlock({
-      id: '',
-      type: 'text',
-      content: '',
-      content_url: '',
-      content_data: {},
-      is_mandatory: true,
-      title: '',
-      order: 0
-    })
-    setEditingBlockIndex(null)
-  }
-
-  const handleAddQuestion = () => {
-    setCurrentQuestion({
-      question: '',
-      type: 'mcq',
-      options: ['', ''],
-      correct_answer: '',
-      points: 1
-    })
-    setEditingQuestionIndex(null)
-    setShowQuestionDialog(true)
-  }
-
-  const handleEditQuestion = (index: number) => {
-    const question = questions[index]
-    setCurrentQuestion({ ...question })
-    setEditingQuestionIndex(index)
-    setShowQuestionDialog(true)
-  }
-
-  const handleSaveQuestion = () => {
-    if (!currentQuestion.question.trim()) return
-
-    if (editingQuestionIndex !== null) {
-      const updated = [...questions]
-      updated[editingQuestionIndex] = currentQuestion
-      setQuestions(updated)
-    } else {
-      setQuestions([...questions, currentQuestion])
-    }
-
-    setShowQuestionDialog(false)
-    setCurrentQuestion({
-      question: '',
-      type: 'mcq',
-      options: ['', ''],
-      correct_answer: '',
-      points: 1
-    })
-    setEditingQuestionIndex(null)
-  }
-
-  const handleQuestionOptionChange = (index: number, value: string) => {
-    const updated = [...currentQuestion.options]
-    updated[index] = value
-    setCurrentQuestion({ ...currentQuestion, options: updated })
-  }
-
-  const addQuestionOption = () => {
-    setCurrentQuestion({
-      ...currentQuestion,
-      options: [...currentQuestion.options, '']
-    })
-  }
-
-  const removeQuestionOption = (index: number) => {
-    if (currentQuestion.options.length <= 2) return
-    const updated = currentQuestion.options.filter((_, i) => i !== index)
-    setCurrentQuestion({ ...currentQuestion, options: updated })
-  }
-
-
-
-
-
   const handleReorderSection = (dragIndex: number, hoverIndex: number) => {
     const newSections = [...sections]
     const [removed] = newSections.splice(dragIndex, 1)
@@ -2064,9 +2072,7 @@ export function TrainingBuilder() {
             const section = sections.find(s => s.id === sectionId)
             const item = section?.items.find(i => i.id === contentId)
             if (item) {
-              setSelectedContent(item)
-              setCurrentBlock(item)
-              setShowContentDialog(true)
+              openContentDialogForBlock(item, { selected: item, sectionId })
             }
           }}
           onDeleteContent={deleteContent}
@@ -2438,6 +2444,9 @@ export function TrainingBuilder() {
     return null
   }
 
+  const stepContent = renderStepContent()
+  const rightPanelContent = renderRightPanel()
+
   return (
     <div className={`min-h-screen bg-background flex flex-col ${isRTL ? 'text-right' : 'text-left'}`}>
       {/* Header */}
@@ -2613,11 +2622,11 @@ export function TrainingBuilder() {
         )}
 
         <main className="flex-1 overflow-y-auto">
-          {renderStepContent()}
+          {stepContent}
         </main>
 
         <BuilderSidebar className="hidden lg:flex w-[320px] border-l bg-slate-50/50">
-          {renderRightPanel()}
+          {rightPanelContent}
         </BuilderSidebar>
       </div>
 
@@ -3150,9 +3159,9 @@ export function TrainingBuilder() {
                   {t('builder.templateEmptyDesc')}
                 </div>
               ) : (
-                templateStats.sections.map((section, index) => (
+                templateStats.sections.map((section) => (
                   <div
-                    key={`${section.title}-${index}`}
+                    key={`${section.title}-${section.count}`}
                     className={cn("flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700", isRTL ? "flex-row-reverse text-right" : "")}
                   >
                     <span className="font-medium">{section.title}</span>
@@ -3507,7 +3516,7 @@ export function TrainingBuilder() {
                     })
                   }
 
-                } catch (err) {
+                } catch (_err) {
                   toast({
                     title: t('common:error'),
                     description: 'Failed to create quiz from questions.',

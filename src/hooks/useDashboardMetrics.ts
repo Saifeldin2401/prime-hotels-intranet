@@ -29,6 +29,26 @@ interface DashboardMetrics {
 }
 
 const COMPLETED_TASK_STATUSES = ['completed'] as const
+type SettledCountPayload = { count?: number | null; error?: { message?: string } | null }
+
+const settledReasonToMessage = (reason: unknown) => {
+  if (reason instanceof Error) return reason.message
+  if (typeof reason === 'string') return reason
+  return 'Unknown rejection'
+}
+
+const getSettledCount = (result: PromiseSettledResult<unknown>, label: string): number => {
+  if (result.status === 'rejected') {
+    console.warn(`${label} query rejected:`, settledReasonToMessage(result.reason))
+    return 0
+  }
+  const payload = result.value as SettledCountPayload
+  if (payload?.error) {
+    console.warn(`${label} query returned error:`, payload.error.message || 'Unknown error')
+    return 0
+  }
+  return payload?.count ?? 0
+}
 
 /**
  * Calculate week-over-week trend
@@ -68,13 +88,7 @@ export function useDashboardMetrics(propertyId?: string): DashboardMetrics {
       // ───────────────────────────────────────────────
       // 1. Task Completion — filter by assigned_to_id (not created_by_id)
       // ───────────────────────────────────────────────
-      const [
-        { count: allTotal },
-        { count: allDone },
-        { count: weekDone },
-        { count: prevTotal },
-        { count: prevDone }
-      ] = await Promise.all([
+      const taskCountSettled = await Promise.allSettled([
         (async () => {
           let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
             .eq('is_deleted', false).eq('assigned_to_id', user.id)
@@ -132,11 +146,11 @@ export function useDashboardMetrics(propertyId?: string): DashboardMetrics {
         })(),
       ])
 
-      const safeAllTotal = allTotal ?? 0
-      const safeAllDone = allDone ?? 0
-      const safeWeekDone = weekDone ?? 0
-      const safePrevTotal = prevTotal ?? 0
-      const safePrevDone = prevDone ?? 0
+      const safeAllTotal = getSettledCount(taskCountSettled[0], 'Dashboard metrics all tasks')
+      const safeAllDone = getSettledCount(taskCountSettled[1], 'Dashboard metrics completed tasks')
+      const safeWeekDone = getSettledCount(taskCountSettled[2], 'Dashboard metrics completed tasks this week')
+      const safePrevTotal = getSettledCount(taskCountSettled[3], 'Dashboard metrics previous week tasks')
+      const safePrevDone = getSettledCount(taskCountSettled[4], 'Dashboard metrics previous week completed tasks')
 
       const taskCompletion = {
         // All-time completion rate as the displayed value

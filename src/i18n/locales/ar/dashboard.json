@@ -178,6 +178,10 @@
             "send_wish": "إرسال تهنئة"
         }
     },
+    "focus": {
+        "my_work": "عملي",
+        "my_team": "فريقي"
+    },
     "schedule": {
         "title": "الجدول",
         "subtitle": "أحداثك ومنوباتك",

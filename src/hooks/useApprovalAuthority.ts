@@ -179,7 +179,7 @@ export function useApprovalAuthority() {
 
             return {
                 role,
-                canApproveGlobally: ['regional_admin', 'regional_hr'].includes(role || ''),
+                canApproveGlobally: ['corporate_admin', 'regional_admin', 'regional_hr'].includes(role || ''),
                 canApproveProperty: ['property_manager', 'property_hr'].includes(role || ''),
                 canApproveDepartment: role === 'department_head',
                 properties: properties?.map(p => p.property) || [],

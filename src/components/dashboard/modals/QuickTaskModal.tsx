@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -61,6 +61,11 @@ export function QuickTaskModal({ open, onOpenChange }: QuickTaskModalProps) {
   const createTask = useQuickCreateTask()
   const { data: users = [] } = useUsers()
   const [dateOpen, setDateOpen] = useState(false)
+  const startOfToday = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today
+  }, [])
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
@@ -174,7 +179,7 @@ export function QuickTaskModal({ open, onOpenChange }: QuickTaskModalProps) {
                           field.onChange(date)
                           setDateOpen(false)
                         }}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        disabled={(date) => date < startOfToday}
                         initialFocus
                       />
                     </PopoverContent>

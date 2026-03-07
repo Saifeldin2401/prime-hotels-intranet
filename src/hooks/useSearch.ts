@@ -1,5 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { escapeSearchQuery } from '@/lib/utils'
@@ -8,7 +7,8 @@ import { useAuth } from '@/hooks/useAuth'
 export interface SearchSuggestion {
   id: string
   text: string
-  type: 'recent' | 'popular' | 'document' | 'page'
+  type: 'recent' | 'popular' | 'document' | 'page' | 'action' | 'navigation' | 'help'
+  url?: string
   count?: number
   category?: string
 }
@@ -22,7 +22,7 @@ interface SearchResult {
   description?: string
   category?: string
   url: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   relevance_score?: number
 }
 
@@ -38,6 +38,11 @@ interface UseSearchOptions {
   limit?: number
   propertyId?: string
   departmentId?: string
+}
+
+const isQuotaExceededError = (error: unknown): boolean => {
+  if (!(error instanceof DOMException)) return false
+  return error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
 }
 
 export function useSearch(query: string, options: UseSearchOptions = {}) {
@@ -56,8 +61,8 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     includeTickets = true,
     includeReferrals = true,
     limit = 20,
-    propertyId,
-    departmentId
+    propertyId: _propertyId,
+    departmentId: _departmentId
   } = options
 
   // Global search query
@@ -114,7 +119,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
         }
 
         // Search Users
-        if (includeUsers && ['regional_admin', 'regional_hr', 'property_manager', 'department_head'].includes(primaryRole || '')) {
+        if (includeUsers && ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head'].includes(primaryRole || '')) {
           try {
             const { data: users } = await supabase
               .from('profiles')
@@ -362,7 +367,6 @@ function calculateRelevanceScore(query: string, title: string, description?: str
 // Hook for search suggestions
 export function useSearchSuggestions(query: string) {
   const { profile } = useAuth()
-  const { t } = useTranslation()
 
   const { data: suggestions = [], isLoading } = useQuery({
     queryKey: ['search-suggestions', query, profile?.id],
@@ -390,7 +394,7 @@ export function useSearchSuggestions(query: string) {
               text: action.text,
               type: 'action',
               url: action.url
-            } as any)
+            })
           }
         })
       }
@@ -404,7 +408,7 @@ export function useSearchSuggestions(query: string) {
               text: `Go to ${page.title}`,
               type: 'navigation',
               url: page.url
-            } as any)
+            })
           }
         })
       }
@@ -416,13 +420,13 @@ export function useSearchSuggestions(query: string) {
           text: 'Search Standard Operating Procedures',
           type: 'help',
           url: '/knowledge'
-        } as any)
+        })
         suggestions.push({
           id: 'help-manual',
           text: 'Open User Manual',
           type: 'help',
           url: '/documents'
-        } as any)
+        })
       }
 
       // 4. Content Suggestions (Database)
@@ -486,13 +490,36 @@ export function useRecentSearches() {
   const saveSearch = (query: string) => {
     if (!query.trim()) return
 
-    const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+    let recentSearches: string[] = []
+    try {
+      recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+    } catch {
+      console.warn('Failed to parse recent searches')
+      recentSearches = []
+    }
     const updatedSearches = [query, ...recentSearches.filter((s: string) => s !== query)].slice(0, 10)
-    localStorage.setItem('recentSearches', JSON.stringify(updatedSearches))
+    try {
+      localStorage.setItem('recentSearches', JSON.stringify(updatedSearches))
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        const fallback = updatedSearches.slice(0, 5)
+        try {
+          localStorage.setItem('recentSearches', JSON.stringify(fallback))
+          return
+        } catch {
+          // Ignore secondary write failures.
+        }
+      }
+      console.warn('Failed to persist recent searches', error)
+    }
   }
 
   const getRecentSearches = (): string[] => {
-    return JSON.parse(localStorage.getItem('recentSearches') || '[]')
+    try {
+      return JSON.parse(localStorage.getItem('recentSearches') || '[]')
+    } catch {
+      return []
+    }
   }
 
   const clearRecentSearches = () => {

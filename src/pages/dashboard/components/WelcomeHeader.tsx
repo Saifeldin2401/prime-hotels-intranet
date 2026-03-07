@@ -12,7 +12,8 @@ import {
   AlertCircle,
   CalendarClock,
   Activity,
-  Zap
+  Zap,
+  Users
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -26,11 +27,15 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { useTranslation } from "react-i18next"
+import { useNavigate } from 'react-router-dom'
 import { ar } from 'date-fns/locale'
 import { QuickCreateMenu } from '@/components/dashboard/QuickCreateMenu'
 import { LiveWeather } from '@/components/dashboard/LiveWeather'
 import { useWeather } from '@/hooks/useWeather'
 import { WeatherBackground } from '@/components/dashboard/WeatherBackground'
+import { PrayerTimesWidget } from './PrayerTimesWidget'
+import { Sparkline } from '@/components/ui/Sparkline'
+import { Sparkles, ArrowRight } from 'lucide-react'
 
 interface WelcomeHeaderProps {
   taskCount?: number
@@ -48,7 +53,7 @@ interface WelcomeHeaderProps {
   onToggleNotifications: () => void
 }
 
-// Live date/time
+// Live date/time with Hijri support
 function LiveDateTime({ isRTL }: { isRTL: boolean }) {
   const [time, setTime] = useState(new Date())
   useEffect(() => {
@@ -56,11 +61,24 @@ function LiveDateTime({ isRTL }: { isRTL: boolean }) {
     return () => clearInterval(timer)
   }, [])
 
+  // Force true Hijri date using the explicit Umm al-Qura calendar
+  const hijriDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(time) + ' هـ'
+
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-slate-500 font-semibold text-sm">{format(time, 'EEE, MMM d', { locale: isRTL ? ar : undefined })}</span>
-      <span className="w-1 h-1 rounded-full bg-slate-200" />
-      <span className="text-slate-400 font-mono text-sm tracking-wide">{format(time, 'HH:mm:ss')}</span>
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-2">
+        <span className="text-slate-500 font-bold text-sm tracking-tight">{format(time, 'EEEE, MMM d', { locale: isRTL ? ar : undefined })}</span>
+        <span className="w-1 h-1 rounded-full bg-slate-200" />
+        <span className="text-slate-400 font-mono text-sm tracking-tight">{format(time, 'HH:mm:ss')}</span>
+      </div>
+      <div className="text-[10px] font-bold text-amber-600 uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm">
+        <span className="w-4 h-[1px] bg-amber-500/40" />
+        {hijriDate}
+      </div>
     </div>
   )
 }
@@ -112,7 +130,8 @@ function StatBentoCard({
   subtext,
   trend,
   accentColor,
-  delay
+  delay,
+  showPulse
 }: {
   icon: any;
   title: string;
@@ -121,6 +140,7 @@ function StatBentoCard({
   trend?: 'up' | 'down' | 'neutral';
   accentColor: string;
   delay: number;
+  showPulse?: boolean;
 }) {
   return (
     <m.div
@@ -130,11 +150,28 @@ function StatBentoCard({
       transition={{ delay, duration: 0.4, ease: "easeOut" }}
       className="group relative overflow-hidden rounded-[14px] bg-[#f8fafc] border border-slate-200 p-4 transition-all hover:bg-white/80 hover:shadow-sm flex-1 cursor-default"
     >
+      <div className="absolute bottom-0 right-0 p-1 opacity-20 transition-opacity group-hover:opacity-40 z-0">
+        <Sparkline
+          data={[30, 45, 32, 50, 40, 60, 40]}
+          color={accentColor.includes('amber') ? '#d97706' : accentColor.includes('emerald') ? '#059669' : accentColor.includes('blue') ? '#2563eb' : '#4f46e5'}
+          width={80}
+          height={30}
+        />
+      </div>
+
       <div className="relative flex flex-col h-full justify-between gap-3 z-10">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className={cn("p-1.5 rounded-lg border border-slate-200 bg-white shadow-sm", accentColor)}>
-              <Icon className="w-4 h-4" />
+            <div className="relative">
+              <div className={cn("p-1.5 rounded-lg border border-slate-200 bg-white shadow-sm", accentColor)}>
+                <Icon className="w-4 h-4" />
+              </div>
+              {showPulse && (
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white"></span>
+                </span>
+              )}
             </div>
             <span className="text-slate-500 font-bold text-[11px] tracking-wider uppercase">{title}</span>
           </div>
@@ -157,7 +194,7 @@ function StatBentoCard({
           )}
         </div>
       </div>
-    </m.div>
+    </m.div >
   )
 }
 
@@ -172,8 +209,16 @@ export function WelcomeHeader({
   completionRate: completionRateProp
 }: WelcomeHeaderProps) {
   const { t, i18n } = useTranslation('dashboard')
+  const navigate = useNavigate()
   const isRTL = i18n.dir() === 'rtl'
-  const { user, profile } = useAuth()
+  const { user, profile, departments } = useAuth()
+
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return t("welcome_header.good_morning", "Good morning,")
+    if (hour < 17) return t("welcome_header.good_afternoon", "Good afternoon,")
+    return t("welcome_header.good_evening", "Good evening,")
+  }
   const { currentProperty } = useProperty()
   const [focusMode, setFocusMode] = useState(false)
 
@@ -257,7 +302,19 @@ export function WelcomeHeader({
           {/* Header Action Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/50">
             <div className="flex flex-wrap items-center gap-3">
-              <LiveDateTime isRTL={isRTL} />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+                <LiveDateTime isRTL={isRTL} />
+
+                <div className="hidden sm:block h-8 w-[1px] bg-white/20" />
+
+                <m.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <PrayerTimesWidget />
+                </m.div>
+              </div>
               <LiveWeather />
             </div>
 
@@ -301,17 +358,60 @@ export function WelcomeHeader({
                 {t("welcome_header.dashboard_overview", "DASHBOARD OVERVIEW")}
               </div>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-700 leading-tight">
-                {t("welcome_header.good_to_see_you", "Good to see you,")} <br className="hidden md:block" />
+                {getGreeting()} <br className="hidden md:block" />
                 <span className="font-bold text-slate-800">
                   {firstName}
                 </span>
               </h1>
+
+              {/* Action Center Snippet */}
+              <m.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8 }}
+                className="mt-5 p-3.5 rounded-2xl bg-gradient-to-br from-white/60 to-white/30 backdrop-blur-md border border-white/50 shadow-sm max-w-sm hidden md:block group hover:shadow-md hover:border-blue-200/50 transition-all cursor-pointer overflow-hidden relative"
+                onClick={() => navigate(unreadCount > 0 ? '/notifications' : '/tasks')}
+              >
+                <div className="absolute top-0 right-0 p-2 opacity-5 scale-150 rotate-12 group-hover:rotate-45 transition-transform">
+                  <Sparkles className="w-12 h-12 text-blue-600" />
+                </div>
+
+                <div className="flex items-start gap-3 relative z-10">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform">
+                    {unreadCount > 0 ? <Bell className="w-5 h-5 text-white animate-bounce" /> : <CheckCircle2 className="w-5 h-5 text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-0.5 flex items-center gap-1.5">
+                      {t("welcome_header.action_center.title", "Primary Focus")}
+                      <div className="h-1 w-1 rounded-full bg-blue-300" />
+                    </div>
+                    <div className="text-sm font-bold text-slate-700 leading-tight">
+                      {unreadCount > 0
+                        ? t("welcome_header.action_center.unread", "You have {{count}} unread alerts", { count: unreadCount })
+                        : highPriorityTaskCount > 0
+                          ? t("welcome_header.action_center.urgent", "Address {{count}} high-priority tasks", { count: highPriorityTaskCount })
+                          : t("welcome_header.action_center.all_clear", "All critical systems are stable")
+                      }
+                    </div>
+                    <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-slate-400 group-hover:text-blue-500 transition-colors uppercase tracking-tight">
+                      {t("welcome_header.action_center.view_details", "View Dashboard Details")}
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </m.div>
 
               <div className="flex items-center gap-3 pt-4">
                 {currentProperty?.name && (
                   <Badge className="bg-slate-200/50 text-slate-600 border border-slate-200 px-3 py-1.5 font-semibold rounded-lg text-xs">
                     <Building2 className="w-3.5 h-3.5 mr-2 text-slate-400" />
                     {currentProperty.name}
+                  </Badge>
+                )}
+                {departments && departments.length > 0 && (
+                  <Badge className="bg-slate-200/50 text-slate-600 border border-slate-200 px-3 py-1.5 font-semibold rounded-lg text-xs">
+                    <Users className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                    {departments[0].name}
                   </Badge>
                 )}
                 {profile?.job_title && (
@@ -332,6 +432,7 @@ export function WelcomeHeader({
                 trend={realTaskCount > 5 ? 'down' : 'up'}
                 accentColor="text-blue-600"
                 delay={0.2}
+                showPulse={highPriorityTaskCount > 0}
                 subtext={
                   highPriorityTaskCount > 0 ? (
                     <span className="flex items-center gap-1 text-rose-600 font-semibold"><AlertCircle className="w-3 h-3" /> {highPriorityTaskCount} urgent</span>

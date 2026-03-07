@@ -135,7 +135,7 @@ function InsightsGrid({ cards, title }: { cards: InsightCard[]; title: string })
                 <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-1">
                     {title}
                 </h3>
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {cards.map((card, index) => {
                         const Icon = card.icon
                         const theme = colorMap[card.theme]
@@ -148,22 +148,29 @@ function InsightsGrid({ cards, title }: { cards: InsightCard[]; title: string })
                                 transition={{ delay: index * 0.06, ease: 'easeOut', duration: 0.35 }}
                             >
                                 <Card className="group relative overflow-hidden border border-slate-200 bg-white rounded-2xl shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-                                    <CardContent className="p-4 relative z-10">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-tight">
+                                    <CardContent className="p-4 relative z-10 flex flex-col h-full">
+                                        <div className="flex items-start justify-between gap-1 mb-2">
+                                            <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-tight sm:tracking-wider leading-tight line-clamp-2 flex-1">
                                                 {card.label}
                                             </span>
                                             <div className={cn(
-                                                "p-1.5 rounded-lg transition-colors duration-300",
+                                                "p-1.5 rounded-lg transition-colors duration-300 shrink-0",
                                                 theme.bg, theme.text,
                                                 "group-hover:scale-110"
                                             )}>
                                                 <Icon className="w-3.5 h-3.5" />
                                             </div>
                                         </div>
-                                        <span className="text-2xl font-extrabold text-slate-800 tracking-tight">
-                                            {card.value}{card.suffix || ''}
-                                        </span>
+                                        <div className="flex items-baseline gap-1 mt-auto">
+                                            <span className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
+                                                {card.value}
+                                            </span>
+                                            {card.suffix && (
+                                                <span className="text-xs font-bold text-slate-400">
+                                                    {card.suffix}
+                                                </span>
+                                            )}
+                                        </div>
                                     </CardContent>
                                     <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-slate-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </Card>

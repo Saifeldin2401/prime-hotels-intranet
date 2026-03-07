@@ -7,6 +7,11 @@ import type { WidgetId } from '@/pages/dashboard/components/WidgetRegistry'
 
 const LOCAL_STORAGE_KEY = 'phg_dashboard_preferences'
 
+const isQuotaExceededError = (error: unknown): boolean => {
+    if (!(error instanceof DOMException)) return false
+    return error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+}
+
 const isAuthError = (error: unknown) => {
     if (!error || typeof error !== 'object') return false
     const candidate = error as { code?: string | number; status?: number }
@@ -35,15 +40,31 @@ function loadFromLocalStorage(): Partial<DashboardPreferences> | null {
         }
     } catch (e) {
         console.warn('Failed to load dashboard preferences from localStorage:', e)
+        try {
+            localStorage.removeItem(LOCAL_STORAGE_KEY)
+        } catch {
+            // Ignore follow-up storage errors.
+        }
     }
     return null
 }
 
 // Helper to save to localStorage
 function saveToLocalStorage(preferences: Partial<DashboardPreferences>) {
+    const serialized = JSON.stringify(preferences)
     try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(preferences))
+        localStorage.setItem(LOCAL_STORAGE_KEY, serialized)
     } catch (e) {
+        if (isQuotaExceededError(e)) {
+            try {
+                localStorage.removeItem(LOCAL_STORAGE_KEY)
+                localStorage.setItem(LOCAL_STORAGE_KEY, serialized)
+                return
+            } catch (retryError) {
+                console.warn('Failed to save dashboard preferences after quota recovery:', retryError)
+                return
+            }
+        }
         console.warn('Failed to save dashboard preferences to localStorage:', e)
     }
 }
@@ -342,7 +363,7 @@ export function useDashboardPreferences() {
             }
             return defaultVisible
         },
-        [preferences?.widget_visibility]
+        [preferences]
     )
 
     return {

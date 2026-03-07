@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -43,7 +43,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
     const [deleteJob, setDeleteJob] = useState<JobPosting | null>(null)
 
     const canManageJobs = (roles || []).some((userRole) =>
-        ['regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(userRole.role)
+        ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'].includes(userRole.role)
     )
 
     const { data: jobs, isLoading } = useQuery({
@@ -91,7 +91,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
 
     const updateStatusMutation = useMutation({
         mutationFn: async ({ jobId, status }: { jobId: string, status: string }) => {
-            const updates: any = { status }
+            const updates: { status: string; published_at?: string } = { status }
 
             if (status === 'open' && !jobs?.find(j => j.id === jobId)?.published_at) {
                 updates.published_at = new Date().toISOString()
@@ -125,7 +125,8 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
     }
 
     return (
-        <div className="space-y-6">
+        <LazyMotion features={domAnimation}>
+            <div className="space-y-6">
             {!embedded && (
                 <PageHeader
                     title={t('title')}
@@ -214,7 +215,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                     />
                 )}
                 {filteredJobs?.map((job, index) => (
-                    <motion.div
+                    <m.div
                         key={job.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -330,7 +331,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                                 </div>
                             </div>
                         </EnhancedCard>
-                    </motion.div>
+                    </m.div>
                 ))}
 
                 {filteredJobs?.length === 0 && (
@@ -360,6 +361,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                     />
                 )
             }
-        </div >
+            </div>
+        </LazyMotion>
     )
 }

@@ -256,6 +256,7 @@ export function useCreateTask() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.create.success('Task')
@@ -331,6 +332,7 @@ export function useUpdateTask() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['task', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
       crudToasts.update.success('Task')
@@ -360,6 +362,7 @@ export function useDeleteTask() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
       crudToasts.delete.success('Task')
     },

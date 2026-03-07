@@ -8,15 +8,35 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import * as QuestionService from '@/services/questionService'
 import type {
-    KnowledgeQuestion,
     QuestionFormData,
     AnswerSubmission,
     QuestionUsageType,
-    AIQuestionGenerationRequest,
-    GeneratedQuestion
+    AIQuestionGenerationRequest
 } from '@/types/questions'
 import { toast } from 'sonner'
 import { crudToasts } from '@/lib/toastHelpers'
+
+function secureRandomIndex(maxExclusive: number): number {
+    if (maxExclusive <= 1) return 0
+    const cryptoApi = globalThis.crypto
+    if (cryptoApi?.getRandomValues) {
+        const random = new Uint32Array(1)
+        cryptoApi.getRandomValues(random)
+        return random[0] % maxExclusive
+    }
+    return Math.floor(Math.random() * maxExclusive)
+}
+
+function shuffledCopy<T>(items: T[]): T[] {
+    const clone = [...items]
+    for (let i = clone.length - 1; i > 0; i -= 1) {
+        const j = secureRandomIndex(i + 1)
+        const temp = clone[i]
+        clone[i] = clone[j]
+        clone[j] = temp
+    }
+    return clone
+}
 
 // ============================================================================
 // QUESTIONS QUERIES
@@ -373,7 +393,7 @@ export function useDailyChallenge() {
             // Get 3 random published questions for daily challenge
             const { questions } = await QuestionService.getQuestions({ status: 'published' }, 1, 20)
             // Shuffle and take 3
-            const shuffled = questions.sort(() => Math.random() - 0.5)
+            const shuffled = shuffledCopy(questions)
             return shuffled.slice(0, 3)
         },
         staleTime: 1000 * 60 * 60 * 24 // Cache for 24 hours

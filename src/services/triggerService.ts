@@ -52,7 +52,7 @@ export interface TriggerContext {
     source_type?: string
     affected_users?: string[]
     department_id?: string
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
 }
 
 // ============================================================================
@@ -136,7 +136,7 @@ function matchesConditions(conditions: TriggerCondition[], context: TriggerConte
                 if (!String(value).includes(String(condition.value))) return false
                 break
             case 'in':
-                if (!Array.isArray(condition.value) || !condition.value.includes(value)) return false
+                if (!Array.isArray(condition.value) || !condition.value.includes(String(value))) return false
                 break
         }
     }
@@ -144,8 +144,7 @@ function matchesConditions(conditions: TriggerCondition[], context: TriggerConte
     return true
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getContextValue(field: string, context: TriggerContext): any {
+function getContextValue(field: string, context: TriggerContext): unknown {
     switch (field) {
         case 'department_id':
             return context.department_id

@@ -130,7 +130,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
 
     // Filter properties based on admin role
     const properties = useMemo(() => {
-        if (['regional_admin', 'regional_hr'].includes(primaryRole || '')) {
+        if (['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')) {
             return allProperties
         }
         // Property managers/HR can only assign to their properties
@@ -154,7 +154,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
         enabled: !!selectedPropertyId
     })
 
-    const isCorpAdmin = ['regional_admin', 'regional_hr'].includes(primaryRole || '')
+    const isCorpAdmin = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
     const allowedPropertyIds = useMemo(() => {
         if (isCorpAdmin) return null
         return userProperties?.map(p => p.id) || []

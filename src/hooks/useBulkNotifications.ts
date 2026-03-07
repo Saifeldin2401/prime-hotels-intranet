@@ -8,7 +8,7 @@ interface NotificationBatch {
     processed_count: number
     failed_count: number
     status: 'pending' | 'processing' | 'completed' | 'failed'
-    metadata: Record<string, any>
+    metadata: Record<string, unknown>
     created_at: string
     started_at?: string
     completed_at?: string
@@ -33,6 +33,54 @@ interface BatchResult {
 }
 
 const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`
+const EDGE_FUNCTION_TIMEOUT_MS = 15000
+
+async function callBulkNotificationFunction(payload: Record<string, unknown>) {
+    const { data: session } = await supabase.auth.getSession()
+    const accessToken = session?.session?.access_token
+    if (!accessToken) {
+        throw new Error('Missing session token for bulk notification request')
+    }
+
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), EDGE_FUNCTION_TIMEOUT_MS)
+
+    try {
+        const response = await fetch(EDGE_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        })
+
+        const text = await response.text()
+        let parsed: Record<string, unknown> | null = null
+        if (text) {
+            try {
+                parsed = JSON.parse(text) as Record<string, unknown>
+            } catch {
+                parsed = { message: text }
+            }
+        }
+
+        if (!response.ok) {
+            const errorMessage = parsed?.error || parsed?.message || `Request failed with status ${response.status}`
+            throw new Error(errorMessage)
+        }
+
+        return parsed
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+            throw new Error(`Bulk notification request timed out after ${Math.floor(EDGE_FUNCTION_TIMEOUT_MS / 1000)}s`)
+        }
+        throw error
+    } finally {
+        clearTimeout(timeoutId)
+    }
+}
 
 export function useBulkNotifications() {
     const queryClient = useQueryClient()
@@ -40,27 +88,13 @@ export function useBulkNotifications() {
     // Create a new notification batch
     const createBatchMutation = useMutation({
         mutationFn: async (params: CreateBatchParams): Promise<BatchResult> => {
-            const { data: session } = await supabase.auth.getSession()
-
-            const response = await fetch(EDGE_FUNCTION_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.session?.access_token}`
-                },
-                body: JSON.stringify({
-                    action: 'create_batch',
-                    userIds: params.userIds,
-                    notificationType: params.notificationType,
-                    notificationData: params.notificationData
-                })
+            const data = await callBulkNotificationFunction({
+                action: 'create_batch',
+                userIds: params.userIds,
+                notificationType: params.notificationType,
+                notificationData: params.notificationData
             })
-
-            if (!response.ok) {
-                throw new Error('Failed to create notification batch')
-            }
-
-            return response.json()
+            return data as BatchResult
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notification-batches'] })
@@ -70,26 +104,12 @@ export function useBulkNotifications() {
     // Process pending notifications
     const processBatchMutation = useMutation({
         mutationFn: async (batchId?: string) => {
-            const { data: session } = await supabase.auth.getSession()
-
-            const response = await fetch(EDGE_FUNCTION_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.session?.access_token}`
-                },
-                body: JSON.stringify({
-                    action: 'process_batch',
-                    batchId,
-                    batchSize: 50
-                })
+            const data = await callBulkNotificationFunction({
+                action: 'process_batch',
+                batchId,
+                batchSize: 50
             })
-
-            if (!response.ok) {
-                throw new Error('Failed to process notifications')
-            }
-
-            return response.json()
+            return data
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notification-batches'] })
@@ -98,25 +118,11 @@ export function useBulkNotifications() {
 
     // Get batch status
     const getBatchStatus = async (batchId: string): Promise<NotificationBatch & { pending_count: number }> => {
-        const { data: session } = await supabase.auth.getSession()
-
-        const response = await fetch(EDGE_FUNCTION_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.session?.access_token}`
-            },
-            body: JSON.stringify({
-                action: 'get_status',
-                batchId
-            })
+        const data = await callBulkNotificationFunction({
+            action: 'get_status',
+            batchId
         })
-
-        if (!response.ok) {
-            throw new Error('Failed to get batch status')
-        }
-
-        return response.json()
+        return data as NotificationBatch & { pending_count: number }
     }
 
     return {

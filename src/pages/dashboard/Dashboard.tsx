@@ -1,20 +1,22 @@
 import { useState, Suspense, useMemo, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { useDashboardStats } from '@/hooks/useDashboardStats'
+import { useDashboardStats, usePropertyManagerStats, useHRStats, useDepartmentHeadStats, useAreaManagerStats, useCorporateStats } from '@/hooks/useDashboardStats'
 import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion'
 import {
   CheckCircle, FileText, GraduationCap,
-  Bell, Zap, ChevronRight, X
+  Bell, Zap, ChevronRight, X, MessageCircle, Users
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useUndoableAction } from '@/hooks/useUndoableAction.ts'
+import { useDashboardFocus } from '@/hooks/useDashboardFocus'
 // Dynamic Registry and Permissions
-import { WIDGET_REGISTRY, type WidgetId } from './components/WidgetRegistry'
+import { WIDGET_REGISTRY, type WidgetId, getLayoutProfile, type DashboardWidgetId } from './components/WidgetRegistry'
 import { useWidgetPermissions } from '@/hooks/useWidgetPermissions'
 
 // Static Widgets
@@ -22,6 +24,7 @@ import { SocialFeed } from '@/components/social/SocialFeed'
 import { WelcomeHeader } from './components/WelcomeHeader'
 import { NotificationsPanel } from './components/NotificationsPanel'
 import { DashboardCustomizeModal } from './components/DashboardCustomizeModal'
+import { AIBriefingWidget } from './components/AIBriefingWidget'
 import { useTranslation } from "react-i18next";
 
 interface RegistryWidgetRendererProps {
@@ -77,9 +80,27 @@ function RegistryWidgetRenderer({
 
 export function IntegratedDashboard() {
   const { t, ready } = useTranslation('dashboard');
-  const { user, profile } = useAuth()
-  const { data: stats, isLoading: statsLoading, refetch } = useDashboardStats()
+  const { user, profile, primaryRole, loading, rolesLoading } = useAuth()
+  const { data: baseStats, isLoading: baseLoading, refetch: refetchBase } = useDashboardStats()
+
+  // Role-specific hooks
+  const isManager = primaryRole === 'property_manager'
+  const isHR = primaryRole === 'property_hr'
+  const isDeptHead = primaryRole === 'department_head'
+  const isAreaManager = primaryRole === 'area_manager'
+  const isCorporate = primaryRole === 'corporate_admin'
+
+  const { data: managerStats, isLoading: managerLoading } = usePropertyManagerStats()
+  const { data: hrStats, isLoading: hrLoading } = useHRStats()
+  const { data: deptHeadStats, isLoading: deptHeadLoading } = useDepartmentHeadStats()
+  const { data: areaStats, isLoading: areaLoading } = useAreaManagerStats()
+  const { data: corpStats, isLoading: corpLoading } = useCorporateStats()
+
+  const statsLoading = baseLoading || managerLoading || hrLoading || deptHeadLoading || areaLoading || corpLoading
+
+  const stats = baseStats // default to base stats for unread counts etc.
   const { notifications } = useNotifications()
+  const { focusMode, setFocusMode } = useDashboardFocus()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showCustomize, setShowCustomize] = useState(false)
 
@@ -110,11 +131,15 @@ export function IntegratedDashboard() {
 
   const [widgetVisibilityOverrides, setWidgetVisibilityOverrides] = useState<Record<string, boolean>>({})
   const visibleWidgets = useMemo(() => {
-    return effectivePermittedWidgets.reduce((acc, widgetId) => {
-      acc[widgetId] = widgetVisibilityOverrides[widgetId] ?? (WIDGET_REGISTRY[widgetId]?.defaultVisible ?? true)
+    return [...effectivePermittedWidgets, 'socialFeed'].reduce((acc, widgetId) => {
+      const isVisible = widgetId === 'socialFeed' ? true : (WIDGET_REGISTRY[widgetId as WidgetId]?.defaultVisible ?? true)
+      acc[widgetId] = widgetVisibilityOverrides[widgetId] ?? isVisible
       return acc
     }, {} as Record<string, boolean>)
   }, [effectivePermittedWidgets, widgetVisibilityOverrides])
+
+  // No debug logs needed after verification
+
 
   const toggleWidget = (key: string, visible: boolean) => {
     setWidgetVisibilityOverrides((prev) => ({ ...prev, [key]: visible }))
@@ -141,8 +166,8 @@ export function IntegratedDashboard() {
     }
   )
 
-  const handleRemoveWidget = useCallback((widgetId: WidgetId) => {
-    executeRemoveWidget(widgetId)
+  const handleRemoveWidget = useCallback((widgetId: string) => {
+    executeRemoveWidget(widgetId as WidgetId)
   }, [executeRemoveWidget])
 
   const unreadCount = notifications?.filter((notification: { is_read?: boolean }) => !notification.is_read).length || 0
@@ -186,13 +211,86 @@ export function IntegratedDashboard() {
       },
     ]
 
-    return baseStats.slice(0, 4)
-  }, [t, ready, stats?.pendingTasks, stats?.completedTraining, stats?.inProgressTraining, stats?.documentsCount, unreadCount])
+    // Customize based on role
+    if (isManager && managerStats) {
+      return [
+        {
+          title: t('widgets.staff_compliance') || 'Staff Compliance',
+          value: `${managerStats.staffCompliance}%`,
+          subtitle: t('widgets.compliance_desc') || 'Training completion rate',
+          icon: GraduationCap,
+          href: '/learning/reports',
+          color: 'emerald'
+        },
+        {
+          title: t('widgets.maintenance') || 'Active Issues',
+          value: managerStats.maintenanceIssues,
+          subtitle: t('widgets.maintenance_desc') || 'Open tickets',
+          icon: Zap,
+          href: '/maintenance',
+          color: 'rose'
+        },
+        ...baseStats.slice(0, 2)
+      ]
+    }
 
-  if (!user || !profile) {
+    if (isHR && hrStats) {
+      return [
+        {
+          title: t('widgets.pending_leave') || 'Leave Requests',
+          value: hrStats.pendingLeaveRequests,
+          subtitle: t('widgets.leave_desc') || 'Awaiting review',
+          icon: Bell,
+          href: '/hr/leave',
+          color: 'indigo'
+        },
+        {
+          title: t('widgets.new_hires') || 'New Hires',
+          value: hrStats.newHiresThisMonth,
+          subtitle: t('widgets.hires_desc') || 'Joined this month',
+          icon: Users,
+          href: '/hr/staff',
+          color: 'emerald'
+        },
+        ...baseStats.slice(0, 2)
+      ]
+    }
+
+    if (isDeptHead && deptHeadStats) {
+      return [
+        {
+          title: t('widgets.presence') || 'Present Today',
+          value: `${deptHeadStats.presentToday}/${deptHeadStats.totalStaff}`,
+          subtitle: t('widgets.attendance_desc') || 'Current shift presence',
+          icon: Users,
+          href: '/hr/attendance',
+          color: 'primary'
+        },
+        {
+          title: t('widgets.dept_compliance') || 'Dept Compliance',
+          value: `${deptHeadStats.trainingCompliance}%`,
+          subtitle: t('widgets.dept_compliance_desc') || 'Training progress',
+          icon: GraduationCap,
+          href: '/learning/team',
+          color: 'emerald'
+        },
+        ...baseStats.slice(0, 2)
+      ]
+    }
+
+    return baseStats.slice(0, 4)
+  }, [t, ready, stats, managerStats, hrStats, deptHeadStats, unreadCount, isManager, isHR, isDeptHead])
+
+  const effectiveRole = primaryRole || 'staff'
+  const layoutProfile = useMemo(() => getLayoutProfile(effectiveRole), [effectiveRole])
+
+  if (loading || (!user || !profile) || (rolesLoading && !primaryRole)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Skeleton className="w-[800px] h-[600px] rounded-xl" />
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="w-[800px] h-[600px] rounded-2xl" />
+          <p className="text-slate-400 font-medium animate-pulse">Loading specialized dashboard...</p>
+        </div>
       </div>
     )
   }
@@ -214,22 +312,118 @@ export function IntegratedDashboard() {
       opacity: 1
     }
   }
+
+  const showFocusToggle = ['corporate_admin', 'regional_admin', 'property_manager', 'property_hr', 'department_head'].includes(effectiveRole)
+
   const widgetRendererProps = {
     effectivePermittedWidgets,
     visibleWidgets,
     itemVariants,
     statsList,
     statsLoading,
+    extraProps: {
+      focusMode
+    }
   }
-  const sidebarWidgetIds: WidgetId[] = [
-    'onlineUsers',
-    'announcements',
-    'todaysBirthdays',
-    'employeeOfMonth',
-    'knowledgeBase',
-    'training',
-    'maintenance',
-  ]
+
+  const renderWidget = (widgetId: DashboardWidgetId) => {
+    if (widgetId === 'socialFeed') {
+      return visibleWidgets.socialFeed !== false ? (
+        <m.div key="socialFeed" variants={itemVariants} className="relative group">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-white/10 hover:bg-white/20 text-white shadow-none border border-white/10 backdrop-blur-sm rounded-full"
+            onClick={() => handleRemoveWidget('socialFeed')}
+          >
+            <X className="w-4 h-4 text-white" />
+          </Button>
+          <Card className="h-full border border-slate-200/60 shadow-xl overflow-hidden rounded-2xl flex flex-col bg-white">
+            <div className="bg-gradient-to-r from-blue-900 via-indigo-800 to-blue-900 p-6 flex flex-col md:flex-row md:items-center justify-between text-white shrink-0 relative overflow-hidden">
+              {/* Decorative background pattern */}
+              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
+              <div className="relative z-10">
+                <CardTitle className="text-2xl font-extrabold flex items-center gap-2.5 text-white tracking-tight">
+                  <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
+                    <MessageCircle className="w-5 h-5 text-blue-100" />
+                  </div>
+                  {t('widgets.activity_feed') || 'Network Activity Feed'}
+                </CardTitle>
+                <CardDescription className="text-blue-100/80 mt-2 font-medium text-sm">
+                  {t('widgets.activity_desc') || 'Live updates, announcements, and team achievements'}
+                </CardDescription>
+              </div>
+            </div>
+            <CardContent className="p-0 bg-slate-50/30 flex-1 relative">
+              {feedLoading ? (
+                <div className="space-y-4 p-6">
+                  <Skeleton className="h-32 w-full rounded-2xl" />
+                  <Skeleton className="h-32 w-full rounded-2xl" />
+                  <Skeleton className="h-32 w-full rounded-2xl" />
+                </div>
+              ) : (
+                <ScrollArea className="h-[700px]">
+                  <div className="p-6 md:px-8 max-w-5xl mx-auto">
+                    {currentUser && (
+                      <SocialFeed
+                        user={currentUser}
+                        feedItems={feedItems}
+                        onReact={onReact}
+                        onComment={onComment}
+                        onShare={onShare}
+                      />
+                    )}
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </m.div>
+      ) : null
+    }
+
+    if (widgetId === 'quickActions') {
+      return effectivePermittedWidgets.includes('quickActions') && visibleWidgets.quickActions !== false ? (
+        <m.div key="quickActions" variants={itemVariants} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative group">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
+            onClick={() => handleRemoveWidget('quickActions')}
+          >
+            <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
+          </Button>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Zap className="w-5 h-5 text-amber-500" />
+              {t('widgets.quick_actions')}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => setShowCustomize(true)}
+            >
+              {t('actions.view_all')} <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+          <RegistryWidgetRenderer
+            id="quickActions"
+            {...widgetRendererProps}
+          />
+        </m.div>
+      ) : null
+    }
+
+    return (
+      <RegistryWidgetRenderer
+        key={widgetId}
+        id={widgetId as WidgetId}
+        {...widgetRendererProps}
+        onRemoveWidget={handleRemoveWidget}
+      />
+    )
+  }
 
   return (
     <LazyMotion features={domAnimation}>
@@ -241,10 +435,29 @@ export function IntegratedDashboard() {
             theme: 'navy',
             accentColor: 'gold'
           }}
-          onRefresh={refetch}
+          onRefresh={() => refetchBase()}
           isLoading={statsLoading}
           unreadCount={unreadCount}
           onToggleNotifications={() => setShowNotifications(!showNotifications)}
+        />
+
+        {showFocusToggle && (
+          <div className="flex justify-center mb-6">
+            <Tabs value={focusMode} onValueChange={(val) => setFocusMode(val as 'my_work' | 'my_team')} className="w-full max-w-md">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="my_work">{t('focus.my_work')}</TabsTrigger>
+                <TabsTrigger value="my_team">{t('focus.my_team')}</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
+
+        <AIBriefingWidget
+          stats={{
+            maintenanceIssues: managerStats?.maintenanceIssues || 0,
+            staffCompliance: managerStats?.staffCompliance || deptHeadStats?.trainingCompliance || 100
+          }}
+          className="mb-8"
         />
 
         <m.div
@@ -255,148 +468,46 @@ export function IntegratedDashboard() {
         >
           {/* Left Column - Main Content */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
-
-            {/* Quick Insights Row - REAL DATA */}
-            <RegistryWidgetRenderer
-              id="quickInsights"
-              {...widgetRendererProps}
-              onRemoveWidget={handleRemoveWidget}
-            />
-
-            {/* Role-Aware Operational KPIs - Leadership Roles Only */}
-            <RegistryWidgetRenderer
-              id="roleAwareInsights"
-              {...widgetRendererProps}
-              onRemoveWidget={handleRemoveWidget}
-            />
-
-            {/* Motivation Widget - Premium Placement */}
-            <RegistryWidgetRenderer
-              id="motivation"
-              {...widgetRendererProps}
-              onRemoveWidget={handleRemoveWidget}
-            />
-
-            {/* Stats Grid */}
-            <RegistryWidgetRenderer
-              id="statsGrid"
-              {...widgetRendererProps}
-              onRemoveWidget={handleRemoveWidget}
-            />
-
-            {/* Quick Actions */}
-            {effectivePermittedWidgets.includes('quickActions') && visibleWidgets.quickActions !== false && (
-              <m.div
-                variants={itemVariants}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative group"
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
-                  onClick={() => handleRemoveWidget('quickActions')}
-                >
-                  <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
-                </Button>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-amber-500" />
-                    {t('widgets.quick_actions')}
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground"
-                    onClick={() => setShowCustomize(true)}
-                  >
-                    {t('actions.view_all')} <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </div>
-                <RegistryWidgetRenderer
-                  id="quickActions"
-                  {...widgetRendererProps}
-                />
-              </m.div>
-            )}
-
-            <div className="mt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Social Feed */}
-                <m.div variants={itemVariants} className="md:col-span-2 relative group">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
-                    onClick={() => handleRemoveWidget('socialFeed')}
-                  >
-                    <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
-                  </Button>
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle>{t('widgets.activity_feed') || 'Activity Feed'}</CardTitle>
-                      <CardDescription>{t('widgets.activity_desc') || 'Latest updates and assignments'}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {feedLoading ? (
-                        <div className="space-y-4">
-                          <Skeleton className="h-32 w-full" />
-                          <Skeleton className="h-32 w-full" />
-                          <Skeleton className="h-32 w-full" />
-                        </div>
-                      ) : (
-                        <ScrollArea className="h-[600px] pr-4">
-                          {currentUser && (
-                            <SocialFeed
-                              user={currentUser}
-                              feedItems={feedItems}
-                              onReact={onReact}
-                              onComment={onComment}
-                              onShare={onShare}
-                            />
-                          )}
-                        </ScrollArea>
-                      )}
-                    </CardContent>
-                  </Card>
-                </m.div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <RegistryWidgetRenderer
-                  id="tasks"
-                  {...widgetRendererProps}
-                  onRemoveWidget={handleRemoveWidget}
-                />
-                <RegistryWidgetRenderer
-                  id="calendar"
-                  {...widgetRendererProps}
-                  onRemoveWidget={handleRemoveWidget}
-                />
-              </div>
-
-              {/* Hospitality News - Wide Layout */}
-              <div className="grid grid-cols-1 gap-6">
-                <RegistryWidgetRenderer
-                  id="hospitalityNews"
-                  {...widgetRendererProps}
-                  onRemoveWidget={handleRemoveWidget}
-                />
-              </div>
-            </div>
+            {layoutProfile.mainColumn.map((item, index) => {
+              if (Array.isArray(item)) {
+                const rowKey = `row-${item.join('-') || index}`
+                return (
+                  <div key={rowKey} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {item.map(widgetId => renderWidget(widgetId))}
+                  </div>
+                )
+              }
+              return renderWidget(item)
+            })}
           </div>
 
           {/* Right Column - Sidebar Widgets */}
           <div className="col-span-12 lg:col-span-4 space-y-6">
-            {sidebarWidgetIds.map((widgetId) => (
-              <RegistryWidgetRenderer
-                key={widgetId}
-                id={widgetId}
-                {...widgetRendererProps}
-                onRemoveWidget={handleRemoveWidget}
-              />
-            ))}
+            {layoutProfile.sidebar.map(widgetId => renderWidget(widgetId))}
           </div>
         </m.div>
+
+        {/* Bottom Full-Width Widgets */}
+        {layoutProfile.bottomFullWidth && layoutProfile.bottomFullWidth.length > 0 && (
+          <m.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 gap-6 w-full"
+          >
+            {layoutProfile.bottomFullWidth.map((item, index) => {
+              if (Array.isArray(item)) {
+                const rowKey = `row-bottom-${item.join('-') || index}`
+                return (
+                  <div key={rowKey} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {item.map(widgetId => renderWidget(widgetId))}
+                  </div>
+                )
+              }
+              return renderWidget(item)
+            })}
+          </m.div>
+        )}
 
         {/* Floating Notification Panel */}
         <AnimatePresence>

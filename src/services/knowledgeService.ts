@@ -864,8 +864,27 @@ function computeReadMinutes(content?: string | null): number | undefined {
     return Math.max(1, Math.round(stripped.split(' ').length / 200))
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function formatArticle(data: any): KnowledgeArticle {
+type RawKnowledgeJoin = {
+    id?: string
+    name?: string
+    full_name?: string
+    avatar_url?: string
+    linked_training_id?: string | null
+    linked_quiz_id?: string | null
+    department_id?: string | null
+}
+
+type RawKnowledgeArticle = {
+    [key: string]: unknown
+    sop?: RawKnowledgeJoin | RawKnowledgeJoin[] | null
+    department?: RawKnowledgeJoin | RawKnowledgeJoin[] | null
+    category?: RawKnowledgeJoin | RawKnowledgeJoin[] | null
+    author?: RawKnowledgeJoin | RawKnowledgeJoin[] | null
+    last_editor?: RawKnowledgeJoin | RawKnowledgeJoin[] | null
+    document_department_access?: Array<{ department_id?: string | null }> | null
+}
+
+function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
     // Handle polymorphic/linked SOP data if present from join
     const sopData = Array.isArray(data.sop) ? data.sop[0] : data.sop
     const department = Array.isArray(data.department) ? data.department[0] : data.department
@@ -875,8 +894,8 @@ function formatArticle(data: any): KnowledgeArticle {
 
     return {
         ...data,
-        content_type: (data.content_type?.toLowerCase() as any) || 'document',
-        visibility_scope: (data.visibility_scope || data.visibility || 'all_properties') as any,
+        content_type: (typeof data.content_type === 'string' ? data.content_type.toLowerCase() : 'document') as KnowledgeArticle['content_type'],
+        visibility_scope: (data.visibility_scope || data.visibility || 'all_properties') as KnowledgeArticle['visibility_scope'],
         linked_training_id: data.linked_training_id || sopData?.linked_training_id,
         linked_quiz_id: data.linked_quiz_id || sopData?.linked_quiz_id,
         department: department || (data.department_id ? { id: data.department_id, name: 'Department' } : undefined),
@@ -903,7 +922,7 @@ function formatArticle(data: any): KnowledgeArticle {
             : undefined,
         tags: [],
         department_access_ids: Array.isArray(data.document_department_access)
-            ? data.document_department_access.map((d: any) => d.department_id)
+            ? data.document_department_access.map((d) => d.department_id)
             : []
     }
 }

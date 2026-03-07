@@ -89,8 +89,11 @@ export const securityConfig = {
         "https://o4508792767840256.ingest.de.sentry.io",
         "https://*.sentry.io",
         "https://va.vercel-scripts.com",
+        "https://api.open-meteo.com",
+        "https://api.aladhan.com",
         "https://fonts.googleapis.com",
-        "https://fonts.gstatic.com"
+        "https://fonts.gstatic.com",
+        "https://images.unsplash.com"
       ],
       // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
       'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com", "https://*.supabase.co"],

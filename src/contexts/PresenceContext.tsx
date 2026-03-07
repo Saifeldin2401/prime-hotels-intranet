@@ -14,6 +14,8 @@ interface PresenceState {
     }[]
 }
 
+type PresencePayload = PresenceState['onlineUsers'][number]
+
 const PresenceContext = createContext<PresenceState | undefined>(undefined)
 
 export function PresenceProvider({ children }: { children: React.ReactNode }) {
@@ -33,11 +35,13 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
 
         channel
             .on('presence', { event: 'sync' }, () => {
-                const newState = channel.presenceState()
-                const users = []
+                const newState = channel.presenceState<PresencePayload>()
+                const users: PresencePayload[] = []
                 for (const key in newState) {
-                    // @ts-ignore
-                    users.push(newState[key][0])
+                    const firstPresence = newState[key]?.[0]
+                    if (firstPresence) {
+                        users.push(firstPresence)
+                    }
                 }
                 setOnlineUsers(users)
             })

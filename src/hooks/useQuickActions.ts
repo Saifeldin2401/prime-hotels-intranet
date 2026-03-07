@@ -84,6 +84,7 @@ export function useMarkTaskComplete() {
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['task-stats'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.update.success('Task', 'Task marked as complete')

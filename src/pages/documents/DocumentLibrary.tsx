@@ -1,6 +1,7 @@
-import { useState, useCallback, useMemo, type MouseEvent } from 'react'
+import { useState, useCallback, useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAuth } from '@/hooks/useAuth'
 import { 
   useDocuments, 
@@ -15,7 +16,6 @@ import {
   useDocumentFolders,
   useDocumentTags,
   useDocumentBulkDelete,
-  useDocumentBulkRestore,
   useDocumentBulkMove,
   useDocumentBulkAddTags,
   useDocumentBulkArchive,
@@ -30,7 +30,6 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { DocumentFolderTree } from '@/components/documents/DocumentFolderTree'
-import { DocumentTagManager } from '@/components/documents/DocumentTagManager'
 import { DocumentTrashBin } from '@/components/documents/DocumentTrashBin'
 import { DocumentBulkActionsBar } from '@/components/documents/DocumentBulkActionsBar'
 import { DocumentSearchAdvanced } from '@/components/documents/DocumentSearchAdvanced'
@@ -44,26 +43,19 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
 import { cn, formatRelativeTime, formatFileSize } from '@/lib/utils'
 import type { Document } from '@/lib/types'
 import { LoadingTransition, TableSkeleton } from '@/components/ui/loading-system'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useTranslation } from 'react-i18next'
-import { useToast } from '@/components/ui/use-toast'
 import { crudToasts } from '@/lib/toastHelpers'
 import {
   Plus,
-  Search,
-  Download,
   FileText,
   Cloud,
   Filter,
   Grid,
   List,
-  Star,
-  FileCheck,
   Heart,
   Eye,
   Pencil,
@@ -71,17 +63,10 @@ import {
   FolderOpen,
   Tag,
   MoreVertical,
-  Calendar as CalendarIcon,
   AlertTriangle,
-  Archive,
-  RotateCcw,
-  X,
-  ChevronDown,
   Sparkles,
   BarChart3,
-  CheckSquare,
-  Clock,
-  Shield
+  Clock
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -101,11 +86,10 @@ interface DocumentFilters {
 }
 
 export default function DocumentLibrary() {
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const { t } = useTranslation('documents')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { toast } = useToast()
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -139,6 +123,7 @@ export default function DocumentLibrary() {
   const [showFilters, setShowFilters] = useState(false)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [selectedForAI, setSelectedForAI] = useState<Document | null>(null)
+  const virtualListParentRef = useRef<HTMLDivElement | null>(null)
 
   // Data fetching
   const { data: documents = [], isLoading } = useDocuments({
@@ -148,7 +133,7 @@ export default function DocumentLibrary() {
     file_type: filters.fileType || undefined,
     date_from: filters.dateFrom?.toISOString(),
     date_to: filters.dateTo?.toISOString(),
-    confidentiality_level: (filters.confidentiality as any) || undefined,
+    confidentiality_level: filters.confidentiality || undefined,
     status: filters.status || undefined,
     include_deleted: activeTab === 'trash',
     include_archived: activeTab !== 'documents',
@@ -170,10 +155,19 @@ export default function DocumentLibrary() {
   const toggleFavorite = useToggleFavorite()
   const { mutate: recordViewMutate } = useRecordDocumentView()
   const { data: trashedDocuments = [] } = useDocumentTrash()
+  const shouldVirtualizeDocumentList =
+    viewMode === 'list' &&
+    activeTab === 'documents' &&
+    documents.length > 120
+  const documentRowVirtualizer = useVirtualizer({
+    count: shouldVirtualizeDocumentList ? documents.length : 0,
+    getScrollElement: () => virtualListParentRef.current,
+    estimateSize: () => 126,
+    overscan: 10
+  })
 
   // Bulk mutations
   const bulkDelete = useDocumentBulkDelete()
-  const bulkRestore = useDocumentBulkRestore()
   const bulkMove = useDocumentBulkMove()
   const bulkAddTags = useDocumentBulkAddTags()
   const bulkArchive = useDocumentBulkArchive()
@@ -224,16 +218,6 @@ export default function DocumentLibrary() {
     crudToasts.delete.success('Document')
   }, [deleteDocumentId, deleteDocument])
 
-  const handleRestore = useCallback(async (docId: string) => {
-    await restoreDocument.mutateAsync(docId)
-    crudToasts.restore.success('Document')
-  }, [restoreDocument])
-
-  const handlePermanentDelete = useCallback(async (docId: string) => {
-    await permanentDelete.mutateAsync(docId)
-    crudToasts.delete.success('Document permanently')
-  }, [permanentDelete])
-
   const handleSubmitForApproval = useCallback((documentId: string, e: MouseEvent) => {
     e.stopPropagation()
     submitForApproval.mutate(documentId)
@@ -250,17 +234,6 @@ export default function DocumentLibrary() {
       setBulkActionLoading(false)
     }
   }, [bulkDelete, selectedDocuments])
-
-  const handleBulkRestore = useCallback(async () => {
-    setBulkActionLoading(true)
-    try {
-      await bulkRestore.mutateAsync(Array.from(selectedDocuments))
-      setSelectedDocuments(new Set())
-      crudToasts.restore.success(`${selectedDocuments.size} documents`)
-    } finally {
-      setBulkActionLoading(false)
-    }
-  }, [bulkRestore, selectedDocuments])
 
   const handleBulkMove = useCallback(async (folderId: string) => {
     setBulkActionLoading(true)
@@ -321,6 +294,13 @@ export default function DocumentLibrary() {
     setAiPanelOpen(true)
   }, [])
 
+  const handleKeyboardActivate = useCallback((event: KeyboardEvent<HTMLElement>, action: () => void) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      action()
+    }
+  }, [])
+
   // Storage stats
   const storageUsedGB = (stats?.totalBytes || 0) / (1024 * 1024 * 1024)
   const storageStats = {
@@ -351,6 +331,10 @@ export default function DocumentLibrary() {
       <div
         key={doc.id}
         onClick={() => navigate(`/documents/${doc.id}`)}
+        onKeyDown={(e) => handleKeyboardActivate(e, () => navigate(`/documents/${doc.id}`))}
+        role="button"
+        tabIndex={0}
+        aria-label={`Open document ${doc.title}`}
         className={cn(
           "group relative bg-white rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-lg",
           isSelected ? "border-hotel-gold ring-2 ring-hotel-gold/20" : "border-gray-200 hover:border-hotel-navy/30"
@@ -409,7 +393,7 @@ export default function DocumentLibrary() {
           {/* Tags */}
           {doc.tags && doc.tags.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1 justify-center">
-              {doc.tags.slice(0, 3).map((tag: any) => (
+              {doc.tags.slice(0, 3).map((tag: { id: string; name: string; color: string }) => (
                 <span
                   key={tag.id}
                   className="px-2 py-0.5 text-xs rounded-full"
@@ -484,6 +468,10 @@ export default function DocumentLibrary() {
       <div
         key={doc.id}
         onClick={() => navigate(`/documents/${doc.id}`)}
+        onKeyDown={(e) => handleKeyboardActivate(e, () => navigate(`/documents/${doc.id}`))}
+        role="button"
+        tabIndex={0}
+        aria-label={`Open document ${doc.title}`}
         className={cn(
           "flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg transition-all duration-200 border gap-3 group cursor-pointer",
           isSelected 
@@ -548,7 +536,7 @@ export default function DocumentLibrary() {
 
           {doc.tags && doc.tags.length > 0 && (
             <div className="hidden md:flex items-center gap-1">
-              {doc.tags.slice(0, 2).map((tag: any) => (
+              {doc.tags.slice(0, 2).map((tag: { id: string; name: string; color: string }) => (
                 <span
                   key={tag.id}
                   className="px-2 py-0.5 text-xs rounded-full"
@@ -815,7 +803,7 @@ export default function DocumentLibrary() {
         </div>
 
         {/* Main Document List */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 content-contain">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocumentTab)}>
             <TabsList className="mb-4">
               <TabsTrigger value="documents">All Documents</TabsTrigger>
@@ -876,6 +864,29 @@ export default function DocumentLibrary() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                           {documents.map(renderDocumentCard)}
                         </div>
+                      ) : shouldVirtualizeDocumentList ? (
+                        <div ref={virtualListParentRef} className="h-[70vh] overflow-auto">
+                          <div
+                            className="relative w-full"
+                            style={{ height: `${documentRowVirtualizer.getTotalSize()}px` }}
+                          >
+                            {documentRowVirtualizer.getVirtualItems().map((virtualRow) => {
+                              const doc = documents[virtualRow.index]
+                              if (!doc) return null
+                              const rowContent = renderDocumentRow(doc)
+
+                              return (
+                                <div
+                                  key={doc.id}
+                                  className="absolute left-0 top-0 w-full pb-2"
+                                  style={{ transform: `translateY(${virtualRow.start}px)` }}
+                                >
+                                  {rowContent}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
                       ) : (
                         <div className="space-y-2">
                           {documents.map(renderDocumentRow)}
@@ -891,7 +902,8 @@ export default function DocumentLibrary() {
                 <div className="p-6">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {folders.map(folder => (
-                      <div
+                      <button
+                        type="button"
                         key={folder.id}
                         onClick={() => setFilters(prev => ({ ...prev, folderId: folder.id }))}
                         className="p-4 rounded-xl border border-gray-200 hover:border-hotel-navy/30 hover:shadow-md transition-all cursor-pointer bg-white"
@@ -901,7 +913,7 @@ export default function DocumentLibrary() {
                         </div>
                         <h3 className="font-medium text-hotel-navy truncate">{folder.name}</h3>
                         <p className="text-sm text-gray-500">{folderStats[folder.id] || 0} documents</p>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -952,7 +964,7 @@ export default function DocumentLibrary() {
                 documents={trashedDocuments.map(d => ({
                   id: d.id,
                   title: d.title,
-                  fileType: (d.file_extension as any) || 'unknown',
+                  fileType: typeof d.file_extension === 'string' ? d.file_extension : 'unknown',
                   fileSize: d.file_size || 0,
                   deletedAt: d.deleted_at || d.updated_at,
                   deletedBy: d.profiles?.full_name || 'Unknown',

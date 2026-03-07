@@ -41,6 +41,12 @@ export type Permission =
   | 'operations.export'
   // Approval permissions
   | 'approvals.view'
+  // Maintenance
+  | 'maintenance.view'
+  // Analytics
+  | 'analytics.view'
+  // Scheduling
+  | 'scheduling.manage'
   // System permissions
   | 'system.view_logs'
   | 'system.manage_settings'
@@ -99,6 +105,14 @@ const PERMISSION_CONFIG: PermissionConfig = {
 
   // Approval permissions
   'approvals.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head'] },
+
+  'maintenance.view': { roles: ['corporate_admin', 'regional_admin', 'property_manager', 'department_head', 'staff'] },
+
+  // Analytics permissions
+  'analytics.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+
+  // Scheduling permissions
+  'scheduling.manage': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
 
   // System permissions
   'system.view_logs': { roles: ['corporate_admin', 'regional_admin'] },

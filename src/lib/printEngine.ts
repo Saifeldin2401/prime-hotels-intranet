@@ -13,6 +13,11 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
+type ExtendedJsPdf = jsPDF & {
+    lastAutoTable?: { finalY?: number }
+    getImageProperties?: (dataUrl: string) => { width?: number; height?: number }
+}
+
 // ========== TYPES ==========
 
 export interface PrintConfig {
@@ -370,8 +375,7 @@ function drawTableSection(
     })
 
     // Get final Y position after table
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const finalY = (doc as any).lastAutoTable.finalY || yPos + 20
+    const finalY = (doc as ExtendedJsPdf).lastAutoTable?.finalY || yPos + 20
     return finalY + 10
 }
 
@@ -421,10 +425,8 @@ function drawContentSection(
             const maxImageHeight = 80
 
             try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const props = (doc as any).getImageProperties
-                    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      (doc as any).getImageProperties(block.dataUrl)
+                const props = (doc as ExtendedJsPdf).getImageProperties
+                    ? (doc as ExtendedJsPdf).getImageProperties?.(block.dataUrl)
                     : null
 
                 const imgW = props?.width || 100

@@ -37,6 +37,19 @@ export function useMessagingPermissions(): MessagingPermissions {
     if (!primaryRole) return permissions
 
     switch (primaryRole) {
+      case 'corporate_admin':
+        return {
+          ...permissions,
+          canSendBroadcast: true,
+          canSendSystemMessage: true,
+          canViewAllMessages: true,
+          canDeleteMessages: true,
+          canManageNotifications: true,
+          maxRecipientsPerMessage: 1000,
+          allowedMessageTypes: ['direct', 'broadcast', 'system'],
+          allowedPriorities: ['low', 'medium', 'high', 'urgent']
+        }
+
       case 'regional_admin':
         return {
           ...permissions,
@@ -128,16 +141,16 @@ export function canSendMessageTo(
   if (!senderRole || !recipientRole) return false
 
   // Users can always message their direct manager or subordinates
-  const roleHierarchy = ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
+  const roleHierarchy = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
   const senderIndex = roleHierarchy.indexOf(senderRole)
   const recipientIndex = roleHierarchy.indexOf(recipientRole)
 
   // Can message up the hierarchy (to managers)
   if (recipientIndex < senderIndex) return true
-  
+
   // Can message down the hierarchy (to subordinates)
   if (recipientIndex > senderIndex) return true
-  
+
   // Can message peers (same level)
   if (senderIndex === recipientIndex) return true
 
@@ -158,7 +171,7 @@ export function validateMessageContent(
   }
 
   // System messages require higher privileges
-  if (messageType === 'system' && !['regional_admin', 'regional_hr'].includes(userRole || '')) {
+  if (messageType === 'system' && !['corporate_admin', 'regional_admin', 'regional_hr'].includes(userRole || '')) {
     return { isValid: false, error: 'You do not have permission to send system messages' }
   }
 

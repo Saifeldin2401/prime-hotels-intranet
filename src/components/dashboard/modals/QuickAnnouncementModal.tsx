@@ -130,7 +130,7 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
     { value: 'property_hr', label: t('roles.property_hr') || 'Property HR' },
     { value: 'regional_hr', label: t('roles.regional_hr') || 'Regional HR' },
     { value: 'regional_admin', label: t('roles.regional_admin') || 'Regional Admin' },
-  ].filter(r => availableRoles.includes(r.value as any) || ['regional_admin', 'regional_hr', 'property_manager'].some(ar => availableRoles.includes(ar as any)))
+  ].filter(r => availableRoles.includes(r.value as any) || ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].some(ar => availableRoles.includes(ar as any)))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

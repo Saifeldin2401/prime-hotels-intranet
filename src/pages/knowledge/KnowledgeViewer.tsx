@@ -1306,7 +1306,7 @@ export default function KnowledgeViewer() {
                 )}>
                     {/* Main Content Pane */}
                     <div className={cn(
-                        "lg:col-span-9 space-y-8 print-content",
+                        "lg:col-span-9 space-y-8 print-content content-contain",
                         isFocusMode && "lg:col-span-12"
                     )}>
 

@@ -5,6 +5,47 @@ import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { isRealPropertyId } from '@/lib/propertyScope'
 
+type SettledPayload = {
+    count?: number | null
+    data?: unknown
+    error?: { message?: string } | null
+}
+
+const settledReasonToMessage = (reason: unknown) => {
+    if (reason instanceof Error) return reason.message
+    if (typeof reason === 'string') return reason
+    return 'Unknown rejection'
+}
+
+const getSettledCount = (result: PromiseSettledResult<unknown>, label: string): number => {
+    if (result.status === 'rejected') {
+        console.warn(`${label} query rejected:`, settledReasonToMessage(result.reason))
+        return 0
+    }
+    const payload = result.value as SettledPayload
+    if (payload?.error) {
+        console.warn(`${label} query returned error:`, payload.error.message || 'Unknown error')
+        return 0
+    }
+    return payload?.count ?? 0
+}
+
+const getSettledData = <T,>(result: PromiseSettledResult<unknown>, label: string, fallback: T): T => {
+    if (result.status === 'rejected') {
+        console.warn(`${label} query rejected:`, settledReasonToMessage(result.reason))
+        return fallback
+    }
+    const payload = result.value as SettledPayload
+    if (payload?.error) {
+        console.warn(`${label} query returned error:`, payload.error.message || 'Unknown error')
+        return fallback
+    }
+    if (payload && 'data' in payload && payload.data !== undefined && payload.data !== null) {
+        return payload.data as T
+    }
+    return fallback
+}
+
 export function useDashboardStats() {
     const { user, profile, roles, departments, properties } = useAuth()
     const { currentProperty, propertyIds } = useProperty()
@@ -17,17 +58,7 @@ export function useDashboardStats() {
 
             const isScoped = isRealPropertyId(currentProperty?.id)
 
-            const [
-                documentsResult,
-                trainingProgressResult,
-                announcementsResult,
-                readAnnouncementsResult,
-                pendingRequestsResult,
-                pendingDocumentsResult,
-                pendingLegacyApprovalsResult,
-                unreadNotificationsResult,
-                pendingTasksResult
-            ] = await Promise.all([
+            const dashboardSettled = await Promise.allSettled([
                 // 1. Documents Count (Scoped)
                 (async () => {
                     const q = supabase
@@ -112,20 +143,36 @@ export function useDashboardStats() {
             ])
 
             // Process Results
-            const documentsCount = documentsResult.count || 0
-
-            const trainingProgress = trainingProgressResult.data || []
+            const documentsCount = getSettledCount(dashboardSettled[0], 'Dashboard documents')
+            const trainingProgress = getSettledData<Array<{ status: string }>>(
+                dashboardSettled[1],
+                'Dashboard training progress',
+                []
+            )
             const completedTraining = trainingProgress.filter(t => t.status === 'completed').length
             const inProgressTraining = trainingProgress.filter(t => t.status === 'in_progress').length
 
-            const announcements = announcementsResult.data || []
-            const readAnnouncements = readAnnouncementsResult.data || []
+            type DashboardAnnouncement = {
+                id: string
+                created_by: string | null
+                target_audience?: { type?: string; values?: string[] } | null
+            }
+            const announcements = getSettledData<DashboardAnnouncement[]>(
+                dashboardSettled[2],
+                'Dashboard announcements',
+                []
+            )
+            const readAnnouncements = getSettledData<Array<{ announcement_id: string }>>(
+                dashboardSettled[3],
+                'Dashboard read announcements',
+                []
+            )
             const readIds = new Set(readAnnouncements.map(r => r.announcement_id))
 
             // Filter announcements by audience (same logic as useAnnouncements)
             const filteredAnnouncements = announcements.filter(announcement => {
                 if (announcement.created_by === user?.id) return true
-                const audience = announcement.target_audience as any
+                const audience = announcement.target_audience
                 if (!audience || audience.type === 'all') return true
                 const values = audience.values || []
 
@@ -145,10 +192,10 @@ export function useDashboardStats() {
 
             const unreadAnnouncements = filteredAnnouncements.filter(a => !readIds.has(a.id)).length
 
-            const pendingApprovals = (pendingRequestsResult.count || 0) +
-                (pendingDocumentsResult.count || 0) +
-                (pendingLegacyApprovalsResult.count || 0)
-            const unreadNotifications = unreadNotificationsResult.count || 0
+            const pendingApprovals = getSettledCount(dashboardSettled[4], 'Dashboard pending requests') +
+                getSettledCount(dashboardSettled[5], 'Dashboard pending document approvals') +
+                getSettledCount(dashboardSettled[6], 'Dashboard pending legacy approvals')
+            const unreadNotifications = getSettledCount(dashboardSettled[7], 'Dashboard unread notifications')
 
             return {
                 documentsCount,
@@ -157,7 +204,7 @@ export function useDashboardStats() {
                 unreadAnnouncements,
                 pendingApprovals,
                 unreadNotifications,
-                pendingTasks: pendingTasksResult?.count || 0
+                pendingTasks: getSettledCount(dashboardSettled[8], 'Dashboard pending tasks')
             }
         },
         enabled: !!user?.id,
@@ -207,13 +254,7 @@ export function usePropertyManagerStats() {
             const { data: propertyUsers } = await propertyUsersQuery
             const userIds = Array.from(new Set((propertyUsers?.map((user) => user.user_id) || [])))
 
-            const [
-                pendingTasksResult,
-                maintenanceIssuesResult,
-                activeDepartmentsResult,
-                completedTrainingResult,
-                totalAssignmentsResult
-            ] = await Promise.all([
+            const propertyManagerSettled = await Promise.allSettled([
                 // 1. Pending Tasks
                 (async () => {
                     let query = supabase
@@ -286,11 +327,11 @@ export function usePropertyManagerStats() {
             ])
 
             const totalStaff = userIds.length
-            const pendingTasks = pendingTasksResult.count || 0
-            const maintenanceIssues = maintenanceIssuesResult.count || 0
-            const activeDepartments = activeDepartmentsResult.count || 0
-            const completedTraining = completedTrainingResult.count || 0
-            const totalAssignments = totalAssignmentsResult.count || 0
+            const pendingTasks = getSettledCount(propertyManagerSettled[0], 'Property manager pending tasks')
+            const maintenanceIssues = getSettledCount(propertyManagerSettled[1], 'Property manager maintenance issues')
+            const activeDepartments = getSettledCount(propertyManagerSettled[2], 'Property manager active departments')
+            const completedTraining = getSettledCount(propertyManagerSettled[3], 'Property manager completed training')
+            const totalAssignments = getSettledCount(propertyManagerSettled[4], 'Property manager total assignments')
 
             const trainingCompletion = totalAssignments && totalAssignments > 0
                 ? Math.round((completedTraining / totalAssignments) * 100)
@@ -322,16 +363,28 @@ export interface DepartmentHeadStats {
 
 export function useDepartmentHeadStats() {
     const { currentProperty } = useProperty()
-    const { profile } = useAuth() // Get current user's department context
+    const { profile, primaryRole } = useAuth() // Get current user's department context
 
     return useQuery({
         queryKey: ['department-head-stats', currentProperty?.id, profile?.id],
         queryFn: async (): Promise<DepartmentHeadStats> => {
+            const profileId = profile?.id
+            if (!profileId) {
+                return {
+                    totalStaff: 0,
+                    presentToday: 0,
+                    trainingCompliance: 0,
+                    pendingApprovals: 0,
+                    performanceScore: 0,
+                    departmentIds: []
+                }
+            }
+
             // Find user's department(s)
             const { data: myDepts } = await supabase
                 .from('user_departments')
                 .select('department_id')
-                .eq('user_id', profile?.id || '')
+                .eq('user_id', profileId)
 
             const deptIds = myDepts?.map(d => d.department_id) || []
             if (deptIds.length === 0) {
@@ -354,15 +407,7 @@ export function useDepartmentHeadStats() {
 
             const now = new Date().toISOString()
 
-            const [
-                totalStaffResult,
-                presentTodayResult,
-                completedTrainingResult,
-                totalAssignmentsResult,
-                totalTasksResult,
-                completedTasksResult,
-                pendingApprovalsResult
-            ] = await Promise.all([
+            const departmentHeadSettled = await Promise.allSettled([
                 // 1. Total Staff
                 supabase
                     .from('user_departments')
@@ -429,22 +474,22 @@ export function useDepartmentHeadStats() {
                     .in('department_id', deptIds)
             ])
 
-            const totalStaff = totalStaffResult.count || 0
-            const presentToday = presentTodayResult.count || 0
+            const totalStaff = getSettledCount(departmentHeadSettled[0], 'Department head total staff')
+            const presentToday = getSettledCount(departmentHeadSettled[1], 'Department head present today')
 
-            const completedTraining = completedTrainingResult.count || 0
-            const totalAssignments = totalAssignmentsResult.count || 0
+            const completedTraining = getSettledCount(departmentHeadSettled[2], 'Department head completed training')
+            const totalAssignments = getSettledCount(departmentHeadSettled[3], 'Department head total assignments')
             const trainingCompliance = totalAssignments && totalAssignments > 0
                 ? Math.round((completedTraining / totalAssignments) * 100)
                 : 0
 
-            const totalTasks = totalTasksResult.count || 0
-            const completedTasks = completedTasksResult.count || 0
+            const totalTasks = getSettledCount(departmentHeadSettled[4], 'Department head total tasks')
+            const completedTasks = getSettledCount(departmentHeadSettled[5], 'Department head completed tasks')
             const performanceScore = totalTasks && totalTasks > 0
                 ? Math.round((completedTasks / totalTasks) * 100)
                 : 0
 
-            const pendingApprovals = pendingApprovalsResult.count || 0
+            const pendingApprovals = getSettledCount(departmentHeadSettled[6], 'Department head pending approvals')
 
             return {
                 totalStaff,
@@ -456,7 +501,8 @@ export function useDepartmentHeadStats() {
             }
         },
         refetchInterval: 120000,
-        staleTime: 60000
+        staleTime: 60000,
+        enabled: primaryRole === 'department_head' && !!profile?.id
     })
 }
 
@@ -506,14 +552,7 @@ export function useHRStats(propertyId?: string) {
             startOfMonth.setDate(1)
             startOfMonth.setHours(0, 0, 0, 0)
 
-            const [
-                presentTodayResult,
-                pendingLeaveResult,
-                newHiresResult,
-                openPositionsResult,
-                completedTrainingResult,
-                totalAssignmentsResult
-            ] = await Promise.all([
+            const hrSettled = await Promise.allSettled([
                 // 1. Present Today
                 (async () => {
                     let query = supabase
@@ -550,16 +589,12 @@ export function useHRStats(propertyId?: string) {
                 // 3. New Hires
                 (async () => {
                     let query = supabase
-                        .from('user_properties')
+                        .from('profiles')
                         .select('id', { count: 'exact', head: true })
                         .gte('created_at', startOfMonth.toISOString())
 
-                    if (isScopedProperty) {
-                        query = query.eq('property_id', propId)
-                    } else if (propertyIds.length > 0) {
-                        query = query.in('property_id', propertyIds)
-                    }
-                    return query
+                    if (propUserIds.length === 0) return { count: 0 }
+                    return query.in('id', propUserIds)
                 })(),
 
                 // 4. Open Positions
@@ -602,13 +637,13 @@ export function useHRStats(propertyId?: string) {
             ])
 
             const totalStaff = propUserIds.length
-            const presentToday = presentTodayResult.count || 0
-            const pendingLeaveRequests = pendingLeaveResult.count || 0
-            const newHiresThisMonth = newHiresResult.count || 0
-            const openPositions = openPositionsResult.count || 0
+            const presentToday = getSettledCount(hrSettled[0], 'HR present today')
+            const pendingLeaveRequests = getSettledCount(hrSettled[1], 'HR pending leave requests')
+            const newHiresThisMonth = getSettledCount(hrSettled[2], 'HR new hires this month')
+            const openPositions = getSettledCount(hrSettled[3], 'HR open positions')
 
-            const completedTraining = completedTrainingResult.count || 0
-            const totalAssignments = totalAssignmentsResult.count || 0
+            const completedTraining = getSettledCount(hrSettled[4], 'HR completed training')
+            const totalAssignments = getSettledCount(hrSettled[5], 'HR total assignments')
             const trainingCompliance = totalAssignments && totalAssignments > 0
                 ? Math.round((completedTraining / totalAssignments) * 100)
                 : 0
@@ -662,15 +697,7 @@ export function useAreaManagerStats(propertyId?: string) {
             const thirtyDaysAgo = new Date()
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-            const [
-                totalPropertiesResult,
-                openIssuesResult,
-                completedTrainingResult,
-                totalTrainingResult,
-                completedTicketsResult,
-                totalTicketsResult,
-                openVacanciesResult
-            ] = await Promise.all([
+            const areaManagerSettled = await Promise.allSettled([
                 // 1. Total Properties
                 (async () => {
                     const q = supabase.from('properties').select('id', { count: 'exact', head: true }).eq('is_active', true)
@@ -684,7 +711,7 @@ export function useAreaManagerStats(propertyId?: string) {
 
                 // 2. Open Issues (Tasks + Tickets)
                 (async () => {
-                    const [tasks, tickets] = await Promise.all([
+                    const [tasksSettled, ticketsSettled] = await Promise.allSettled([
                         (async () => {
                             const q = supabase.from('tasks').select('id', { count: 'exact', head: true }).neq('status', 'completed').neq('status', 'cancelled')
                             if (isScoped) {
@@ -705,7 +732,9 @@ export function useAreaManagerStats(propertyId?: string) {
                         })()
                     ]);
                     return {
-                        count: (tasks.count || 0) + (tickets.count || 0)
+                        count:
+                            getSettledCount(tasksSettled, 'Area manager open issue tasks') +
+                            getSettledCount(ticketsSettled, 'Area manager open issue tickets')
                     };
                 })(),
 
@@ -766,22 +795,22 @@ export function useAreaManagerStats(propertyId?: string) {
                 })()
             ])
 
-            const totalProperties = totalPropertiesResult.count || 0
-            const openIssues = openIssuesResult.count || 0
+            const totalProperties = getSettledCount(areaManagerSettled[0], 'Area manager total properties')
+            const openIssues = getSettledCount(areaManagerSettled[1], 'Area manager open issues')
 
-            const completedTraining = completedTrainingResult.count || 0
-            const totalTraining = totalTrainingResult.count || 0
+            const completedTraining = getSettledCount(areaManagerSettled[2], 'Area manager completed training')
+            const totalTraining = getSettledCount(areaManagerSettled[3], 'Area manager total training')
             const staffCompliance = totalTraining && totalTraining > 0
                 ? Math.round((completedTraining / totalTraining) * 100)
                 : 0
 
-            const completedTickets = completedTicketsResult.count || 0
-            const totalTickets = totalTicketsResult.count || 0
+            const completedTickets = getSettledCount(areaManagerSettled[4], 'Area manager completed tickets')
+            const totalTickets = getSettledCount(areaManagerSettled[5], 'Area manager total tickets')
             const maintenanceEfficiency = totalTickets && totalTickets > 0
                 ? Math.round((completedTickets / totalTickets) * 100)
                 : 100
 
-            const openVacancies = openVacanciesResult.count || 0
+            const openVacancies = getSettledCount(areaManagerSettled[6], 'Area manager open vacancies')
 
             return {
                 totalProperties,
@@ -827,15 +856,7 @@ export function useCorporateStats(propertyId?: string) {
             const { data: users } = await userPropsQuery
             userIds = users?.map(u => u.user_id) || []
 
-            const [
-                propResult,
-                staffResult,
-                completedTrainingResult,
-                totalTrainResult,
-                completedTicketsResult,
-                totalTicketsResult,
-                vacancyResult
-            ] = await Promise.all([
+            const corporateSettled = await Promise.allSettled([
                 // 1. Total Properties
                 (async () => {
                     const q = supabase.from('properties').select('id', { count: 'exact', head: true }).eq('is_active', true)
@@ -915,22 +936,22 @@ export function useCorporateStats(propertyId?: string) {
                 })()
             ])
 
-            const totalProperties = propResult.count || 0
-            const totalStaff = staffResult.count || 0
+            const totalProperties = getSettledCount(corporateSettled[0], 'Corporate total properties')
+            const totalStaff = getSettledCount(corporateSettled[1], 'Corporate total staff')
 
-            const completedTraining = completedTrainingResult.count || 0
-            const totalTraining = totalTrainResult.count || 0
+            const completedTraining = getSettledCount(corporateSettled[2], 'Corporate completed training')
+            const totalTraining = getSettledCount(corporateSettled[3], 'Corporate total training')
             const complianceRate = totalTraining && totalTraining > 0
                 ? Math.round((completedTraining / totalTraining) * 100)
                 : 0
 
-            const completedTickets = completedTicketsResult.count || 0
-            const totalTickets = totalTicketsResult.count || 0
+            const completedTickets = getSettledCount(corporateSettled[4], 'Corporate completed tickets')
+            const totalTickets = getSettledCount(corporateSettled[5], 'Corporate total tickets')
             const maintenanceEfficiency = totalTickets && totalTickets > 0
                 ? Math.round((completedTickets / totalTickets) * 100)
                 : 100
 
-            const openVacancies = vacancyResult.count || 0
+            const openVacancies = getSettledCount(corporateSettled[6], 'Corporate open vacancies')
 
             return {
                 totalProperties,

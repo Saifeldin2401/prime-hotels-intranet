@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
+const BulkUserProvisioning = lazy(() => import('@/pages/admin/BulkUserProvisioning'))
 const OrganizationalControlCenter = lazy(() => import('@/pages/admin/OrganizationalControlCenter'))
 const JobTitles = lazy(() => import('@/pages/admin/JobTitles'))
 const PropertyManagement = lazy(() => import('@/pages/admin/PropertyManagement'))
@@ -36,6 +37,16 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr']}>
                     <AppLayout>
                         <UserManagement />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/users/bulk"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr']}>
+                    <AppLayout>
+                        <BulkUserProvisioning />
                     </AppLayout>
                 </ProtectedRoute>
             }

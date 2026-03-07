@@ -117,8 +117,8 @@ export function canViewApplication(
     userId: string,
     userRoles: AppRole[]
 ): boolean {
-    // Regional admin and regional HR can see all applications
-    if (userRoles.includes('regional_admin') || userRoles.includes('regional_hr')) {
+    // Corporate/regional admin and regional HR can see all applications
+    if (userRoles.includes('corporate_admin') || userRoles.includes('regional_admin') || userRoles.includes('regional_hr')) {
         return true
     }
 

@@ -68,6 +68,9 @@ interface DocumentMetadataFormProps {
   className?: string;
 }
 
+const EMPTY_FOLDERS: DocumentFolder[] = [];
+const EMPTY_OWNERS: Array<{ id: string; name: string; avatar?: string }> = [];
+
 const CONFIDENTIALITY_LEVELS: Array<{
   value: ConfidentialityLevel;
   label: string;
@@ -107,7 +110,7 @@ const CONFIDENTIALITY_LEVELS: Array<{
 
 function generateDocumentNumber(prefix: string = "DOC"): string {
   const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  const random = crypto.randomUUID().split('-')[0].toUpperCase();
   return `${prefix}-${timestamp}-${random}`;
 }
 
@@ -128,8 +131,8 @@ function flattenFolders(folders: DocumentFolder[]): Array<DocumentFolder & { lev
 export function DocumentMetadataForm({
   metadata,
   onChange,
-  folders = [],
-  owners = [],
+  folders = EMPTY_FOLDERS,
+  owners = EMPTY_OWNERS,
   documentNumberPrefix = "DOC",
   autoGenerateNumber = false,
   onAutoGenerateToggle,
@@ -186,10 +189,6 @@ export function DocumentMetadataForm({
     setCustomFields(updatedFields);
     updateMetadata("customFields", updatedFields);
   };
-
-  const selectedConfidentiality = CONFIDENTIALITY_LEVELS.find(
-    (l) => l.value === metadata.confidentiality
-  );
 
   return (
     <div className={cn("space-y-6", className)}>

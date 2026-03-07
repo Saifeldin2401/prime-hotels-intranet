@@ -170,6 +170,18 @@ export function useCreateEvent() {
         .single()
 
       if (error) throw error
+
+      // Audit log
+      supabase.from('audit_logs').insert({
+        entity_type: 'event',
+        entity_id: data.id,
+        action: 'create',
+        user_id: user.id,
+        details: { title: event.title, property_id: data.property_id }
+      }).then(({ error: auditError }) => {
+        if (auditError) console.error('Failed to write audit log:', auditError)
+      })
+
       return data
     },
     onSuccess: () => {
@@ -180,6 +192,7 @@ export function useCreateEvent() {
 
 export function useUpdateEvent() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async ({ id, ...event }: Partial<Event> & { id: string }) => {
@@ -195,6 +208,18 @@ export function useUpdateEvent() {
         .single()
 
       if (error) throw error
+
+      // Audit log
+      supabase.from('audit_logs').insert({
+        entity_type: 'event',
+        entity_id: data.id,
+        action: 'update',
+        user_id: user?.id,
+        details: { updates: event }
+      }).then(({ error: auditError }) => {
+        if (auditError) console.error('Failed to write audit log:', auditError)
+      })
+
       return data
     },
     onSuccess: () => {
@@ -205,6 +230,7 @@ export function useUpdateEvent() {
 
 export function useDeleteEvent() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -214,6 +240,17 @@ export function useDeleteEvent() {
         .eq('id', id)
 
       if (error) throw error
+
+      // Audit log
+      supabase.from('audit_logs').insert({
+        entity_type: 'event',
+        entity_id: id,
+        action: 'delete',
+        user_id: user?.id,
+        details: { deleted: true }
+      }).then(({ error: auditError }) => {
+        if (auditError) console.error('Failed to write audit log:', auditError)
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] })

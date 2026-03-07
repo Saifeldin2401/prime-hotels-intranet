@@ -177,7 +177,7 @@ export default function PromotionTransferHistory() {
         }
     });
 
-    const isGlobalAdmin = ['regional_admin', 'regional_hr'].includes(primaryRole || '');
+    const isGlobalAdmin = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '');
 
     // Refetch Promotions
     const { data: promotionsData, refetch: refetchPromos } = useQuery({
@@ -229,7 +229,7 @@ export default function PromotionTransferHistory() {
         r.employee?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const canInitiate = ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '')
+    const canInitiate = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '')
 
     const handleCancel = async () => {
         if (!recordToCancel?.request_id) return;
