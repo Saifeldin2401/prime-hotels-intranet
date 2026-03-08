@@ -1,3 +1,3 @@
-## 2026-03-05 - Prevent Excessive API Calls on Search Keystrokes
-**Learning:** React Query will fire a new query on every keystroke if the raw search input state is used directly in the queryKey.
-**Action:** Use a `useDebounce` hook to wrap the search input state and use the debounced value in the `queryKey` and query function. This drastically reduces unnecessary database requests and improves frontend responsiveness.
+## 2024-03-22 - Replacing `setTimeout` based debounce with `useDebounce` hook is a code refactor, not a performance optimization
+**Learning:** I learned that replacing manual debouncing using `useEffect` and `setTimeout` with the `useDebounce` hook is purely a code refactor for cleaner code. Real performance improvements require finding inputs that are making API calls or expensive calculations without *any* debouncing and wrapping them in `useDebounce`.
+**Action:** When looking for performance improvements related to debouncing, I will actively look for inputs that currently lack debouncing entirely before trying to implement it.
