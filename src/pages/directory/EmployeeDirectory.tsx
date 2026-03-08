@@ -18,6 +18,7 @@ import {
   Filter,
   Settings
 } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
 import { EmployeeCard } from '@/components/directory/EmployeeCard'
 import { OrgPyramid } from '@/components/directory/OrgPyramid'
 import { useOrgHierarchy } from '@/hooks/useOrgHierarchy'
@@ -64,7 +65,8 @@ export default function EmployeeDirectory() {
   const { primaryRole } = useAuth()
 
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const debouncedSearchRaw = useDebounce(search, 350)
+  const debouncedSearch = debouncedSearchRaw.trim()
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [propertyFilter, setPropertyFilter] = useState('all')
   const [departmentFilter, setDepartmentFilter] = useState('all')
@@ -82,13 +84,6 @@ export default function EmployeeDirectory() {
 
   const { data: properties = [] } = useProperties()
   const { departments = [] } = useDepartments(propertyFilter !== 'all' ? propertyFilter : undefined)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search.trim())
-    }, 350)
-
-    return () => clearTimeout(timer)
-  }, [search])
 
   const { hierarchy, isLoading: isOrgLoading } = useOrgHierarchy(debouncedSearch)
 
