@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useToast } from '@/components/ui/use-toast'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -114,6 +115,7 @@ export default function TrainingHub() {
 
   // State management
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [statusFilter, setStatusFilter] = useState<ModuleStatus | 'all'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('created_at')
@@ -133,7 +135,7 @@ export default function TrainingHub() {
 
   // Data fetching
   const { data: modules, isLoading } = useQuery({
-    queryKey: ['training-modules', statusFilter, categoryFilter, search, sortBy, sortOrder],
+    queryKey: ['training-modules', statusFilter, categoryFilter, debouncedSearch, sortBy, sortOrder],
     queryFn: async () => {
       let query = supabase
         .from('training_modules')
@@ -149,8 +151,8 @@ export default function TrainingHub() {
         query = query.eq('category', categoryFilter)
       }
 
-      if (search) {
-        query = query.ilike('title', `%${search}%`)
+      if (debouncedSearch) {
+        query = query.ilike('title', `%${debouncedSearch}%`)
       }
 
       const { data, error } = await query
