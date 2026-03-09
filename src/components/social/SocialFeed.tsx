@@ -5,6 +5,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 import { formatDistanceToNow } from 'date-fns' 
@@ -146,7 +151,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                   <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
                     {getTypeIcon(item.type)}
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg" aria-label="More options">
                     <Icons.MoreHorizontal className="h-5 w-5" />
                   </Button>
                 </div>
@@ -245,9 +250,17 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                       <span className="hidden sm:inline">{t('social.share')}</span>
                     </button>
 
-                    <button className="flex items-center justify-center h-9 w-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all">
-                      <Icons.Bookmark className="h-4 w-4" />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          className="flex items-center justify-center h-9 w-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all"
+                          aria-label="Bookmark post"
+                        >
+                          <Icons.Bookmark className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Bookmark post</TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
 
