@@ -42,5 +42,3 @@ export function Icon({
   }
   return <IconComponent {...props} />;
 }
-
-export default Icons;
