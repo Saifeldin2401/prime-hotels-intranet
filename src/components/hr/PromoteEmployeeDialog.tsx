@@ -134,10 +134,9 @@ export function PromoteEmployeeDialog({
         },
     });
 
+    // Reset form when editRecord changes or dialog opens
     useEffect(() => {
-        if (!open) return;
-
-        if (editRecord) {
+        if (open && editRecord) {
             form.reset({
                 employeeId: editRecord.employee_id,
                 newRole: editRecord.new_role as z.infer<typeof formSchema>["newRole"],
@@ -146,17 +145,16 @@ export function PromoteEmployeeDialog({
                 notes: editRecord.notes || "",
                 effectiveDate: new Date(editRecord.effective_date),
             });
-            return;
+        } else if (open && !editRecord) {
+            form.reset({
+                employeeId: "",
+                newRole: undefined,
+                newJobTitle: "",
+                newDepartmentId: undefined,
+                notes: "",
+                effectiveDate: new Date(),
+            });
         }
-
-        form.reset({
-            employeeId: "",
-            newRole: undefined,
-            newJobTitle: "",
-            newDepartmentId: undefined,
-            notes: "",
-            effectiveDate: new Date(),
-        });
     }, [open, editRecord, form]);
 
     const [openJobTitle, setOpenJobTitle] = useState(false);
@@ -301,7 +299,6 @@ export function PromoteEmployeeDialog({
                             : 'Submit a promotion request for approval. Changes will be applied on the effective date after approval.'}
                     </DialogDescription>
                 </DialogHeader>
-
                 <Form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
                         control={form.control}

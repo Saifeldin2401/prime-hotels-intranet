@@ -496,28 +496,7 @@
             "metrics_only": "Collect Metrics",
             "optimizer_only": "Run Optimizer",
             "validate_pending": "Validate Pending",
-            "apply_pending": "Apply Validated",
-            "daily_report": "Generate Report"
-        },
-        "reports": {
-            "title": "Daily Reports",
-            "description": "Last 14 AI governance summaries",
-            "empty": "No reports generated yet.",
-            "view": "View",
-            "detail_title": "Daily Report",
-            "close": "Close",
-            "kpi": {
-                "proposals": "Proposals",
-                "decisions": "Decisions",
-                "changes": "Policy Changes",
-                "audit": "Audit Events"
-            },
-            "metrics_section": "Metrics Snapshot",
-            "metrics_items": "{{count}} metrics captured",
-            "metrics_empty": "No metrics snapshot recorded.",
-            "recent_proposals": "Recent Proposals",
-            "recent_changes": "Recent Policy Changes",
-            "none": "None"
+            "apply_pending": "Apply Validated"
         },
         "toast_running": "Running {{action}}...",
         "toast_completed": "Completed {{action}}",

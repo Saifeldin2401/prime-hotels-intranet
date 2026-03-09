@@ -114,10 +114,9 @@ export function TransferEmployeeDialog({
         },
     });
 
+    // Reset form when editRecord changes or dialog opens
     useEffect(() => {
-        if (!open) return;
-
-        if (editRecord) {
+        if (open && editRecord) {
             form.reset({
                 employeeId: editRecord.employee_id,
                 targetPropertyId: editRecord.to_property_id,
@@ -125,16 +124,15 @@ export function TransferEmployeeDialog({
                 notes: editRecord.notes || "",
                 effectiveDate: new Date(editRecord.effective_date),
             });
-            return;
+        } else if (open && !editRecord) {
+            form.reset({
+                employeeId: "",
+                targetPropertyId: "",
+                targetDepartmentId: undefined,
+                notes: "",
+                effectiveDate: new Date(),
+            });
         }
-
-        form.reset({
-            employeeId: "",
-            targetPropertyId: "",
-            targetDepartmentId: undefined,
-            notes: "",
-            effectiveDate: new Date(),
-        });
     }, [open, editRecord, form]);
 
     const loadData = useCallback(async () => {

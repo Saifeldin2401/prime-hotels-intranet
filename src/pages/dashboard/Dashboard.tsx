@@ -24,7 +24,7 @@ import { SocialFeed } from '@/components/social/SocialFeed'
 import { WelcomeHeader } from './components/WelcomeHeader'
 import { NotificationsPanel } from './components/NotificationsPanel'
 import { DashboardCustomizeModal } from './components/DashboardCustomizeModal'
-import { AIBriefingWidget } from './components/AIBriefingWidget'
+
 import { useTranslation } from "react-i18next";
 
 interface RegistryWidgetRendererProps {
@@ -452,13 +452,7 @@ export function IntegratedDashboard() {
           </div>
         )}
 
-        <AIBriefingWidget
-          stats={{
-            maintenanceIssues: managerStats?.maintenanceIssues || 0,
-            staffCompliance: managerStats?.staffCompliance || deptHeadStats?.trainingCompliance || 100
-          }}
-          className="mb-8"
-        />
+
 
         <m.div
           variants={containerVariants}

@@ -81,9 +81,7 @@ serve(async (req) => {
       })
     }
 
-    if (action === 'daily_report' || action === 'full_cycle') {
-      results.report = await callFunction(baseUrl, 'ai-daily-report', serviceRoleToken)
-    }
+
 
     if (action === 'rollback_check' || action === 'full_cycle') {
       results.rollback = await callFunction(baseUrl, 'ai-rollback-engine', serviceRoleToken)

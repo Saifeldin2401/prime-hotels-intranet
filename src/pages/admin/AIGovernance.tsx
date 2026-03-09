@@ -31,12 +31,7 @@ type AuditLog = {
   details: Record<string, unknown> | null
 }
 
-type DailyReport = {
-  id: string
-  report_date: string
-  created_at: string
-  summary_json: Record<string, unknown>
-}
+
 
 type MetricsSnapshot = {
   id: string
@@ -50,30 +45,30 @@ export default function AIGovernance() {
   const [policySets, setPolicySets] = useState<PolicySet[]>([])
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
-  const [reports, setReports] = useState<DailyReport[]>([])
+
   const [latestMetrics, setLatestMetrics] = useState<MetricsSnapshot | null>(null)
   const [loading, setLoading] = useState(false)
-  const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null)
+
 
   const loadData = useCallback(async () => {
     const [
       policySetsRes,
       proposalsRes,
       auditRes,
-      reportRes,
+
       metricsRes,
     ] = await Promise.all([
       supabase.from('ai_policy_sets').select('*').order('created_at', { ascending: false }),
       supabase.from('ai_proposals').select('*').order('created_at', { ascending: false }).limit(20),
       supabase.from('ai_audit_logs').select('*').order('created_at', { ascending: false }).limit(20),
-      supabase.from('ai_daily_reports').select('*').order('report_date', { ascending: false }).limit(14),
+
       supabase.from('ai_metrics_snapshots').select('*').order('window_end', { ascending: false }).limit(1).maybeSingle(),
     ])
 
     if (policySetsRes.data) setPolicySets(policySetsRes.data as PolicySet[])
     if (proposalsRes.data) setProposals(proposalsRes.data as Proposal[])
     if (auditRes.data) setAuditLogs(auditRes.data as AuditLog[])
-    if (reportRes.data) setReports(reportRes.data as DailyReport[])
+
     if (metricsRes.data) setLatestMetrics(metricsRes.data as MetricsSnapshot)
   }, [])
 
@@ -117,7 +112,7 @@ export default function AIGovernance() {
           <Button variant="outline" onClick={() => runAction('optimizer_only')} disabled={loading}>{t('ai_governance.actions.optimizer_only')}</Button>
           <Button variant="outline" onClick={() => runAction('validate_pending')} disabled={loading}>{t('ai_governance.actions.validate_pending')}</Button>
           <Button variant="outline" onClick={() => runAction('apply_pending')} disabled={loading}>{t('ai_governance.actions.apply_pending')}</Button>
-          <Button variant="outline" onClick={() => runAction('daily_report')} disabled={loading}>{t('ai_governance.actions.daily_report')}</Button>
+
         </div>
       </div>
 
@@ -162,35 +157,7 @@ export default function AIGovernance() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('ai_governance.reports.title')}</CardTitle>
-            <CardDescription>{t('ai_governance.reports.description')}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-slate-600">
-            {reports.length === 0 ? (
-              <div>{t('ai_governance.reports.empty')}</div>
-            ) : (
-              <ul className="space-y-2">
-                {reports.map((report) => (
-                  <li key={report.id} className="flex items-center justify-between gap-2">
-                    <div className="flex flex-col">
-                      <span>{report.report_date}</span>
-                      <span className="text-xs text-slate-500">{new Date(report.created_at).toLocaleString()}</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedReport(report)}
-                    >
-                      {t('ai_governance.reports.view')}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -244,108 +211,7 @@ export default function AIGovernance() {
         </Card>
       </div>
 
-      <Dialog open={!!selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{t('ai_governance.reports.detail_title')}</DialogTitle>
-          </DialogHeader>
-          {selectedReport ? (
-            <div className="space-y-4 text-sm text-slate-700">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div className="font-medium">{selectedReport.report_date}</div>
-                  <div className="text-xs text-slate-500">{new Date(selectedReport.created_at).toLocaleString()}</div>
-                </div>
-                <Button variant="outline" onClick={() => setSelectedReport(null)}>
-                  {t('ai_governance.reports.close')}
-                </Button>
-              </div>
 
-              <div className="grid gap-3 sm:grid-cols-4">
-                <div className="rounded border border-slate-200 p-3">
-                  <div className="text-xs text-slate-500">{t('ai_governance.reports.kpi.proposals')}</div>
-                  <div className="text-lg font-semibold">
-                    {Number((selectedReport.summary_json as any)?.proposal_count ?? 0)}
-                  </div>
-                </div>
-                <div className="rounded border border-slate-200 p-3">
-                  <div className="text-xs text-slate-500">{t('ai_governance.reports.kpi.decisions')}</div>
-                  <div className="text-lg font-semibold">
-                    {Number((selectedReport.summary_json as any)?.decision_count ?? 0)}
-                  </div>
-                </div>
-                <div className="rounded border border-slate-200 p-3">
-                  <div className="text-xs text-slate-500">{t('ai_governance.reports.kpi.changes')}</div>
-                  <div className="text-lg font-semibold">
-                    {Number((selectedReport.summary_json as any)?.change_count ?? 0)}
-                  </div>
-                </div>
-                <div className="rounded border border-slate-200 p-3">
-                  <div className="text-xs text-slate-500">{t('ai_governance.reports.kpi.audit')}</div>
-                  <div className="text-lg font-semibold">
-                    {Number((selectedReport.summary_json as any)?.audit_events ?? 0)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded border border-slate-200 p-4">
-                <div className="font-medium mb-2">{t('ai_governance.reports.metrics_section')}</div>
-                {((selectedReport.summary_json as any)?.metrics_snapshot) ? (
-                  <div className="space-y-1 text-xs text-slate-600">
-                    <div>
-                      {t('ai_governance.metrics.window', {
-                        start: (selectedReport.summary_json as any).metrics_snapshot.window_start,
-                        end: (selectedReport.summary_json as any).metrics_snapshot.window_end,
-                      })}
-                    </div>
-                    <div>
-                      {t('ai_governance.reports.metrics_items', {
-                        count: Object.keys((selectedReport.summary_json as any).metrics_snapshot.metrics_json || {}).length,
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-500">{t('ai_governance.reports.metrics_empty')}</div>
-                )}
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded border border-slate-200 p-4">
-                  <div className="font-medium mb-2">{t('ai_governance.reports.recent_proposals')}</div>
-                  {((selectedReport.summary_json as any)?.recent_proposals || []).length === 0 ? (
-                    <div className="text-xs text-slate-500">{t('ai_governance.reports.none')}</div>
-                  ) : (
-                    <ul className="space-y-2 text-xs text-slate-600">
-                      {(selectedReport.summary_json as any).recent_proposals.map((item: any) => (
-                        <li key={item.id} className="flex items-center justify-between">
-                          <span>{item.proposal_type}</span>
-                          <span className="text-slate-500">{item.status}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="rounded border border-slate-200 p-4">
-                  <div className="font-medium mb-2">{t('ai_governance.reports.recent_changes')}</div>
-                  {((selectedReport.summary_json as any)?.recent_changes || []).length === 0 ? (
-                    <div className="text-xs text-slate-500">{t('ai_governance.reports.none')}</div>
-                  ) : (
-                    <ul className="space-y-2 text-xs text-slate-600">
-                      {(selectedReport.summary_json as any).recent_changes.map((item: any) => (
-                        <li key={item.id} className="flex items-center justify-between">
-                          <span>{item.policy_set_id}</span>
-                          <span className="text-slate-500">{item.applied_at}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

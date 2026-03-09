@@ -496,28 +496,7 @@
             "metrics_only": "جمع المقاييس",
             "optimizer_only": "تشغيل المحسن",
             "validate_pending": "تحقق من المعلق",
-            "apply_pending": "تطبيق ما تم التحقق منه",
-            "daily_report": "إنشاء تقرير"
-        },
-        "reports": {
-            "title": "التقارير اليومية",
-            "description": "آخر 14 ملخص حوكمة للذكاء الاصطناعي",
-            "empty": "لم يتم إنشاء تقارير بعد.",
-            "view": "عرض",
-            "detail_title": "تقرير يومي",
-            "close": "إغلاق",
-            "kpi": {
-                "proposals": "مقترحات",
-                "decisions": "قرارات",
-                "changes": "تغيير السياسات",
-                "audit": "أحداث التدقيق"
-            },
-            "metrics_section": "لقطة المقاييس",
-            "metrics_items": "تم التقاط {{count}} مقياس",
-            "metrics_empty": "لم يتم تسجيل أي لقطة مقاييس.",
-            "recent_proposals": "المقترحات الأخيرة",
-            "recent_changes": "تغييرات السياسة الأخيرة",
-            "none": "لا شيء"
+            "apply_pending": "تطبيق ما تم التحقق منه"
         },
         "toast_running": "جاري تشغيل {{action}}...",
         "toast_completed": "اكتمل {{action}}",
