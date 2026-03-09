@@ -8,11 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Search, Loader2, Users, Mail, Phone, Clock, Award, CheckSquare, AlertTriangle, GraduationCap } from 'lucide-react'
+import { Progress } from '@/components/ui/progress'
+import { Search, Loader2, Users, Mail, Phone, Clock, CheckSquare, AlertTriangle, GraduationCap, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { useRequestsInbox } from '@/hooks/useRequests'
-import { useTasks } from '@/hooks/useTasks'
 
 interface TeamMember {
     id: string
@@ -24,6 +24,28 @@ interface TeamMember {
     phone: string | null
     is_active: boolean
     department?: Array<{ departments?: { name?: string | null } | null }> | null
+}
+
+interface TeamLearningTracking {
+    assignedModules: number
+    completedModules: number
+    inProgressModules: number
+    completionRate: number
+    avgScore: number | null
+    certificatesCount: number
+    lastActivity: string | null
+    atRisk: boolean
+}
+
+interface TeamLearningTrackingSnapshot {
+    byUser: Record<string, TeamLearningTracking>
+    summary: {
+        assignedModules: number
+        completedModules: number
+        overallCompletionRate: number
+        certificatesCount: number
+        atRiskCount: number
+    }
 }
 
 export default function MyTeam() {
@@ -94,10 +116,117 @@ export default function MyTeam() {
         enabled: teamMemberIds.length > 0
     })
 
+    const { data: teamLearningTracking, isLoading: isLoadingLearning } = useQuery({
+        queryKey: ['team-learning-tracking', teamMemberIds],
+        queryFn: async () => {
+            if (teamMemberIds.length === 0) {
+                return {
+                    byUser: {},
+                    summary: {
+                        assignedModules: 0,
+                        completedModules: 0,
+                        overallCompletionRate: 0,
+                        certificatesCount: 0,
+                        atRiskCount: 0
+                    }
+                } satisfies TeamLearningTrackingSnapshot
+            }
+
+            const [progressResult, certResult] = await Promise.all([
+                supabase
+                    .from('learning_progress')
+                    .select('user_id, status, score_percentage, updated_at, content_type')
+                    .in('user_id', teamMemberIds)
+                    .eq('content_type', 'module'),
+                supabase
+                    .from('certificates')
+                    .select('user_id')
+                    .eq('certificate_type', 'training')
+                    .eq('status', 'active')
+                    .in('user_id', teamMemberIds)
+            ])
+
+            if (progressResult.error) throw progressResult.error
+            if (certResult.error) throw certResult.error
+
+            const progressRows = progressResult.data || []
+            const certRows = certResult.data || []
+
+            const certsByUser = certRows.reduce<Record<string, number>>((acc, row) => {
+                if (!row.user_id) return acc
+                acc[row.user_id] = (acc[row.user_id] || 0) + 1
+                return acc
+            }, {})
+
+            const byUser = teamMemberIds.reduce<Record<string, TeamLearningTracking>>((acc, userId) => {
+                const userRows = progressRows.filter((row) => row.user_id === userId)
+                const assignedModules = userRows.length
+                const completedModules = userRows.filter((row) => row.status === 'completed').length
+                const inProgressModules = userRows.filter((row) => row.status === 'in_progress').length
+                const completionRate = assignedModules > 0
+                    ? Math.round((completedModules / assignedModules) * 100)
+                    : 0
+
+                const scoredRows = userRows.filter((row) => typeof row.score_percentage === 'number')
+                const avgScore = scoredRows.length > 0
+                    ? Math.round(scoredRows.reduce((sum, row) => sum + Number(row.score_percentage), 0) / scoredRows.length)
+                    : null
+
+                const lastActivity = userRows.length > 0
+                    ? userRows
+                        .map((row) => row.updated_at)
+                        .filter((value): value is string => typeof value === 'string')
+                        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null
+                    : null
+
+                const certificatesCount = certsByUser[userId] || 0
+                const atRisk = assignedModules > 0 && (completionRate < 50 || (avgScore !== null && avgScore < 70))
+
+                acc[userId] = {
+                    assignedModules,
+                    completedModules,
+                    inProgressModules,
+                    completionRate,
+                    avgScore,
+                    certificatesCount,
+                    lastActivity,
+                    atRisk
+                }
+                return acc
+            }, {})
+
+            const assignedModules = Object.values(byUser).reduce((sum, row) => sum + row.assignedModules, 0)
+            const completedModules = Object.values(byUser).reduce((sum, row) => sum + row.completedModules, 0)
+            const certificatesCount = Object.values(byUser).reduce((sum, row) => sum + row.certificatesCount, 0)
+            const atRiskCount = Object.values(byUser).filter((row) => row.atRisk).length
+
+            return {
+                byUser,
+                summary: {
+                    assignedModules,
+                    completedModules,
+                    overallCompletionRate: assignedModules > 0 ? Math.round((completedModules / assignedModules) * 100) : 0,
+                    certificatesCount,
+                    atRiskCount
+                }
+            } satisfies TeamLearningTrackingSnapshot
+        },
+        enabled: teamMemberIds.length > 0
+    })
+
     const filteredTeam = teamMembers?.filter(member =>
         member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         member.job_title?.toLowerCase().includes(searchTerm.toLowerCase())
     ) || []
+
+    const trackingByUser = teamLearningTracking?.byUser || {}
+    const trackingSummary = teamLearningTracking?.summary || {
+        assignedModules: 0,
+        completedModules: 0,
+        overallCompletionRate: 0,
+        certificatesCount: 0,
+        atRiskCount: 0
+    }
 
     return (
         <div className="space-y-6">
@@ -107,7 +236,7 @@ export default function MyTeam() {
             />
 
             {/* Manager Dashboard Widgets */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
                 <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
                     <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-semibold text-slate-500 flex items-center gap-2">
@@ -168,6 +297,40 @@ export default function MyTeam() {
                         </div>
                         <p className="text-sm text-slate-500 mt-1">
                             {t('team.assigned_to_reports', 'Assigned directly to reports')}
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-semibold text-slate-500 flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-indigo-500" />
+                            {t('team.learning_completion', 'Learning Completion')}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold text-slate-800">
+                            {isLoadingLearning ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : `${trackingSummary.overallCompletionRate}%`}
+                        </div>
+                        <p className="text-sm text-slate-500 mt-1">
+                            {`${trackingSummary.completedModules}/${trackingSummary.assignedModules} ${t('team.modules_completed', 'modules completed')}`}
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-semibold text-slate-500 flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-rose-500" />
+                            {t('team.needs_follow_up', 'Needs Follow-up')}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold text-slate-800">
+                            {isLoadingLearning ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : trackingSummary.atRiskCount}
+                        </div>
+                        <p className="text-sm text-slate-500 mt-1">
+                            {t('team.low_progress_or_score', 'Low completion or low quiz scores')}
                         </p>
                     </CardContent>
                 </Card>
@@ -246,6 +409,35 @@ export default function MyTeam() {
                                         <span className="truncate">
                                             {member.department?.[0]?.departments?.name || t('team.no_department', 'No Department')}
                                         </span>
+                                    </div>
+
+                                    <div className="pt-3 border-t mt-3 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1 text-xs text-slate-500">
+                                                <BarChart3 className="h-3.5 w-3.5" />
+                                                {t('team.learning_tracking', 'Learning Tracking')}
+                                            </div>
+                                            {trackingByUser[member.id]?.atRisk && (
+                                                <Badge variant="destructive" className="text-[10px] px-2 py-0">
+                                                    {t('team.at_risk', 'At risk')}
+                                                </Badge>
+                                            )}
+                                        </div>
+
+                                        <div className="text-xs text-slate-600">
+                                            {`${trackingByUser[member.id]?.completedModules || 0}/${trackingByUser[member.id]?.assignedModules || 0} ${t('team.modules', 'modules')}`}
+                                        </div>
+                                        <Progress value={trackingByUser[member.id]?.completionRate || 0} className="h-2" />
+
+                                        <div className="flex items-center justify-between text-xs text-slate-500">
+                                            <span>{`${t('team.avg_score', 'Avg score')}: ${trackingByUser[member.id]?.avgScore ?? '-'}`}</span>
+                                            <span>{`${t('team.certificates', 'Certificates')}: ${trackingByUser[member.id]?.certificatesCount || 0}`}</span>
+                                        </div>
+                                        {trackingByUser[member.id]?.lastActivity && (
+                                            <div className="text-[11px] text-slate-400">
+                                                {`${t('team.last_activity', 'Last activity')}: ${new Date(trackingByUser[member.id].lastActivity as string).toLocaleDateString()}`}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="pt-3 flex gap-2 border-t mt-3">
