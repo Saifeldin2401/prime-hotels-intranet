@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react'
 import { Plus, X, Award, Save } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -127,6 +133,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
     if (loading) return <div className={`text-sm text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('skillsManagement.loading')}</div>
 
     return (
+        <TooltipProvider>
         <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'}`}>
             <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                 <h3 className={`text-sm font-medium flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -219,14 +226,22 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
                                     </div>
                                 </div>
                                 {!readonly && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={() => handleRemoveSkill(ms.skill_id)}
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </Button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => handleRemoveSkill(ms.skill_id)}
+                                                aria-label={t('skillsManagement.removeSkill')}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">
+                                            {t('skillsManagement.removeSkill')}
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                             </div>
                         ))}
@@ -234,5 +249,6 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
                 )}
             </div>
         </div>
+        </TooltipProvider>
     )
 }
