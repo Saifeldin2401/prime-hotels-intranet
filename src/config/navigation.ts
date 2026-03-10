@@ -20,6 +20,7 @@ import {
     Users,
     Wrench,
     MessageSquare,
+    Mail,
     BarChart3,
     User,
     Calendar,
@@ -826,6 +827,15 @@ export const ROUTES: RouteConfig[] = [
         order: 3.8
     },
     {
+        path: '/admin/email-writer',
+        title: 'email_writer',
+        icon: Mail,
+        description: 'Compose branded system emails with AI assistance',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'administration',
+        order: 3.85
+    },
+    {
         path: '/admin/audit',
         title: 'audit_logs',
         icon: ClipboardList,
@@ -848,7 +858,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'compliance_center',
         icon: Shield,
         description: 'Enterprise audit exports, compliance monitoring, and regulatory reporting',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'compliance_officer'],
+        allowedRoles: ['corporate_admin', 'regional_admin'],
         group: 'administration',
         order: 4.9
     },

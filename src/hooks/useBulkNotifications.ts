@@ -15,13 +15,28 @@ interface NotificationBatch {
 }
 
 interface CreateBatchParams {
-    userIds: string[]
+    userIds?: string[]
+    all?: boolean
+    propertyId?: string
+    departmentId?: string
     notificationType: string
+    businessDomain?: string
+    templateKey?: string
+    channels?: Array<'in_app' | 'email'>
+    priority?: 'low' | 'normal' | 'high' | 'critical'
     notificationData: {
         title: string
         message: string
+        link?: string
+        actionLabel?: string
         moduleId?: string
         deadline?: string
+        priority?: 'low' | 'normal' | 'high' | 'critical'
+        businessDomain?: string
+        templateKey?: string
+        send_email?: boolean
+        variables?: Record<string, unknown>
+        [key: string]: unknown
     }
 }
 
@@ -32,8 +47,7 @@ interface BatchResult {
     processed: number
 }
 
-const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`
-const EDGE_FUNCTION_TIMEOUT_MS = 15000
+
 
 async function callBulkNotificationFunction(payload: Record<string, unknown>) {
     const { data: session } = await supabase.auth.getSession()
@@ -42,44 +56,19 @@ async function callBulkNotificationFunction(payload: Record<string, unknown>) {
         throw new Error('Missing session token for bulk notification request')
     }
 
-    const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), EDGE_FUNCTION_TIMEOUT_MS)
+    const { data, error } = await supabase.functions.invoke('bulk-notification-processor', {
+        body: payload
+    })
 
-    try {
-        const response = await fetch(EDGE_FUNCTION_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
-            },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-        })
-
-        const text = await response.text()
-        let parsed: Record<string, unknown> | null = null
-        if (text) {
-            try {
-                parsed = JSON.parse(text) as Record<string, unknown>
-            } catch {
-                parsed = { message: text }
-            }
-        }
-
-        if (!response.ok) {
-            const errorMessage = parsed?.error || parsed?.message || `Request failed with status ${response.status}`
-            throw new Error(errorMessage)
-        }
-
-        return parsed
-    } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-            throw new Error(`Bulk notification request timed out after ${Math.floor(EDGE_FUNCTION_TIMEOUT_MS / 1000)}s`)
-        }
-        throw error
-    } finally {
-        clearTimeout(timeoutId)
+    if (error) {
+        throw new Error(`Bulk notification failed: ${error.message || 'Unknown error from edge function'}`)
     }
+
+    if (data && data.error) {
+        throw new Error(`Bulk notification error: ${data.error}`)
+    }
+
+    return data as Record<string, unknown>
 }
 
 export function useBulkNotifications() {
@@ -91,10 +80,17 @@ export function useBulkNotifications() {
             const data = await callBulkNotificationFunction({
                 action: 'create_batch',
                 userIds: params.userIds,
+                all: params.all,
+                propertyId: params.propertyId,
+                departmentId: params.departmentId,
                 notificationType: params.notificationType,
-                notificationData: params.notificationData
+                notificationData: params.notificationData,
+                businessDomain: params.businessDomain,
+                templateKey: params.templateKey,
+                channels: params.channels,
+                priority: params.priority,
             })
-            return data as BatchResult
+            return data as unknown as BatchResult
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notification-batches'] })
@@ -122,7 +118,7 @@ export function useBulkNotifications() {
             action: 'get_status',
             batchId
         })
-        return data as NotificationBatch & { pending_count: number }
+        return data as unknown as NotificationBatch & { pending_count: number }
     }
 
     return {
