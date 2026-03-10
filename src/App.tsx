@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, dehydrate, hydrate, focusManager, onl
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { RouterProvider } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
@@ -141,6 +142,7 @@ function App() {
         </ThemeProvider>
         <Toaster />
         <Analytics />
+        <SpeedInsights />
       </QueryClientProvider>
     </ErrorBoundary>
   )
