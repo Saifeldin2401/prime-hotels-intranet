@@ -27,7 +27,7 @@ export function useInactivityTimeout({
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
-    const lastActivityRef = useRef(Date.now())
+    const lastActivityRef = useRef(0)
 
     const clearAllTimers = useCallback(() => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -65,7 +65,10 @@ export function useInactivityTimeout({
                 countdownRef.current = setInterval(() => {
                     setRemainingTime(prev => {
                         if (prev <= 1000) {
-                            if (countdownRef.current) clearInterval(countdownRef.current)
+                            if (countdownRef.current) {
+                                clearInterval(countdownRef.current)
+                                countdownRef.current = null
+                            }
                             return 0
                         }
                         return prev - 1000
@@ -155,8 +158,10 @@ export function useInactivityTimeout({
             }
         }
 
-        // Set up timers initially
-        resetTimers(true)
+        // Set up timers after effect commit to avoid synchronous state updates in effect body.
+        const initTimerId = window.setTimeout(() => {
+            resetTimers(true)
+        }, 0)
 
         // Listen for user activity
         const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']
@@ -167,6 +172,7 @@ export function useInactivityTimeout({
         window.addEventListener('storage', handleStorageChange)
 
         return () => {
+            clearTimeout(initTimerId)
             clearAllTimers()
             events.forEach(event => {
                 window.removeEventListener(event, handleActivity)

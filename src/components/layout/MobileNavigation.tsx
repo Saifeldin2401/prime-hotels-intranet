@@ -26,7 +26,12 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
   const { quickActions, isPathActive } = useNavigation()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
-  const handleHaptic = useCallback(() => {
+  const handleHaptic = useCallback((e?: React.MouseEvent) => {
+    // Blur to prevent aria-hidden conflict
+    if (e && e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.blur()
+    }
+
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate(10)
@@ -36,8 +41,30 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
     }
   }, [])
 
+  const handleFabClick = useCallback((event: React.MouseEvent) => {
+    handleHaptic(event)
+    setIsSheetOpen(true)
+  }, [handleHaptic])
+
+  const handleNewRequestAction = useCallback(() => {
+    handleHaptic()
+    setIsSheetOpen(false)
+    navigate('/hr/leave-requests')
+  }, [handleHaptic, navigate])
+
+  const handleReportIssueAction = useCallback(() => {
+    handleHaptic()
+    setIsSheetOpen(false)
+    navigate('/maintenance/submit')
+  }, [handleHaptic, navigate])
+
+  const handleMenuClickWrapper = useCallback(() => {
+    handleHaptic()
+    onMenuClick?.()
+  }, [handleHaptic, onMenuClick])
+
   return (
-    <div className={cn("fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] inset-x-4 z-30 max-w-full mx-auto print:hidden", className)}>
+    <div className={cn("fixed bottom-[max(env(safe-area-inset-bottom),1rem)] inset-x-4 z-30 max-w-full mx-auto print:hidden", className)}>
       <nav
         className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl px-2 py-2 flex items-center justify-between relative"
         aria-label={t('mobileNav', { defaultValue: 'Mobile navigation' })}
@@ -83,12 +110,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
             onOpenChange={setIsSheetOpen}
             trigger={
               <button
-                onClick={(event) => {
-                  handleHaptic()
-                  setIsSheetOpen(true)
-                  // Blur the button to prevent aria-hidden conflict
-                  event.currentTarget.blur()
-                }}
+                onClick={handleFabClick}
                 className="w-14 h-14 rounded-full bg-hotel-gold text-white shadow-lg shadow-hotel-gold/40 flex items-center justify-center transform active:scale-95 transition-transform border-4 border-gray-50"
               >
                 <div className="relative">
@@ -100,12 +122,8 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
             description={t('quickActionsDesc', 'Access common tasks instantly')}
           >
             <div className="grid grid-cols-2 gap-3 py-4">
-              <button 
-                onClick={() => {
-                  handleHaptic()
-                  setIsSheetOpen(false)
-                  navigate('/hr/leave-requests')
-                }}
+              <button
+                onClick={handleNewRequestAction}
                 className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100"
               >
                 <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
@@ -113,12 +131,8 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
                 </div>
                 <span className="text-xs font-medium">{t('newRequest', 'New Request')}</span>
               </button>
-              <button 
-                onClick={() => {
-                  handleHaptic()
-                  setIsSheetOpen(false)
-                  navigate('/maintenance/submit')
-                }}
+              <button
+                onClick={handleReportIssueAction}
                 className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100"
               >
                 <div className="h-10 w-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
@@ -151,10 +165,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
 
         {/* Menu */}
         <button
-          onClick={() => {
-            handleHaptic()
-            onMenuClick?.()
-          }}
+          onClick={handleMenuClickWrapper}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-600 min-h-[44px]"
           )}

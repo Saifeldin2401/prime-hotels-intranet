@@ -68,12 +68,30 @@ const ALLOWED_ROLES = new Set<AppRole>([
     "property_hr",
 ]);
 
+const APP_ROLE_PRIORITY: Record<AppRole, number> = {
+    corporate_admin: 1,
+    regional_admin: 2,
+    regional_hr: 3,
+    property_manager: 4,
+    property_hr: 5,
+    department_head: 6,
+    manager: 7,
+    staff: 8,
+};
+
 function isAppRole(value: unknown): value is AppRole {
     return typeof value === "string" && [
         "corporate_admin", "regional_admin", "regional_hr",
         "property_manager", "property_hr", "department_head",
         "manager", "staff",
     ].includes(value);
+}
+
+function getMostPrivilegedRole(roles: AppRole[]): AppRole | null {
+    if (roles.length === 0) return null;
+    return roles.reduce((best, current) =>
+        APP_ROLE_PRIORITY[current] < APP_ROLE_PRIORITY[best] ? current : best
+    );
 }
 
 function resolveAppUrl(req: Request): string {
@@ -168,6 +186,8 @@ Deno.serve(async (req: Request) => {
             return jsonResponse({ error: "Forbidden: Insufficient privileges" }, 403, corsHeaders);
         }
 
+        const callerBestRole = getMostPrivilegedRole(callerAppRoles);
+
         // 4. Prevent self-action
         if (caller.id === user_id) {
             return jsonResponse({ error: "Cannot perform this action on your own account" }, 400, corsHeaders);
@@ -182,6 +202,20 @@ Deno.serve(async (req: Request) => {
 
         if (targetProfileError || !targetProfile) {
             return jsonResponse({ error: "Target user not found" }, 404, corsHeaders);
+        }
+
+        const { data: targetRoleRows } = await adminClient
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user_id);
+
+        const targetRoles = (targetRoleRows || [])
+            .map((r: { role: string }) => r.role)
+            .filter(isAppRole);
+        const targetBestRole = getMostPrivilegedRole(targetRoles);
+
+        if (callerBestRole && targetBestRole && APP_ROLE_PRIORITY[targetBestRole] <= APP_ROLE_PRIORITY[callerBestRole]) {
+            return jsonResponse({ error: "Forbidden: cannot act on users with equal or higher privileges" }, 403, corsHeaders);
         }
 
         const accountAction = action as AccountAction;

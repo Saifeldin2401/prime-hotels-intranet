@@ -63,4 +63,7 @@ export function escapeSearchQuery(query: string): string {
     .replace(/\\/g, '\\\\')  // Escape backslash first
     .replace(/%/g, '\\%')    // Escape percent sign
     .replace(/_/g, '\\_')    // Escape underscore
+    .replace(/,/g, '\\,')    // Escape PostgREST OR separator
+    .replace(/\(/g, '\\(')   // Escape PostgREST grouping
+    .replace(/\)/g, '\\)')   // Escape PostgREST grouping
 }

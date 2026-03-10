@@ -9,7 +9,6 @@ import {
   X,
   Check,
   FileText,
-  ChevronDown,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,13 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -32,11 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import type { DocumentFolder } from "@/hooks/useDocuments";
 import type { DocumentTag } from "./DocumentTagManager";
 
@@ -58,12 +45,16 @@ interface DocumentBulkActionsBarProps {
   className?: string;
 }
 
+const EMPTY_DOCUMENTS: Array<{ id: string; title: string }> = [];
+const EMPTY_FOLDERS: DocumentFolder[] = [];
+const EMPTY_TAGS: DocumentTag[] = [];
+
 export function DocumentBulkActionsBar({
   selectedIds,
   totalCount,
-  documents = [],
-  folders = [],
-  tags = [],
+  documents = EMPTY_DOCUMENTS,
+  folders = EMPTY_FOLDERS,
+  tags = EMPTY_TAGS,
   onSelectAll,
   onSelectNone,
   onMove,
@@ -77,12 +68,17 @@ export function DocumentBulkActionsBar({
 }: DocumentBulkActionsBarProps) {
   const [moveDialogOpen, setMoveDialogOpen] = React.useState(false);
   const [tagDialogOpen, setTagDialogOpen] = React.useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [selectedFolderId, setSelectedFolderId] = React.useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([]);
 
   const selectedCount = selectedIds.length;
   const isAllSelected = selectedCount === totalCount && totalCount > 0;
+  const selectedDocumentPreview = selectedIds
+    .map((id) => documents.find((doc) => doc.id === id))
+    .filter(Boolean)
+    .slice(0, 8) as Array<{ id: string; title: string }>;
 
   const handleSelectToggle = () => {
     if (isAllSelected) {
@@ -111,6 +107,11 @@ export function DocumentBulkActionsBar({
   const handleDelete = () => {
     onDelete?.(selectedIds);
     setDeleteDialogOpen(false);
+  };
+
+  const handleArchive = () => {
+    onArchive?.(selectedIds);
+    setArchiveDialogOpen(false);
   };
 
   // Build flat folder list for selection
@@ -197,7 +198,7 @@ export function DocumentBulkActionsBar({
             variant="ghost"
             size="sm"
             className="text-white hover:bg-white/20 gap-1.5 whitespace-nowrap"
-            onClick={() => onArchive?.(selectedIds)}
+            onClick={() => setArchiveDialogOpen(true)}
             disabled={isProcessing}
           >
             <Archive className="w-4 h-4" />
@@ -267,6 +268,25 @@ export function DocumentBulkActionsBar({
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
+            {selectedDocumentPreview.length > 0 && (
+              <div className="mb-4 rounded-md border bg-muted/30 p-3">
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                  Preview of affected documents
+                </p>
+                <ul className="space-y-1">
+                  {selectedDocumentPreview.map((doc) => (
+                    <li key={doc.id} className="text-xs truncate">
+                      {doc.title}
+                    </li>
+                  ))}
+                  {selectedCount > selectedDocumentPreview.length && (
+                    <li className="text-xs text-muted-foreground">
+                      +{selectedCount - selectedDocumentPreview.length} more
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
             <div className="space-y-1 max-h-[300px] overflow-auto">
               {/* Root option */}
               <button
@@ -337,6 +357,25 @@ export function DocumentBulkActionsBar({
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
+            {selectedDocumentPreview.length > 0 && (
+              <div className="mb-4 rounded-md border bg-muted/30 p-3">
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                  Preview of affected documents
+                </p>
+                <ul className="space-y-1">
+                  {selectedDocumentPreview.map((doc) => (
+                    <li key={doc.id} className="text-xs truncate">
+                      {doc.title}
+                    </li>
+                  ))}
+                  {selectedCount > selectedDocumentPreview.length && (
+                    <li className="text-xs text-muted-foreground">
+                      +{selectedCount - selectedDocumentPreview.length} more
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
             <div className="space-y-2 max-h-[300px] overflow-auto">
               {tags.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
@@ -390,6 +429,52 @@ export function DocumentBulkActionsBar({
               )}
               Add {selectedTagIds.length} Tag
               {selectedTagIds.length !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Confirmation */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="w-5 h-5" />
+              Archive Documents
+            </DialogTitle>
+            <DialogDescription>
+              This will archive {selectedCount} document
+              {selectedCount !== 1 ? "s" : ""}. You can undo this right after the action.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDocumentPreview.length > 0 && (
+            <div className="py-3">
+              <p className="text-sm font-medium mb-2">Preview of affected documents:</p>
+              <ul className="space-y-1">
+                {selectedDocumentPreview.map((doc) => (
+                  <li key={doc.id} className="text-sm text-muted-foreground truncate">
+                    - {doc.title}
+                  </li>
+                ))}
+                {selectedCount > selectedDocumentPreview.length && (
+                  <li className="text-sm text-muted-foreground">
+                    +{selectedCount - selectedDocumentPreview.length} more
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleArchive} disabled={isProcessing}>
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Archive className="w-4 h-4 mr-2" />
+              )}
+              Archive {selectedCount} Document{selectedCount !== 1 ? "s" : ""}
             </Button>
           </DialogFooter>
         </DialogContent>

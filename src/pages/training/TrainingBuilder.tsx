@@ -52,6 +52,26 @@ type RecentUpload = { url: string; name: string; type: 'image' | 'audio' | 'docu
 
 const TRAINING_BUILDER_SAVED_BLOCKS_KEY = 'training_builder_saved_blocks_v1'
 const TRAINING_BUILDER_RECENT_UPLOADS_KEY = 'training_builder_recent_uploads_v1'
+const MAX_UPLOAD_SIZE_BYTES: Record<'image' | 'audio' | 'document', number> = {
+  image: 10 * 1024 * 1024,
+  audio: 25 * 1024 * 1024,
+  document: 15 * 1024 * 1024
+}
+const ALLOWED_UPLOAD_MIME_TYPES: Record<'image' | 'audio' | 'document', string[]> = {
+  image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
+  audio: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp4'],
+  document: [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
+  ]
+}
+const ALLOWED_UPLOAD_EXTENSIONS: Record<'image' | 'audio' | 'document', string[]> = {
+  image: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'],
+  audio: ['mp3', 'wav', 'ogg', 'webm', 'm4a'],
+  document: ['pdf', 'doc', 'docx', 'txt']
+}
 
 interface ContentBlockForm {
   id: string
@@ -774,8 +794,6 @@ export function TrainingBuilder() {
       setShowTemplateApplyConfirm(false)
       return
     }
-    setSections([])
-    setActiveSection(null)
     setTemplatePreset(pendingTemplate.id)
     applyTemplateToSections(pendingTemplate)
     setPendingTemplate(null)
@@ -1237,11 +1255,42 @@ export function TrainingBuilder() {
 
   const [uploading, setUploading] = useState(false)
 
+  const isSupportedUpload = (file: File, type: 'image' | 'document' | 'audio') => {
+    const extension = (file.name.split('.').pop() || '').toLowerCase()
+    const allowedMimes = ALLOWED_UPLOAD_MIME_TYPES[type]
+    const allowedExtensions = ALLOWED_UPLOAD_EXTENSIONS[type]
+    const mimeAllowed = !!file.type && allowedMimes.includes(file.type.toLowerCase())
+    const extensionAllowed = allowedExtensions.includes(extension)
+    return mimeAllowed || extensionAllowed
+  }
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'document' | 'audio') => {
     const file = e.target.files?.[0]
     if (!file) return
 
     try {
+      if (!isSupportedUpload(file, type)) {
+        toast({
+          title: t('uploadFailed'),
+          description: t('builder.invalidUploadType', {
+            defaultValue: 'Unsupported file type. Please upload a valid file format.'
+          }),
+          variant: 'destructive'
+        })
+        return
+      }
+
+      if (file.size > MAX_UPLOAD_SIZE_BYTES[type]) {
+        toast({
+          title: t('uploadFailed'),
+          description: t('builder.uploadTooLarge', {
+            defaultValue: 'File is too large for this content type.'
+          }),
+          variant: 'destructive'
+        })
+        return
+      }
+
       setUploading(true)
       const fileExt = file.name.split('.').pop()
       const fileName = `${crypto.randomUUID()}.${fileExt}`
@@ -1294,6 +1343,94 @@ export function TrainingBuilder() {
       return section
     }))
   }
+
+  const buildBlocksPayload = useCallback((targetId: string) => {
+    const blocksToInsert: TrainingContentBlockInsert[] = []
+    let orderIndex = 0
+
+    for (const section of sections) {
+      for (const item of section.items) {
+        blocksToInsert.push({
+          training_module_id: targetId,
+          type: item.type,
+          title: item.title || null,
+          content: item.content || item.title || '',
+          content_url: item.content_url || null,
+          content_data: item.content_data || {},
+          source_document_id: (item.content_data as Record<string, unknown> | undefined)?.sop_id as string | undefined || null,
+          order: orderIndex++,
+          is_mandatory: item.is_mandatory ?? true,
+          duration_seconds: toDurationSeconds(item.duration),
+          points: item.points
+        })
+      }
+    }
+
+    if (blocksToInsert.length === 0) {
+      for (const block of contentBlocks) {
+        blocksToInsert.push({
+          training_module_id: targetId,
+          type: block.type,
+          title: block.title || null,
+          content: block.content || block.title || '',
+          content_url: block.content_url || null,
+          content_data: block.content_data || {},
+          source_document_id: (block.content_data as Record<string, unknown> | undefined)?.sop_id as string | undefined || null,
+          order: orderIndex++,
+          is_mandatory: block.is_mandatory ?? true,
+          duration_seconds: toDurationSeconds(block.duration),
+          points: block.points
+        })
+      }
+    }
+
+    return blocksToInsert
+  }, [contentBlocks, sections])
+
+  const replaceModuleBlocksSafely = useCallback(async (targetId: string, blocksToInsert: TrainingContentBlockInsert[]) => {
+    const { data: existingBlocks, error: fetchError } = await supabase
+      .from('training_content_blocks')
+      .select('*')
+      .eq('training_module_id', targetId)
+      .order('order', { ascending: true })
+    if (fetchError) throw fetchError
+
+    const previousRows = Array.isArray(existingBlocks) ? existingBlocks : []
+
+    const { error: deleteError } = await supabase
+      .from('training_content_blocks')
+      .delete()
+      .eq('training_module_id', targetId)
+    if (deleteError) throw deleteError
+
+    if (blocksToInsert.length === 0) return
+
+    const { error: insertError } = await supabase
+      .from('training_content_blocks')
+      .insert(blocksToInsert)
+
+    if (!insertError) return
+
+    if (previousRows.length > 0) {
+      const restoreRows = previousRows.map((row: Record<string, unknown>) => {
+        const { id, created_at, updated_at, ...rest } = row
+        void id
+        void created_at
+        void updated_at
+        return rest
+      })
+
+      const { error: restoreError } = await supabase
+        .from('training_content_blocks')
+        .insert(restoreRows)
+
+      if (restoreError) {
+        console.error('Failed to restore previous training blocks after save error:', restoreError)
+      }
+    }
+
+    throw insertError
+  }, [])
 
   const _saveTraining = async () => {
     if (!title.trim()) {
@@ -1353,62 +1490,8 @@ export function TrainingBuilder() {
 
       // Save content blocks from sections
       if (currentModuleId) {
-        // Delete existing blocks
-        await supabase
-          .from('training_content_blocks')
-          .delete()
-          .eq('training_module_id', currentModuleId)
-        // Flatten sections into content blocks
-        const allBlocks: TrainingContentBlockInsert[] = []
-        let orderIndex = 0
-
-        for (const section of sections) {
-          for (const item of section.items) {
-            allBlocks.push({
-              training_module_id: currentModuleId,
-              type: item.type,
-              content: item.content || item.title || '',
-              content_url: item.content_url || null,
-              content_data: item.content_data || {},
-              order: orderIndex++,
-              is_mandatory: item.is_mandatory ?? true,
-              duration_seconds: toDurationSeconds(item.duration),
-              points: item.points
-            })
-          }
-        }
-
-        // Also include any standalone content blocks only if sections are empty
-        if (allBlocks.length === 0) {
-          for (const block of contentBlocks) {
-            allBlocks.push({
-              training_module_id: currentModuleId,
-              type: block.type,
-              content: block.content || block.title || '',
-              content_url: block.content_url || null,
-              content_data: block.content_data || {},
-              order: orderIndex++,
-              is_mandatory: block.is_mandatory ?? true,
-              duration_seconds: toDurationSeconds(block.duration),
-              points: block.points
-            })
-          }
-        }
-
-        if (allBlocks.length > 0) {
-          const { error: blocksError } = await supabase
-            .from('training_content_blocks')
-            .insert(allBlocks)
-          if (blocksError) {
-            const errorDetails = getUserFriendlyError(blocksError)
-            toast({
-              title: t('error'),
-              description: errorDetails.message,
-              variant: 'destructive'
-            })
-            throw blocksError
-          }
-        }
+        const allBlocks = buildBlocksPayload(currentModuleId)
+        await replaceModuleBlocksSafely(currentModuleId, allBlocks)
 
         // VERIFY PERSISTENCE
         const { count, error: verifyError } = await supabase
@@ -1508,22 +1591,6 @@ export function TrainingBuilder() {
     }
   }
 
-  // Load module data if editing
-  useQuery({
-    queryKey: ['training-module', moduleId],
-    queryFn: async () => {
-      if (!moduleId) return null
-      const { data, error } = await supabase
-        .from('training_modules')
-        .select('*')
-        .eq('id', moduleId)
-        .single()
-      if (error) throw error
-      return data as TrainingModule
-    },
-    enabled: !!moduleId
-  })
-
   // Save module mutation
   const saveModuleMutation = useMutation({
     mutationFn: async () => {
@@ -1581,61 +1648,8 @@ export function TrainingBuilder() {
       const targetId = idToUse || moduleId
       if (!targetId) return
 
-      // Delete existing blocks
-      const { error: deleteError } = await supabase
-        .from('training_content_blocks')
-        .delete()
-        .eq('training_module_id', targetId)
-      if (deleteError) throw deleteError
-
-      // Insert new blocks
-      // Use sections to build the blocks list to ensure we capture the current UI state
-      const blocksToInsert: TrainingContentBlockInsert[] = []
-      let orderIndex = 0
-
-      for (const section of sections) {
-        for (const item of section.items) {
-          blocksToInsert.push({
-            training_module_id: targetId,
-            type: item.type,
-            title: item.title || null,
-            content: item.content || item.title || '',
-            content_url: item.content_url || null,
-            content_data: item.content_data || {},
-            source_document_id: (item.content_data as Record<string, unknown> | undefined)?.sop_id as string | undefined || null,
-            order: orderIndex++,
-            is_mandatory: item.is_mandatory ?? true,
-            duration_seconds: toDurationSeconds(item.duration),
-            points: item.points
-          })
-        }
-      }
-
-      // Fallback for legacy flows that still populate flat contentBlocks.
-      if (blocksToInsert.length === 0) {
-        for (const block of contentBlocks) {
-          blocksToInsert.push({
-            training_module_id: targetId,
-            type: block.type,
-            title: block.title || null,
-            content: block.content || block.title || '',
-            content_url: block.content_url || null,
-            content_data: block.content_data || {},
-            source_document_id: (block.content_data as Record<string, unknown> | undefined)?.sop_id as string | undefined || null,
-            order: orderIndex++,
-            is_mandatory: block.is_mandatory ?? true,
-            duration_seconds: toDurationSeconds(block.duration),
-            points: block.points
-          })
-        }
-      }
-
-      if (blocksToInsert.length > 0) {
-        const { error } = await supabase
-          .from('training_content_blocks')
-          .insert(blocksToInsert)
-        if (error) throw error
-      }
+      const blocksToInsert = buildBlocksPayload(targetId)
+      await replaceModuleBlocksSafely(targetId, blocksToInsert)
     }
   })
 

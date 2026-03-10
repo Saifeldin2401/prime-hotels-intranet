@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { useTranslationAI, type TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 
 interface EmbeddedArticleViewerProps {
     sopId: string
@@ -29,6 +30,68 @@ type LegacySopDocument = {
     updated_at?: string | null
     published_at?: string | null
     code?: string | null
+}
+
+interface EmbeddedHtmlContentProps {
+    content: string | null | undefined
+    translationTarget?: TranslationTargetLanguage | null
+    translatedContent?: string | null
+    isTranslating: boolean
+    showBilingual?: boolean
+    translationDir: 'ltr' | 'rtl'
+}
+
+const EmbeddedHtmlContent = ({
+    content,
+    translationTarget,
+    translatedContent,
+    isTranslating,
+    showBilingual,
+    translationDir
+}: EmbeddedHtmlContentProps) => {
+    const { t } = useTranslation('training')
+
+    if (!content) return null
+
+    const displayContent = (translationTarget && translatedContent) ? translatedContent : content
+    const isTranslatingContent = Boolean(translationTarget && isTranslating)
+
+    return (
+        <div className={`prose md:prose-lg max-w-none dark:prose-invert leading-relaxed ${showBilingual ? 'grid md:grid-cols-2 gap-6' : ''}`}>
+            {/* Translated or Main View */}
+            <div dir={translationTarget && translatedContent ? translationDir : 'auto'} className="relative">
+                {showBilingual && (
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-hotel-gold mb-2 font-bold">
+                        {translationTarget || t('original', 'Original')}
+                    </div>
+                )}
+
+                {isTranslatingContent ? (
+                    <div className="space-y-4 animate-pulse">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                        <Skeleton className="h-4 w-4/6" />
+                    </div>
+                ) : (
+                    <InlineErrorBoundary>
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayContent) }} />
+                    </InlineErrorBoundary>
+                )}
+            </div>
+
+            {/* Original View (if Bilingual) */}
+            {showBilingual && translationTarget && (
+                <div dir="auto" className="border-l pl-6 border-slate-100">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
+                        {t('original', 'Original')}
+                    </div>
+                    <InlineErrorBoundary>
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
+                    </InlineErrorBoundary>
+                </div>
+            )}
+        </div>
+    )
 }
 
 export const EmbeddedArticleViewer = (props: EmbeddedArticleViewerProps) => {
@@ -93,7 +156,6 @@ const EmbeddedArticleViewerInner = ({
     const document = (documentData || legacyDocument) as LegacySopDocument | null
     const isLoading = isDocumentLoading || (shouldTryLegacy && isLegacyLoading)
     const resolvedError = document ? null : (documentError || legacyError)
-    const [viewMode, setViewMode] = useState<'inline' | 'fallback'>('inline')
 
     // Translation state
     const translateAI = useTranslationAI()
@@ -164,22 +226,7 @@ const EmbeddedArticleViewerInner = ({
         if (translationTarget && document && document.content) {
             translateContent()
         }
-    }, [document?.id, document?.content, document?.title, translationTarget, translateAI, translatedContent, isTranslating])
-
-    // Effect to determine initial view mode based on file type
-    useEffect(() => {
-        if (document) {
-            const isPdf = document.file_url?.toLowerCase().endsWith('.pdf')
-            const isImage = document.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-            const hasContent = !!document.content
-
-            if (hasContent || isPdf || isImage) {
-                setViewMode('inline')
-            } else {
-                setViewMode('fallback')
-            }
-        }
-    }, [document])
+    }, [document, document?.id, document?.content, document?.title, translationTarget, translateAI, translatedContent, isTranslating])
 
     if (isLoading) {
         return (
@@ -215,47 +262,8 @@ const EmbeddedArticleViewerInner = ({
 
     const isPdf = document.file_url?.toLowerCase().endsWith('.pdf')
     const isImage = document.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-
-    // Helper to render HTML content safely
-    const renderHtmlContent = () => {
-        if (!document.content) return null
-
-        const displayContent = (translationTarget && translatedContent) ? translatedContent : document.content
-        const isTranslatingContent = translationTarget && isTranslating
-
-        return (
-            <div className={`prose md:prose-lg max-w-none dark:prose-invert leading-relaxed ${showBilingual ? 'grid md:grid-cols-2 gap-6' : ''}`}>
-                {/* Translated or Main View */}
-                <div dir={translationTarget && translatedContent ? translationDir : 'auto'} className="relative">
-                    {showBilingual && (
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-hotel-gold mb-2 font-bold">
-                            {translationTarget || 'Original'}
-                        </div>
-                    )}
-
-                    {isTranslatingContent ? (
-                        <div className="space-y-4 animate-pulse">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-5/6" />
-                            <Skeleton className="h-4 w-4/6" />
-                        </div>
-                    ) : (
-                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayContent) }} />
-                    )}
-                </div>
-
-                {/* Original View (if Bilingual) */}
-                {showBilingual && translationTarget && (
-                    <div dir="auto" className="border-l pl-6 border-slate-100">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
-                            {t('original', 'Original')}
-                        </div>
-                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(document.content) }} />
-                    </div>
-                )}
-            </div>
-        )
-    }
+    const hasContent = !!document.content
+    const viewMode = (hasContent || isPdf || isImage) ? 'inline' : 'fallback'
 
     const displayTitle = (translationTarget && translatedTitle) ? translatedTitle : (document.title || t('sopReference', 'Standard Operating Procedure'))
     const openInNewTabHref = documentData ? `/documents/${sopId}` : `/knowledge/${sopId}`
@@ -316,7 +324,14 @@ const EmbeddedArticleViewerInner = ({
                             {/* 1. Article/HTML Content */}
                             {document.content && (
                                 <div className="mb-8">
-                                    {renderHtmlContent()}
+                                    <EmbeddedHtmlContent
+                                        content={document.content}
+                                        translationTarget={translationTarget}
+                                        translatedContent={translatedContent}
+                                        isTranslating={isTranslating}
+                                        showBilingual={showBilingual}
+                                        translationDir={translationDir}
+                                    />
                                 </div>
                             )}
 

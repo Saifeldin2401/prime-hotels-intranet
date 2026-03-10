@@ -65,7 +65,6 @@ type BirthdayExportRow = {
   hotel: string | null
   department: string | null
   birthday_date: string | null
-  age: number | null
 }
 
 export function useEmployeeDirectory(filters: EmployeeDirectoryFilters) {
@@ -121,8 +120,7 @@ export async function exportMonthlyBirthdays(params: {
     JobTitle: row.job_title || '',
     Hotel: row.hotel || '',
     Department: row.department || '',
-    Birthday: row.birthday_date || '',
-    Age: row.age || ''
+    Birthday: row.birthday_date || ''
   }))
 
   const now = new Date()

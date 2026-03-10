@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useMyLeaveRequests, useSubmitLeaveRequest, useCancelLeaveRequest } from '@/hooks/useLeaveRequests'
+import { useLeaveBalance } from '@/hooks/useLeaveBalance'
 import { PageHeader } from '@/components/layout/PageHeader'
 import type { LeaveRequest } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -65,6 +66,7 @@ export default function MyLeaveRequests() {
   })
 
   const { data: leaveRequests, isLoading } = useMyLeaveRequests()
+  const { data: leaveBalance, isLoading: isLeaveBalanceLoading } = useLeaveBalance(user?.id)
   const submitMutation = useSubmitLeaveRequest()
   const cancelMutation = useCancelLeaveRequest()
 
@@ -150,6 +152,42 @@ export default function MyLeaveRequests() {
         title={t('leave_requests.title')}
         description={t('leave_requests.description')}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('leave_requests.balance.title', { defaultValue: 'Leave Balance' })}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLeaveBalanceLoading ? (
+            <p className="text-sm text-gray-600">
+              {t('leave_requests.balance.loading', { defaultValue: 'Loading leave balance...' })}
+            </p>
+          ) : leaveBalance ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">{t('leave_requests.balance.entitlement', { defaultValue: 'Entitlement' })}</p>
+                <p className="text-lg font-semibold">{leaveBalance.total_days.toFixed(1)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('leave_requests.balance.used', { defaultValue: 'Used' })}</p>
+                <p className="text-lg font-semibold">{leaveBalance.used_days.toFixed(1)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('leave_requests.balance.pending', { defaultValue: 'Pending' })}</p>
+                <p className="text-lg font-semibold">{leaveBalance.pending_days.toFixed(1)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('leave_requests.balance.remaining', { defaultValue: 'Remaining' })}</p>
+                <p className="text-lg font-semibold">{leaveBalance.remaining_days.toFixed(1)}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">
+              {t('leave_requests.balance.unavailable', { defaultValue: 'Leave balance is unavailable.' })}
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">

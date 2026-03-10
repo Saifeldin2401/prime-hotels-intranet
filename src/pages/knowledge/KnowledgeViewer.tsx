@@ -95,6 +95,7 @@ import { PdfViewer } from '@/components/common/PdfViewer'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { supabase, env } from '@/lib/supabase'
 import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
@@ -1415,9 +1416,62 @@ export default function KnowledgeViewer() {
                                 {translatedData || article.content_ar ? (
                                     showBilingual ? (
                                         <div ref={mermaidRef} className="grid grid-cols-1 lg:grid-cols-2 gap-16 text-slate-800">
+                                            <InlineErrorBoundary>
+                                                <div
+                                                    className={cn(
+                                                        "prose max-w-none transition-all duration-300",
+                                                        fontSize === 'sm' && "text-kb-sm",
+                                                        fontSize === 'base' && "text-kb-base",
+                                                        fontSize === 'lg' && "text-kb-lg",
+                                                        fontSize === 'xl' && "text-kb-xl",
+                                                    )}
+                                                    dangerouslySetInnerHTML={htmlContentSanitized}
+                                                />
+                                            </InlineErrorBoundary>
+                                            <InlineErrorBoundary>
+                                                <div
+                                                    dir={shouldUseRtl ? 'rtl' : 'ltr'}
+                                                    className={cn(
+                                                        "prose max-w-none transition-all duration-300",
+                                                        shouldUseRtl
+                                                            ? "border-r-2 border-indigo-100 pr-10 text-right font-arabic"
+                                                            : "border-l-2 border-indigo-100 pl-10",
+                                                        fontSize === 'sm' && "text-kb-sm",
+                                                        fontSize === 'base' && "text-kb-base",
+                                                        fontSize === 'lg' && "text-kb-lg",
+                                                        fontSize === 'xl' && "text-kb-xl",
+                                                    )}
+                                                    dangerouslySetInnerHTML={translatedHtmlSanitized}
+                                                />
+                                            </InlineErrorBoundary>
+                                        </div>
+                                    ) : (
+                                        <div ref={mermaidRef}>
+                                            <InlineErrorBoundary>
+                                                <article
+                                                    dir={shouldUseRtl ? 'rtl' : 'ltr'}
+                                                    className={cn(
+                                                        "prose md:prose-lg max-w-none transition-all duration-300",
+                                                        shouldUseRtl ? "text-right font-arabic break-words" : "text-left",
+                                                        fontSize === 'sm' && "text-kb-sm",
+                                                        fontSize === 'base' && "text-kb-base",
+                                                        fontSize === 'lg' && "text-kb-lg",
+                                                        fontSize === 'xl' && "text-kb-xl",
+                                                    )}
+                                                    style={shouldUseRtl ? { wordBreak: 'break-word', overflowWrap: 'break-word' } : undefined}
+                                                    dangerouslySetInnerHTML={translatedHtmlSanitized}
+                                                />
+                                            </InlineErrorBoundary>
+                                        </div>
+                                    )
+                                ) : article.content ? (
+                                    <div ref={mermaidRef}>
+                                        <InlineErrorBoundary>
                                             <div
+                                                ref={contentRef}
                                                 className={cn(
-                                                    "prose max-w-none transition-all duration-300",
+                                                    "prose md:prose-lg max-w-none text-slate-800 kb-prose transition-all duration-300",
+                                                    fontFamily === 'serif' && "kb-prose-serif",
                                                     fontSize === 'sm' && "text-kb-sm",
                                                     fontSize === 'base' && "text-kb-base",
                                                     fontSize === 'lg' && "text-kb-lg",
@@ -1425,52 +1479,7 @@ export default function KnowledgeViewer() {
                                                 )}
                                                 dangerouslySetInnerHTML={htmlContentSanitized}
                                             />
-                                            <div
-                                                dir={shouldUseRtl ? 'rtl' : 'ltr'}
-                                                className={cn(
-                                                    "prose max-w-none transition-all duration-300",
-                                                    shouldUseRtl
-                                                        ? "border-r-2 border-indigo-100 pr-10 text-right font-arabic"
-                                                        : "border-l-2 border-indigo-100 pl-10",
-                                                    fontSize === 'sm' && "text-kb-sm",
-                                                    fontSize === 'base' && "text-kb-base",
-                                                    fontSize === 'lg' && "text-kb-lg",
-                                                    fontSize === 'xl' && "text-kb-xl",
-                                                )}
-                                                dangerouslySetInnerHTML={translatedHtmlSanitized}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div ref={mermaidRef}>
-                                            <article
-                                                dir={shouldUseRtl ? 'rtl' : 'ltr'}
-                                                className={cn(
-                                                    "prose md:prose-lg max-w-none transition-all duration-300",
-                                                    shouldUseRtl ? "text-right font-arabic break-words" : "text-left",
-                                                    fontSize === 'sm' && "text-kb-sm",
-                                                    fontSize === 'base' && "text-kb-base",
-                                                    fontSize === 'lg' && "text-kb-lg",
-                                                    fontSize === 'xl' && "text-kb-xl",
-                                                )}
-                                                style={shouldUseRtl ? { wordBreak: 'break-word', overflowWrap: 'break-word' } : undefined}
-                                                dangerouslySetInnerHTML={translatedHtmlSanitized}
-                                            />
-                                        </div>
-                                    )
-                                ) : article.content ? (
-                                    <div ref={mermaidRef}>
-                                        <div
-                                            ref={contentRef}
-                                            className={cn(
-                                                "prose md:prose-lg max-w-none text-slate-800 kb-prose transition-all duration-300",
-                                                fontFamily === 'serif' && "kb-prose-serif",
-                                                fontSize === 'sm' && "text-kb-sm",
-                                                fontSize === 'base' && "text-kb-base",
-                                                fontSize === 'lg' && "text-kb-lg",
-                                                fontSize === 'xl' && "text-kb-xl",
-                                            )}
-                                            dangerouslySetInnerHTML={htmlContentSanitized}
-                                        />
+                                        </InlineErrorBoundary>
                                     </div>
                                 ) : (
                                     !article.file_url && (

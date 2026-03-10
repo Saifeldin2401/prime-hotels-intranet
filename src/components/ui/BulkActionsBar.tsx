@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, X, Trash2, UserPlus, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Check, X, Trash2, UserPlus, Clock, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react'
+import { LazyMotion, AnimatePresence, domAnimation, m } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import {
     Select,
@@ -21,7 +21,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
-import type { BulkOperationResult } from '@/hooks/useBulkOperations'
+import { undoBulkOperation, type BulkOperationResult } from '@/hooks/useBulkOperations'
 
 interface BulkActionsBarProps {
     selectedCount: number
@@ -34,24 +34,35 @@ interface BulkActionsBarProps {
     onBulkAssign?: (ids: string[], assigneeId: string | null) => Promise<BulkOperationResult>
     onBulkDelete?: (ids: string[]) => Promise<BulkOperationResult>
     onBulkApprove?: (ids: string[]) => Promise<BulkOperationResult>
+    onAfterUndo?: () => void | Promise<void>
     className?: string
 }
+
+const EMPTY_STATUS_OPTIONS: Array<{ value: string; label: string }> = []
+const EMPTY_ASSIGNEES: Array<{ id: string; name: string }> = []
 
 export function BulkActionsBar({
     selectedCount,
     selectedIds,
     onClearSelection,
     entityType,
-    statusOptions = [],
-    assignees = [],
+    statusOptions = EMPTY_STATUS_OPTIONS,
+    assignees = EMPTY_ASSIGNEES,
     onBulkStatusChange,
     onBulkAssign,
     onBulkDelete,
     onBulkApprove,
+    onAfterUndo,
     className
 }: BulkActionsBarProps) {
     const [isLoading, setIsLoading] = useState(false)
+    const [isUndoing, setIsUndoing] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showStatusConfirm, setShowStatusConfirm] = useState(false)
+    const [pendingStatus, setPendingStatus] = useState<string | null>(null)
+    const [showAssignConfirm, setShowAssignConfirm] = useState(false)
+    const [pendingAssigneeId, setPendingAssigneeId] = useState<string | null>(null)
+    const [showApproveConfirm, setShowApproveConfirm] = useState(false)
     const [result, setResult] = useState<BulkOperationResult | null>(null)
     const { t } = useTranslation()
 
@@ -73,15 +84,15 @@ export function BulkActionsBar({
     }
 
     const handleStatusChange = async (status: string) => {
-        if (onBulkStatusChange) {
-            await handleAction((ids) => onBulkStatusChange(ids, status))
-        }
+        if (!onBulkStatusChange) return
+        setPendingStatus(status)
+        setShowStatusConfirm(true)
     }
 
     const handleAssign = async (assigneeId: string) => {
-        if (onBulkAssign) {
-            await handleAction((ids) => onBulkAssign(ids, assigneeId === 'unassign' ? null : assigneeId))
-        }
+        if (!onBulkAssign) return
+        setPendingAssigneeId(assigneeId)
+        setShowAssignConfirm(true)
     }
 
     const handleDelete = async () => {
@@ -92,17 +103,16 @@ export function BulkActionsBar({
     }
 
     const handleApprove = async () => {
-        if (onBulkApprove) {
-            await handleAction(onBulkApprove)
-        }
+        if (!onBulkApprove) return
+        setShowApproveConfirm(true)
     }
 
     const entityLabel = entityType.replace('_', ' ')
 
     return (
-        <>
+        <LazyMotion features={domAnimation}>
             <AnimatePresence>
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
@@ -193,7 +203,7 @@ export function BulkActionsBar({
                     >
                         <X className="h-4 w-4" />
                     </Button>
-                </motion.div>
+                </m.div>
             </AnimatePresence>
 
             {/* Delete confirmation */}
@@ -220,10 +230,105 @@ export function BulkActionsBar({
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* Status change confirmation */}
+            <AlertDialog
+                open={showStatusConfirm}
+                onOpenChange={(open) => {
+                    setShowStatusConfirm(open)
+                    if (!open) setPendingStatus(null)
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            {`Update status for ${selectedCount} ${entityLabel}${selectedCount === 1 ? '' : 's'}?`}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`This will update the status to "${pendingStatus || ''}" for the selected ${entityLabel}${selectedCount === 1 ? '' : 's'}.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                if (!onBulkStatusChange || !pendingStatus) return
+                                await handleAction((ids) => onBulkStatusChange(ids, pendingStatus))
+                                setShowStatusConfirm(false)
+                                setPendingStatus(null)
+                            }}
+                        >
+                            {t('common:common.confirm')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Assignment confirmation */}
+            <AlertDialog
+                open={showAssignConfirm}
+                onOpenChange={(open) => {
+                    setShowAssignConfirm(open)
+                    if (!open) setPendingAssigneeId(null)
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            {`Assign ${selectedCount} ${entityLabel}${selectedCount === 1 ? '' : 's'}?`}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`This will assign the selected ${entityLabel}${selectedCount === 1 ? '' : 's'} to the chosen user.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                if (!onBulkAssign || !pendingAssigneeId) return
+                                await handleAction((ids) => onBulkAssign(ids, pendingAssigneeId === 'unassign' ? null : pendingAssigneeId))
+                                setShowAssignConfirm(false)
+                                setPendingAssigneeId(null)
+                            }}
+                        >
+                            {t('common:common.confirm')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Approve confirmation */}
+            <AlertDialog open={showApproveConfirm} onOpenChange={setShowApproveConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            {`Approve ${selectedCount} ${entityLabel}${selectedCount === 1 ? '' : 's'}?`}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`This will approve the selected ${entityLabel}${selectedCount === 1 ? '' : 's'}.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                if (!onBulkApprove) return
+                                await handleAction(onBulkApprove)
+                                setShowApproveConfirm(false)
+                            }}
+                        >
+                            {t('common:common.confirm')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Result notification */}
             <AnimatePresence>
                 {result && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
@@ -244,6 +349,31 @@ export function BulkActionsBar({
                             {result.success.length} succeeded
                             {result.failed.length > 0 && `, ${result.failed.length} failed`}
                         </span>
+                        {result.undoToken && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isUndoing}
+                                onClick={async () => {
+                                    setIsUndoing(true)
+                                    try {
+                                        const undoResult = await undoBulkOperation(result.undoToken!)
+                                        setResult({
+                                            ...undoResult,
+                                            undoToken: undefined
+                                        })
+                                        await onAfterUndo?.()
+                                    } finally {
+                                        setIsUndoing(false)
+                                    }
+                                }}
+                            >
+                                {isUndoing ? (
+                                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                ) : null}
+                                Undo
+                            </Button>
+                        )}
                         <Button
                             variant="ghost"
                             size="sm"
@@ -251,10 +381,10 @@ export function BulkActionsBar({
                         >
                             <X className="h-4 w-4" />
                         </Button>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
-        </>
+        </LazyMotion>
     )
 }
 

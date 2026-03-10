@@ -7,9 +7,18 @@ import { escapeSearchQuery } from '@/lib/utils'
 import type { Document, DocumentApproval, DocumentVersion } from '@/lib/types'
 import { crudToasts } from '@/lib/toastHelpers'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { logAuditEvent } from '@/lib/auditLog'
 
 const DOCS_RECENTLY_VIEWED_KEY = 'docs_recently_viewed'
 const MAX_RECENT_DOCS = 20
+
+const MAX_BULK_OPERATION_IDS = 200
+
+const assertBulkOperationSize = (ids: string[], operationLabel: string) => {
+  if (ids.length > MAX_BULK_OPERATION_IDS) {
+    throw new Error(`${operationLabel} limited to ${MAX_BULK_OPERATION_IDS} items per operation. Selected: ${ids.length}`)
+  }
+}
 
 // ============================================================================
 // Types
@@ -1311,7 +1320,7 @@ export function useDocumentExpiry(status?: 'expiring_soon' | 'expired' | 'all') 
         .eq('is_deleted', false)
         .not('expires_at', 'is', null)
 
-      const now = new Date().toISOString()
+      const now = new Date()
       const thirtyDaysFromNow = new Date()
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
 
@@ -1389,6 +1398,8 @@ export function useDocumentBulkDelete() {
     mutationFn: async (ids: string[]): Promise<BulkOperationResult> => {
       if (!user?.id) throw new Error('User must be authenticated')
 
+      assertBulkOperationSize(ids, 'Bulk delete documents')
+
       const result: BulkOperationResult = {
         success: [],
         failed: [],
@@ -1410,11 +1421,26 @@ export function useDocumentBulkDelete() {
         data?.forEach(item => result.success.push(item.id))
       }
 
+      if (result.success.length > 0) {
+        await logAuditEvent({
+          event_type: 'admin.action',
+          entity_type: 'document',
+          description: 'Bulk delete documents',
+          metadata: {
+            bulk_operation: true,
+            total_selected: result.total,
+            success_count: result.success.length,
+            failure_count: result.failed.length
+          }
+        })
+      }
+
       return result
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
+
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
 
       if (result.failed.length === 0) {
@@ -1434,6 +1460,8 @@ export function useDocumentBulkRestore() {
 
   return useMutation({
     mutationFn: async (ids: string[]): Promise<BulkOperationResult> => {
+      assertBulkOperationSize(ids, 'Bulk restore documents')
+
       const result: BulkOperationResult = {
         success: [],
         failed: [],
@@ -1455,13 +1483,27 @@ export function useDocumentBulkRestore() {
         data?.forEach(item => result.success.push(item.id))
       }
 
+      if (result.success.length > 0) {
+        await logAuditEvent({
+          event_type: 'admin.action',
+          entity_type: 'document',
+          description: 'Bulk restore documents',
+          metadata: {
+            bulk_operation: true,
+            total_selected: result.total,
+            success_count: result.success.length,
+            failure_count: result.failed.length
+          }
+        })
+      }
+
       return result
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
+
       queryClient.invalidateQueries({ queryKey: ['document-trash'] })
-      queryClient.invalidateQueries({ queryKey: ['document-stats'] })
 
       if (result.success.length > 0) {
         crudToasts.update.success(`Restored ${result.success.length} documents`)
@@ -1478,6 +1520,8 @@ export function useDocumentBulkMove() {
 
   return useMutation({
     mutationFn: async ({ ids, folderId }: { ids: string[]; folderId: string | null }): Promise<BulkOperationResult> => {
+      assertBulkOperationSize(ids, 'Bulk move documents')
+
       const result: BulkOperationResult = {
         success: [],
         failed: [],
@@ -1506,11 +1550,27 @@ export function useDocumentBulkMove() {
         data?.forEach(item => result.success.push(item.id))
       }
 
+      if (result.success.length > 0) {
+        await logAuditEvent({
+          event_type: 'admin.action',
+          entity_type: 'document',
+          description: 'Bulk move documents',
+          metadata: {
+            bulk_operation: true,
+            total_selected: result.total,
+            success_count: result.success.length,
+            failure_count: result.failed.length,
+            folder_id: folderId
+          }
+        })
+      }
+
       return result
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
+
       queryClient.invalidateQueries({ queryKey: ['document-folders'] })
 
       if (result.success.length > 0) {
@@ -1528,6 +1588,8 @@ export function useDocumentBulkAddTags() {
 
   return useMutation({
     mutationFn: async ({ ids, tagIds }: { ids: string[]; tagIds: string[] }): Promise<BulkOperationResult> => {
+      assertBulkOperationSize(ids, 'Bulk tag documents')
+
       const result: BulkOperationResult = {
         success: [],
         failed: [],
@@ -1553,11 +1615,27 @@ export function useDocumentBulkAddTags() {
         result.success = ids
       }
 
+      if (result.success.length > 0) {
+        await logAuditEvent({
+          event_type: 'admin.action',
+          entity_type: 'document',
+          description: 'Bulk tag documents',
+          metadata: {
+            bulk_operation: true,
+            total_selected: result.total,
+            success_count: result.success.length,
+            failure_count: result.failed.length,
+            tag_ids: tagIds
+          }
+        })
+      }
+
       return result
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
+
       queryClient.invalidateQueries({ queryKey: ['document-tags'] })
 
       if (result.success.length > 0) {
@@ -1575,6 +1653,8 @@ export function useDocumentBulkArchive() {
 
   return useMutation({
     mutationFn: async (ids: string[]): Promise<BulkOperationResult> => {
+      assertBulkOperationSize(ids, 'Bulk archive documents')
+
       const result: BulkOperationResult = {
         success: [],
         failed: [],
@@ -1596,6 +1676,80 @@ export function useDocumentBulkArchive() {
         data?.forEach(item => result.success.push(item.id))
       }
 
+      if (result.success.length > 0) {
+        await logAuditEvent({
+          event_type: 'admin.action',
+          entity_type: 'document',
+          description: 'Bulk archive documents',
+          metadata: {
+            bulk_operation: true,
+            total_selected: result.total,
+            success_count: result.success.length,
+            failure_count: result.failed.length
+          }
+        })
+      }
+
+      return result
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
+
+      queryClient.invalidateQueries({ queryKey: ['document-stats'] })
+
+      if (result.success.length > 0) {
+        crudToasts.update.success(`Archived ${result.success.length} documents`)
+      }
+    }
+  })
+}
+
+/**
+ * Bulk unarchive documents
+ */
+export function useDocumentBulkUnarchive() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<BulkOperationResult> => {
+      assertBulkOperationSize(ids, 'Bulk unarchive documents')
+
+      const result: BulkOperationResult = {
+        success: [],
+        failed: [],
+        total: ids.length
+      }
+
+      const { data, error } = await supabase
+        .from('documents')
+        .update({
+          is_archived: false,
+          updated_at: new Date().toISOString()
+        })
+        .in('id', ids)
+        .select('id')
+
+      if (error) {
+        ids.forEach(id => result.failed.push({ id, error: error.message }))
+      } else {
+        data?.forEach(item => result.success.push(item.id))
+      }
+
+      if (result.success.length > 0) {
+        await logAuditEvent({
+          event_type: 'admin.action',
+          entity_type: 'document',
+          description: 'Bulk unarchive documents',
+          metadata: {
+            bulk_operation: true,
+            total_selected: result.total,
+            success_count: result.success.length,
+            failure_count: result.failed.length
+          }
+        })
+      }
+
       return result
     },
     onSuccess: (result) => {
@@ -1604,7 +1758,7 @@ export function useDocumentBulkArchive() {
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
 
       if (result.success.length > 0) {
-        crudToasts.update.success(`Archived ${result.success.length} documents`)
+        crudToasts.update.success(`Unarchived ${result.success.length} documents`)
       }
     }
   })
@@ -1624,6 +1778,8 @@ export function useDocumentBulkChangeConfidentiality() {
       ids: string[];
       level: 'public' | 'internal' | 'confidential' | 'restricted'
     }): Promise<BulkOperationResult> => {
+      assertBulkOperationSize(ids, 'Bulk change document confidentiality')
+
       const result: BulkOperationResult = {
         success: [],
         failed: [],
@@ -1643,6 +1799,21 @@ export function useDocumentBulkChangeConfidentiality() {
         ids.forEach(id => result.failed.push({ id, error: error.message }))
       } else {
         data?.forEach(item => result.success.push(item.id))
+      }
+
+      if (result.success.length > 0) {
+        await logAuditEvent({
+          event_type: 'admin.action',
+          entity_type: 'document',
+          description: 'Bulk change document confidentiality',
+          metadata: {
+            bulk_operation: true,
+            total_selected: result.total,
+            success_count: result.success.length,
+            failure_count: result.failed.length,
+            confidentiality_level: level
+          }
+        })
       }
 
       return result

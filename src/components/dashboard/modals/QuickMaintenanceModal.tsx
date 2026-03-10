@@ -257,15 +257,15 @@ export function QuickMaintenanceModal({ open, onOpenChange }: QuickMaintenanceMo
             >
               {t('actions.cancel') || 'Cancel'}
             </Button>
-            <Button type="submit" disabled={createTicket.isPending}>
+            <Button type="submit" disabled={createTicket.isPending} aria-busy={createTicket.isPending} aria-live="polite">
               {createTicket.isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 me-2 animate-spin" aria-hidden="true" />
                   {t('quick_create.submitting') || 'Submitting...'}
                 </>
               ) : (
                 <>
-                  <Wrench className="w-4 h-4 me-2" />
+                  <Wrench className="w-4 h-4 me-2" aria-hidden="true" />
                   {t('quick_create.report_issue') || 'Report Issue'}
                 </>
               )}

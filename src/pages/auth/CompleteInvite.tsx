@@ -27,6 +27,13 @@ interface PropertyOption {
     name: string
 }
 
+type InviteOptionsResponse = {
+    jobTitles?: string[]
+    properties?: PropertyOption[]
+    assignedPropertyIds?: string[]
+    error?: string
+}
+
 export default function CompleteInvite() {
     const { t } = useTranslation('auth')
     const navigate = useNavigate()
@@ -113,72 +120,66 @@ export default function CompleteInvite() {
         const loadFormOptions = async () => {
             setLoadingFormOptions(true)
             try {
-                const [
-                    { data: jobTitleRows, error: jobTitleError },
-                    { data: propertyRows, error: propertyError },
-                ] = await Promise.all([
-                    supabase
-                        .from('job_titles')
-                        .select('title')
-                        .order('title', { ascending: true }),
-                    supabase
-                        .from('properties')
-                        .select('id, name')
-                        .eq('is_active', true)
-                        .order('name', { ascending: true }),
-                ])
+                const { data: optionsData, error: optionsError } = await supabase.functions.invoke(
+                    'complete-invite-profile',
+                    {
+                        body: { action: 'options' },
+                    }
+                )
 
-                if (jobTitleError) throw jobTitleError
-                if (propertyError) throw propertyError
-
-                const normalizedJobTitles = (jobTitleRows || [])
-                    .map((row) => row.title)
-                    .filter((title): title is string => typeof title === 'string' && title.trim().length > 0)
-
-                const allPropertyOptions = (propertyRows || [])
-                    .map((row) => ({ id: row.id, name: row.name }))
-                    .filter((property): property is PropertyOption =>
-                        typeof property.id === 'string' &&
-                        property.id.length > 0 &&
-                        typeof property.name === 'string' &&
-                        property.name.length > 0
-                    )
-
-                const { data: userData, error: userError } = await supabase.auth.getUser()
-                if (userError || !userData.user) {
-                    throw new Error('Your invite session is invalid. Please request a new invitation link.')
+                if (optionsError) {
+                    const maybeContext = optionsError as unknown as { context?: Response | { response?: Response } }
+                    const response = maybeContext?.context instanceof Response
+                        ? maybeContext.context
+                        : maybeContext?.context?.response
+                    if (response) {
+                        const text = await response.text().catch(() => '')
+                        let parsedError: string | undefined
+                        if (text) {
+                            try {
+                                const parsed = JSON.parse(text) as { error?: string }
+                                parsedError = parsed?.error
+                            } catch {
+                                parsedError = text
+                            }
+                        }
+                        throw new Error(parsedError || optionsError.message || 'Failed to load invite setup options')
+                    }
+                    throw new Error(optionsError.message || 'Failed to load invite setup options')
                 }
 
-                const { data: assignedProperties, error: assignedPropertiesError } = await supabase
-                    .from('user_properties')
-                    .select('property_id, properties(id, name)')
-                    .eq('user_id', userData.user.id)
+                const response = (optionsData || {}) as InviteOptionsResponse
+                if (response.error) {
+                    throw new Error(response.error)
+                }
 
-                if (assignedPropertiesError) throw assignedPropertiesError
+                const normalizedJobTitles = (response.jobTitles || [])
+                    .filter((title): title is string => typeof title === 'string' && title.trim().length > 0)
 
-                const assignedPropertyOptions = (assignedProperties || [])
-                    .map((row) => {
-                        const relatedProperty = row.properties as
-                            | { id?: string; name?: string }
-                            | { id?: string; name?: string }[]
-                            | null
-                        const normalizedProperty = Array.isArray(relatedProperty) ? relatedProperty[0] : relatedProperty
-                        if (!normalizedProperty?.id || !normalizedProperty?.name) return null
-                        return { id: normalizedProperty.id, name: normalizedProperty.name }
-                    })
-                    .filter((property): property is PropertyOption => !!property)
-
-                const availableProperties = assignedPropertyOptions.length > 0
-                    ? assignedPropertyOptions
-                    : allPropertyOptions
+                const availableProperties = (response.properties || [])
+                    .filter((property): property is PropertyOption =>
+                        typeof property?.id === 'string' &&
+                        property.id.length > 0 &&
+                        typeof property?.name === 'string' &&
+                        property.name.length > 0
+                    )
 
                 if (cancelled) return
 
                 setJobTitleOptions(Array.from(new Set(normalizedJobTitles)))
                 setPropertyOptions(Array.from(new Map(availableProperties.map((property) => [property.id, property])).values()))
 
+                const assignedPropertyIds = (response.assignedPropertyIds || [])
+                    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+
                 if (availableProperties.length === 1) {
                     setPropertyId(availableProperties[0].id)
+                } else if (assignedPropertyIds.length === 1) {
+                    setPropertyId(assignedPropertyIds[0])
+                }
+
+                if (availableProperties.length === 0) {
+                    setError('No properties are available for this invite. Please contact your administrator.')
                 }
             } catch (err) {
                 console.error('Failed to load invite setup options:', err)
@@ -531,8 +532,8 @@ export default function CompleteInvite() {
                                     { check: /[a-z]/.test(password), text: 'One lowercase letter' },
                                     { check: /\d/.test(password), text: 'One number' },
                                     { check: /[!@#$%^&*(),.?":{}|<>]/.test(password), text: 'One special character' },
-                                ].map((req, i) => (
-                                    <li key={i} className={`flex items-center gap-1 ${req.check ? 'text-green-600' : 'text-gray-500'}`}>
+                                ].map((req) => (
+                                    <li key={req.text} className={`flex items-center gap-1 ${req.check ? 'text-green-600' : 'text-gray-500'}`}>
                                         {req.check ? <CheckCircle className="h-3 w-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300" />}
                                         {req.text}
                                     </li>

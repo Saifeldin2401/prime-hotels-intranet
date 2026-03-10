@@ -22,13 +22,36 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useCreateEvent, useDeleteEvent } from '@/hooks/useEvents'
+import type { Event } from '@/hooks/useEvents'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
 
+export type CalendarEventType =
+    | 'meeting'
+    | 'training'
+    | 'review'
+    | 'holiday'
+    | 'deadline'
+    | 'shift'
+    | 'event'
+    | 'birthday'
+    | 'general'
+
+export type CalendarEvent = {
+    id: string
+    title: string
+    type: CalendarEventType
+    start_time: string
+    end_time?: string
+    start_date?: string
+    location?: string
+    description?: string
+}
+
 interface EventDialogsProps {
-    selectedEvent: any | null
-    setSelectedEvent: (event: any | null) => void
+    selectedEvent: CalendarEvent | null
+    setSelectedEvent: (event: CalendarEvent | null) => void
     isAddModalOpen: boolean
     setIsAddModalOpen: (open: boolean) => void
     selectedDate: Date | null
@@ -87,7 +110,7 @@ export function EventDialogs({
             await createEvent.mutateAsync({
                 title: formData.title,
                 description: formData.description,
-                type: formData.type as any,
+                type: formData.type as Event['type'],
                 location: formData.location,
                 start_date: formData.start_time,
                 all_day: false,
@@ -190,7 +213,11 @@ export function EventDialogs({
                                         </div>
                                         <div>
                                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('common.date')}</p>
-                                            <p className="text-sm font-semibold">{format(parseISO(selectedEvent.start_time), 'EEEE, MMMM d, yyyy')}</p>
+                                            <p className="text-sm font-semibold">
+                                                {selectedEvent.start_time
+                                                    ? format(parseISO(selectedEvent.start_time), 'EEEE, MMMM d, yyyy')
+                                                    : (selectedEvent.start_date ? format(parseISO(selectedEvent.start_date), 'EEEE, MMMM d, yyyy') : '—')}
+                                            </p>
                                         </div>
                                     </div>
 
@@ -201,7 +228,9 @@ export function EventDialogs({
                                         <div>
                                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('common.time')}</p>
                                             <p className="text-sm font-semibold">
-                                                {format(parseISO(selectedEvent.start_time), 'h:mm a')}
+                                                {selectedEvent.start_time
+                                                    ? format(parseISO(selectedEvent.start_time), 'h:mm a')
+                                                    : (selectedEvent.start_date ? format(parseISO(selectedEvent.start_date), 'h:mm a') : '—')}
                                                 {selectedEvent.end_time && ` - ${format(parseISO(selectedEvent.end_time), 'h:mm a')}`}
                                             </p>
                                         </div>

@@ -352,15 +352,15 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
             >
               {t('actions.cancel') || 'Cancel'}
             </Button>
-            <Button type="submit" disabled={createAnnouncement.isPending}>
+            <Button type="submit" disabled={createAnnouncement.isPending} aria-busy={createAnnouncement.isPending} aria-live="polite">
               {createAnnouncement.isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 me-2 animate-spin" aria-hidden="true" />
                   {t('quick_create.posting') || 'Posting...'}
                 </>
               ) : (
                 <>
-                  <Megaphone className="w-4 h-4 me-2" />
+                  <Megaphone className="w-4 h-4 me-2" aria-hidden="true" />
                   {t('quick_create.post_announcement') || 'Post Announcement'}
                 </>
               )}

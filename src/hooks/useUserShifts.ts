@@ -23,6 +23,24 @@ export interface UserShift {
   }
 }
 
+const MIN_REST_HOURS = 11
+
+const toShiftDateTime = (shiftDate: string, time: string) => {
+  if (time.includes('T')) {
+    return new Date(time)
+  }
+  return new Date(`${shiftDate}T${time}`)
+}
+
+const normalizeShiftWindow = (shiftDate: string, startTime: string, endTime: string) => {
+  const start = toShiftDateTime(shiftDate, startTime)
+  let end = toShiftDateTime(shiftDate, endTime)
+  if (end <= start) {
+    end = new Date(end.getTime() + 24 * 60 * 60 * 1000)
+  }
+  return { start, end }
+}
+
 export function useNextShift() {
   const { user } = useAuth()
 
@@ -101,6 +119,42 @@ export function useCreateShift() {
 
   return useMutation({
     mutationFn: async (shift: Omit<UserShift, 'id' | 'created_at'>) => {
+      const shiftDate = shift.shift_date
+      const newWindow = normalizeShiftWindow(shiftDate, shift.start_time, shift.end_time)
+      const baseDate = new Date(`${shiftDate}T00:00:00`)
+      const prevDate = new Date(baseDate)
+      prevDate.setDate(prevDate.getDate() - 1)
+      const nextDate = new Date(baseDate)
+      nextDate.setDate(nextDate.getDate() + 1)
+
+      const { data: existingShifts, error: existingError } = await supabase
+        .from('user_shifts')
+        .select('id, shift_date, start_time, end_time, status')
+        .eq('user_id', shift.user_id)
+        .neq('status', 'cancelled')
+        .gte('shift_date', prevDate.toISOString().split('T')[0])
+        .lte('shift_date', nextDate.toISOString().split('T')[0])
+
+      if (existingError) throw existingError
+
+      const conflicts = (existingShifts || []).filter((existing) => {
+        const existingWindow = normalizeShiftWindow(existing.shift_date, existing.start_time, existing.end_time)
+        const overlaps = newWindow.start < existingWindow.end && newWindow.end > existingWindow.start
+        if (overlaps) return true
+
+        const gapAfter = (newWindow.start.getTime() - existingWindow.end.getTime()) / (1000 * 60 * 60)
+        if (gapAfter > 0 && gapAfter < MIN_REST_HOURS) return true
+
+        const gapBefore = (existingWindow.start.getTime() - newWindow.end.getTime()) / (1000 * 60 * 60)
+        if (gapBefore > 0 && gapBefore < MIN_REST_HOURS) return true
+
+        return false
+      })
+
+      if (conflicts.length > 0) {
+        throw new Error('Shift conflicts with an existing assignment or violates the minimum rest period.')
+      }
+
       const { data, error } = await supabase
         .from('user_shifts')
         .insert({

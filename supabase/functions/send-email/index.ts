@@ -53,7 +53,7 @@ interface RuntimeConfig {
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
@@ -76,10 +76,6 @@ serve(async (req) => {
 
     const isServiceRoleCall = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
       || req.headers.get("apikey") === SUPABASE_SERVICE_ROLE_KEY;
-
-    console.log("SEND-EMAIL DEBUG: authHeader starts with", authHeader?.substring(0, 15));
-    console.log("SEND-EMAIL DEBUG: isServiceRole?", isServiceRoleCall);
-    console.log("SEND-EMAIL DEBUG: apikey present?", !!req.headers.get("apikey"));
 
     let user: { id: string; email?: string | null } | null = null;
     if (!isServiceRoleCall) {

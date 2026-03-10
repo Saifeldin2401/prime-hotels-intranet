@@ -71,7 +71,7 @@ export function AutomationSettings() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* Smart Leave Config */}
             <Card className="relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
+                <div className="absolute top-0 end-0 p-4 opacity-10">
                     <Sparkles className="h-12 w-12" />
                 </div>
                 <CardHeader>
@@ -127,7 +127,7 @@ export function AutomationSettings() {
 
             {/* Auto Training Config */}
             <Card className="relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
+                <div className="absolute top-0 end-0 p-4 opacity-10">
                     <GraduationCap className="h-12 w-12" />
                 </div>
                 <CardHeader>
@@ -168,7 +168,7 @@ export function AutomationSettings() {
 
             {/* Recurring Tasks Config */}
             <Card className="relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
+                <div className="absolute top-0 end-0 p-4 opacity-10">
                     <CalendarDays className="h-12 w-12" />
                 </div>
                 <CardHeader>

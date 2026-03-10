@@ -10,7 +10,7 @@
  * - Mobile responsive (Bottom Sheet Launcher)
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from 'framer-motion'
 import { sidebarItemVariants } from '@/lib/motion'
@@ -94,22 +94,22 @@ export function SidebarNavigation({
     [groupedNavigation]
   )
 
-  const toggleGroup = (groupId: string) => {
+  const toggleGroup = useCallback((groupId: string) => {
     setExpandedGroups(prev =>
       prev.includes(groupId)
         ? prev.filter(id => id !== groupId)
         : [...prev, groupId]
     )
-  }
+  }, [])
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await signOut()
     navigate('/login')
-  }
+  }, [signOut, navigate])
 
-  const handleNavClick = () => {
+  const handleNavClick = useCallback(() => {
     if (isMobile) onClose()
-  }
+  }, [isMobile, onClose])
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (!isMobile) return

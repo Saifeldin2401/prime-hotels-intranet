@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { resolveCommands } from '@/editor/ai/commands'
 import { requestAISuggestion } from '@/editor/ai/aiClient'
 import { getSelectedContent } from '@/editor/utils/selection'
@@ -190,17 +191,21 @@ export function AIAssistPanel({
           <div className="grid gap-4 md:grid-cols-2 pt-2">
             <div className="space-y-2">
               <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Current</Label>
-              <div
-                className="max-h-64 overflow-auto rounded-lg border bg-muted/30 p-3 text-sm prose prose-sm max-w-none shadow-inner"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(replacement.originalHtml) }}
-              />
+              <InlineErrorBoundary>
+                <div
+                  className="max-h-64 overflow-auto rounded-lg border bg-muted/30 p-3 text-sm prose prose-sm max-w-none shadow-inner"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(replacement.originalHtml) }}
+                />
+              </InlineErrorBoundary>
             </div>
             <div className="space-y-2">
               <Label className="text-[11px] font-bold uppercase tracking-wider text-hotel-gold">AI Suggestion</Label>
-              <div
-                className="max-h-64 overflow-auto rounded-lg border-emerald-500/30 bg-emerald-500/5 p-3 text-sm prose prose-sm max-w-none shadow-inner ring-1 ring-emerald-500/20"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(replacement.suggestedHtml) }}
-              />
+              <InlineErrorBoundary>
+                <div
+                  className="max-h-64 overflow-auto rounded-lg border-emerald-500/30 bg-emerald-500/5 p-3 text-sm prose prose-sm max-w-none shadow-inner ring-1 ring-emerald-500/20"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(replacement.suggestedHtml) }}
+                />
+              </InlineErrorBoundary>
             </div>
 
             <div className="flex gap-2 md:col-span-2 pt-2 border-t border-hotel-gold/10">

@@ -10,6 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { extractTextFromAiResponse } from '@/lib/aiResponse'
 import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import {
@@ -1282,9 +1283,9 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 {tagSuggestions.length > 0 && (
                                     <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <span className="text-xs text-slate-500">{t('editor.suggested_tags', 'Suggested tags:')}</span>
-                                        {tagSuggestions.map((suggestion, idx) => (
+                                        {tagSuggestions.map((suggestion) => (
                                             <Badge
-                                                key={idx}
+                                                key={`${suggestion.tag}-${suggestion.confidence}`}
                                                 variant="outline"
                                                 className={`text-[10px] cursor-pointer hover:bg-indigo-50 ${suggestion.confidence === 'high' ? 'border-green-300 text-green-700' :
                                                     suggestion.confidence === 'medium' ? 'border-blue-300 text-blue-700' :
@@ -1563,7 +1564,9 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 </div>
                             ) : (
                                 <div ref={previewRef} className="prose max-w-none min-h-[400px] p-4 border rounded bg-white">
-                                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }} />
+                                    <InlineErrorBoundary>
+                                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }} />
+                                    </InlineErrorBoundary>
 
                                     {/* Preview content type specific blocks */}
                                     <div className="mt-8 space-y-6">

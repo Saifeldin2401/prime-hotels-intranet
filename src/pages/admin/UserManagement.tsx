@@ -61,6 +61,8 @@ export default function UserManagement() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<AppRole | ''>('staff')
+  const [invitePropertyId, setInvitePropertyId] = useState('')
+  const [inviteDepartmentId, setInviteDepartmentId] = useState('')
 
   // Account action dialog state
   const [actionDialogOpen, setActionDialogOpen] = useState(false)
@@ -86,6 +88,39 @@ export default function UserManagement() {
 
       if (error) throw error
       return data as Profile[]
+    },
+  })
+
+  const { data: properties } = useQuery({
+    queryKey: ['properties', 'invite'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      return (data || []) as Array<{ id: string; name: string }>
+    },
+  })
+
+  const { data: departments } = useQuery({
+    queryKey: ['departments', 'invite', invitePropertyId],
+    queryFn: async () => {
+      let query = supabase
+        .from('departments')
+        .select('id, name, property_id')
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+
+      if (invitePropertyId) {
+        query = query.eq('property_id', invitePropertyId)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      return (data || []) as Array<{ id: string; name: string; property_id: string }>
     },
   })
 
@@ -205,6 +240,8 @@ export default function UserManagement() {
           role,
           provisioningMethod: 'invite',
           appUrl,
+          propertyIds: invitePropertyId ? [invitePropertyId] : [],
+          departmentIds: inviteDepartmentId ? [inviteDepartmentId] : [],
         },
       })
 
@@ -246,6 +283,8 @@ export default function UserManagement() {
       setInviteDialogOpen(false)
       setInviteEmail('')
       setInviteRole('staff')
+      setInvitePropertyId('')
+      setInviteDepartmentId('')
       refetch()
     },
     onError: (error: Error) => {
@@ -262,6 +301,8 @@ export default function UserManagement() {
     if (!open) {
       setInviteEmail('')
       setInviteRole('staff')
+      setInvitePropertyId('')
+      setInviteDepartmentId('')
     }
   }
 
@@ -744,6 +785,56 @@ export default function UserManagement() {
                 'form.invite_role_description',
                 'This role is enforced before the account is created.'
               )}
+            </p>
+          </div>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="invite-property">{t('form.properties', 'Property')}</Label>
+            <select
+              id="invite-property"
+              value={invitePropertyId}
+              onChange={(e) => {
+                const nextPropertyId = e.target.value
+                setInvitePropertyId(nextPropertyId)
+                setInviteDepartmentId('')
+              }}
+              disabled={inviteUserMutation.isPending}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">{t('form.select_property', 'Select property (optional)')}</option>
+              {(properties || []).map((property) => (
+                <option key={property.id} value={property.id}>
+                  {property.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {t('form.invite_property_description', 'Assign a property now or let the user select one during invite completion.')}
+            </p>
+          </div>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="invite-department">{t('form.departments', 'Department')}</Label>
+            <select
+              id="invite-department"
+              value={inviteDepartmentId}
+              onChange={(e) => setInviteDepartmentId(e.target.value)}
+              disabled={inviteUserMutation.isPending || !invitePropertyId}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">
+                {invitePropertyId
+                  ? t('form.select_department', 'Select department (optional)')
+                  : t('form.select_property_first', 'Select a property first')}
+              </option>
+              {(departments || []).map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {t('form.invite_department_description', 'Departments are filtered by the selected property.')}
             </p>
           </div>
 

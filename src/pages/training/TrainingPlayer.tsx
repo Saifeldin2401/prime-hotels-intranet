@@ -18,6 +18,7 @@ import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import {
     ChevronLeft,
     ChevronRight,
@@ -45,6 +46,7 @@ import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponent
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
+import { awardCertificationPathCertificates } from '@/lib/certificationPathService'
 import { sanitizeHtml } from '@/lib/sanitize'
 import type { TrainingContentBlock } from '@/lib/types'
 import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
@@ -77,6 +79,12 @@ type RichTextBlockContentProps = {
     translationDir: 'ltr' | 'rtl'
     originalLabel: string
     translatedLabel: string
+}
+
+type MediaWatchState = {
+    lastTime: number
+    watchedSeconds: number
+    markedComplete: boolean
 }
 
 const isValidUuid = (value?: string | null) =>
@@ -126,7 +134,9 @@ function RichTextBlockContent({
     if (!translationTarget || !translatedHtml) {
         return (
             <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
-                <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
+                <InlineErrorBoundary>
+                    <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
+                </InlineErrorBoundary>
             </div>
         )
     }
@@ -139,7 +149,9 @@ function RichTextBlockContent({
                         {originalLabel}
                     </div>
                     <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
-                        <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
+                        <InlineErrorBoundary>
+                            <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
+                        </InlineErrorBoundary>
                     </div>
                 </div>
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4" dir={translationDir}>
@@ -147,7 +159,9 @@ function RichTextBlockContent({
                         {translatedLabel}
                     </div>
                     <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed whitespace-pre-wrap">
-                        <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
+                        <InlineErrorBoundary>
+                            <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
+                        </InlineErrorBoundary>
                     </div>
                 </div>
             </div>
@@ -156,7 +170,9 @@ function RichTextBlockContent({
 
     return (
         <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed whitespace-pre-wrap" dir={translationDir}>
-            <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
+            <InlineErrorBoundary>
+                <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
+            </InlineErrorBoundary>
         </div>
     )
 }
@@ -169,8 +185,10 @@ export default function TrainingPlayer() {
     const assignmentId = searchParams.get('assignment')
     const navigate = useNavigate()
     const { toast } = useToast()
-    const { user, profile, properties, departments } = useAuth()
+    const { user, profile, properties, departments, primaryRole } = useAuth()
     const isValidModuleId = isValidUuid(id)
+
+    const canViewUnpublishedModules = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
 
     useEffect(() => {
         if (id && !isValidModuleId) {
@@ -215,6 +233,8 @@ export default function TrainingPlayer() {
     const hasRestoredRef = useRef(false)
     const timeByBlockRef = useRef<Record<string, number>>({})
     const strictResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const quizScoresByIdRef = useRef<Record<string, number>>({})
+    const mediaWatchProgressRef = useRef<Record<string, MediaWatchState>>({})
 
     const translateAI = useTranslationAI()
 
@@ -249,7 +269,13 @@ export default function TrainingPlayer() {
         setShowBilingual(false)
         setBlockTranslations({})
         setModuleTitleTranslations({})
+        quizScoresByIdRef.current = {}
+        mediaWatchProgressRef.current = {}
     }, [])
+
+    useEffect(() => {
+        quizScoresByIdRef.current = quizScoresById
+    }, [quizScoresById])
 
     const applyRestoredProgress = useCallback((
         progress: PersistedModuleProgress | null,
@@ -286,6 +312,7 @@ export default function TrainingPlayer() {
         const restoredQuizScores = getValidQuizScoresMap(progress.metadata?.quiz_scores_by_id)
         if (Object.keys(restoredQuizScores).length > 0) {
             setQuizScoresById(restoredQuizScores)
+            quizScoresByIdRef.current = restoredQuizScores
             const aggregatedScore = getAggregatedQuizScore(getModuleQuizIds(blocks), restoredQuizScores)
             if (typeof aggregatedScore === 'number') {
                 setQuizScore(aggregatedScore)
@@ -294,7 +321,6 @@ export default function TrainingPlayer() {
             setQuizScore(progress.score_percentage)
         }
     }, [t])
-
 
     // Close sidebar on mobile by default and when entering small breakpoints.
     useEffect(() => {
@@ -315,11 +341,16 @@ export default function TrainingPlayer() {
         queryFn: async () => {
             if (!id || !isValidModuleId) throw new Error('Invalid module ID')
 
-            const { data: module, error: moduleError } = await supabase
+            let moduleQuery = supabase
                 .from('training_modules')
                 .select('*')
                 .eq('id', id)
-                .maybeSingle()
+
+            if (!canViewUnpublishedModules) {
+                moduleQuery = moduleQuery.eq('status', 'published')
+            }
+
+            const { data: module, error: moduleError } = await moduleQuery.maybeSingle()
 
             if (moduleError) throw moduleError
             if (!module) return null
@@ -328,6 +359,7 @@ export default function TrainingPlayer() {
                 .from('training_content_blocks')
                 .select('*')
                 .eq('training_module_id', id)
+                .eq('is_deleted', false)
                 .order('order', { ascending: true })
 
             if (blocksError) throw blocksError
@@ -525,10 +557,45 @@ export default function TrainingPlayer() {
     }
 
     const handleMarkWatched = (blockId: string) => {
+        mediaWatchProgressRef.current[blockId] = {
+            ...(mediaWatchProgressRef.current[blockId] || { lastTime: 0, watchedSeconds: 0 }),
+            markedComplete: true
+        }
         setCompletedMediaBlocks(prev => new Set(prev).add(blockId))
         setCompletedBlocks(prev => new Set(prev).add(blockId))
         void recordBlockCompletion(blockId)
         scheduleProgressSave(200)
+    }
+
+    const trackMediaProgress = (blockId: string, currentTime: number, duration: number) => {
+        if (!duration || duration <= 0) return
+
+        const state = mediaWatchProgressRef.current[blockId] || {
+            lastTime: currentTime,
+            watchedSeconds: 0,
+            markedComplete: false
+        }
+
+        const delta = currentTime - state.lastTime
+        if (delta >= 0 && delta <= 2.5) {
+            state.watchedSeconds += delta
+        }
+
+        state.lastTime = currentTime
+        mediaWatchProgressRef.current[blockId] = state
+
+        if (!state.markedComplete && state.watchedSeconds >= duration * 0.9) {
+            handleMarkWatched(blockId)
+        }
+    }
+
+    const registerMediaSeek = (blockId: string, currentTime: number) => {
+        const existing = mediaWatchProgressRef.current[blockId]
+        mediaWatchProgressRef.current[blockId] = {
+            lastTime: currentTime,
+            watchedSeconds: existing?.watchedSeconds || 0,
+            markedComplete: existing?.markedComplete || false
+        }
     }
 
     const handleCompleteModule = async () => {
@@ -560,9 +627,10 @@ export default function TrainingPlayer() {
             }
 
             const passingScore = moduleData.module.passing_score_percentage || 80
-            const aggregatedPartScore = getAggregatedQuizScore(moduleQuizIds, quizScoresById)
+            const latestQuizScores = quizScoresByIdRef.current
+            const aggregatedPartScore = getAggregatedQuizScore(moduleQuizIds, latestQuizScores)
             const effectiveScore = aggregatedPartScore ?? quizScore ?? linkedTrainingQuizScore
-            const completedQuizParts = moduleQuizIds.filter((quizId) => typeof quizScoresById[quizId] === 'number').length
+            const completedQuizParts = moduleQuizIds.filter((quizId) => typeof latestQuizScores[quizId] === 'number').length
 
             if (moduleQuizIds.length > 1 && completedQuizParts < moduleQuizIds.length) {
                 toast({
@@ -602,7 +670,7 @@ export default function TrainingPlayer() {
                 metadata: {
                     completed_blocks: Array.from(completedBlocks),
                     completed_media_blocks: Array.from(completedMediaBlocks),
-                    quiz_scores_by_id: quizScoresById,
+                    quiz_scores_by_id: latestQuizScores,
                     active_block_id: activeBlock?.id || null
                 }
             })
@@ -614,35 +682,100 @@ export default function TrainingPlayer() {
                 // Error is logged but doesn't prevent certificate generation
             }
 
-            if (isPassed && user && moduleData.module && moduleData.module.certificate_enabled) {
-                try {
-                    const primaryProperty = properties?.[0]
-                    const primaryDepartment = departments?.[0]
-                    const certificateData: CertificateData = {
-                        userId: user.id,
-                        recipientName: profile?.full_name || user.email || 'Training Participant',
-                        recipientEmail: user.email,
-                        certificateType: 'training',
-                        title: moduleData.module.title,
-                        description: t('certificateEarned', { moduleName: moduleData.module.title }),
-                        completionDate: new Date(),
-                        score: effectiveScore,
-                        passingScore,
-                        trainingModuleId: moduleData.module.id,
-                        trainingProgressId: linkedTrainingProgressId,
-                        propertyId: primaryProperty?.id,
-                        propertyName: primaryProperty?.name,
-                        departmentId: primaryDepartment?.id,
-                        departmentName: primaryDepartment?.name
+            if (isPassed && user && moduleData.module) {
+                const primaryProperty = properties?.[0]
+                const primaryDepartment = departments?.[0]
+                let certificateErrorMessage: string | null = null
+                let pathErrorMessage: string | null = null
+
+                if (moduleData.module.certificate_enabled) {
+                    try {
+                        const certificateData: CertificateData = {
+                            userId: user.id,
+                            recipientName: profile?.full_name || user.email || 'Training Participant',
+                            recipientEmail: user.email,
+                            certificateType: 'training',
+                            title: moduleData.module.title,
+                            description: t('certificateEarned', { moduleName: moduleData.module.title }),
+                            completionDate: new Date(),
+                            score: effectiveScore,
+                            passingScore,
+                            trainingModuleId: moduleData.module.id,
+                            trainingProgressId: linkedTrainingProgressId,
+                            propertyId: primaryProperty?.id,
+                            propertyName: primaryProperty?.name,
+                            departmentId: primaryDepartment?.id,
+                            departmentName: primaryDepartment?.name
+                        }
+                        await createCertificate(certificateData)
+                    } catch (certError) {
+                        certificateErrorMessage = getUserFriendlyError(certError).message
                     }
-                    await createCertificate(certificateData)
-                } catch (certError) {
-                    // Certificate generation is optional - don't block completion
-                    // Error is logged but doesn't prevent training completion
-                    const errorDetails = getUserFriendlyError(certError)
+                }
+
+                try {
+                    let pathCertificates:
+                        | Awaited<ReturnType<typeof awardCertificationPathCertificates>>
+                        | null = null
+                    let pathAttemptError: unknown = null
+
+                    // Retries reduce transient completion/certificate race failures.
+                    for (let attempt = 0; attempt < 3; attempt += 1) {
+                        try {
+                            pathCertificates = await awardCertificationPathCertificates({
+                                userId: user.id,
+                                completedModuleId: moduleData.module.id,
+                                recipientName: profile?.full_name || user.email || 'Training Participant',
+                                recipientEmail: user.email,
+                                propertyId: primaryProperty?.id,
+                                propertyName: primaryProperty?.name,
+                                departmentId: primaryDepartment?.id,
+                                departmentName: primaryDepartment?.name
+                            })
+                            pathAttemptError = null
+                            break
+                        } catch (attemptError) {
+                            pathAttemptError = attemptError
+                            if (attempt < 2) {
+                                await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)))
+                            }
+                        }
+                    }
+
+                    if (pathAttemptError) {
+                        throw pathAttemptError
+                    }
+
+                    if (pathCertificates?.awarded.length) {
+                        toast({
+                            title: t('certificateEarned', 'Certificate earned'),
+                            description: t(
+                                'pathCertificateAwarded',
+                                `You earned ${pathCertificates.awarded.length} certification path certificate(s).`
+                            )
+                        })
+                    }
+
+                    if (pathCertificates?.errors.length) {
+                        console.error('Certification path processing errors:', pathCertificates.errors)
+                    }
+                } catch (pathError) {
+                    pathErrorMessage = getUserFriendlyError(pathError).message
+                    console.error('Failed to process certification path completion:', pathError)
+                }
+
+                if (certificateErrorMessage) {
                     toast({
                         title: t('certificateGenerationFailed'),
-                        description: errorDetails.message,
+                        description: certificateErrorMessage,
+                        variant: 'destructive'
+                    })
+                }
+
+                if (pathErrorMessage) {
+                    toast({
+                        title: t('pathCertificateProcessingFailed', 'Path certificate processing failed'),
+                        description: pathErrorMessage,
                         variant: 'destructive'
                     })
                 }
@@ -683,10 +816,11 @@ export default function TrainingPlayer() {
         const status = statusOverride || (isFinished ? 'completed' : 'in_progress')
         const nowIso = new Date().toISOString()
         const timeSpent = getCurrentSessionSeconds()
+        const latestQuizScores = quizScoresByIdRef.current
         const metadata = {
             completed_blocks: Array.from(completedBlocks),
             completed_media_blocks: Array.from(completedMediaBlocks),
-            quiz_scores_by_id: quizScoresById,
+            quiz_scores_by_id: latestQuizScores,
             active_block_id: activeBlock?.id || null
         }
 
@@ -737,7 +871,6 @@ export default function TrainingPlayer() {
         getCurrentSessionSeconds,
         completedBlocks,
         completedMediaBlocks,
-        quizScoresById,
         activeBlock,
         assignmentId,
         progressPercentage,
@@ -1005,12 +1138,9 @@ export default function TrainingPlayer() {
                                                 controls
                                                 onTimeUpdate={(e) => {
                                                     const target = e.currentTarget
-                                                    if (target.duration && target.currentTime / target.duration >= 0.9) {
-                                                        if (!completedMediaBlocks.has(block.id)) {
-                                                            handleMarkWatched(block.id)
-                                                        }
-                                                    }
+                                                    trackMediaProgress(block.id, target.currentTime, target.duration)
                                                 }}
+                                                onSeeking={(e) => registerMediaSeek(block.id, e.currentTarget.currentTime)}
                                             />
                                         )
                                     }
@@ -1018,7 +1148,11 @@ export default function TrainingPlayer() {
                                         <iframe
                                             src={block.content_url}
                                             className="w-full h-full"
+                                            allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
                                             allowFullScreen
+                                            sandbox="allow-scripts allow-same-origin allow-presentation"
+                                            referrerPolicy="strict-origin-when-cross-origin"
+                                            loading="lazy"
                                             title={t('training_video_content', { defaultValue: 'Training video content' })}
                                         />
                                     )
@@ -1080,12 +1214,9 @@ export default function TrainingPlayer() {
                                     src={block.content_url}
                                     onTimeUpdate={(e) => {
                                         const target = e.currentTarget
-                                        if (target.duration && target.currentTime / target.duration >= 0.9) {
-                                            if (!completedMediaBlocks.has(block.id)) {
-                                                handleMarkWatched(block.id)
-                                            }
-                                        }
+                                        trackMediaProgress(block.id, target.currentTime, target.duration)
                                     }}
+                                    onSeeking={(e) => registerMediaSeek(block.id, e.currentTarget.currentTime)}
                                 />
                             ) : (
                                 <div className="flex items-center gap-3 text-slate-500">
@@ -1143,7 +1274,9 @@ export default function TrainingPlayer() {
                                         src={block.content_url}
                                         className="w-full h-full"
                                         allow="clipboard-read; clipboard-write; fullscreen"
-                                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                                        sandbox="allow-same-origin allow-scripts"
+                                        referrerPolicy="strict-origin-when-cross-origin"
+                                        loading="lazy"
                                         title={t('interactive_training_content', { defaultValue: 'Interactive training content' })}
                                     />
                                 </div>
@@ -1242,6 +1375,7 @@ export default function TrainingPlayer() {
                         </div>
                         <QuizComponentEnhanced
                             quizId={block.content_data?.quiz_id as string}
+                            assignmentId={assignmentId}
                             certificateEnabled={moduleData.module.certificate_enabled}
                             translationTarget={translationTarget}
                             showBilingual={showBilingual}
@@ -1250,6 +1384,7 @@ export default function TrainingPlayer() {
                                 if (currentQuizId) {
                                     setQuizScoresById((prev) => {
                                         const next = { ...prev, [currentQuizId]: result.score }
+                                        quizScoresByIdRef.current = next
                                         const nextAggregated = getAggregatedQuizScore(moduleQuizIds, next)
                                         setQuizScore(nextAggregated ?? result.score)
                                         return next

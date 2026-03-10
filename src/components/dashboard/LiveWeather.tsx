@@ -44,7 +44,7 @@ export function LiveWeather() {
     } else if (code >= 1 && code <= 3) {
         Icon = isDay ? CloudSun : Cloud; // Simplified
         iconColor = "text-slate-400";
-        animateProps = { y: [0, -2, 2, 0] };
+        animateProps = { translateY: [0, -2, 2, 0] };
     } else if (code === 45 || code === 48) {
         Icon = CloudFog;
         iconColor = "text-slate-400";
@@ -52,11 +52,11 @@ export function LiveWeather() {
     } else if (code >= 51 && code <= 55) {
         Icon = CloudDrizzle;
         iconColor = "text-blue-400";
-        animateProps = { y: [0, 2, 0] };
+        animateProps = { translateY: [0, 2, 0] };
     } else if ((code >= 61 && code <= 65) || (code >= 80 && code <= 82)) {
         Icon = CloudRain;
         iconColor = "text-blue-500";
-        animateProps = { y: [0, 3, 0] };
+        animateProps = { translateY: [0, 3, 0] };
     } else if (code >= 71 && code <= 77 || code === 85 || code === 86) {
         Icon = Snowflake;
         iconColor = "text-cyan-400";

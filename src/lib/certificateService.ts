@@ -40,6 +40,7 @@ export interface CertificateData {
     departmentName?: string
     issuedBy?: string
     issuedByName?: string
+    metadata?: Record<string, unknown>
 }
 
 export interface Certificate extends CertificateData {
@@ -89,7 +90,7 @@ type CertificateRecord = {
 }
 
 // Brand colors for Prime Hotels
-const BRAND_COLORS = {
+const _BRAND_COLORS = {
     navy: '#1a365d',
     gold: '#c9a962',
     darkGold: '#a88b4a',
@@ -451,6 +452,28 @@ export async function createCertificate(data: CertificateData): Promise<Certific
         }
     }
 
+    const pathCertificateId =
+        data.certificateType === 'achievement' &&
+        data.metadata &&
+        typeof data.metadata.training_path_id === 'string'
+            ? data.metadata.training_path_id
+            : null
+
+    if (pathCertificateId) {
+        const { data: existingPathCert, error: existingPathCertError } = await supabase
+            .from('certificates')
+            .select('*')
+            .eq('user_id', data.userId)
+            .eq('certificate_type', 'achievement')
+            .eq('status', 'active')
+            .contains('metadata', { training_path_id: pathCertificateId })
+            .maybeSingle()
+
+        if (!existingPathCertError && existingPathCert) {
+            return mapCertificateFromDb(existingPathCert)
+        }
+    }
+
     const certificateNumber = generateCertificateNumber()
     const verificationCode = generateVerificationCode()
 
@@ -480,7 +503,8 @@ export async function createCertificate(data: CertificateData): Promise<Certific
             metadata: {
                 propertyName: data.propertyName,
                 departmentName: data.departmentName,
-                issuedByName: data.issuedByName
+                issuedByName: data.issuedByName,
+                ...(data.metadata || {})
             }
         })
         .select()

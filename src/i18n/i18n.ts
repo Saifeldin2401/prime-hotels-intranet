@@ -57,6 +57,8 @@ import enOperations from './locales/en/operations.json';
 import arOperations from './locales/ar/operations.json';
 import enLearning from './locales/en/learning.json';
 import arLearning from './locales/ar/learning.json';
+import enExtracted from './locales/en/extracted.json';
+import arExtracted from './locales/ar/extracted.json';
 
 // Define the resources
 const resources = {
@@ -87,6 +89,7 @@ const resources = {
     errors: enErrors,
     operations: enOperations,
     learning: enLearning,
+    extracted: enExtracted,
   },
   ar: {
     common: arCommon,
@@ -115,6 +118,7 @@ const resources = {
     errors: arErrors,
     operations: arOperations,
     learning: arLearning,
+    extracted: arExtracted,
   },
 };
 

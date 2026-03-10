@@ -63,6 +63,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 // import { AIDocumentAssistant } from '@/components/documents/AIDocumentAssistant'
+import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
 
 export default function DocumentDetail() {
   const { id } = useParams<{ id: string }>()
@@ -79,6 +80,14 @@ export default function DocumentDetail() {
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+
+  const {
+    summary: aiSummary,
+    loading: aiSummaryLoading,
+    error: aiSummaryError,
+    summarizeDocument,
+    clearSummary
+  } = useAIDocumentSummarizer()
 
   // Data fetching
   const { data: document, isLoading: docLoading, error: docError } = useDocument(id!)
@@ -150,6 +159,17 @@ export default function DocumentDetail() {
   const handleShare = useCallback(() => {
     setShareDialogOpen(true)
   }, [])
+
+  useEffect(() => {
+    if (!aiAssistantOpen || !document) return
+
+    const contentToSummarize =
+      (typeof (document as any).content === 'string' ? (document as any).content : '') ||
+      document.description ||
+      ''
+
+    void summarizeDocument(contentToSummarize, document.title)
+  }, [aiAssistantOpen, document, summarizeDocument])
 
   const handleAddComment = useCallback(async (content: string, parentId?: string) => {
     if (!document?.id || !user) return
@@ -681,12 +701,80 @@ export default function DocumentDetail() {
             <p className="text-sm text-muted-foreground">
               AI-powered features for <strong>{document?.title}</strong>
             </p>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <Sparkles className="w-4 h-4 inline mr-2 text-hotel-gold" />
-                AI-powered features coming soon: auto-tagging, duplicate detection, and smart summaries.
-              </p>
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const contentToSummarize =
+                    (typeof (document as any).content === 'string' ? (document as any).content : '') ||
+                    document.description ||
+                    ''
+                  void summarizeDocument(contentToSummarize, document.title)
+                }}
+                disabled={aiSummaryLoading}
+              >
+                {aiSummaryLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Refresh Summary
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearSummary()
+                  setAiAssistantOpen(false)
+                }}
+              >
+                Close
+              </Button>
             </div>
+
+            {aiSummaryError && (
+              <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-sm">
+                {aiSummaryError}
+              </div>
+            )}
+
+            {aiSummaryLoading && (
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Analyzing document...
+                </div>
+              </div>
+            )}
+
+            {!aiSummaryLoading && aiSummary?.summary && (
+              <div className="p-4 bg-muted rounded-lg space-y-3">
+                <div className="text-sm">{aiSummary.summary}</div>
+                {Array.isArray(aiSummary.keyChanges) && aiSummary.keyChanges.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground">Key changes</div>
+                    <ul className="list-disc pl-5 space-y-1 text-sm">
+                      {aiSummary.keyChanges.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="text-xs text-muted-foreground">
+                  {aiSummary.targetAudience ? `Audience: ${aiSummary.targetAudience}` : null}
+                  {aiSummary.targetAudience && aiSummary.readingTime ? ' • ' : null}
+                  {aiSummary.readingTime ? `Estimated read: ${aiSummary.readingTime} min` : null}
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

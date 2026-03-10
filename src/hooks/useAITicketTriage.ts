@@ -79,7 +79,8 @@ Do not include any text outside the JSON.`
             // Parse AI response
             let parsed: any = null
             try {
-                const jsonMatch = (aiResult?.result || '').match(/\{[\s\S]*\}/)
+                const rawText = (aiResult?.response ?? aiResult?.result ?? '')
+                const jsonMatch = rawText.match(/\{[\s\S]*\}/)
                 if (jsonMatch) {
                     parsed = JSON.parse(jsonMatch[0])
                 }

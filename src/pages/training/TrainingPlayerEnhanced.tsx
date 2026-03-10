@@ -28,6 +28,7 @@ import {
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import {
     ChevronLeft,
     ChevronRight,
@@ -54,6 +55,7 @@ import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponent
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import { createCertificate } from '@/lib/certificateService'
+import { awardCertificationPathCertificates } from '@/lib/certificationPathService'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { getEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
 import type { TrainingContentBlock } from '@/lib/types'
@@ -92,8 +94,10 @@ export default function TrainingPlayerEnhanced() {
     const assignmentId = searchParams.get('assignment')
     const navigate = useNavigate()
     const { toast } = useToast()
-    const { user, profile } = useAuth()
+    const { user, profile, primaryRole } = useAuth()
     const isValidModuleId = isValidUuid(id)
+
+    const canViewUnpublishedModules = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
 
     useEffect(() => {
         if (id && !isValidModuleId) {
@@ -157,11 +161,16 @@ export default function TrainingPlayerEnhanced() {
         queryFn: async () => {
             if (!id || !isValidModuleId) throw new Error('Invalid module ID')
 
-            const { data: module, error: moduleError } = await supabase
+            let moduleQuery = supabase
                 .from('training_modules')
                 .select('*')
                 .eq('id', id)
-                .maybeSingle()
+
+            if (!canViewUnpublishedModules) {
+                moduleQuery = moduleQuery.eq('status', 'published')
+            }
+
+            const { data: module, error: moduleError } = await moduleQuery.maybeSingle()
 
             if (moduleError) throw moduleError
             if (!module) return null
@@ -170,6 +179,7 @@ export default function TrainingPlayerEnhanced() {
                 .from('training_content_blocks')
                 .select('*')
                 .eq('training_module_id', id)
+                .eq('is_deleted', false)
                 .order('order', { ascending: true })
 
             if (blocksError) throw blocksError
@@ -398,6 +408,30 @@ export default function TrainingPlayerEnhanced() {
                     })
                 } catch (error) {
                     console.error('Failed to create certificate:', error)
+                }
+            }
+
+            if (isPassed && moduleData.module) {
+                try {
+                    const pathCertificates = await awardCertificationPathCertificates({
+                        userId: user.id,
+                        completedModuleId: moduleData.module.id,
+                        recipientName: profile?.full_name || user.email || 'Training Participant',
+                        recipientEmail: user.email
+                    })
+
+                    if (pathCertificates.awarded.length > 0) {
+                        toast({
+                            title: t('certificateEarned', 'Certificate earned'),
+                            description: `You earned ${pathCertificates.awarded.length} certification path certificate(s).`
+                        })
+                    }
+
+                    if (pathCertificates.errors.length > 0) {
+                        console.error('Certification path processing errors:', pathCertificates.errors)
+                    }
+                } catch (pathError) {
+                    console.error('Failed to process certification path completion:', pathError)
                 }
             }
 
@@ -772,20 +806,22 @@ export default function TrainingPlayerEnhanced() {
                                     transition={{ duration: 0.3 }}
                                 >
                                     {/* Text Block */}
-                                    {activeBlock.type === 'text' && (
-                                        <div className={cn(
-                                            "prose max-w-none",
-                                            focusMode ? "prose-invert" : ""
-                                        )}>
-                                            <div
-                                                dangerouslySetInnerHTML={{
-                                                    __html: sanitizeHtml(
-                                                        getTranslatedBlockContent(activeBlock) || activeBlock.content
-                                                    )
-                                                }}
-                                            />
-                                        </div>
-                                    )}
+                                        {activeBlock.type === 'text' && (
+                                            <div className={cn(
+                                                "prose max-w-none",
+                                                focusMode ? "prose-invert" : ""
+                                            )}>
+                                                <InlineErrorBoundary>
+                                                    <div
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: sanitizeHtml(
+                                                                getTranslatedBlockContent(activeBlock) || activeBlock.content
+                                                            )
+                                                        }}
+                                                    />
+                                                </InlineErrorBoundary>
+                                            </div>
+                                        )}
 
                                     {/* Video Block */}
                                     {activeBlock.type === 'video' && (

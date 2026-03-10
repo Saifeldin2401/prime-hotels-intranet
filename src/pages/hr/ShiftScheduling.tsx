@@ -282,8 +282,8 @@ export default function ShiftScheduling() {
       }
       setEditingShiftId(null)
       setShiftForm(defaultShiftForm)
-    } catch (_error) {
-      toast.error('Failed to save shift')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save shift')
     }
   }
 

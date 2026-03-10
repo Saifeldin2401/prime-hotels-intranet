@@ -709,14 +709,17 @@ export function useTrainingStats() {
         .eq('target_id', user.id)
         .eq('target_type', 'user')
 
+      const typedProgress = (progress || []) as Partial<TrainingProgress>[]
+      const typedAssignments = (assignments || []) as Partial<LearningAssignment>[]
+
       const stats = {
-        totalAssigned: assignments?.length || 0,
-        inProgress: (progress as any[])?.filter(p => p.status === 'in_progress').length || 0,
-        completed: (progress as any[])?.filter(p => p.status === 'completed').length || 0,
-        overdue: (assignments as any[])?.filter((a) =>
+        totalAssigned: typedAssignments.length,
+        inProgress: typedProgress.filter(p => p.status === 'in_progress').length,
+        completed: typedProgress.filter(p => p.status === 'completed').length,
+        overdue: typedAssignments.filter((a) =>
           a.due_date && new Date(a.due_date) < new Date() &&
-          !(progress as any[])?.find(p => p.training_id === a.content_id && p.status === 'completed')
-        ).length || 0,
+          !typedProgress.find(p => p.training_id === a.content_id && p.status === 'completed')
+        ).length,
         averageScore: 0, // Could calculate from quiz attempts
       }
 

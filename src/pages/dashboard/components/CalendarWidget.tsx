@@ -8,8 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
-import { useEvents, useUpcomingEvents } from '@/hooks/useEvents'
-import { useUserShifts } from '@/hooks/useUserShifts'
+import { useEvents, useUpcomingEvents, type Event } from '@/hooks/useEvents'
+import { useUserShifts, type UserShift } from '@/hooks/useUserShifts'
 import { useAuth } from '@/hooks/useAuth'
 import {
   format,
@@ -27,9 +27,11 @@ import {
 import { ar } from 'date-fns/locale'
 import { Link } from 'react-router-dom'
 import { useTranslation } from "react-i18next";
+import type { TFunction } from 'i18next'
 import { EventDialogs } from './EventDialogs'
+import type { CalendarEvent, CalendarEventType } from './EventDialogs'
 
-const eventTypeColors: Record<string, string> = {
+const eventTypeColors: Record<CalendarEventType | 'default', string> = {
   meeting: 'bg-blue-500 shadow-blue-500/30',
   training: 'bg-indigo-500 shadow-indigo-500/30',
   review: 'bg-purple-500 shadow-purple-500/30',
@@ -37,6 +39,8 @@ const eventTypeColors: Record<string, string> = {
   deadline: 'bg-red-500 shadow-red-500/30',
   shift: 'bg-emerald-500 shadow-emerald-500/30',
   event: 'bg-amber-500 shadow-amber-500/30',
+  birthday: 'bg-pink-500 shadow-pink-500/30',
+  general: 'bg-slate-500 shadow-slate-500/30',
   default: 'bg-slate-400 shadow-slate-400/30'
 }
 
@@ -58,21 +62,18 @@ interface ExternalHoliday {
   name: string;
 }
 
-interface CalendarHolidayEvent {
-  id: string
-  title: string
-  start_time: string
+interface CalendarHolidayEvent extends CalendarEvent {
   type: 'holiday'
   location: string
 }
 
 interface SelectedDateEventsPanelProps {
   selectedDate: Date | null
-  selectedDateEvents: any[]
+  selectedDateEvents: CalendarEvent[]
   isRTL: boolean
   shouldReduceMotion: boolean
-  t: (key: string, fallback: string) => string
-  onSelectEvent: (event: any) => void
+  t: TFunction
+  onSelectEvent: (event: CalendarEvent) => void
 }
 
 function SelectedDateEventsPanel({
@@ -113,7 +114,7 @@ function SelectedDateEventsPanel({
                 )}
               </m.div>
             ) : (
-              selectedDateEvents.map((event: any, idx: number) => (
+              selectedDateEvents.map((event, idx) => (
                 <m.div
                   key={event.id}
                   initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 8 }}
@@ -180,7 +181,7 @@ export function CalendarWidget() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const currentYear = currentDate.getFullYear()
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   // Roles that can access the full scheduling/shift management tool
@@ -191,19 +192,32 @@ export function CalendarWidget() {
   const { data: fetchedHolidays = [] } = useQuery<CalendarHolidayEvent[]>({
     queryKey: ['ksa-holidays', currentYear, i18n.language],
     queryFn: async () => {
-      const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${currentYear}/SA`)
-      if (!response.ok) return []
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
 
-      const data = await response.json().catch(() => []) as ExternalHoliday[]
-      if (!Array.isArray(data)) return []
+      try {
+        const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${currentYear}/SA`, {
+          signal: controller.signal
+        })
+        if (!response.ok) return []
 
-      return data.map((holiday) => ({
-        id: `holiday-ext-${holiday.date}-${holiday.name}`,
-        title: isRTL ? holiday.localName : holiday.name,
-        start_time: `${holiday.date}T00:00:00`,
-        type: 'holiday',
-        location: t('common.ksa', 'Saudi Arabia')
-      }))
+        const data = await response.json().catch(() => []) as ExternalHoliday[]
+        if (!Array.isArray(data)) return []
+
+        return data
+          .filter((holiday) => holiday && typeof holiday.date === 'string' && holiday.date.length >= 10)
+          .map((holiday) => ({
+            id: `holiday-ext-${holiday.date}-${holiday.name}`,
+            title: isRTL ? holiday.localName : holiday.name,
+            start_time: `${holiday.date}T00:00:00`,
+            type: 'holiday',
+            location: t('common.ksa', 'Saudi Arabia')
+          }))
+      } catch (_error) {
+        return []
+      } finally {
+        clearTimeout(timeoutId)
+      }
     },
     staleTime: 1000 * 60 * 60 * 24,
     gcTime: 1000 * 60 * 60 * 24 * 7,
@@ -227,7 +241,17 @@ export function CalendarWidget() {
 
   // Combine events, shifts, and holidays
   const allEvents = useMemo(() => {
-    const shiftEvents = (shifts || []).map((shift: any) => {
+    const baseEvents = (events || []).map((event: Event): CalendarEvent => ({
+      id: event.id,
+      title: event.title,
+      type: event.type,
+      location: event.location,
+      start_time: event.start_date,
+      end_time: event.end_date,
+      description: event.description
+    }))
+
+    const shiftEvents = (shifts || []).map((shift: UserShift): CalendarEvent => {
       const shiftStart = shift.start_time?.includes('T')
         ? shift.start_time
         : `${shift.shift_date}T${shift.start_time}`
@@ -259,7 +283,12 @@ export function CalendarWidget() {
       }))
 
     // Merge database events, shifts, local holidays, and fetched holidays
-    return [...(events || []), ...shiftEvents, ...ksaHolidays, ...fetchedHolidays.filter(h => isSameMonth(parseISO(h.start_time), currentDate))]
+    return [
+      ...baseEvents,
+      ...shiftEvents,
+      ...ksaHolidays,
+      ...fetchedHolidays.filter(h => isSameMonth(parseISO(h.start_time), currentDate))
+    ]
   }, [events, shifts, t, currentDate, isRTL, fetchedHolidays])
 
   // Calendar grid days
@@ -280,8 +309,8 @@ export function CalendarWidget() {
     : [t('schedule.calendar.sun'), t('schedule.calendar.mon'), t('schedule.calendar.tue'), t('schedule.calendar.wed'), t('schedule.calendar.thu'), t('schedule.calendar.fri'), t('schedule.calendar.sat')]
 
   const getEventsForDate = (date: Date) => {
-    return allEvents.filter((event: any) => {
-      const eventDateRaw = event.start_time || event.start_date || event.date
+    return allEvents.filter((event) => {
+      const eventDateRaw = event.start_time || event.start_date
       if (!eventDateRaw) return false
       const eventDate = parseISO(eventDateRaw)
       return isSameDay(eventDate, date)
@@ -289,6 +318,17 @@ export function CalendarWidget() {
   }
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : []
+  const upcomingDisplayEvents = useMemo(() => {
+    return (upcomingEvents || []).map((event: Event): CalendarEvent => ({
+      id: event.id,
+      title: event.title,
+      type: event.type,
+      location: event.location,
+      start_time: event.start_date,
+      end_time: event.end_date,
+      description: event.description
+    }))
+  }, [upcomingEvents])
 
   // Today's events summary
   const todayEvents = getEventsForDate(new Date())
@@ -429,7 +469,7 @@ export function CalendarWidget() {
                     {/* Event dots */}
                     {hasEvents && (
                       <div className="flex gap-1 mt-1">
-                      {dayEvents.slice(0, 3).map((e: any) => (
+                      {dayEvents.slice(0, 3).map((e) => (
                           <div
                             key={`${e.id || e.start_time || e.title}-${date.toISOString()}`}
                             className={cn(
@@ -501,14 +541,14 @@ export function CalendarWidget() {
           />
 
           {/* Upcoming Summary (Mobile/Compact) */}
-          {!isRTL && (upcomingEvents || []).length > 0 && (
+          {!isRTL && upcomingDisplayEvents.length > 0 && (
             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 mt-4">
               <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5" />
                 {t('schedule.upcoming', 'Next Up')}
               </h4>
               <div className="space-y-4">
-                {(upcomingEvents || []).slice(0, 3).map((event: any) => (
+                {upcomingDisplayEvents.slice(0, 3).map((event) => (
                   <Link
                     key={event.id}
                     to={schedulePath}
@@ -520,7 +560,7 @@ export function CalendarWidget() {
                     )} />
                     <span className="truncate flex-1 font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{event.title}</span>
                     <span className="text-[11px] font-bold text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
-                      {format(parseISO(event.start_time || event.start_date), 'MMM d')}
+                      {format(parseISO(event.start_time), 'MMM d')}
                     </span>
                   </Link>
                 ))}

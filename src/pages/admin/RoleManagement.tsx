@@ -238,7 +238,7 @@ export default function RoleManagement() {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <div className="relative">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
+                    <Search className="w-4 h-4 absolute start-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder={t('roles.search')}
                       value={searchQuery}
@@ -463,3 +463,4 @@ export default function RoleManagement() {
     </div>
   )
 }
+

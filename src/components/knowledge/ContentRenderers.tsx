@@ -4,13 +4,15 @@
  * Specialized components for rendering different knowledge article content types.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Badge } from '@/components/ui/badge'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import {
     Accordion,
     AccordionContent,
@@ -18,14 +20,11 @@ import {
     AccordionTrigger,
 } from '@/components/ui/accordion'
 import {
-    Play,
-    Pause,
     Maximize,
     CheckCircle2,
     Circle,
     HelpCircle,
     ExternalLink,
-    PlayCircle,
     ArrowRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -76,7 +75,7 @@ export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
 
                 // Fallback: regex extraction for odd formats
                 if (!videoId) {
-                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/|live\/)([^#\&\?]*).*/
+                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/
                     const match = url.match(regExp)
                     videoId = match?.[2] || null
                 }
@@ -241,9 +240,9 @@ export function ChecklistRenderer({ items, onCheckChange, readOnly = false }: Ch
                                     "font-medium",
                                     isChecked && "line-through text-gray-400"
                                 )}>
-                                    {item.text || (item as any).task}
+                                    {item.text || ('task' in item ? (item as { task?: string }).task : '')}
                                 </p>
-                                {(item.is_required || (item as any).required) && !isChecked && (
+                                {(item.is_required || ('required' in item && Boolean((item as { required?: boolean }).required))) && !isChecked && (
                                     <Badge variant="outline" className="text-xs mt-1 text-orange-600 border-orange-200">
                                         Required
                                     </Badge>
@@ -288,10 +287,12 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
                         </div>
                     </AccordionTrigger>
                     <AccordionContent className="pl-8 pb-4">
-                        <div
-                            className="prose prose-sm max-w-none text-gray-600"
-                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.answer) }}
-                        />
+                        <InlineErrorBoundary>
+                            <div
+                                className="prose prose-sm max-w-none text-gray-600"
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.answer) }}
+                            />
+                        </InlineErrorBoundary>
                     </AccordionContent>
                 </AccordionItem>
             ))}
@@ -308,14 +309,14 @@ interface RelatedArticlesProps {
     sourceId?: string
 }
 
-const getRelationLabel = (type: string, t: any) => {
+const getRelationLabel = (type: string, t: TFunction) => {
     switch (type) {
-        case 'see_also': return { label: t('viewer.relation.see_also'), color: 'blue', variant: 'outline' }
-        case 'prerequisite': return { label: t('viewer.relation.prerequisite'), color: 'orange', variant: 'outline' }
-        case 'supersedes': return { label: t('viewer.relation.supersedes'), color: 'yellow', variant: 'outline' }
-        case 'updated_by': return { label: t('viewer.relation.updated_by'), color: 'green', variant: 'outline' }
-        case 'automated': return { label: t('viewer.relation.automated'), color: 'hotel-gold', variant: 'default' }
-        default: return { label: t('viewer.relation.see_also'), color: 'blue', variant: 'outline' }
+        case 'see_also': return { label: t('viewer.relation.see_also'), color: 'blue', variant: 'outline' as BadgeProps['variant'] }
+        case 'prerequisite': return { label: t('viewer.relation.prerequisite'), color: 'orange', variant: 'outline' as BadgeProps['variant'] }
+        case 'supersedes': return { label: t('viewer.relation.supersedes'), color: 'yellow', variant: 'outline' as BadgeProps['variant'] }
+        case 'updated_by': return { label: t('viewer.relation.updated_by'), color: 'green', variant: 'outline' as BadgeProps['variant'] }
+        case 'automated': return { label: t('viewer.relation.automated'), color: 'hotel-gold', variant: 'default' as BadgeProps['variant'] }
+        default: return { label: t('viewer.relation.see_also'), color: 'blue', variant: 'outline' as BadgeProps['variant'] }
     }
 }
 
@@ -324,16 +325,17 @@ export function RelatedArticles({ articles, sourceId }: RelatedArticlesProps) {
     const { user } = useAuth()
     const trackClick = useTrackRelatedClick()
     const trackImpressions = useTrackRelatedImpressions()
+    const relatedIds = useMemo(() => articles.map((article) => article.id), [articles])
 
     // Track impressions once when component mounts
     useEffect(() => {
-        if (sourceId && articles.length > 0) {
+        if (sourceId && relatedIds.length > 0) {
             trackImpressions.mutate({
                 sourceId,
-                relatedIds: articles.map(a => a.id)
+                relatedIds
             })
         }
-    }, [sourceId, articles.length]) // Only on mount or if articles change significantly
+    }, [sourceId, relatedIds, trackImpressions])
 
     const handleArticleClick = (relatedId: string, position: number) => {
         if (sourceId) {
@@ -371,15 +373,15 @@ export function RelatedArticles({ articles, sourceId }: RelatedArticlesProps) {
                                         {article.content_type}
                                     </Badge>
                                     <div className="flex items-center gap-2">
-                                        <Badge
-                                            variant={getRelationLabel(article.relation_type || 'see_also', t).variant as any}
+                                    <Badge
+                                            variant={getRelationLabel(article.relation_type || 'see_also', t).variant}
                                             className={cn(
                                                 "text-[10px] uppercase font-bold px-1.5 py-0",
                                                 article.relation_type === 'automated' ? "bg-hotel-gold text-white" : ""
                                             )}
-                                        >
-                                            {getRelationLabel(article.relation_type || 'see_also', t).label}
-                                        </Badge>
+                                    >
+                                        {getRelationLabel(article.relation_type || 'see_also', t).label}
+                                    </Badge>
                                     </div>
                                     {article.score && (
                                         <span className="text-[10px] text-gray-400 font-mono">

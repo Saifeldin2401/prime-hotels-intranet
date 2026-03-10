@@ -32,8 +32,8 @@ interface RegistryWidgetRendererProps {
   effectivePermittedWidgets: WidgetId[]
   visibleWidgets: Record<string, boolean>
   itemVariants: {
-    hidden: { y: number; opacity: number }
-    visible: { y: number; opacity: number }
+    hidden: { translateY: number; opacity: number }
+    visible: { translateY: number; opacity: number }
   }
   statsList: Array<Record<string, unknown>>
   statsLoading: boolean
@@ -306,9 +306,9 @@ export function IntegratedDashboard() {
   }
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: { translateY: 20, opacity: 0 },
     visible: {
-      y: 0,
+      translateY: 0,
       opacity: 1
     }
   }

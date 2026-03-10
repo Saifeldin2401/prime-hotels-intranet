@@ -69,16 +69,16 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
             {mode === 'cloudy' && (
                 <>
                     <m.div
-                        initial={{ x: '-20%' }}
-                        animate={{ x: '120%' }}
+                        initial={{ translateX: '-20%' }}
+                        animate={{ translateX: '120%' }}
                         transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}
                         className="absolute -top-10 text-slate-500/5 w-full h-[300px]"
                     >
                         <Cloud className="w-96 h-96" strokeWidth={0.5} />
                     </m.div>
                     <m.div
-                        initial={{ x: '-50%' }}
-                        animate={{ x: '150%' }}
+                        initial={{ translateX: '-50%' }}
+                        animate={{ translateX: '150%' }}
                         transition={{ duration: 160, repeat: Infinity, ease: 'linear' }}
                         className="absolute top-10 text-slate-400/5 w-full"
                     >
@@ -93,8 +93,8 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
                     {particles.map((p) => (
                         <m.div
                             key={`rain-${p.id}`}
-                            initial={{ y: -50, left: p.left, opacity: 0 }}
-                            animate={{ y: '120%', opacity: [0, 1, 0] }}
+                            initial={{ translateY: -50, left: p.left, opacity: 0 }}
+                            animate={{ translateY: '120%', opacity: [0, 1, 0] }}
                             transition={{ duration: p.duration, repeat: Infinity, ease: 'linear', delay: p.delay }}
                             className="absolute -top-10 text-blue-500"
                         >
@@ -110,8 +110,8 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
                     {snowParticles.map((p) => (
                         <m.div
                             key={`snow-${p.id}`}
-                            initial={{ y: -50, left: p.left, opacity: 0 }}
-                            animate={{ y: '120%', opacity: [0, 1, 0], rotate: 360 }}
+                            initial={{ translateY: -50, left: p.left, opacity: 0 }}
+                            animate={{ translateY: '120%', opacity: [0, 1, 0], rotate: 360 }}
                             transition={{ duration: p.duration, repeat: Infinity, ease: 'linear', delay: p.delay }}
                             className="absolute -top-10 text-slate-300"
                         >
@@ -129,8 +129,8 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
                         className="absolute inset-0 bg-violet-500/5 mix-blend-color-burn"
                     />
                     <m.div
-                        initial={{ x: '-20%' }}
-                        animate={{ x: '120%' }}
+                        initial={{ translateX: '-20%' }}
+                        animate={{ translateX: '120%' }}
                         transition={{ duration: 100, repeat: Infinity, ease: 'linear' }}
                         className="absolute top-0 text-slate-600/5 w-full"
                     >
@@ -140,8 +140,8 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
                         {particles.map((p) => (
                             <m.div
                                 key={`storm-rain-${p.id}`}
-                                initial={{ y: -50, left: p.left, opacity: 0 }}
-                                animate={{ y: '120%', opacity: [0, 1, 0] }}
+                                initial={{ translateY: -50, left: p.left, opacity: 0 }}
+                                animate={{ translateY: '120%', opacity: [0, 1, 0] }}
                                 transition={{ duration: p.duration * 0.7, repeat: Infinity, ease: 'linear', delay: p.delay }}
                                 className="absolute -top-10 text-blue-600"
                             >
@@ -154,8 +154,8 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
 
             {mode === 'foggy' && (
                 <m.div
-                    initial={{ opacity: 0.3, x: '-5%' }}
-                    animate={{ opacity: 0.7, x: '5%' }}
+                    initial={{ opacity: 0.3, translateX: '-5%' }}
+                    animate={{ opacity: 0.7, translateX: '5%' }}
                     transition={{ duration: 10, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
                     className="absolute inset-0 bg-gradient-to-b from-slate-200/10 via-slate-100/30 to-slate-200/10 blur-xl"
                 />

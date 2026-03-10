@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
@@ -74,10 +75,10 @@ export function Header({
   const scopedProperties = availableProperties.filter((property) => !isConsolidatedPropertyId(property.id))
   const hasConsolidatedOption = consolidatedProperties.length > 0
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await signOut()
     navigate('/login')
-  }
+  }, [signOut, navigate])
 
   return (
     <header className="sticky top-0 z-40 w-full transition-all duration-300">

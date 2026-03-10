@@ -90,7 +90,7 @@ export const useAITrainingContent = () => {
             setProgress('Processing result...')
 
             // 5. Parse and return result
-            const generatedText = aiResult?.result || generateFallbackContent(doc.title, plainContent, options)
+            const generatedText = (aiResult?.response ?? aiResult?.result) || generateFallbackContent(doc.title, plainContent, options)
 
             return {
                 title: `Training: ${doc.title}`,
@@ -164,7 +164,8 @@ Return a JSON object with:
 
             // Parse result or use fallback
             try {
-                const parsed = JSON.parse(cleanJSON(aiResult?.result || '{}'))
+                const rawText = (aiResult?.response ?? aiResult?.result ?? '{}')
+                const parsed = JSON.parse(cleanJSON(rawText))
                 return parsed as ModuleOutline
             } catch {
                 // Fallback outline
@@ -371,7 +372,8 @@ IMPORTANT:
 
             // Parse result
             try {
-                const parsed = JSON.parse(cleanJSON(aiResult?.result || '{}'))
+                const rawText = (aiResult?.response ?? aiResult?.result ?? '{}')
+                const parsed = JSON.parse(cleanJSON(rawText))
                 if (parsed.sections && parsed.sections.length > 0) {
                     return parsed
                 }

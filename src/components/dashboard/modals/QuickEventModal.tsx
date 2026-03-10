@@ -39,12 +39,12 @@ import { cn } from '@/lib/utils'
 
 const eventSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  start_date: z.date({ required_error: 'Start date is required' }),
+  start_date: z.date({ message: 'Start date is required' }),
   end_date: z.date().optional(),
   location: z.string().optional(),
-  type: z.enum(['meeting', 'training', 'holiday', 'deadline', 'birthday', 'general']).default('meeting'),
+  type: z.enum(['meeting', 'training', 'holiday', 'deadline', 'birthday', 'general']),
   description: z.string().optional(),
-  all_day: z.boolean().default(false),
+  all_day: z.boolean(),
 })
 
 type EventFormValues = z.infer<typeof eventSchema>
@@ -293,15 +293,15 @@ export function QuickEventModal({ open, onOpenChange }: QuickEventModalProps) {
             >
               {t('actions.cancel') || 'Cancel'}
             </Button>
-            <Button type="submit" disabled={createEvent.isPending}>
+            <Button type="submit" disabled={createEvent.isPending} aria-busy={createEvent.isPending} aria-live="polite">
               {createEvent.isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 me-2 animate-spin" aria-hidden="true" />
                   {t('quick_create.creating') || 'Creating...'}
                 </>
               ) : (
                 <>
-                  <CalendarDays className="w-4 h-4 me-2" />
+                  <CalendarDays className="w-4 h-4 me-2" aria-hidden="true" />
                   {t('quick_create.create_event') || 'Create Event'}
                 </>
               )}

@@ -21,10 +21,18 @@ export function getAllowedOrigins(): string[] {
 
 export function resolveCorsOrigin(req: Request): string {
   const origin = req.headers.get("origin") || "";
-  if (!origin) return getAllowedOrigins()[0] || "https://phg-connect.com";
-
   const allowedOrigins = getAllowedOrigins();
-  return allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "https://phg-connect.com";
+
+  if (!origin) return allowedOrigins[0] || "https://phg-connect.com";
+
+  const cleanOrigin = origin.trim().replace(/\/$/, "");
+
+  const isAllowed = allowedOrigins.some(ao => {
+    const cleanAo = ao.trim().replace(/\/$/, "");
+    return cleanAo === cleanOrigin;
+  });
+
+  return isAllowed ? origin : allowedOrigins[0] || "https://phg-connect.com";
 }
 
 export function buildCorsHeaders(req: Request): Record<string, string> {

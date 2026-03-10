@@ -26,6 +26,15 @@ interface UserReadStatus {
     acknowledged_at?: string
 }
 
+interface ComplianceBreakdownRow {
+    scope_type: 'property' | 'department'
+    scope_id: string
+    scope_name: string
+    total_users: number
+    read_users: number
+    acknowledged_users: number
+}
+
 const UserList = ({ users, showAckTime = false }: { users: UserReadStatus[], showAckTime?: boolean }) => (
     <div className="space-y-2">
         {users.length === 0 ? (
@@ -91,6 +100,55 @@ export default function AnnouncementAnalytics() {
 
             if (error) throw error
             return data
+        }
+    })
+
+    const { data: complianceBreakdown = [] } = useQuery({
+        queryKey: ['announcement-compliance-breakdown', id],
+        enabled: !!id,
+        retry: false,
+        queryFn: async () => {
+            const { data, error } = await supabase.rpc('get_announcement_compliance_breakdown', {
+                p_announcement_id: id
+            })
+            if (error) {
+                const msg = (error as any)?.message || ''
+                if (typeof msg === 'string' && msg.toLowerCase().includes('not authorized')) {
+                    return [] as ComplianceBreakdownRow[]
+                }
+                throw error
+            }
+            return (data || []) as ComplianceBreakdownRow[]
+        }
+    })
+
+    const departmentScopeIds = complianceBreakdown
+        .filter((row) => row.scope_type === 'department')
+        .map((row) => row.scope_id)
+
+    const { data: departmentLookup = new Map<string, { departmentName: string; propertyName?: string }>() } = useQuery({
+        queryKey: ['announcement-compliance-dept-lookup', id, departmentScopeIds],
+        enabled: departmentScopeIds.length > 0,
+        staleTime: 5 * 60 * 1000,
+        queryFn: async () => {
+            const uniqueIds = Array.from(new Set(departmentScopeIds)).filter(Boolean)
+            if (uniqueIds.length === 0) return new Map<string, { departmentName: string; propertyName?: string }>()
+
+            const { data, error } = await supabase
+                .from('departments')
+                .select('id, name, property:properties(name)')
+                .in('id', uniqueIds)
+
+            if (error) throw error
+
+            const map = new Map<string, { departmentName: string; propertyName?: string }>()
+            ;(data || []).forEach((row: any) => {
+                map.set(row.id, {
+                    departmentName: row.name,
+                    propertyName: row.property?.name
+                })
+            })
+            return map
         }
     })
 
@@ -240,6 +298,14 @@ export default function AnnouncementAnalytics() {
     const readPercent = totalUsers > 0 ? Math.round((totalRead / totalUsers) * 100) : 0
     const ackPercent = totalUsers > 0 ? Math.round((totalAcknowledged / totalUsers) * 100) : 0
 
+    const breakdownByProperty = complianceBreakdown
+        .filter((row) => row.scope_type === 'property')
+        .sort((a, b) => (b.total_users || 0) - (a.total_users || 0))
+
+    const breakdownByDepartment = complianceBreakdown
+        .filter((row) => row.scope_type === 'department')
+        .sort((a, b) => (b.total_users || 0) - (a.total_users || 0))
+
     return (
         <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
             <PageHeader
@@ -339,7 +405,11 @@ export default function AnnouncementAnalytics() {
                 </CardHeader>
                 <CardContent>
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="grid grid-cols-2 sm:grid-cols-3 w-full max-w-md mb-4">
+                        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full max-w-2xl mb-4">
+                            <TabsTrigger value="overview" className="flex items-center gap-2">
+                                <PieChart className="w-4 h-4" />
+                                Overview
+                            </TabsTrigger>
                             <TabsTrigger value="acknowledged" className="flex items-center gap-2">
                                 <ThumbsUp className="w-4 h-4" />
                                 Acknowledged ({acknowledgedUsers.length})
@@ -353,6 +423,82 @@ export default function AnnouncementAnalytics() {
                                 Not Read ({unreadUsers.length})
                             </TabsTrigger>
                         </TabsList>
+
+                        <TabsContent value="overview">
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>By Property</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {breakdownByProperty.length === 0 ? (
+                                                <p className="text-sm text-muted-foreground">No property compliance data available.</p>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {breakdownByProperty.map((row) => {
+                                                        const readPct = row.total_users > 0 ? Math.round((row.read_users / row.total_users) * 100) : 0
+                                                        const ackPct = row.total_users > 0 ? Math.round((row.acknowledged_users / row.total_users) * 100) : 0
+                                                        return (
+                                                            <div key={`prop-${row.scope_id}`} className="border rounded-lg p-3">
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-medium truncate">{row.scope_name}</p>
+                                                                        <p className="text-xs text-muted-foreground">{row.total_users} users</p>
+                                                                    </div>
+                                                                    <div className="text-right text-xs">
+                                                                        <p>Read: {readPct}%</p>
+                                                                        {announcement.requires_acknowledgment && <p>Ack: {ackPct}%</p>}
+                                                                    </div>
+                                                                </div>
+                                                                <Progress value={announcement.requires_acknowledgment ? ackPct : readPct} className="mt-2 h-2" />
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>By Department</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {breakdownByDepartment.length === 0 ? (
+                                                <p className="text-sm text-muted-foreground">No department compliance data available.</p>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {breakdownByDepartment.map((row) => {
+                                                        const readPct = row.total_users > 0 ? Math.round((row.read_users / row.total_users) * 100) : 0
+                                                        const ackPct = row.total_users > 0 ? Math.round((row.acknowledged_users / row.total_users) * 100) : 0
+                                                        const lookup = departmentLookup.get(row.scope_id)
+                                                        const displayName = lookup?.departmentName
+                                                            ? `${lookup.departmentName}${lookup.propertyName ? ` — ${lookup.propertyName}` : ''}`
+                                                            : row.scope_name
+                                                        return (
+                                                            <div key={`dept-${row.scope_id}`} className="border rounded-lg p-3">
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-medium truncate">{displayName}</p>
+                                                                        <p className="text-xs text-muted-foreground">{row.total_users} users</p>
+                                                                    </div>
+                                                                    <div className="text-right text-xs">
+                                                                        <p>Read: {readPct}%</p>
+                                                                        {announcement.requires_acknowledgment && <p>Ack: {ackPct}%</p>}
+                                                                    </div>
+                                                                </div>
+                                                                <Progress value={announcement.requires_acknowledgment ? ackPct : readPct} className="mt-2 h-2" />
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
+                        </TabsContent>
 
                         <TabsContent value="acknowledged">
                             <div className="border rounded-lg p-4 bg-green-50/50 dark:bg-green-900/10">

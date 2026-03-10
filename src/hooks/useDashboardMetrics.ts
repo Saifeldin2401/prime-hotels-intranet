@@ -1,10 +1,9 @@
 /**
  * useDashboardMetrics Hook
- * 
- * Calculates real dashboard metrics with week-over-week trends.
- * Shows ALL-TIME values as the primary metric so users with sparse weekly data
- * still see meaningful numbers (not 0%).
- * Week-over-week trend arrows are based on this week vs last week.
+ *
+ * Display values are all-time KPIs for stability.
+ * Trend arrows always compare like-for-like windows:
+ * this week vs previous week.
  */
 
 import { useQuery } from '@tanstack/react-query'
@@ -15,21 +14,21 @@ import { isRealPropertyId } from '@/lib/propertyScope'
 
 interface TrendResult {
   value: number
-  change: number | null // percentage change, null if no previous data
-  positive: boolean // true if improvement
+  change: number | null
+  positive: boolean
   direction: 'up' | 'down' | 'flat'
 }
 
 interface DashboardMetrics {
   taskCompletion: TrendResult
   trainingProgress: TrendResult
-  responseTime: TrendResult // in hours
+  responseTime: TrendResult
   attendanceRate: TrendResult
   isLoading: boolean
 }
 
-const COMPLETED_TASK_STATUSES = ['completed'] as const
 type SettledCountPayload = { count?: number | null; error?: { message?: string } | null }
+const COMPLETED_TASK_STATUSES = ['completed'] as const
 
 const settledReasonToMessage = (reason: unknown) => {
   if (reason instanceof Error) return reason.message
@@ -50,21 +49,85 @@ const getSettledCount = (result: PromiseSettledResult<unknown>, label: string): 
   return payload?.count ?? 0
 }
 
-/**
- * Calculate week-over-week trend
- */
-function calculateTrend(current: number, previous: number): { change: number | null; positive: boolean; direction: 'up' | 'down' | 'flat' } {
-  if (previous === 0) {
-    return { change: null, positive: current > 0, direction: current > 0 ? 'up' : 'flat' }
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+const calculateRate = (completed: number, total: number) =>
+  total > 0 ? Math.round((completed / total) * 100) : 0
+
+const calculateAttendanceRate = (records: { status: string }[]) => {
+  if (records.length === 0) return 0
+  const present = records.filter((record) => record.status === 'present' || record.status === 'on_time').length
+  return Math.round((present / records.length) * 100)
+}
+
+const calculateAvgResponseTime = (
+  tasks: { created_at: string; completed_at: string | null }[]
+): number | null => {
+  if (!tasks.length) return null
+  const values = tasks
+    .map((task) => {
+      if (!task.completed_at) return null
+      const created = new Date(task.created_at).getTime()
+      const completed = new Date(task.completed_at).getTime()
+      if (Number.isNaN(created) || Number.isNaN(completed) || completed < created) return null
+      return (completed - created) / (1000 * 60 * 60)
+    })
+    .filter((value): value is number => typeof value === 'number')
+
+  if (!values.length) return null
+  return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10
+}
+
+const filterByRange = <T,>(
+  rows: T[],
+  getDate: (row: T) => string | null | undefined,
+  startInclusive: Date,
+  endExclusive?: Date
+) =>
+  rows.filter((row) => {
+    const raw = getDate(row)
+    if (!raw) return false
+    const date = new Date(raw)
+    if (Number.isNaN(date.getTime())) return false
+    if (date < startInclusive) return false
+    if (endExclusive && date >= endExclusive) return false
+    return true
+  })
+
+function calculateTrend(
+  current: number | null,
+  previous: number | null,
+  options: { lowerIsBetter?: boolean } = {}
+): { change: number | null; positive: boolean; direction: 'up' | 'down' | 'flat' } {
+  const { lowerIsBetter = false } = options
+
+  if (current === null || previous === null) {
+    return { change: null, positive: true, direction: 'flat' }
   }
 
-  const change = ((current - previous) / previous) * 100
-  const roundedChange = Math.round(change * 10) / 10
+  if (previous === 0) {
+    if (current === 0) return { change: null, positive: true, direction: 'flat' }
+    const direction = lowerIsBetter ? 'down' : 'up'
+    return { change: null, positive: true, direction }
+  }
+
+  const delta = ((current - previous) / previous) * 100
+  const roundedDelta = Math.round(delta * 10) / 10
+
+  const rawDirection: 'up' | 'down' | 'flat' =
+    roundedDelta > 3 ? 'up' : roundedDelta < -3 ? 'down' : 'flat'
+
+  const direction =
+    lowerIsBetter && rawDirection !== 'flat'
+      ? (rawDirection === 'up' ? 'down' : 'up')
+      : rawDirection
+
+  const positive = lowerIsBetter ? roundedDelta < 0 : roundedDelta > 0
 
   return {
-    change: Math.abs(roundedChange),
-    positive: roundedChange > 0,
-    direction: roundedChange > 3 ? 'up' : roundedChange < -3 ? 'down' : 'flat'
+    change: Math.abs(roundedDelta),
+    positive,
+    direction
   }
 }
 
@@ -79,125 +142,129 @@ export function useDashboardMetrics(propertyId?: string): DashboardMetrics {
       if (!user?.id) return null
 
       const isScoped = isRealPropertyId(activePropertyId)
-
-      // Date ranges for week-over-week trend comparison only
       const now = new Date()
-      const currentWeekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const previousWeekStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+      const currentWeekStart = new Date(now.getTime() - WEEK_MS)
+      const previousWeekStart = new Date(now.getTime() - (WEEK_MS * 2))
 
-      // ───────────────────────────────────────────────
-      // 1. Task Completion — filter by assigned_to_id (not created_by_id)
-      // ───────────────────────────────────────────────
       const taskCountSettled = await Promise.allSettled([
         (async () => {
-          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('is_deleted', false).eq('assigned_to_id', user.id)
-          if (isScoped) {
-            q = q.eq('property_id', activePropertyId)
-          } else if (propertyIds.length > 0) {
-            q = q.in('property_id', propertyIds)
-          }
-          return q
+          let query = supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false)
+            .eq('assigned_to_id', user.id)
+          if (isScoped) query = query.eq('property_id', activePropertyId)
+          else if (propertyIds.length > 0) query = query.in('property_id', propertyIds)
+          return query
         })(),
         (async () => {
-          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
-          if (isScoped) {
-            q = q.eq('property_id', activePropertyId)
-          } else if (propertyIds.length > 0) {
-            q = q.in('property_id', propertyIds)
-          }
-          return q
+          let query = supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false)
+            .eq('assigned_to_id', user.id)
+            .in('status', COMPLETED_TASK_STATUSES)
+          if (isScoped) query = query.eq('property_id', activePropertyId)
+          else if (propertyIds.length > 0) query = query.in('property_id', propertyIds)
+          return query
         })(),
         (async () => {
-          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
-            .gte('completed_at', currentWeekStart.toISOString())
-          if (isScoped) {
-            q = q.eq('property_id', activePropertyId)
-          } else if (propertyIds.length > 0) {
-            q = q.in('property_id', propertyIds)
-          }
-          return q
+          let query = supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false)
+            .eq('assigned_to_id', user.id)
+            .gte('created_at', currentWeekStart.toISOString())
+          if (isScoped) query = query.eq('property_id', activePropertyId)
+          else if (propertyIds.length > 0) query = query.in('property_id', propertyIds)
+          return query
         })(),
         (async () => {
-          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('is_deleted', false).eq('assigned_to_id', user.id)
+          let query = supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false)
+            .eq('assigned_to_id', user.id)
+            .in('status', COMPLETED_TASK_STATUSES)
+            .gte('created_at', currentWeekStart.toISOString())
+          if (isScoped) query = query.eq('property_id', activePropertyId)
+          else if (propertyIds.length > 0) query = query.in('property_id', propertyIds)
+          return query
+        })(),
+        (async () => {
+          let query = supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false)
+            .eq('assigned_to_id', user.id)
             .gte('created_at', previousWeekStart.toISOString())
             .lt('created_at', currentWeekStart.toISOString())
-          if (isScoped) {
-            q = q.eq('property_id', activePropertyId)
-          } else if (propertyIds.length > 0) {
-            q = q.in('property_id', propertyIds)
-          }
-          return q
+          if (isScoped) query = query.eq('property_id', activePropertyId)
+          else if (propertyIds.length > 0) query = query.in('property_id', propertyIds)
+          return query
         })(),
         (async () => {
-          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('is_deleted', false).eq('assigned_to_id', user.id).in('status', COMPLETED_TASK_STATUSES)
+          let query = supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('is_deleted', false)
+            .eq('assigned_to_id', user.id)
+            .in('status', COMPLETED_TASK_STATUSES)
             .gte('created_at', previousWeekStart.toISOString())
             .lt('created_at', currentWeekStart.toISOString())
-          if (isScoped) {
-            q = q.eq('property_id', activePropertyId)
-          } else if (propertyIds.length > 0) {
-            q = q.in('property_id', propertyIds)
-          }
-          return q
+          if (isScoped) query = query.eq('property_id', activePropertyId)
+          else if (propertyIds.length > 0) query = query.in('property_id', propertyIds)
+          return query
         })(),
       ])
 
-      const safeAllTotal = getSettledCount(taskCountSettled[0], 'Dashboard metrics all tasks')
-      const safeAllDone = getSettledCount(taskCountSettled[1], 'Dashboard metrics completed tasks')
-      const safeWeekDone = getSettledCount(taskCountSettled[2], 'Dashboard metrics completed tasks this week')
-      const safePrevTotal = getSettledCount(taskCountSettled[3], 'Dashboard metrics previous week tasks')
-      const safePrevDone = getSettledCount(taskCountSettled[4], 'Dashboard metrics previous week completed tasks')
+      const totalTasksAllTime = getSettledCount(taskCountSettled[0], 'Dashboard metrics all tasks')
+      const completedTasksAllTime = getSettledCount(taskCountSettled[1], 'Dashboard metrics completed tasks')
+      const totalTasksCurrentWeek = getSettledCount(taskCountSettled[2], 'Dashboard metrics tasks this week')
+      const completedTasksCurrentWeek = getSettledCount(taskCountSettled[3], 'Dashboard metrics completed tasks this week')
+      const totalTasksPreviousWeek = getSettledCount(taskCountSettled[4], 'Dashboard metrics tasks previous week')
+      const completedTasksPreviousWeek = getSettledCount(taskCountSettled[5], 'Dashboard metrics completed tasks previous week')
 
       const taskCompletion = {
-        // All-time completion rate as the displayed value
-        current: safeAllTotal > 0 ? Math.round((safeAllDone / safeAllTotal) * 100) : 0,
-        // Trend: this week's completions vs last week's rate
-        previous: safePrevTotal > 0
-          ? Math.round((safePrevDone / safePrevTotal) * 100)
-          : safeWeekDone > 0 ? 50 : 0 // neutral baseline if no history
+        current: calculateRate(completedTasksAllTime, totalTasksAllTime),
+        weekRate: calculateRate(completedTasksCurrentWeek, totalTasksCurrentWeek),
+        previousWeekRate: calculateRate(completedTasksPreviousWeek, totalTasksPreviousWeek)
       }
 
-      // ───────────────────────────────────────────────
-      // 2. Training Progress — all-time overall rate
-      // ───────────────────────────────────────────────
-      // We need to fetch training progress but we don't have a property_id column in training_progress usually.
-      // However, learning_progress might have it. Let's assume it doesn't and filter by user_id only 
-      // UNLESS we want to cross-reference with user_properties or similar.
-      // For now, let's stick to the current implementation but check if training_progress had property_id.
-      // Looking at the original code, it was purely user.id based.
-      const { data: trainingData } = await supabase
-        .from('learning_progress') // Wait, the original was 'training_progress' but user rules say use 'learning_progress'
-        .select('status, completed_at, created_at')
+      const { data: trainingData, error: trainingError } = await supabase
+        .from('learning_progress')
+        .select('status, created_at')
         .eq('user_id', user.id)
         .or('is_deleted.is.null,is_deleted.eq.false')
 
-      const allTraining = trainingData || []
-      const currentWeekTraining = allTraining.filter(t => new Date(t.created_at) >= currentWeekStart)
-      const previousWeekTraining = allTraining.filter(t => {
-        const d = new Date(t.created_at)
-        return d >= previousWeekStart && d < currentWeekStart
-      })
-
-      const trainingProgress = {
-        // All-time training completion rate
-        current: allTraining.length > 0
-          ? Math.round((allTraining.filter(t => t.status === 'completed').length / allTraining.length) * 100)
-          : 0,
-        // Trend comparison
-        previous: previousWeekTraining.length > 0
-          ? Math.round((previousWeekTraining.filter(t => t.status === 'completed').length / previousWeekTraining.length) * 100)
-          : currentWeekTraining.length > 0
-            ? Math.round((currentWeekTraining.filter(t => t.status === 'completed').length / currentWeekTraining.length) * 100)
-            : 0
+      if (trainingError) {
+        console.warn('Dashboard metrics training query error:', trainingError.message)
       }
 
-      // ───────────────────────────────────────────────
-      // 3. Response Time — all-time average (hours to complete tasks)
-      // ───────────────────────────────────────────────
+      const allTraining = trainingData || []
+      const currentWeekTraining = filterByRange(allTraining, (row) => row.created_at, currentWeekStart)
+      const previousWeekTraining = filterByRange(
+        allTraining,
+        (row) => row.created_at,
+        previousWeekStart,
+        currentWeekStart
+      )
+
+      const trainingProgress = {
+        current: calculateRate(
+          allTraining.filter((row) => row.status === 'completed').length,
+          allTraining.length
+        ),
+        weekRate: calculateRate(
+          currentWeekTraining.filter((row) => row.status === 'completed').length,
+          currentWeekTraining.length
+        ),
+        previousWeekRate: calculateRate(
+          previousWeekTraining.filter((row) => row.status === 'completed').length,
+          previousWeekTraining.length
+        )
+      }
+
       let responseTimeQuery = supabase
         .from('tasks')
         .select('created_at, completed_at')
@@ -206,89 +273,87 @@ export function useDashboardMetrics(propertyId?: string): DashboardMetrics {
         .not('completed_at', 'is', null)
         .eq('assigned_to_id', user.id)
 
-      if (isScoped) {
-        responseTimeQuery = responseTimeQuery.eq('property_id', activePropertyId)
-      } else if (propertyIds.length > 0) {
-        responseTimeQuery = responseTimeQuery.in('property_id', propertyIds)
+      if (isScoped) responseTimeQuery = responseTimeQuery.eq('property_id', activePropertyId)
+      else if (propertyIds.length > 0) responseTimeQuery = responseTimeQuery.in('property_id', propertyIds)
+
+      const { data: responseTimeData, error: responseTimeError } = await responseTimeQuery
+      if (responseTimeError) {
+        console.warn('Dashboard metrics response-time query error:', responseTimeError.message)
       }
 
-      const { data: responseTimeData } = await responseTimeQuery
+      const completedTasks = responseTimeData || []
+      const responseTasksCurrentWeek = filterByRange(
+        completedTasks,
+        (row) => row.completed_at,
+        currentWeekStart
+      )
+      const responseTasksPreviousWeek = filterByRange(
+        completedTasks,
+        (row) => row.completed_at,
+        previousWeekStart,
+        currentWeekStart
+      )
 
-      const calculateAvgResponseTime = (tasks: { created_at: string; completed_at: string | null }[]) => {
-        if (!tasks || tasks.length === 0) return 0
-        const times = tasks.map(t => {
-          const created = new Date(t.created_at).getTime()
-          const completed = new Date(t.completed_at!).getTime()
-          return (completed - created) / (1000 * 60 * 60) // hours
-        })
-        const avg = times.reduce((a, b) => a + b, 0) / times.length
-        return Math.round(avg * 10) / 10
-      }
-
-      const allCompleted = responseTimeData || []
-      const prevWeekCompleted = allCompleted.filter(t => {
-        const d = new Date(t.created_at)
-        return d >= previousWeekStart && d < currentWeekStart
-      })
+      const allTimeResponse = calculateAvgResponseTime(completedTasks)
+      const currentWeekResponse = calculateAvgResponseTime(responseTasksCurrentWeek)
+      const previousWeekResponse = calculateAvgResponseTime(responseTasksPreviousWeek)
 
       const responseTime = {
-        current: calculateAvgResponseTime(allCompleted),    // All-time average
-        previous: calculateAvgResponseTime(prevWeekCompleted.length > 0 ? prevWeekCompleted : allCompleted)
+        current: allTimeResponse ?? 0,
+        weekAverage: currentWeekResponse,
+        previousWeekAverage: previousWeekResponse
       }
 
-      // ───────────────────────────────────────────────
-      // 4. Attendance Rate — all-time (not just last 7 days)
-      // ───────────────────────────────────────────────
       let attendanceQuery = supabase
         .from('attendance')
         .select('status, date')
         .eq('employee_id', user.id)
 
-      if (isScoped) {
-        attendanceQuery = attendanceQuery.eq('property_id', activePropertyId)
-      } else if (propertyIds.length > 0) {
-        attendanceQuery = attendanceQuery.in('property_id', propertyIds)
-      }
+      if (isScoped) attendanceQuery = attendanceQuery.eq('property_id', activePropertyId)
+      else if (propertyIds.length > 0) attendanceQuery = attendanceQuery.in('property_id', propertyIds)
 
-      const { data: attendanceData } = await attendanceQuery
+      const { data: attendanceData, error: attendanceError } = await attendanceQuery
+      if (attendanceError) {
+        console.warn('Dashboard metrics attendance query error:', attendanceError.message)
+      }
 
       const allAttendance = attendanceData || []
-      const currentWeekAttendance = allAttendance.filter(a => new Date(a.date) >= currentWeekStart)
-      const previousWeekAttendance = allAttendance.filter(a => {
-        const d = new Date(a.date)
-        return d >= previousWeekStart && d < currentWeekStart
-      })
-
-      const calculateAttendanceRate = (records: { status: string }[]) => {
-        if (records.length === 0) return 0
-        const present = records.filter(r => r.status === 'present' || r.status === 'on_time').length
-        return Math.round((present / records.length) * 100)
-      }
+      const currentWeekAttendance = filterByRange(allAttendance, (row) => row.date, currentWeekStart)
+      const previousWeekAttendance = filterByRange(
+        allAttendance,
+        (row) => row.date,
+        previousWeekStart,
+        currentWeekStart
+      )
 
       const attendanceRate = {
-        current: calculateAttendanceRate(allAttendance),  // All-time rate
-        previous: calculateAttendanceRate(
-          previousWeekAttendance.length > 0 ? previousWeekAttendance : currentWeekAttendance
-        )
+        current: calculateAttendanceRate(allAttendance),
+        weekRate: calculateAttendanceRate(currentWeekAttendance),
+        previousWeekRate: calculateAttendanceRate(previousWeekAttendance)
       }
 
       return { taskCompletion, trainingProgress, responseTime, attendanceRate }
     },
-    refetchInterval: 5 * 60 * 1000 // Refresh every 5 minutes
+    refetchInterval: 5 * 60 * 1000
   })
 
-  // Calculate trends
-  const taskTrend = data ? calculateTrend(data.taskCompletion.current, data.taskCompletion.previous) : null
-  const trainingTrend = data ? calculateTrend(data.trainingProgress.current, data.trainingProgress.previous) : null
+  const taskTrend = data
+    ? calculateTrend(data.taskCompletion.weekRate, data.taskCompletion.previousWeekRate)
+    : null
 
-  // For response time, lower is better so we invert the trend
-  const responseTrendRaw = data ? calculateTrend(data.responseTime.current, data.responseTime.previous) : null
-  const responseTrend = responseTrendRaw ? {
-    ...responseTrendRaw,
-    positive: !responseTrendRaw.positive // Invert - lower time is better
-  } : null
+  const trainingTrend = data
+    ? calculateTrend(data.trainingProgress.weekRate, data.trainingProgress.previousWeekRate)
+    : null
 
-  const attendanceTrend = data ? calculateTrend(data.attendanceRate.current, data.attendanceRate.previous) : null
+  const responseTrend = data
+    ? calculateTrend(data.responseTime.weekAverage, data.responseTime.previousWeekAverage, {
+      lowerIsBetter: true
+    })
+    : null
+
+  const attendanceTrend = data
+    ? calculateTrend(data.attendanceRate.weekRate, data.attendanceRate.previousWeekRate)
+    : null
 
   return {
     taskCompletion: {

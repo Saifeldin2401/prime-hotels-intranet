@@ -105,7 +105,7 @@ export class SecurityMiddleware {
   }
 
   // Request validation
-  static validateRequest(data: any, requiredFields: string[]): {
+  static validateRequest(data: Record<string, unknown>, requiredFields: string[]): {
     isValid: boolean
     missingFields: string[]
   } {
@@ -124,19 +124,24 @@ export class SecurityMiddleware {
   }
 
   // Session security
-  static validateSession(session: any): boolean {
+  static validateSession(session: Record<string, unknown> | null | undefined): boolean {
     if (!session) return false
 
     // Check session age
-    const sessionAge = Date.now() - new Date(session.created_at).getTime()
-    const maxSessionAge = 24 * 60 * 60 * 1000 // 24 hours
+    const createdAt = typeof session.created_at === 'string' ? session.created_at : ''
+    const sessionAge = createdAt ? Date.now() - new Date(createdAt).getTime() : Number.POSITIVE_INFINITY
+    const defaultMaxSessionAge = 24 * 60 * 60 * 1000 // 24 hours
+    const configuredMaxSessionAge = Number(import.meta.env.VITE_MAX_SESSION_AGE_MS)
+    const maxSessionAge = Number.isFinite(configuredMaxSessionAge)
+      ? configuredMaxSessionAge
+      : defaultMaxSessionAge
 
     if (sessionAge > maxSessionAge) {
       return false
     }
 
     // Check session integrity
-    return !!session.user_id && !!session.expires_at
+    return typeof session.user_id === 'string' && Boolean(session.expires_at)
   }
 
   // API key validation

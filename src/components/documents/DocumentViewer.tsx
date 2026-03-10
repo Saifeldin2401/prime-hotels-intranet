@@ -4,7 +4,7 @@ import { sanitizeHtml } from '@/lib/sanitize'
 import { Button } from '@/components/ui/button'
 import { Download, Loader2 } from 'lucide-react'
 import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
-import { useTranslation } from "react-i18next";
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 
 interface DocumentViewerProps {
   open: boolean
@@ -19,7 +19,6 @@ interface DocumentViewerProps {
 }
 
 export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerProps) {
-  const [loading, setLoading] = useState(true)
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
   const [isResolvingUrl, setIsResolvingUrl] = useState(false)
 
@@ -124,8 +123,6 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
                 src={activeUrl}
                 alt={document.title}
                 className="max-w-full max-h-full object-contain"
-                onLoad={() => setLoading(false)}
-                onError={() => setLoading(false)}
               />
             </div>
           )}
@@ -155,7 +152,9 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
                   {document.description}
                 </p>
               )}
-              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(document.content || '') }} />
+              <InlineErrorBoundary>
+                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(document.content || '') }} />
+              </InlineErrorBoundary>
             </div>
           )}
 

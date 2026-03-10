@@ -40,7 +40,14 @@ Deno.serve(async (req) => {
             });
         }
 
-        const { feedback_id } = await req.json();
+        let payload: Record<string, unknown> = {};
+        try {
+            payload = await req.json();
+        } catch {
+            payload = {};
+        }
+
+        const feedback_id = typeof payload?.feedback_id === "string" ? payload.feedback_id.trim() : "";
 
         if (!feedback_id) {
             return new Response(JSON.stringify({ error: "No feedback_id provided" }), {
@@ -49,31 +56,41 @@ Deno.serve(async (req) => {
             });
         }
 
-        const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!);
-
-        // 1. Get feedback details
-        const { data: feedback, error: fetchError } = await supabase
+        // Scope check with RLS using the authenticated user token.
+        const { data: scopedFeedback, error: scopedError } = await supabaseAuth
             .from("document_feedback")
             .select(`
-        *,
+        id,
+        ai_analysis_status,
+        feedback_text,
+        helpful,
         documents (
           title,
           department_id
         )
       `)
             .eq("id", feedback_id)
-            .single();
+            .maybeSingle();
 
-        if (fetchError || !feedback) {
-            console.error("Error fetching feedback:", fetchError);
-            return new Response(JSON.stringify({ error: "Feedback not found" }), {
-                status: 404,
+        if (scopedError) {
+            console.error("Scoped feedback lookup failed:", scopedError);
+            return new Response(JSON.stringify({ error: "Unable to verify feedback access" }), {
+                status: 403,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
+        if (!scopedFeedback) {
+            return new Response(JSON.stringify({ error: "Feedback not accessible" }), {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!);
+
         // Skip if already analyzed or no text
-        if (feedback.ai_analysis_status === "completed" || !feedback.feedback_text) {
+        if (scopedFeedback.ai_analysis_status === "completed" || !scopedFeedback.feedback_text) {
             return new Response(JSON.stringify({ success: true, message: "Skipped" }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -82,9 +99,9 @@ Deno.serve(async (req) => {
         // 2. Call Together.ai for analysis
         const prompt = `You are an AI assistant for a hotel intranet system. Analyze the following feedback left by an employee on a Knowledge Base document (SOP/Policy).
     
-    DOCUMENT TITLE: ${feedback.documents?.title || "Unknown"}
-    HELPFUL: ${feedback.helpful ? "Yes" : "No"}
-    FEEDBACK TEXT: "${feedback.feedback_text}"
+    DOCUMENT TITLE: ${scopedFeedback.documents?.title || "Unknown"}
+    HELPFUL: ${scopedFeedback.helpful ? "Yes" : "No"}
+    FEEDBACK TEXT: "${scopedFeedback.feedback_text}"
 
     Analyze the feedback and provide:
     1. Sentiment: "positive", "neutral", or "negative".

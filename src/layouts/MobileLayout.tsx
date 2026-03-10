@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation'
@@ -18,9 +18,9 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     const { currentProperty } = useProperty()
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col no-horizontal-scroll">
+        <div className="min-h-dvh bg-gray-50 flex flex-col no-horizontal-scroll">
             {/* Dedicated Mobile Top Header - Distinct from Desktop */}
-            <header className="sticky top-0 z-40 w-full h-16 bg-white/80 backdrop-blur-lg border-b border-gray-100 flex items-center justify-between px-4 sm:px-6">
+            <header className="sticky top-0 z-50 w-full h-16 bg-white/80 backdrop-blur-lg border-b border-gray-100 flex items-center justify-between px-4 sm:px-6">
                 <Link to="/" className="flex items-center gap-2">
                     <img
                         src="/prime-logo-light.png"

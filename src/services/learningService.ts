@@ -9,14 +9,30 @@ import type {
 } from '@/types/learning'
 import type { QuestionStatus } from '@/types/questions'
 
-function shuffleArray<T>(items: T[]): T[] {
+function hashSeed(input: string): number {
+    let hash = 2166136261
+    for (let i = 0; i < input.length; i += 1) {
+        hash ^= input.charCodeAt(i)
+        hash = Math.imul(hash, 16777619)
+    }
+    return hash >>> 0
+}
+
+function seededShuffleArray<T>(items: T[], seedInput: string): T[] {
     const result = [...items]
+    let seed = hashSeed(seedInput)
+    const nextRandom = () => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+        return seed / 4294967296
+    }
+
     for (let i = result.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1))
+        const j = Math.floor(nextRandom() * (i + 1))
         const temp = result[i]
         result[i] = result[j]
         result[j] = temp
     }
+
     return result
 }
 
@@ -69,7 +85,9 @@ export const learningService = {
         // Respect quiz setting: randomize question order in player when enabled.
         if (data.questions) {
             if (data.randomize_questions) {
-                data.questions = shuffleArray(data.questions)
+                const { data: authData } = await supabase.auth.getUser()
+                const userSeed = authData?.user?.id || 'anonymous'
+                data.questions = seededShuffleArray(data.questions, `${id}:${userSeed}`)
             } else {
                 data.questions.sort((a: LearningQuizQuestion, b: LearningQuizQuestion) => (a.display_order || 0) - (b.display_order || 0))
             }
@@ -362,8 +380,56 @@ export const learningService = {
             throw new Error('Missing required progress keys (user_id, content_id, content_type)')
         }
 
+        const { data: existingRow, error: existingError } = await supabase
+            .from('learning_progress')
+            .select('*')
+            .eq('user_id', progress.user_id)
+            .eq('content_type', progress.content_type)
+            .eq('content_id', progress.content_id)
+            .maybeSingle()
+
+        if (existingError) throw existingError
+
+        const existingScore = typeof existingRow?.score_percentage === 'number' ? existingRow.score_percentage : null
+        const nextScore = typeof progress.score_percentage === 'number' ? progress.score_percentage : null
+        const existingProgress = typeof existingRow?.progress_percentage === 'number' ? existingRow.progress_percentage : null
+        const nextProgress = typeof progress.progress_percentage === 'number' ? progress.progress_percentage : null
+
+        const keepExistingScore =
+            existingScore !== null &&
+            nextScore !== null &&
+            Number.isFinite(existingScore) &&
+            Number.isFinite(nextScore) &&
+            existingScore > nextScore
+
+        const mergedMetadata = (
+            existingRow?.metadata &&
+            typeof existingRow.metadata === 'object' &&
+            !Array.isArray(existingRow.metadata)
+        )
+            ? { ...(existingRow.metadata as Record<string, unknown>) }
+            : {}
+
+        if (progress.metadata && typeof progress.metadata === 'object' && !Array.isArray(progress.metadata)) {
+            Object.assign(mergedMetadata, progress.metadata as Record<string, unknown>)
+        }
+
+        const bestProgressPercentage =
+            existingProgress !== null && nextProgress !== null
+                ? Math.max(existingProgress, nextProgress)
+                : (nextProgress ?? existingProgress)
+
+        const bestScorePercentage = keepExistingScore ? existingRow?.score_percentage : progress.score_percentage
+        const bestPassed = keepExistingScore ? existingRow?.passed : progress.passed
+        const bestCompletedAt = keepExistingScore ? (existingRow?.completed_at ?? progress.completed_at) : (progress.completed_at ?? existingRow?.completed_at)
+
         const progressData = {
             ...progress,
+            progress_percentage: bestProgressPercentage,
+            score_percentage: bestScorePercentage,
+            passed: bestPassed,
+            completed_at: bestCompletedAt,
+            metadata: Object.keys(mergedMetadata).length ? mergedMetadata : progress.metadata,
             updated_at: new Date().toISOString()
         }
 

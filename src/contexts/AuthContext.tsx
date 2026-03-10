@@ -78,7 +78,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authRecoveryInProgressRef.current = true
     try {
       console.warn(`[Auth] ${reason}. Clearing local session.`)
-      await supabase.auth.signOut({ scope: 'local' })
+      const maxAttempts = 3
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+          await supabase.auth.signOut({ scope: 'local' })
+          break
+        } catch (error) {
+          if (attempt === maxAttempts - 1) {
+            throw error
+          }
+          const delayMs = 250 * (2 ** attempt)
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
+        }
+      }
     } catch (error) {
       console.warn('Failed to clear local auth session:', error)
     } finally {
@@ -114,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const loadId = ++loadSeqRef.current
       activeUserIdRef.current = userId
       setRolesLoading(true)
+      const isStale = () => activeUserIdRef.current !== userId || loadId !== loadSeqRef.current
 
       // Load profile with timeout
       const profilePromise = supabase
@@ -127,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         10000,
         'Profile load'
       ) as any
+      if (isStale()) return
       const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
 
       if (profileError) {
@@ -138,9 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Try alternative: use auth.users metadata
         const { data: { user } } = await supabase.auth.getUser()
-        if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
-          return
-        }
+        if (isStale()) return
         if (user) {
           // Set basic profile from auth user
           const fullProfile: Profile = {
@@ -165,17 +177,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(fullProfile)
         }
       } else if (profileData) {
-        if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
-          return
-        }
+        if (isStale()) return
         setProfile(profileData)
       } else {
         // No profile row yet (e.g. during first-time auth propagation).
         // Fall back to auth user metadata without logging as an error.
         const { data: { user } } = await supabase.auth.getUser()
-        if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
-          return
-        }
+        if (isStale()) return
         if (user) {
           const fullProfile: Profile = {
             id: user.id,
@@ -223,9 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         withTimeout(departmentsPromise as any, 10000, 'Departments load')
       ]) as [PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>]
 
-      if (activeUserIdRef.current !== userId || loadId !== loadSeqRef.current) {
-        return
-      }
+      if (isStale()) return
 
       // Handle roles
       if (rolesResult.status === 'fulfilled') {

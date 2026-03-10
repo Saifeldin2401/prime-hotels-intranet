@@ -12,6 +12,7 @@ import { buildCorsHeaders } from "../_shared/cors.ts";
 const HF_TOKEN = Deno.env.get('HUGGINGFACE_TOKEN');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 interface TriageResult {
     priority: 'low' | 'medium' | 'high' | 'critical';
@@ -101,7 +102,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // Verify the JWT token
-        const supabaseAuth = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             global: { headers: { Authorization: authHeader } }
         });
         const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
@@ -123,6 +124,37 @@ Deno.serve(async (req: Request) => {
         }
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+        const { data: roleRows } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
+
+        const triageRoles = new Set(['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head', 'property_hr']);
+        const hasTriageRole = (roleRows || []).some((row: { role: string }) => triageRoles.has(row.role));
+
+        // Fetch ticket with user-scoped client to enforce RLS visibility
+        const { data: scopedTicket, error: scopedError } = await supabaseAuth
+            .from('maintenance_tickets')
+            .select('id, reported_by_id, assigned_to_id')
+            .eq('id', ticket_id)
+            .maybeSingle();
+
+        if (scopedError || !scopedTicket) {
+            return new Response(JSON.stringify({ error: 'Unauthorized to access this ticket' }), {
+                status: 403,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        const isReporter = scopedTicket.reported_by_id === user.id;
+        const isAssignee = scopedTicket.assigned_to_id === user.id;
+        if (!hasTriageRole && !isReporter && !isAssignee) {
+            return new Response(JSON.stringify({ error: 'Forbidden: insufficient privileges to triage this ticket' }), {
+                status: 403,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
 
         // Fetch the ticket
         const { data: ticket, error: fetchError } = await supabase

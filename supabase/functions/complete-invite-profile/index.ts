@@ -78,12 +78,123 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const body = await req.json();
+    let body: Record<string, unknown> = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const action = typeof body?.action === "string" ? body.action.trim().toLowerCase() : "";
     const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : "";
     const dateOfBirth = typeof body?.dateOfBirth === "string" ? body.dateOfBirth.trim() : "";
     const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
     const jobTitleInput = typeof body?.jobTitle === "string" ? body.jobTitle.trim() : "";
     const propertyId = typeof body?.propertyId === "string" ? body.propertyId.trim() : "";
+
+    if (action === "options") {
+      const { data: profileRow, error: profileReadError } = await adminClient
+        .from("profiles")
+        .select("id, force_password_reset, password_initialized")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileReadError) {
+        return new Response(JSON.stringify({ error: `Failed to load profile: ${profileReadError.message}` }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!profileRow) {
+        return new Response(JSON.stringify({ error: "Profile record not found." }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const canCompleteInvite = profileRow.force_password_reset === true || profileRow.password_initialized === false;
+      if (!canCompleteInvite) {
+        return new Response(JSON.stringify({ error: "Invite completion is no longer allowed for this account." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const [{ data: jobTitleRows, error: jobTitleError }, { data: propertyRows, error: propertyError }] =
+        await Promise.all([
+          adminClient.from("job_titles").select("title").order("title", { ascending: true }),
+          adminClient.from("properties").select("id, name").eq("is_active", true).order("name", { ascending: true }),
+        ]);
+
+      if (jobTitleError) {
+        return new Response(JSON.stringify({ error: `Failed to load job titles: ${jobTitleError.message}` }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (propertyError) {
+        return new Response(JSON.stringify({ error: `Failed to load properties: ${propertyError.message}` }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const normalizedJobTitles = (jobTitleRows || [])
+        .map((row) => row.title)
+        .filter((title): title is string => typeof title === "string" && title.trim().length > 0);
+
+      const allPropertyOptions = (propertyRows || [])
+        .map((row) => ({ id: row.id, name: row.name }))
+        .filter((property): property is { id: string; name: string } =>
+          typeof property.id === "string" &&
+          property.id.length > 0 &&
+          typeof property.name === "string" &&
+          property.name.length > 0
+        );
+
+      const { data: assignedProperties, error: assignedPropertiesError } = await adminClient
+        .from("user_properties")
+        .select("property_id, properties(id, name)")
+        .eq("user_id", user.id);
+
+      if (assignedPropertiesError) {
+        return new Response(JSON.stringify({ error: `Failed to load assigned properties: ${assignedPropertiesError.message}` }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const assignedPropertyOptions = (assignedProperties || [])
+        .map((row) => {
+          const relatedProperty = row.properties as
+            | { id?: string; name?: string }
+            | { id?: string; name?: string }[]
+            | null;
+          const normalizedProperty = Array.isArray(relatedProperty) ? relatedProperty[0] : relatedProperty;
+          if (!normalizedProperty?.id || !normalizedProperty?.name) return null;
+          return { id: normalizedProperty.id, name: normalizedProperty.name };
+        })
+        .filter((property): property is { id: string; name: string } => !!property);
+
+      const availableProperties = assignedPropertyOptions.length > 0
+        ? assignedPropertyOptions
+        : allPropertyOptions;
+
+      const assignedPropertyIds = (assignedProperties || [])
+        .map((row) => row.property_id)
+        .filter((value): value is string => typeof value === "string");
+
+      return new Response(JSON.stringify({
+        jobTitles: Array.from(new Set(normalizedJobTitles)),
+        properties: Array.from(new Map(availableProperties.map((property) => [property.id, property])).values()),
+        assignedPropertyIds: Array.from(new Set(assignedPropertyIds)),
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!fullName) {
       return new Response(JSON.stringify({ error: "Full name is required." }), {

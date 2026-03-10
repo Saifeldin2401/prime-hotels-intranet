@@ -1,8 +1,9 @@
-import { useState, useCallback, useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { 
   useDocuments, 
   useDocumentStats, 
@@ -19,6 +20,8 @@ import {
   useDocumentBulkMove,
   useDocumentBulkAddTags,
   useDocumentBulkArchive,
+  useDocumentBulkRestore,
+  useDocumentBulkUnarchive,
   useRecordDocumentView,
   useDocumentTrash
 } from '@/hooks/useDocuments'
@@ -49,6 +52,8 @@ import { LoadingTransition, TableSkeleton } from '@/components/ui/loading-system
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useTranslation } from 'react-i18next'
 import { crudToasts } from '@/lib/toastHelpers'
+import { toast } from 'sonner'
+import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
 import {
   Plus,
   FileText,
@@ -91,6 +96,14 @@ export default function DocumentLibrary() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  const {
+    summary: aiSummary,
+    loading: aiSummaryLoading,
+    error: aiSummaryError,
+    summarizeDocument,
+    clearSummary
+  } = useAIDocumentSummarizer()
+
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [activeTab, setActiveTab] = useState<DocumentTab>('documents')
@@ -124,6 +137,17 @@ export default function DocumentLibrary() {
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [selectedForAI, setSelectedForAI] = useState<Document | null>(null)
   const virtualListParentRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!aiPanelOpen || !selectedForAI) return
+
+    const contentToSummarize =
+      (typeof (selectedForAI as any).content === 'string' ? (selectedForAI as any).content : '') ||
+      selectedForAI.description ||
+      ''
+
+    void summarizeDocument(contentToSummarize, selectedForAI.title)
+  }, [aiPanelOpen, selectedForAI, summarizeDocument])
 
   // Data fetching
   const { data: documents = [], isLoading } = useDocuments({
@@ -171,6 +195,8 @@ export default function DocumentLibrary() {
   const bulkMove = useDocumentBulkMove()
   const bulkAddTags = useDocumentBulkAddTags()
   const bulkArchive = useDocumentBulkArchive()
+  const bulkRestore = useDocumentBulkRestore()
+  const bulkUnarchive = useDocumentBulkUnarchive()
 
   // Handlers
   const handleViewDocument = useCallback((doc: Document, e?: MouseEvent) => {
@@ -225,48 +251,190 @@ export default function DocumentLibrary() {
 
   // Bulk operation handlers
   const handleBulkDelete = useCallback(async () => {
-    setBulkActionLoading(true)
-    try {
-      await bulkDelete.mutateAsync(Array.from(selectedDocuments))
-      setSelectedDocuments(new Set())
-      crudToasts.delete.success(`${selectedDocuments.size} documents`)
-    } finally {
-      setBulkActionLoading(false)
-    }
-  }, [bulkDelete, selectedDocuments])
+    const selectedIds = Array.from(selectedDocuments)
+    if (selectedIds.length === 0) return
 
-  const handleBulkMove = useCallback(async (folderId: string) => {
     setBulkActionLoading(true)
     try {
-      await bulkMove.mutateAsync({ ids: Array.from(selectedDocuments), folderId })
+      const result = await bulkDelete.mutateAsync(selectedIds)
       setSelectedDocuments(new Set())
-      crudToasts.update.success('Documents moved')
+
+      if (result.success.length > 0) {
+        toast.success(`${result.success.length} documents moved to trash`, {
+          duration: 10000,
+          action: {
+            label: 'Undo',
+            onClick: async () => {
+              try {
+                await bulkRestore.mutateAsync(result.success)
+                toast.success(`Restored ${result.success.length} documents`)
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Failed to undo delete')
+              }
+            }
+          }
+        })
+      }
     } finally {
       setBulkActionLoading(false)
     }
-  }, [bulkMove, selectedDocuments])
+  }, [bulkDelete, bulkRestore, selectedDocuments])
+
+  const handleBulkMove = useCallback(async (folderId: string | null) => {
+    const selectedIds = Array.from(selectedDocuments)
+    if (selectedIds.length === 0) return
+
+    const previousFolderByDocument = documents
+      .filter((doc) => selectedIds.includes(doc.id))
+      .reduce<Record<string, string | null>>((acc, doc) => {
+        acc[doc.id] = doc.folder_id || null
+        return acc
+      }, {})
+
+    setBulkActionLoading(true)
+    try {
+      const result = await bulkMove.mutateAsync({ ids: selectedIds, folderId })
+      setSelectedDocuments(new Set())
+
+      if (result.success.length > 0) {
+        const movedIds = result.success
+        toast.success(`Moved ${movedIds.length} documents`, {
+          duration: 10000,
+          action: {
+            label: 'Undo',
+            onClick: async () => {
+              const groupedByPreviousFolder = movedIds.reduce<Record<string, string[]>>((acc, id) => {
+                const previousFolder = previousFolderByDocument[id] ?? null
+                const key = previousFolder ?? '__root__'
+                acc[key] = acc[key] || []
+                acc[key].push(id)
+                return acc
+              }, {})
+
+              try {
+                for (const [folderKey, ids] of Object.entries(groupedByPreviousFolder)) {
+                  const originalFolderId = folderKey === '__root__' ? null : folderKey
+                  const { error } = await supabase
+                    .from('documents')
+                    .update({
+                      folder_id: originalFolderId,
+                      updated_at: new Date().toISOString()
+                    })
+                    .in('id', ids)
+
+                  if (error) throw error
+                }
+
+                await Promise.all([
+                  queryClient.invalidateQueries({ queryKey: ['documents'] }),
+                  queryClient.invalidateQueries({ queryKey: ['documents-paginated'] }),
+                  queryClient.invalidateQueries({ queryKey: ['document-folders'] })
+                ])
+
+                toast.success(`Move reverted for ${movedIds.length} documents`)
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Failed to undo move')
+              }
+            }
+          }
+        })
+      }
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [bulkMove, documents, queryClient, selectedDocuments])
 
   const handleBulkAddTags = useCallback(async (tagIds: string[]) => {
+    const selectedIds = Array.from(selectedDocuments)
+    if (selectedIds.length === 0 || tagIds.length === 0) return
+
     setBulkActionLoading(true)
     try {
-      await bulkAddTags.mutateAsync({ ids: Array.from(selectedDocuments), tagIds })
+      const { data: existingMappings, error: existingMappingsError } = await supabase
+        .from('document_tag_assignments')
+        .select('document_id,tag_id')
+        .in('document_id', selectedIds)
+        .in('tag_id', tagIds)
+
+      if (existingMappingsError) throw existingMappingsError
+
+      const existingSet = new Set(
+        (existingMappings || []).map((row) => `${row.document_id}:${row.tag_id}`)
+      )
+
+      const addedMappings = selectedIds.flatMap((documentId) =>
+        tagIds
+          .filter((tagId) => !existingSet.has(`${documentId}:${tagId}`))
+          .map((tagId) => ({ document_id: documentId, tag_id: tagId }))
+      )
+
+      const result = await bulkAddTags.mutateAsync({ ids: selectedIds, tagIds })
       setSelectedDocuments(new Set())
-      crudToasts.update.success('Tags added')
+
+      if (result.success.length > 0 && addedMappings.length > 0) {
+        toast.success(`Added tags to ${result.success.length} documents`, {
+          duration: 10000,
+          action: {
+            label: 'Undo',
+            onClick: async () => {
+              try {
+                for (const mapping of addedMappings) {
+                  const { error } = await supabase
+                    .from('document_tag_assignments')
+                    .delete()
+                    .eq('document_id', mapping.document_id)
+                    .eq('tag_id', mapping.tag_id)
+                  if (error) throw error
+                }
+
+                await Promise.all([
+                  queryClient.invalidateQueries({ queryKey: ['documents'] }),
+                  queryClient.invalidateQueries({ queryKey: ['documents-paginated'] }),
+                  queryClient.invalidateQueries({ queryKey: ['document-tags'] })
+                ])
+
+                toast.success(`Removed ${addedMappings.length} newly-added tag links`)
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Failed to undo tag action')
+              }
+            }
+          }
+        })
+      }
     } finally {
       setBulkActionLoading(false)
     }
-  }, [bulkAddTags, selectedDocuments])
+  }, [bulkAddTags, queryClient, selectedDocuments])
 
   const handleBulkArchive = useCallback(async () => {
+    const selectedIds = Array.from(selectedDocuments)
+    if (selectedIds.length === 0) return
+
     setBulkActionLoading(true)
     try {
-      await bulkArchive.mutateAsync(Array.from(selectedDocuments))
+      const result = await bulkArchive.mutateAsync(selectedIds)
       setSelectedDocuments(new Set())
-      crudToasts.update.success('Documents archived')
+
+      if (result.success.length > 0) {
+        toast.success(`Archived ${result.success.length} documents`, {
+          duration: 10000,
+          action: {
+            label: 'Undo',
+            onClick: async () => {
+              try {
+                await bulkUnarchive.mutateAsync(result.success)
+                toast.success(`Unarchived ${result.success.length} documents`)
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Failed to undo archive')
+              }
+            }
+          }
+        })
+      }
     } finally {
       setBulkActionLoading(false)
     }
-  }, [bulkArchive, selectedDocuments])
+  }, [bulkArchive, bulkUnarchive, selectedDocuments])
 
   const handleSelectAll = useCallback((checked: boolean) => {
     if (checked) {
@@ -964,11 +1132,22 @@ export default function DocumentLibrary() {
                 documents={trashedDocuments.map(d => ({
                   id: d.id,
                   title: d.title,
-                  fileType: typeof d.file_extension === 'string' ? d.file_extension : 'unknown',
-                  fileSize: d.file_size || 0,
+                  fileType: (() => {
+                    const ext = typeof d.file_extension === 'string' ? d.file_extension.toLowerCase() : ''
+                    if (ext === 'pdf') return 'pdf'
+                    if (ext === 'doc') return 'doc'
+                    if (ext === 'docx') return 'docx'
+                    if (ext === 'xls') return 'xls'
+                    if (ext === 'xlsx') return 'xlsx'
+                    if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg'].includes(ext)) return 'image'
+                    return 'other'
+                  })() as 'pdf' | 'doc' | 'docx' | 'xls' | 'xlsx' | 'image' | 'other',
                   deletedAt: d.deleted_at || d.updated_at,
-                  deletedBy: d.profiles?.full_name || 'Unknown',
-                  daysRemaining: 30 // Default retention period
+                  deletedBy: {
+                    id: 'unknown',
+                    name: d.profiles?.full_name || 'Unknown'
+                  },
+                  size: d.file_size || 0,
                 }))}
                 onRestore={(ids) => {
                   ids.forEach(id => restoreDocument.mutate(id))
@@ -1064,12 +1243,80 @@ export default function DocumentLibrary() {
               <p className="text-sm text-muted-foreground">
                 AI suggestions for <strong>{selectedForAI.title}</strong>
               </p>
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm">
-                  <Sparkles className="w-4 h-4 inline mr-2 text-hotel-gold" />
-                  AI-powered features coming soon: auto-tagging, duplicate detection, and smart summaries.
-                </p>
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const contentToSummarize =
+                      (typeof (selectedForAI as any).content === 'string' ? (selectedForAI as any).content : '') ||
+                      selectedForAI.description ||
+                      ''
+                    void summarizeDocument(contentToSummarize, selectedForAI.title)
+                  }}
+                  disabled={aiSummaryLoading}
+                >
+                  {aiSummaryLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Refresh Summary
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    clearSummary()
+                    setAiPanelOpen(false)
+                  }}
+                >
+                  Close
+                </Button>
               </div>
+
+              {aiSummaryError && (
+                <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-sm">
+                  {aiSummaryError}
+                </div>
+              )}
+
+              {aiSummaryLoading && (
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Analyzing document...
+                  </div>
+                </div>
+              )}
+
+              {!aiSummaryLoading && aiSummary?.summary && (
+                <div className="p-4 bg-muted rounded-lg space-y-3">
+                  <div className="text-sm">{aiSummary.summary}</div>
+                  {Array.isArray(aiSummary.keyChanges) && aiSummary.keyChanges.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground">Key changes</div>
+                      <ul className="list-disc pl-5 space-y-1 text-sm">
+                        {aiSummary.keyChanges.map((item, idx) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {aiSummary.targetAudience ? `Audience: ${aiSummary.targetAudience}` : null}
+                    {aiSummary.targetAudience && aiSummary.readingTime ? ' • ' : null}
+                    {aiSummary.readingTime ? `Estimated read: ${aiSummary.readingTime} min` : null}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

@@ -86,12 +86,12 @@ export default function OrganizationalControlCenter() {
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                         placeholder={t('organization.search_employees', 'Search employees...')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
+                        className="ps-10"
                     />
                 </div>
                 <Select
@@ -319,31 +319,32 @@ function AssignmentsTable({
             const profileIds = profiles.map(p => p.id)
             const managerIds = profiles.map(p => p.reporting_to).filter(Boolean) as string[]
 
-            // Fetch manager names
-            const { data: managers } = managerIds.length > 0
-                ? await supabase
-                    .from('profiles')
-                    .select('id, full_name, job_title, staff_id')
-                    .in('id', managerIds)
-                : { data: [] }
-
-            // Fetch properties
-            const { data: userProps } = await supabase
-                .from('user_properties')
-                .select('user_id, property_id, properties(name)')
-                .in('user_id', profileIds)
-
-            // Fetch departments
-            const { data: userDepts } = await supabase
-                .from('user_departments')
-                .select('user_id, department_id, departments(name)')
-                .in('user_id', profileIds)
-
-            // Fetch roles
-            const { data: userRoles } = await supabase
-                .from('user_roles')
-                .select('user_id, role')
-                .in('user_id', profileIds)
+            // Fetch related data in parallel
+            const [
+                { data: managers },
+                { data: userProps },
+                { data: userDepts },
+                { data: userRoles },
+            ] = await Promise.all([
+                managerIds.length > 0
+                    ? supabase
+                        .from('profiles')
+                        .select('id, full_name, job_title, staff_id')
+                        .in('id', managerIds)
+                    : Promise.resolve({ data: [] }),
+                supabase
+                    .from('user_properties')
+                    .select('user_id, property_id, properties(name)')
+                    .in('user_id', profileIds),
+                supabase
+                    .from('user_departments')
+                    .select('user_id, department_id, departments(name)')
+                    .in('user_id', profileIds),
+                supabase
+                    .from('user_roles')
+                    .select('user_id, role')
+                    .in('user_id', profileIds),
+            ])
 
             // Merge the data
             return profiles.map(profile => {

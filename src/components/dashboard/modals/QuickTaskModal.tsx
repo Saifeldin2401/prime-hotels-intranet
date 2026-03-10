@@ -43,7 +43,7 @@ const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   due_date: z.date().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']),
   assigned_to_id: z.string().optional(),
 })
 
@@ -258,15 +258,15 @@ export function QuickTaskModal({ open, onOpenChange }: QuickTaskModalProps) {
             >
               {t('actions.cancel') || 'Cancel'}
             </Button>
-            <Button type="submit" disabled={createTask.isPending}>
+            <Button type="submit" disabled={createTask.isPending} aria-busy={createTask.isPending} aria-live="polite">
               {createTask.isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 me-2 animate-spin" aria-hidden="true" />
                   {t('quick_create.creating') || 'Creating...'}
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4 me-2" />
+                  <CheckCircle2 className="w-4 h-4 me-2" aria-hidden="true" />
                   {t('quick_create.create_task') || 'Create Task'}
                 </>
               )}

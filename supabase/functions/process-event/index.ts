@@ -14,6 +14,80 @@ interface TriggerContext {
     };
 }
 
+type AppRole =
+    | "corporate_admin"
+    | "regional_admin"
+    | "regional_hr"
+    | "property_manager"
+    | "property_hr"
+    | "department_head"
+    | "manager"
+    | "staff";
+
+const ALLOWED_CALLER_ROLES = new Set<AppRole>([
+    "corporate_admin",
+    "regional_admin",
+    "regional_hr",
+    "property_manager",
+    "property_hr",
+    "department_head",
+]);
+
+const HIGH_PRIVILEGE_ROLES = new Set<AppRole>([
+    "corporate_admin",
+    "regional_admin",
+    "regional_hr",
+]);
+
+const isAppRole = (value: unknown): value is AppRole => {
+    return typeof value === "string" && ALLOWED_CALLER_ROLES.has(value as AppRole);
+};
+
+const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+const normalizeUserIds = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+    return Array.from(
+        new Set(
+            value
+                .filter((id): id is string => typeof id === "string")
+                .map((id) => id.trim())
+                .filter((id) => id.length > 0 && isUuid(id)),
+        ),
+    );
+};
+
+const filterAffectedUsersByScope = async (
+    supabase: ReturnType<typeof createClient>,
+    userIds: string[],
+    propertyIds: string[],
+    departmentIds: string[],
+): Promise<string[]> => {
+    if (userIds.length === 0) return [];
+    const allowed = new Set<string>();
+
+    if (propertyIds.length > 0) {
+        const { data: propRows } = await supabase
+            .from("user_properties")
+            .select("user_id")
+            .in("property_id", propertyIds)
+            .in("user_id", userIds);
+        propRows?.forEach((row) => allowed.add(row.user_id));
+    }
+
+    if (departmentIds.length > 0) {
+        const { data: deptRows } = await supabase
+            .from("user_departments")
+            .select("user_id")
+            .in("department_id", departmentIds)
+            .in("user_id", userIds);
+        deptRows?.forEach((row) => allowed.add(row.user_id));
+    }
+
+    return userIds.filter((id) => allowed.has(id));
+};
+
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
     if (req.method === "OPTIONS") {
@@ -51,13 +125,73 @@ Deno.serve(async (req) => {
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        const { event_type, payload }: TriggerContext = await req.json();
+        const body = await req.json().catch(() => ({}));
+        const event_type = body?.event_type as string | undefined;
+        const payload = (body?.payload ?? {}) as TriggerContext["payload"];
 
         if (!event_type) {
             return new Response(JSON.stringify({ error: 'Missing event_type' }), {
                 status: 400,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             })
+        }
+
+        const { data: callerRoles, error: rolesError } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id);
+
+        if (rolesError) {
+            return new Response(JSON.stringify({ error: "Failed to verify caller permissions" }), {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        const roles = (callerRoles || []).map((row) => row.role).filter(isAppRole);
+        const hasPermission = roles.some((role) => ALLOWED_CALLER_ROLES.has(role));
+        if (!hasPermission) {
+            return new Response(JSON.stringify({ error: "Forbidden: insufficient privileges" }), {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        const isHighPrivilege = roles.some((role) => HIGH_PRIVILEGE_ROLES.has(role));
+
+        const { data: callerProperties } = await supabase
+            .from("user_properties")
+            .select("property_id")
+            .eq("user_id", user.id);
+        const { data: callerDepartments } = await supabase
+            .from("user_departments")
+            .select("department_id")
+            .eq("user_id", user.id);
+
+        const propertyIds = (callerProperties || []).map((row) => row.property_id);
+        const departmentIds = (callerDepartments || []).map((row) => row.department_id);
+
+        const rawAffectedUsers = normalizeUserIds(payload.affected_users);
+        const payloadUserId = typeof payload.user_id === "string" ? payload.user_id.trim() : "";
+        const requestedUsers = rawAffectedUsers.length > 0
+            ? rawAffectedUsers
+            : (payloadUserId && isUuid(payloadUserId) ? [payloadUserId] : []);
+
+        let scopedAffectedUsers = requestedUsers;
+        if (!isHighPrivilege && requestedUsers.length > 0) {
+            scopedAffectedUsers = await filterAffectedUsersByScope(
+                supabase,
+                requestedUsers,
+                propertyIds,
+                departmentIds,
+            );
+
+            if (scopedAffectedUsers.length !== requestedUsers.length) {
+                return new Response(JSON.stringify({ error: "Forbidden: affected users outside your scope" }), {
+                    status: 403,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
         }
 
         console.log(`Processing event: ${event_type}`, payload);
@@ -80,11 +214,17 @@ Deno.serve(async (req) => {
         const results = [];
 
         // 2. Evaluate and Execute Rules
+        const safePayload = {
+            ...payload,
+            affected_users: scopedAffectedUsers,
+            triggered_by: user.id,
+        };
+
         for (const rule of rules) {
             try {
-                if (matchesConditions(rule.conditions, payload)) {
+                if (matchesConditions(rule.conditions, safePayload)) {
                     console.log(`Rule matched: ${rule.name}`);
-                    await executeAction(supabase, rule.action_type, rule.action_config, { ...payload, event_type }, authHeader);
+                    await executeAction(supabase, rule.action_type, rule.action_config, { ...safePayload, event_type }, authHeader);
                     results.push({ rule_id: rule.id, success: true });
                 } else {
                     results.push({ rule_id: rule.id, success: false, reason: 'condition_mismatch' });
@@ -97,7 +237,7 @@ Deno.serve(async (req) => {
 
         // 3. Optional: apply auto-training rules for new hires or role changes
         try {
-            await applyAutoTrainingIfEnabled(supabase, event_type, payload);
+            await applyAutoTrainingIfEnabled(supabase, event_type, safePayload);
         } catch (err) {
             console.warn('Auto-training application failed:', err);
         }
@@ -219,7 +359,7 @@ async function executeAction(supabase: any, type: string, config: any, context: 
                 workflow_id: workflowId,
                 status: 'pending',
                 metadata: {
-                    triggered_by: 'process-event',
+                    triggered_by: context.triggered_by || 'process-event',
                     event_type: context.event_type,
                     source_id: context.source_id,
                     source_type: context.source_type,

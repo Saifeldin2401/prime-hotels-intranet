@@ -1,6 +1,35 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { buildCorsHeaders } from "../_shared/cors.ts";
+
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://phg-connect.com",
+  "https://www.phg-connect.com",
+  "https://prime-hotels-intranet.vercel.app",
+] as const;
+
+function resolveCorsOrigin(req: Request): string {
+  const origin = req.headers.get("origin");
+  if (!origin) return DEFAULT_ALLOWED_ORIGINS[0];
+
+  const cleanOrigin = origin.trim().replace(/\/$/, "");
+  const isAllowed = DEFAULT_ALLOWED_ORIGINS.some(allowed =>
+    allowed.replace(/\/$/, "") === cleanOrigin
+  );
+
+  return isAllowed ? origin : DEFAULT_ALLOWED_ORIGINS[0];
+}
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": resolveCorsOrigin(req),
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com").replace(/\/+$/, "");
@@ -54,6 +83,11 @@ interface NotificationRequest {
   sendEmail?: boolean;
   priority?: "low" | "normal" | "high" | "critical";
   scheduledFor?: string;
+  all?: boolean;
+  propertyId?: string;
+  departmentId?: string;
+  emailSubject?: string;
+  emailHtml?: string;
 }
 
 interface NotificationBatchRow {
@@ -80,6 +114,7 @@ interface NotificationQueueRow {
   template_key?: string | null;
   business_domain?: string | null;
   email_subject?: string | null;
+  email_html_override?: string | null;
   email_payload?: Record<string, unknown>;
   send_email?: boolean;
   scheduled_for?: string | null;
@@ -239,13 +274,13 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Missing Authorization header" }, 401);
+      return jsonResponse({ error: "Missing Authorization header" }, 401, corsHeaders);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -253,7 +288,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-      return jsonResponse({ error: "Missing required Supabase environment variables" }, 500);
+      return jsonResponse({ error: "Missing required Supabase environment variables" }, 500, corsHeaders);
     }
 
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
@@ -266,7 +301,7 @@ Deno.serve(async (req) => {
     } = await userClient.auth.getUser();
 
     if (userError || !user) {
-      return jsonResponse({ error: "Invalid token" }, 401);
+      return jsonResponse({ error: "Invalid token" }, 401, corsHeaders);
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -277,28 +312,65 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id);
 
     if (roleError) {
-      return jsonResponse({ error: "Failed to validate user role" }, 500);
+      return jsonResponse({ error: "Failed to validate user role" }, 500, corsHeaders);
     }
 
     const hasPermission = (userRoles ?? []).some((roleRow: { role: string }) => allowedRoles.includes(roleRow.role));
     if (!hasPermission) {
-      return jsonResponse({ error: "Unauthorized: insufficient permissions for bulk notification processing" }, 403);
+      return jsonResponse({ error: "Unauthorized: insufficient permissions for bulk notification processing" }, 403, corsHeaders);
     }
 
     const runtimeConfig = await loadRuntimeConfig(supabase);
     if (!runtimeConfig.resendApiKey) {
-      return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500);
+      return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500, corsHeaders);
     }
 
     const body = (await req.json()) as NotificationRequest;
-    const { action, userIds, notificationType, notificationData, batchId, batchSize = 50 } = body;
+    const { action, userIds, notificationType, notificationData, batchId, batchSize = 50, emailSubject, emailHtml } = body;
 
     if (action === "create_batch") {
-      if (!userIds || userIds.length === 0) {
-        return jsonResponse({ error: "userIds required" }, 400);
+      let targetUserIds = userIds || [];
+
+      if (body.all) {
+        // Fetch all active profile IDs
+        const { data: allProfiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("is_active", true);
+
+        if (profilesError) {
+          return jsonResponse({ error: "Failed to fetch all profiles", details: profilesError.message }, 500, corsHeaders);
+        }
+        targetUserIds = (allProfiles || []).map((p) => p.id);
+      } else if (body.propertyId) {
+        // Fetch profiles assigned to this property
+        const { data: propertyUsers, error: propertyError } = await supabase
+          .from("user_properties")
+          .select("user_id")
+          .eq("property_id", body.propertyId);
+
+        if (propertyError) {
+          return jsonResponse({ error: "Failed to fetch property users", details: propertyError.message }, 500, corsHeaders);
+        }
+        targetUserIds = (propertyUsers || []).map((p) => p.user_id);
+      } else if (body.departmentId) {
+        // Fetch profiles assigned to this department
+        const { data: deptUsers, error: deptError } = await supabase
+          .from("user_departments")
+          .select("user_id")
+          .eq("department_id", body.departmentId);
+
+        if (deptError) {
+          return jsonResponse({ error: "Failed to fetch department users", details: deptError.message }, 500, corsHeaders);
+        }
+        targetUserIds = (deptUsers || []).map((p) => p.user_id);
       }
 
-      const dedupedUserIds = [...new Set(userIds)];
+      if (targetUserIds.length === 0) {
+        return jsonResponse({ error: "userIds required (or target 'all' with active users)" }, 400, corsHeaders);
+      }
+
+      const dedupedUserIds = [...new Set(targetUserIds)];
       const normalizedDomain = normalizeDomain(body.businessDomain || notificationData?.businessDomain, notificationType);
       const normalizedType = normalizeNotificationType(notificationType ?? "system");
       const normalizedChannels = normalizeChannels(body.channels, body.sendEmail ?? notificationData?.send_email);
@@ -329,7 +401,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (batchError || !batch) {
-        return jsonResponse({ error: "Failed to create notification batch", details: batchError?.message }, 500);
+        return jsonResponse({ error: "Failed to create notification batch", details: batchError?.message }, 500, corsHeaders);
       }
 
       const chunkSize = 100;
@@ -344,7 +416,8 @@ Deno.serve(async (req) => {
           template_key: resolvedTemplateKey,
           business_domain: normalizedDomain,
           email_payload: notificationData ?? {},
-          email_subject: undefined,
+          email_subject: emailSubject || undefined,
+          email_html_override: emailHtml || undefined,
           send_email: normalizedChannels.includes("email"),
           priority: normalizedPriority,
           scheduled_for: scheduledFor,
@@ -352,7 +425,7 @@ Deno.serve(async (req) => {
 
         const { error: queueError } = await supabase.from("notification_queue").insert(queueItems);
         if (queueError) {
-          return jsonResponse({ error: "Failed to enqueue notification batch", details: queueError.message }, 500);
+          return jsonResponse({ error: "Failed to enqueue notification batch", details: queueError.message }, 500, corsHeaders);
         }
       }
 
@@ -366,17 +439,17 @@ Deno.serve(async (req) => {
         failed: processResult.failed,
         emailSent: processResult.emailSent,
         emailFailed: processResult.emailFailed,
-      });
+      }, 200, corsHeaders);
     }
 
     if (action === "process_batch") {
       const result = await processNotifications(supabase, batchId, batchSize, runtimeConfig);
-      return jsonResponse(result);
+      return jsonResponse(result, 200, corsHeaders);
     }
 
     if (action === "get_status") {
       if (!batchId) {
-        return jsonResponse({ error: "batchId required" }, 400);
+        return jsonResponse({ error: "batchId required" }, 400, corsHeaders);
       }
 
       const { data: batch, error: batchError } = await supabase
@@ -386,7 +459,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (batchError || !batch) {
-        return jsonResponse({ error: "Batch not found", details: batchError?.message }, 404);
+        return jsonResponse({ error: "Batch not found", details: batchError?.message }, 404, corsHeaders);
       }
 
       const { count: pendingCount } = await supabase
@@ -419,13 +492,13 @@ Deno.serve(async (req) => {
         email_sent: emailSentCount ?? 0,
         email_failed: emailFailedCount ?? 0,
         email_queued: emailQueuedCount ?? 0,
-      });
+      }, 200, corsHeaders);
     }
 
-    return jsonResponse({ error: "Invalid action" }, 400);
+    return jsonResponse({ error: "Invalid action" }, 400, corsHeaders);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse({ error: message }, 500, corsHeaders);
   }
 });
 
@@ -550,7 +623,7 @@ async function processNotifications(
           );
 
           const subject = renderTemplate(item.email_subject || template.subject_template, context);
-          const html = renderTemplate(template.html_template, context);
+          const html = renderTemplate(item.email_html_override || template.html_template, context);
           const text = renderTemplate(template.text_template || "", context);
 
           const resendResult = await sendWithResend({
@@ -607,7 +680,7 @@ async function processNotifications(
       }
 
       if (shouldInApp) {
-        await createInAppNotification(supabase, item, dataPayload);
+        await createInAppNotification(supabase, item, dataPayload, profile?.language as string | null || "en");
       }
 
       await supabase
@@ -708,6 +781,7 @@ async function createInAppNotification(
   supabase: ReturnType<typeof createClient>,
   item: NotificationQueueRow,
   dataPayload: NotificationData,
+  userLanguage: string = "en",
 ): Promise<void> {
   const metadata = {
     ...(dataPayload ?? {}),
@@ -732,11 +806,19 @@ async function createInAppNotification(
   const entityType = typeof dataPayload.entityType === "string" ? dataPayload.entityType : null;
   const entityId = typeof dataPayload.entityId === "string" && isUUID(dataPayload.entityId) ? dataPayload.entityId : null;
 
+  const title = userLanguage === "ar" && dataPayload.title_ar
+    ? dataPayload.title_ar as string
+    : asText(dataPayload.title, "New Notification");
+
+  const message = userLanguage === "ar" && dataPayload.message_ar
+    ? dataPayload.message_ar as string
+    : asText(dataPayload.message, "You have a new notification");
+
   await supabase.from("notifications").insert({
     user_id: item.user_id,
     type,
-    title: asText(dataPayload.title, "New Notification"),
-    message: asText(dataPayload.message, "You have a new notification"),
+    title,
+    message,
     link,
     metadata: {
       ...(metadata ?? {}),
@@ -951,10 +1033,10 @@ function resolveRelativeLink(dataPayload: NotificationData): string {
     return dataPayload.link;
   }
   if (typeof dataPayload.moduleId === "string" && dataPayload.moduleId.length > 0) {
-    return `/learning/training/${dataPayload.moduleId}`;
+    return "/learning/training/" + dataPayload.moduleId;
   }
   if (typeof dataPayload.announcement_id === "string" && dataPayload.announcement_id.length > 0) {
-    return `/announcements/${dataPayload.announcement_id}`;
+    return "/announcements/" + dataPayload.announcement_id;
   }
   return "/notifications";
 }
@@ -974,12 +1056,12 @@ function buildTemplateContext(
   const actionUrl = resolveAbsoluteUrlWithBase(link, appBaseUrl);
 
   const baseContext: Record<string, string> = {
-    title: asText(payload.title, "PHG Connect Notification"),
-    message: asText(payload.message, isAr ? "\u0644\u062F\u064A\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0641\u064A PHG Connect." : "You have a new update in PHG Connect."),
+    title: isAr && payload.title_ar ? asText(payload.title_ar, "") : asText(payload.title, "PHG Connect Notification"),
+    message: isAr && payload.message_ar ? asText(payload.message_ar, "") : asText(payload.message, isAr ? "لديك تحديث جديد في PHG Connect." : "You have a new update in PHG Connect."),
     action_url: actionUrl,
-    action_label: asText(payload.actionLabel, isAr ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0646\u0635\u0629" : "Open PHG Connect"),
+    action_label: isAr && payload.actionLabel_ar ? asText(payload.actionLabel_ar, "") : asText(payload.actionLabel, isAr ? "فتح المنصة" : "Open PHG Connect"),
     app_url: appBaseUrl,
-    logo_url: `${appBaseUrl}/prime-logo-white-full.png`, // Corrected high-contrast logo
+    logo_url: appBaseUrl + "/prime-logo-white-full.png", // Corrected high-contrast logo
     recipient_name: recipientName || recipientEmail,
     lang: language,
     dir: isAr ? "rtl" : "ltr",
@@ -990,10 +1072,12 @@ function buildTemplateContext(
     brand_gradient: branding.gradient,
     business_unit_label: isAr ? branding.labelAr : branding.labelEn,
     footer_text: isAr
-      ? "\u0625\u0634\u0639\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A \u0645\u0646 PHG Connect. \u062A\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0625\u062C\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u0642\u0633\u0645 \u0623\u0648 \u0645\u0647\u0645\u0629/\u0627\u0639\u062A\u0645\u0627\u062F \u0645\u0631\u062A\u0628\u0637 \u0628\u0643."
+      ? "إشعار تلقائي من PHG Connect. تم الإرسال بناءً على إجراء داخل القسم أو مهمة/اعتماد مرتبط بك."
       : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
-    has_data_box: (payload.data_box || payload.variables?.data_box) ? "true" : "false",
-    data_box_content: asText(payload.data_box || payload.variables?.data_box, "")
+    has_data_box: (payload.data_box || payload.data_box_ar || payload.variables?.data_box || payload.variables?.data_box_ar) ? "true" : "false",
+    data_box_content: isAr && (payload.data_box_ar || payload.variables?.data_box_ar)
+      ? asText(payload.data_box_ar || payload.variables?.data_box_ar, "")
+      : asText(payload.data_box || payload.variables?.data_box, "")
   };
 
   // Merge remaining variables
@@ -1081,8 +1165,8 @@ function renderTemplate(template: string, context: Record<string, string>): stri
 
 function resolveAbsoluteUrlWithBase(pathOrUrl: string, appBaseUrl: string): string {
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  const path = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
-  return `${appBaseUrl.replace(/\/+$/, "")}${path}`;
+  const path = pathOrUrl.startsWith("/") ? pathOrUrl : "/" + pathOrUrl;
+  return appBaseUrl.replace(/\/+$/, "") + path;
 }
 
 async function loadRuntimeConfig(supabase: ReturnType<typeof createClient>): Promise<RuntimeConfig> {
@@ -1115,7 +1199,7 @@ async function getRemainingCount(supabase: ReturnType<typeof createClient>, batc
   return count ?? 0;
 }
 
-function jsonResponse(payload: Record<string, unknown>, status = 200): Response {
+function jsonResponse(payload: Record<string, unknown>, status = 200, corsHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },

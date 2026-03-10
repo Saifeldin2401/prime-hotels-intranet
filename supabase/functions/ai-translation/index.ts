@@ -3,6 +3,55 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const SUPPORTED_LANGUAGES = ['en', 'ar', 'fr', 'es', 'de', 'ru', 'tr', 'ur', 'hi', 'bn', 'id', 'tl'] as const
+const MAX_FILE_BYTES = 12 * 1024 * 1024
+
+const getSupabaseHost = () => {
+    const url = Deno.env.get('SUPABASE_URL') || ''
+    try {
+        return new URL(url).host
+    } catch {
+        return ''
+    }
+}
+
+const isAllowedFileUrl = (value: string): boolean => {
+    try {
+        const parsed = new URL(value)
+        if (parsed.protocol !== 'https:') return false
+
+        const supabaseHost = getSupabaseHost()
+        if (supabaseHost && parsed.host === supabaseHost) return true
+
+        return false
+    } catch {
+        return false
+    }
+}
+
+const resolveFileExtension = (value: string): string => {
+    try {
+        const parsed = new URL(value)
+        const parts = parsed.pathname.split('.')
+        return (parts.pop() || '').toLowerCase()
+    } catch {
+        return ''
+    }
+}
+
+const assertFileSize = async (url: string) => {
+    try {
+        const head = await fetch(url, { method: 'HEAD' })
+        const length = head.headers.get('content-length')
+        if (length) {
+            const size = Number(length)
+            if (Number.isFinite(size) && size > MAX_FILE_BYTES) {
+                throw new Error('File exceeds translation size limit.')
+            }
+        }
+    } catch {
+        // Ignore HEAD failures; size will be checked after download.
+    }
+}
 
 const LANGUAGE_NAMES: Record<string, string> = {
     en: 'English',
@@ -74,18 +123,26 @@ serve(async (req) => {
         }
 
         if (file_url) {
+            if (!isAllowedFileUrl(file_url)) {
+                throw new Error('File URL is not allowed for translation.')
+            }
+            await assertFileSize(file_url)
             if (!text && texts.length === 0) {
                 console.log('Fetching file for extraction:', file_url)
                 const fileRes = await fetch(file_url)
                 if (!fileRes.ok) throw new Error(`Failed to fetch file: ${fileRes.statusText}`)
                 const blob = await fileRes.blob()
                 const arrayBuffer = await blob.arrayBuffer()
+                if (arrayBuffer.byteLength > MAX_FILE_BYTES) {
+                    throw new Error('File exceeds translation size limit.')
+                }
 
-                if (file_type === 'pdf' || file_url.endsWith('.pdf')) {
+                const extension = resolveFileExtension(file_url)
+                if (file_type === 'pdf' || extension === 'pdf') {
                     const { extractText } = await import('https://esm.sh/unpdf@0.10.0')
                     const { text: extractedText } = await extractText(arrayBuffer)
                     text = extractedText.join(' ')
-                } else if (file_type === 'docx' || file_url.endsWith('.docx')) {
+                } else if (file_type === 'docx' || extension === 'docx') {
                     const mammoth = await import('https://esm.sh/mammoth@1.6.0')
                     const result = await mammoth.extractRawText({ arrayBuffer })
                     text = result.value

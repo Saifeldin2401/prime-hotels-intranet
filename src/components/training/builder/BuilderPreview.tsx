@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link, FileText, Image, Video, FileQuestion, BookOpen, Headphones, Gamepad2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { cn } from '@/lib/utils'
 
 interface ContentBlock {
@@ -73,10 +74,12 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                                     <div className={cn("flex-1 min-w-0", isRTL ? "text-right" : "text-left")}>
                                                         <h3 className="text-lg font-semibold mb-2 text-gray-900">{item.title}</h3>
                                                         {item.content && (
-                                                            <div
-                                                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }}
-                                                                className="mb-4 text-gray-600 prose-sm"
-                                                            />
+                                                            <InlineErrorBoundary>
+                                                                <div
+                                                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }}
+                                                                    className="mb-4 text-gray-600 prose-sm"
+                                                                />
+                                                            </InlineErrorBoundary>
                                                         )}
 
                                                         {item.type === 'video' && item.content_url && (

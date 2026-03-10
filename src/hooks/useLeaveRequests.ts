@@ -6,6 +6,9 @@ import { crudToasts } from '@/lib/toastHelpers'
 import type { LeaveRequest } from '@/lib/types'
 import { notifyApprovalOutcome } from '@/services/approvalNotificationService'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { calculateLeaveRequestDays, fetchLeaveBalanceSummary } from '@/lib/leaveBalance'
+
+const BALANCE_ENFORCED_LEAVE_TYPES = new Set<LeaveRequest['type']>(['annual'])
 
 /**
  * Smart Leave Request Hooks
@@ -241,6 +244,9 @@ export function useSubmitLeaveRequest() {
       reason?: string
     }) => {
       if (!user?.id) throw new Error('User must be authenticated')
+      if (data.end_date < data.start_date) {
+        throw new Error('End date must be on or after start date')
+      }
 
       // W-001: Validate no overlapping leave requests
       const { data: overlapping } = await supabase
@@ -257,6 +263,20 @@ export function useSubmitLeaveRequest() {
         throw new Error(
           `You already have a leave request (${overlapping[0].type}) from ${overlapping[0].start_date} to ${overlapping[0].end_date} that overlaps with this period.`
         )
+      }
+
+      const requestedDays = calculateLeaveRequestDays(data.start_date, data.end_date)
+      if (requestedDays <= 0) {
+        throw new Error('Invalid leave period')
+      }
+
+      if (BALANCE_ENFORCED_LEAVE_TYPES.has(data.type)) {
+        const leaveBalance = await fetchLeaveBalanceSummary({ userId: user.id })
+        if (requestedDays > leaveBalance.remaining_days) {
+          throw new Error(
+            `Insufficient leave balance. Requested ${requestedDays} day(s), available ${leaveBalance.remaining_days.toFixed(1)} day(s).`
+          )
+        }
       }
 
       // Determine property for the request
@@ -298,6 +318,7 @@ export function useSubmitLeaveRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['leave-balance'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
       crudToasts.submit.success('Leave request')
     },

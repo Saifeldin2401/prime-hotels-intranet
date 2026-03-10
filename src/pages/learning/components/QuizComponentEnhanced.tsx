@@ -9,7 +9,7 @@
  * - Power-ups system (earned through participation)
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
     CheckCircle2,
     XCircle,
@@ -53,7 +53,7 @@ import { createCertificate, type CertificateData } from '@/lib/certificateServic
 import type { LearningQuiz } from '@/types/learning'
 import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
@@ -106,6 +106,152 @@ interface QuestionState {
     powerUpsUsed: PowerUpType[]
 }
 
+const DEFAULT_POWER_UP_COUNTS: Record<PowerUpType, number> = {
+    timeFreeze: 1,
+    fiftyFifty: 1,
+    hint: 1,
+    skip: 0
+}
+
+const buildPowerUps = (counts: Partial<Record<PowerUpType, number>> = {}): PowerUp[] => ([
+    {
+        type: 'timeFreeze',
+        name: 'Time Freeze',
+        icon: <Zap className="h-4 w-4" />,
+        description: '+30 seconds',
+        count: Math.max(0, counts.timeFreeze ?? DEFAULT_POWER_UP_COUNTS.timeFreeze)
+    },
+    {
+        type: 'fiftyFifty',
+        name: '50/50',
+        icon: <Target className="h-4 w-4" />,
+        description: 'Remove 2 wrong',
+        count: Math.max(0, counts.fiftyFifty ?? DEFAULT_POWER_UP_COUNTS.fiftyFifty)
+    },
+    {
+        type: 'hint',
+        name: 'Hint',
+        icon: <Lightbulb className="h-4 w-4" />,
+        description: 'Show explanation',
+        count: Math.max(0, counts.hint ?? DEFAULT_POWER_UP_COUNTS.hint)
+    },
+    {
+        type: 'skip',
+        name: 'Skip',
+        icon: <SkipForward className="h-4 w-4" />,
+        description: 'Next question',
+        count: Math.max(0, counts.skip ?? DEFAULT_POWER_UP_COUNTS.skip)
+    }
+])
+
+type FeedbackOverlayProps = {
+    showFeedback: boolean
+    currentFeedback: 'correct' | 'incorrect' | null
+    quiz: LearningQuiz | null
+    currentQuestionIndex: number
+    displayExplanation?: string | null
+    streak: number
+    onAdvance: () => void
+}
+
+function FeedbackOverlay({
+    showFeedback,
+    currentFeedback,
+    quiz,
+    currentQuestionIndex,
+    displayExplanation,
+    streak,
+    onAdvance
+}: FeedbackOverlayProps) {
+    if (!showFeedback || !currentFeedback) return null
+
+    const isCorrect = currentFeedback === 'correct'
+    const currentQ = quiz?.questions?.[currentQuestionIndex]
+    const explanation = displayExplanation || currentQ?.question?.explanation
+    const sourceSnippet = currentQ?.question?.linked_sop_section
+
+    return (
+        <m.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
+            onClick={onAdvance}
+        >
+            <m.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className={cn(
+                    "max-w-lg w-full rounded-3xl p-8 text-center shadow-2xl",
+                    isCorrect ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white" : "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
+                )}
+                onClick={e => e.stopPropagation()}
+            >
+                {isCorrect ? (
+                    <>
+                        <m.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                            className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6"
+                        >
+                            <CheckCircle2 className="h-12 w-12" />
+                        </m.div>
+                        <h3 className="text-3xl font-bold mb-2">Correct!</h3>
+                        {streak > 1 && (
+                            <div className="flex items-center justify-center gap-2 mb-4">
+                                <Flame className="h-5 w-5 text-orange-300" />
+                                <span className="text-lg font-semibold">{streak} in a row!</span>
+                            </div>
+                        )}
+                        <p className="text-white/80 mb-6">+10 points</p>
+                    </>
+                ) : (
+                    <>
+                        <m.div
+                            initial={{ x: -10 }}
+                            animate={{ x: [0, 10, -10, 10, 0] }}
+                            transition={{ duration: 0.4 }}
+                            className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6"
+                        >
+                            <XCircle className="h-12 w-12" />
+                        </m.div>
+                        <h3 className="text-3xl font-bold mb-2">Not quite</h3>
+                        <p className="text-white/70 mb-6">Don't worry, keep learning!</p>
+                    </>
+                )}
+
+                {explanation && (
+                    <div className="bg-white/10 rounded-xl p-4 mb-6 text-left">
+                        <p className="text-sm text-white/60 mb-1">Explanation:</p>
+                        <p className="text-sm">{explanation}</p>
+                    </div>
+                )}
+                {sourceSnippet && (
+                    <div className="bg-white/10 rounded-xl p-4 mb-6 text-left">
+                        <p className="text-sm text-white/60 mb-1">Source:</p>
+                        <p className="text-sm">{sourceSnippet}</p>
+                    </div>
+                )}
+
+                <Button
+                    onClick={onAdvance}
+                    className={cn(
+                        "px-8 py-6 rounded-xl font-bold text-lg",
+                        isCorrect
+                            ? "bg-white text-emerald-600 hover:bg-white/90"
+                            : "bg-white text-slate-700 hover:bg-white/90"
+                    )}
+                >
+                    Continue
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+            </m.div>
+        </m.div>
+    )
+}
+
 // --- Component ---
 
 export function QuizComponentEnhanced({
@@ -135,6 +281,8 @@ export function QuizComponentEnhanced({
     const [submitted, setSubmitted] = useState(false)
     const [attemptCount, setAttemptCount] = useState(0)
     const [attemptLimitReached, setAttemptLimitReached] = useState(false)
+    const progressMetadataRef = useRef<Record<string, unknown> | null>(null)
+    const attemptContextKey = assignmentId ? `assignment:${assignmentId}` : `quiz:${quizId}`
 
     // Enhanced state
     const [questionStates, setQuestionStates] = useState<Record<string, QuestionState>>({})
@@ -143,18 +291,16 @@ export function QuizComponentEnhanced({
     const [showFeedback, setShowFeedback] = useState(false)
     const [currentFeedback, setCurrentFeedback] = useState<'correct' | 'incorrect' | null>(null)
     const [eliminatedOptions, setEliminatedOptions] = useState<Set<string>>(new Set())
-    const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now())
-    const [quizStartTime] = useState<number>(Date.now())
+    const [questionStartTime, setQuestionStartTime] = useState<number>(() => Date.now())
+    const [quizStartTime] = useState<number>(() => Date.now())
+    const feedbackPauseMsRef = useRef(0)
+    const feedbackPauseStartMsRef = useRef<number | null>(null)
 
     // Power-ups
-    const [powerUps, setPowerUps] = useState<PowerUp[]>([
-        { type: 'timeFreeze', name: 'Time Freeze', icon: <Zap className="h-4 w-4" />, description: '+30 seconds', count: 1 },
-        { type: 'fiftyFifty', name: '50/50', icon: <Target className="h-4 w-4" />, description: 'Remove 2 wrong', count: 1 },
-        { type: 'hint', name: 'Hint', icon: <Lightbulb className="h-4 w-4" />, description: 'Show explanation', count: 1 },
-        { type: 'skip', name: 'Skip', icon: <SkipForward className="h-4 w-4" />, description: 'Next question', count: 0 },
-    ])
+    const [powerUps, setPowerUps] = useState<PowerUp[]>(() => buildPowerUps())
     const [powerUpsUsed, setPowerUpsUsed] = useState<PowerUpType[]>([])
     const [hintRevealed, setHintRevealed] = useState<Set<string>>(new Set())
+    const powerUpsStorageKey = user?.id ? `quiz-powerups:${user.id}` : null
 
     // Timer
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
@@ -178,7 +324,7 @@ export function QuizComponentEnhanced({
         if (quizId) {
             loadQuiz(quizId)
         }
-    }, [quizId, user?.id])
+    }, [quizId, user?.id, assignmentId])
 
     useEffect(() => {
         if (propTranslationTarget !== undefined) {
@@ -192,6 +338,35 @@ export function QuizComponentEnhanced({
         }
     }, [propShowBilingual])
 
+    useEffect(() => {
+        if (!powerUpsStorageKey) {
+            setPowerUps(buildPowerUps())
+            return
+        }
+
+        try {
+            const stored = localStorage.getItem(powerUpsStorageKey)
+            if (!stored) {
+                setPowerUps(buildPowerUps())
+                return
+            }
+
+            const parsed = JSON.parse(stored) as Partial<Record<PowerUpType, number>>
+            setPowerUps(buildPowerUps(parsed))
+        } catch {
+            setPowerUps(buildPowerUps())
+        }
+    }, [powerUpsStorageKey])
+
+    useEffect(() => {
+        if (!powerUpsStorageKey) return
+        const counts = powerUps.reduce<Record<PowerUpType, number>>((acc, item) => {
+            acc[item.type] = item.count
+            return acc
+        }, { ...DEFAULT_POWER_UP_COUNTS })
+        localStorage.setItem(powerUpsStorageKey, JSON.stringify(counts))
+    }, [powerUps, powerUpsStorageKey])
+
     // Timer
     useEffect(() => {
         let timer: NodeJS.Timeout
@@ -204,6 +379,20 @@ export function QuizComponentEnhanced({
         }
         return () => clearInterval(timer)
     }, [timeLeft, submitted, timeFrozen, showFeedback])
+
+    useEffect(() => {
+        if (showFeedback) {
+            if (feedbackPauseStartMsRef.current === null) {
+                feedbackPauseStartMsRef.current = Date.now()
+            }
+            return
+        }
+
+        if (feedbackPauseStartMsRef.current !== null) {
+            feedbackPauseMsRef.current += Math.max(0, Date.now() - feedbackPauseStartMsRef.current)
+            feedbackPauseStartMsRef.current = null
+        }
+    }, [showFeedback])
 
     // Track time per question
     useEffect(() => {
@@ -230,11 +419,30 @@ export function QuizComponentEnhanced({
                     .eq('content_id', id)
                     .maybeSingle()
 
-                const recordedAttempts = Number((progressData?.metadata as any)?.quiz_attempt_count || 0)
+                const metadata = (
+                    progressData?.metadata &&
+                    typeof progressData.metadata === 'object' &&
+                    !Array.isArray(progressData.metadata)
+                ) ? progressData.metadata as Record<string, unknown> : null
+
+                progressMetadataRef.current = metadata
+
+                const attemptsByContext = (
+                    metadata?.quiz_attempts_by_context &&
+                    typeof metadata.quiz_attempts_by_context === 'object' &&
+                    !Array.isArray(metadata.quiz_attempts_by_context)
+                ) ? metadata.quiz_attempts_by_context as Record<string, unknown> : null
+
+                const contextAttemptsRaw = attemptsByContext?.[attemptContextKey]
+                const fallbackAttemptsRaw = metadata?.quiz_attempt_count
+                const recordedAttempts = Number(
+                    typeof contextAttemptsRaw === 'number' ? contextAttemptsRaw : (fallbackAttemptsRaw || 0)
+                )
                 const safeAttempts = Number.isFinite(recordedAttempts) ? recordedAttempts : 0
                 setAttemptCount(safeAttempts)
                 setAttemptLimitReached(Boolean(data.max_attempts && safeAttempts >= data.max_attempts))
             } else {
+                progressMetadataRef.current = null
                 setAttemptCount(0)
                 setAttemptLimitReached(false)
             }
@@ -430,7 +638,8 @@ export function QuizComponentEnhanced({
             const totalQuestions = quiz.questions?.length || 0
             const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0
             const passed = percentage >= quiz.passing_score_percentage
-            const totalTimeSpent = Math.floor((Date.now() - quizStartTime) / 1000)
+            const extraPauseMs = feedbackPauseStartMsRef.current ? Math.max(0, Date.now() - feedbackPauseStartMsRef.current) : 0
+            const totalTimeSpent = Math.floor(Math.max(0, (Date.now() - quizStartTime) - (feedbackPauseMsRef.current + extraPauseMs)) / 1000)
 
             const finalResult: QuizResult = {
                 score: Math.round(percentage),
@@ -444,6 +653,23 @@ export function QuizComponentEnhanced({
             }
 
             setResult(finalResult)
+            const previousMetadata = progressMetadataRef.current || {}
+            const previousContextMap = (
+                previousMetadata.quiz_attempts_by_context &&
+                typeof previousMetadata.quiz_attempts_by_context === 'object' &&
+                !Array.isArray(previousMetadata.quiz_attempts_by_context)
+            )
+                ? previousMetadata.quiz_attempts_by_context as Record<string, unknown>
+                : {}
+            const metadata = {
+                ...previousMetadata,
+                quiz_attempt_count: nextAttemptCount,
+                quiz_attempts_by_context: {
+                    ...previousContextMap,
+                    [attemptContextKey]: nextAttemptCount
+                },
+                max_attempts: quiz.max_attempts ?? null
+            }
 
             // Submit to backend
             await learningService.submitQuizProgress({
@@ -456,11 +682,9 @@ export function QuizComponentEnhanced({
                 score_percentage: Math.round(percentage),
                 passed,
                 completed_at: new Date().toISOString(),
-                metadata: {
-                    quiz_attempt_count: nextAttemptCount,
-                    max_attempts: quiz.max_attempts ?? null
-                }
+                metadata
             })
+            progressMetadataRef.current = metadata
             setAttemptCount(nextAttemptCount)
             if (quiz.max_attempts && !passed && nextAttemptCount >= quiz.max_attempts) {
                 setAttemptLimitReached(true)
@@ -669,10 +893,24 @@ export function QuizComponentEnhanced({
         return translatedCurrent.options[optionId || ''] || fallback
     }
 
+    const feedbackOverlay = (
+        <FeedbackOverlay
+            showFeedback={showFeedback}
+            currentFeedback={currentFeedback}
+            quiz={quiz}
+            currentQuestionIndex={currentQuestionIndex}
+            displayExplanation={displayExplanation}
+            streak={streak}
+            onAdvance={advanceQuestion}
+        />
+    )
+
+    let mainContent: React.ReactNode
+
     if (loading || !quiz) {
-        return (
+        mainContent = (
             <div className="min-h-[60vh] flex items-center justify-center">
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="text-center space-y-4"
@@ -682,14 +920,11 @@ export function QuizComponentEnhanced({
                         <Brain className="h-6 w-6 text-hotel-gold absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                     </div>
                     <p className="text-slate-500 font-medium">{t('training:quizzes.player.loading')}</p>
-                </motion.div>
+                </m.div>
             </div>
         )
-    }
-
-    // Results screen
-    if (result) {
-        return (
+    } else if (result) {
+        mainContent = (
             <QuizResultsScreen
                 result={result}
                 quiz={quiz}
@@ -712,103 +947,11 @@ export function QuizComponentEnhanced({
                 canRetry={!attemptLimitReached && (!quiz.max_attempts || attemptCount < quiz.max_attempts)}
             />
         )
-    }
-
-    // Feedback overlay
-    const renderFeedbackOverlay = () => {
-        if (!showFeedback || !currentFeedback) return null
-
-        const isCorrect = currentFeedback === 'correct'
-        const currentQ = quiz?.questions?.[currentQuestionIndex]
-        const explanation = displayExplanation || currentQ?.question?.explanation
-        const sourceSnippet = currentQ?.question?.linked_sop_section
-
-        return (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
-                onClick={advanceQuestion}
-            >
-                <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
-                    className={cn(
-                        "max-w-lg w-full rounded-3xl p-8 text-center shadow-2xl",
-                        isCorrect ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white" : "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
-                    )}
-                    onClick={e => e.stopPropagation()}
-                >
-                    {isCorrect ? (
-                        <>
-                            <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                                className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6"
-                            >
-                                <CheckCircle2 className="h-12 w-12" />
-                            </motion.div>
-                            <h3 className="text-3xl font-bold mb-2">Correct!</h3>
-                            {streak > 1 && (
-                                <div className="flex items-center justify-center gap-2 mb-4">
-                                    <Flame className="h-5 w-5 text-orange-300" />
-                                    <span className="text-lg font-semibold">{streak} in a row!</span>
-                                </div>
-                            )}
-                            <p className="text-white/80 mb-6">+10 points</p>
-                        </>
-                    ) : (
-                        <>
-                            <motion.div
-                                initial={{ x: -10 }}
-                                animate={{ x: [0, 10, -10, 10, 0] }}
-                                transition={{ duration: 0.4 }}
-                                className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6"
-                            >
-                                <XCircle className="h-12 w-12" />
-                            </motion.div>
-                            <h3 className="text-3xl font-bold mb-2">Not quite</h3>
-                            <p className="text-white/70 mb-6">Don't worry, keep learning!</p>
-                        </>
-                    )}
-
-                    {explanation && (
-                        <div className="bg-white/10 rounded-xl p-4 mb-6 text-left">
-                            <p className="text-sm text-white/60 mb-1">Explanation:</p>
-                            <p className="text-sm">{explanation}</p>
-                        </div>
-                    )}
-                    {sourceSnippet && (
-                        <div className="bg-white/10 rounded-xl p-4 mb-6 text-left">
-                            <p className="text-sm text-white/60 mb-1">Source:</p>
-                            <p className="text-sm">{sourceSnippet}</p>
-                        </div>
-                    )}
-
-                    <Button
-                        onClick={advanceQuestion}
-                        className={cn(
-                            "px-8 py-6 rounded-xl font-bold text-lg",
-                            isCorrect
-                                ? "bg-white text-emerald-600 hover:bg-white/90"
-                                : "bg-white text-slate-700 hover:bg-white/90"
-                        )}
-                    >
-                        Continue
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                </motion.div>
-            </motion.div>
-        )
-    }
-
-    return (
+    } else {
+        mainContent = (
         <div className="max-w-4xl mx-auto space-y-6 pb-10">
             {/* Header with Stats */}
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-wrap items-center justify-between gap-4"
@@ -826,14 +969,14 @@ export function QuizComponentEnhanced({
                 <div className="flex items-center gap-3">
                     {/* Streak Badge */}
                     {streak > 0 && (
-                        <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
+                        <m.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
                             className="flex items-center gap-2 px-3 py-2 bg-orange-500 text-white rounded-xl font-bold"
                         >
                             <Flame className="h-4 w-4" />
                             {streak}
-                        </motion.div>
+                        </m.div>
                     )}
 
                     {/* Timer */}
@@ -869,11 +1012,11 @@ export function QuizComponentEnhanced({
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-            </motion.div>
+            </m.div>
 
             {/* Progress Bar */}
             <div className="relative h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                <motion.div
+                <m.div
                     className="absolute left-0 top-0 h-full bg-gradient-to-r from-hotel-gold-dark via-hotel-gold to-hotel-gold-light"
                     initial={{ width: 0 }}
                     animate={{ width: `${((currentQuestionIndex) / (quiz.questions?.length || 1)) * 100}%` }}
@@ -904,7 +1047,7 @@ export function QuizComponentEnhanced({
             {/* Question Card */}
             <AnimatePresence mode="wait">
                 {currentQuestion && (
-                    <motion.div
+                    <m.div
                         key={currentQuestionIndex}
                         initial={{ opacity: 0, x: isRTL ? -30 : 30 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -929,7 +1072,7 @@ export function QuizComponentEnhanced({
 
                                 {/* Hint (if revealed) */}
                                 {hintRevealed.has(currentQuestion.question_id) && displayExplanation && (
-                                    <motion.div
+                                    <m.div
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: 'auto' }}
                                         className="bg-amber-50 border border-amber-200 rounded-xl p-4"
@@ -938,7 +1081,7 @@ export function QuizComponentEnhanced({
                                             <Lightbulb className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                                             <p className="text-sm text-amber-800">{displayExplanation}</p>
                                         </div>
-                                    </motion.div>
+                                    </m.div>
                                 )}
 
                                 {/* Answer Options */}
@@ -958,8 +1101,8 @@ export function QuizComponentEnhanced({
                                                     if (isEliminated) return null
 
                                                     return (
-                                                        <motion.div
-                                                            key={opt.id || idx}
+                                                        <m.div
+                                                            key={opt.id || `option-${idx}`}
                                                             whileHover={{ scale: 1.01 }}
                                                             whileTap={{ scale: 0.99 }}
                                                             className={cn(
@@ -969,6 +1112,15 @@ export function QuizComponentEnhanced({
                                                                     : 'bg-white border-slate-100 hover:border-hotel-gold/50'
                                                             )}
                                                             onClick={() => setAnswers({ ...answers, [currentQuestion.question_id]: opt.id })}
+                                                            role="radio"
+                                                            aria-checked={isSelected}
+                                                            tabIndex={0}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                                    e.preventDefault()
+                                                                    setAnswers({ ...answers, [currentQuestion.question_id]: opt.id })
+                                                                }
+                                                            }}
                                                         >
                                                             <div className={cn(
                                                                 "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
@@ -983,7 +1135,7 @@ export function QuizComponentEnhanced({
                                                             )}>
                                                                 {translatedOption}
                                                             </span>
-                                                        </motion.div>
+                                                        </m.div>
                                                     )
                                                 })}
                                             </RadioGroup>
@@ -1004,8 +1156,8 @@ export function QuizComponentEnhanced({
                                                 const isSelected = selectedAnswers.includes(opt.id)
                                                 const translatedOption = displayOptionText(opt.id, opt.option_text)
                                                 return (
-                                                    <motion.div
-                                                        key={opt.id || idx}
+                                                    <m.div
+                                                        key={opt.id || `option-${idx}`}
                                                         whileHover={{ scale: 1.01 }}
                                                         whileTap={{ scale: 0.99 }}
                                                         className={cn(
@@ -1019,6 +1171,18 @@ export function QuizComponentEnhanced({
                                                                 ? selectedAnswers.filter(id => id !== opt.id)
                                                                 : [...selectedAnswers, opt.id]
                                                             setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
+                                                        }}
+                                                        role="checkbox"
+                                                        aria-checked={isSelected}
+                                                        tabIndex={0}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                                e.preventDefault()
+                                                                const next = isSelected
+                                                                    ? selectedAnswers.filter(id => id !== opt.id)
+                                                                    : [...selectedAnswers, opt.id]
+                                                                setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
+                                                            }
                                                         }}
                                                     >
                                                         <Checkbox
@@ -1038,7 +1202,7 @@ export function QuizComponentEnhanced({
                                                         )}>
                                                             {translatedOption}
                                                         </span>
-                                                    </motion.div>
+                                                    </m.div>
                                                 )
                                             })}
                                         </div>
@@ -1049,7 +1213,7 @@ export function QuizComponentEnhanced({
                                             {['true', 'false'].map((option) => {
                                                 const isSelected = answers[currentQuestion.question_id] === option
                                                 return (
-                                                    <motion.button
+                                                    <m.button
                                                         key={option}
                                                         whileHover={{ scale: 1.02 }}
                                                         whileTap={{ scale: 0.98 }}
@@ -1063,7 +1227,7 @@ export function QuizComponentEnhanced({
                                                     >
                                                         {option === 'true' ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
                                                         <span className="text-lg font-bold uppercase">{option}</span>
-                                                    </motion.button>
+                                                    </m.button>
                                                 )
                                             })}
                                         </div>
@@ -1093,8 +1257,8 @@ export function QuizComponentEnhanced({
                                                     if (isEliminated) return null
 
                                                     return (
-                                                        <motion.div
-                                                            key={opt.id || idx}
+                                                        <m.div
+                                                            key={opt.id || `option-${idx}`}
                                                             whileHover={{ scale: 1.01 }}
                                                             whileTap={{ scale: 0.99 }}
                                                             className={cn(
@@ -1104,6 +1268,15 @@ export function QuizComponentEnhanced({
                                                                     : 'bg-white border-slate-100 hover:border-hotel-gold/50'
                                                             )}
                                                             onClick={() => setAnswers({ ...answers, [currentQuestion.question_id]: opt.id })}
+                                                            role="radio"
+                                                            aria-checked={isSelected}
+                                                            tabIndex={0}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                                    e.preventDefault()
+                                                                    setAnswers({ ...answers, [currentQuestion.question_id]: opt.id })
+                                                                }
+                                                            }}
                                                         >
                                                             <div className={cn(
                                                                 "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
@@ -1118,7 +1291,7 @@ export function QuizComponentEnhanced({
                                                             )}>
                                                                 {translatedOption}
                                                             </span>
-                                                        </motion.div>
+                                                        </m.div>
                                                     )
                                                 })}
                                             </RadioGroup>
@@ -1134,7 +1307,7 @@ export function QuizComponentEnhanced({
                                 </div>
                             </CardContent>
                         </Card>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
 
@@ -1167,9 +1340,16 @@ export function QuizComponentEnhanced({
 
             {/* Feedback Overlay */}
             <AnimatePresence>
-                {renderFeedbackOverlay()}
+                {feedbackOverlay}
             </AnimatePresence>
         </div>
+        )
+    }
+
+    return (
+        <LazyMotion features={domAnimation}>
+            {mainContent}
+        </LazyMotion>
     )
 }
 
@@ -1207,7 +1387,7 @@ function QuizResultsScreen({
     }
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="max-w-3xl mx-auto space-y-6"
@@ -1219,9 +1399,9 @@ function QuizResultsScreen({
             )}>
                 <CardContent className="space-y-6">
                     {/* Status Icon */}
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
+                    <m.div
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
                         transition={{ type: "spring", stiffness: 200 }}
                         className={cn(
                             "w-24 h-24 rounded-full flex items-center justify-center mx-auto",
@@ -1232,7 +1412,7 @@ function QuizResultsScreen({
                         ) : (
                             <XCircle className="h-12 w-12 text-red-500" />
                         )}
-                    </motion.div>
+                    </m.div>
 
                     {/* Score */}
                     <div>
@@ -1275,7 +1455,7 @@ function QuizResultsScreen({
 
                     {/* Achievements */}
                     {result.streakAchieved >= 3 && (
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
@@ -1283,7 +1463,7 @@ function QuizResultsScreen({
                         >
                             <Sparkles className="h-4 w-4" />
                             <span className="font-semibold">{result.streakAchieved} Answer Streak!</span>
-                        </motion.div>
+                        </m.div>
                     )}
 
                     {/* Actions */}
@@ -1336,8 +1516,8 @@ function QuizResultsScreen({
                                 : question.correct_answer
 
                             return (
-                                <motion.div
-                                    key={index}
+                                <m.div
+                                    key={answer.question_id || `answer-${index}`}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.05 }}
@@ -1375,13 +1555,13 @@ function QuizResultsScreen({
                                             <XCircle className="h-5 w-5 text-red-500 shrink-0" />
                                         )}
                                     </div>
-                                </motion.div>
+                                </m.div>
                             )
                         })}
                     </div>
                 </CardContent>
             </Card>
-        </motion.div>
+        </m.div>
     )
 }
 
@@ -1401,3 +1581,4 @@ function StatCard({ icon, value, label, color }: { icon: React.ReactNode, value:
         </div>
     )
 }
+

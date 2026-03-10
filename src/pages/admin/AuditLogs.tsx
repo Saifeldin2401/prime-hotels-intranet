@@ -301,7 +301,7 @@ export default function AuditLogs() {
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 rtl:left-auto rtl:right-3" />
+              <Search className="absolute start-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder={t('audit_logs.search_placeholder')}
                 value={searchTerm}
@@ -509,3 +509,4 @@ export default function AuditLogs() {
     </div>
   )
 }
+

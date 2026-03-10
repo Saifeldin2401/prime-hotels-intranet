@@ -1,6 +1,7 @@
 // Common Components
 export { ErrorBoundary } from './ErrorBoundary'
 export { RouteErrorBoundary } from './RouteErrorBoundary'
+export { InlineErrorBoundary } from './InlineErrorBoundary'
 export { ErrorState, InlineError } from './ErrorState'
 export {
     EmptyState,

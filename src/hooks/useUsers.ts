@@ -36,10 +36,16 @@ export function useProfiles(filters?: {
                 .eq('is_active', true)
                 .order('full_name')
 
-            if (filters?.search) {
-                const escaped = escapeSearchQuery(filters.search)
-                query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
-            }
+      if (filters?.search) {
+        const normalizedSearch = filters.search
+          .replace(/[^a-zA-Z0-9@._\s-]/g, '')
+          .trim()
+          .slice(0, 100)
+        if (normalizedSearch) {
+          const escaped = escapeSearchQuery(normalizedSearch)
+          query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
+        }
+      }
 
             if (normalizedPropertyId) {
                 // Filter by users who have a user_properties entry for this property

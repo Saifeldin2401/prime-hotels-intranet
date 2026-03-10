@@ -60,7 +60,17 @@ serve(async (req) => {
 
         const reqBody = await req.json()
 
-        const { model, prompt, provider, task } = reqBody
+        const {
+            model,
+            prompt,
+            provider,
+            task,
+            action,
+            context,
+            temperature,
+            max_tokens,
+            maxOutputTokens,
+        } = reqBody
 
 
 
@@ -73,6 +83,7 @@ serve(async (req) => {
             throw new Error('HUGGINGFACE_TOKEN is missing.')
         }
         const currentTask = task || 'chat'
+
         // Use a powerful supported LLM for summarization instead of legacy BART
         let targetModelId = model
         if (currentTask === 'summarization') {
@@ -108,6 +119,22 @@ serve(async (req) => {
             )
         }
 
+        const normalizeTemperature = (value: unknown) => {
+            if (typeof value !== 'number' || Number.isNaN(value)) return 0.7
+            if (value < 0) return 0
+            if (value > 2) return 2
+            return value
+        }
+
+        const normalizeMaxTokens = (value: unknown) => {
+            const n = typeof value === 'number' ? value : Number(value)
+            if (!Number.isFinite(n) || n <= 0) return 2048
+            return Math.max(1, Math.min(4096, Math.floor(n)))
+        }
+
+        const effectiveTemperature = normalizeTemperature(temperature)
+        const effectiveMaxTokens = normalizeMaxTokens(max_tokens ?? maxOutputTokens)
+
         const callHfRouter = async (token: string, modelId: string) => {
             const response = await fetch(`https://router.huggingface.co/v1/chat/completions`, {
                 method: 'POST',
@@ -121,8 +148,8 @@ serve(async (req) => {
                         { role: 'system', content: currentTask === 'summarization' ? 'You are an expert summarizer. Summarize the user input concisely into key bullet points.' : 'You are a helpful assistant. Output valid JSON when requested.' },
                         { role: 'user', content: prompt }
                     ],
-                    max_tokens: 2048,
-                    temperature: 0.7,
+                    max_tokens: effectiveMaxTokens,
+                    temperature: effectiveTemperature,
                     stream: false
                 }),
             })
@@ -199,6 +226,7 @@ serve(async (req) => {
 
         return new Response(JSON.stringify({
             response: result,
+            result,
             success: true,
             meta: {
                 modelUsed: targetModelId,
@@ -229,7 +257,7 @@ serve(async (req) => {
 
             {
 
-                status: 200,
+                status: 500,
 
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
 

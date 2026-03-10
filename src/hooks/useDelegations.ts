@@ -219,8 +219,18 @@ export function useDelegations() {
         },
     })
 
+    const isDelegationWithinApprovalLimit = (delegation: Delegation) => {
+        if (delegation.max_approvals === null || delegation.max_approvals === undefined) {
+            return true
+        }
+        const approvalsUsed = delegation.approvals_used ?? 0
+        return approvalsUsed < delegation.max_approvals
+    }
+
     // Filter helpers
-    const activeDelegations = delegations.filter(d => d.is_active && new Date(d.ends_at) > new Date())
+    const activeDelegations = delegations.filter(
+        d => d.is_active && new Date(d.ends_at) > new Date() && isDelegationWithinApprovalLimit(d)
+    )
     const pausedDelegations = delegations.filter(
         d => !d.is_active && !d.revoked_at && new Date(d.ends_at) > new Date()
     )
@@ -228,7 +238,9 @@ export function useDelegations() {
         d => d.revoked_at || d.auto_expired || new Date(d.ends_at) <= new Date()
     )
     const myDelegations = delegations.filter(d => d.delegator_id === user?.id)
-    const receivedDelegations = delegations.filter(d => d.delegate_id === user?.id && d.is_active)
+    const receivedDelegations = delegations.filter(
+        d => d.delegate_id === user?.id && d.is_active && isDelegationWithinApprovalLimit(d)
+    )
 
     return {
         delegations,

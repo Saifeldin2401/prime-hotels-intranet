@@ -13,6 +13,7 @@ import { getWikiArticles } from '@/services/systemWikiService'
 import type { SystemWikiArticle, AppRole } from '@/lib/types'
 import { WikiEditorDialog } from '@/components/knowledge/WikiEditorDialog'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 
 export default function SystemWiki() {
     const { t, i18n } = useTranslation(['common', 'nav', 'knowledge'])
@@ -154,12 +155,14 @@ export default function SystemWiki() {
                         <CardContent className="p-6 md:p-8">
                             {activeArticle ? (
                                 <div className="space-y-8">
-                                    <div
-                                        className="prose prose-slate max-w-none animate-in fade-in slide-in-from-bottom-2 duration-300"
-                                        dangerouslySetInnerHTML={{
-                                            __html: sanitizeHtml(currentLang === 'ar' ? activeArticle.content_ar : activeArticle.content_en)
-                                        }}
-                                    />
+                                    <InlineErrorBoundary>
+                                        <div
+                                            className="prose prose-slate max-w-none animate-in fade-in slide-in-from-bottom-2 duration-300"
+                                            dangerouslySetInnerHTML={{
+                                                __html: sanitizeHtml(currentLang === 'ar' ? activeArticle.content_ar : activeArticle.content_en)
+                                            }}
+                                        />
+                                    </InlineErrorBoundary>
                                     {activeArticle.subtopics && activeArticle.subtopics.length > 0 && (
                                         <div className="mt-8 pt-8 border-t border-slate-200">
                                             <h3 className="text-xl font-semibold mb-6 flex items-center text-slate-800">
@@ -183,10 +186,12 @@ export default function SystemWiki() {
                                                                 {title}
                                                             </AccordionTrigger>
                                                             <AccordionContent className="pt-2 pb-6 border-t border-slate-100">
-                                                                <div
-                                                                    className="prose prose-sm prose-slate max-w-none"
-                                                                    dangerouslySetInnerHTML={{ __html: htmlContent }}
-                                                                />
+                                                                <InlineErrorBoundary>
+                                                                    <div
+                                                                        className="prose prose-sm prose-slate max-w-none"
+                                                                        dangerouslySetInnerHTML={{ __html: htmlContent }}
+                                                                    />
+                                                                </InlineErrorBoundary>
                                                             </AccordionContent>
                                                         </AccordionItem>
                                                     );

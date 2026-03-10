@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { SidebarNavigation } from './SidebarNavigation'
 import { MobileLayout } from '@/layouts/MobileLayout'
 import { Header } from '@/components/layout/Header'
@@ -20,6 +20,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+
+  const handleSidebarClose = useCallback(() => setSidebarOpen(false), [])
+  const handleSidebarToggle = useCallback(() => setSidebarCollapsed(prev => !prev), [])
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -72,7 +75,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col no-horizontal-scroll">
+    <div className="min-h-dvh bg-background text-foreground flex flex-col no-horizontal-scroll">
       {/* Skip to content link for keyboard accessibility */}
       <a href="#main-content" className="skip-to-content">
         {t_ext('skip_to_main_content', 'Skip to main content')}</a>
@@ -81,8 +84,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       <SidebarNavigation
         isOpen={sidebarOpen}
         collapsed={sidebarCollapsed}
-        onClose={() => setSidebarOpen(false)}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onClose={handleSidebarClose}
+        onToggleCollapse={handleSidebarToggle}
       />
 
       <div className={cn(

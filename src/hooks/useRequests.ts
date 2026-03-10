@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { escapeSearchQuery } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { isRealPropertyId } from '@/lib/propertyScope'
@@ -141,6 +140,17 @@ export interface RequestAttachmentRow {
   file_type: string
   file_size: number
   created_at: string
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function formatSafeIdList(ids: Array<string | null | undefined>): string | null {
+  const sanitizedIds = Array.from(
+    new Set(ids.filter((id): id is string => typeof id === 'string' && UUID_PATTERN.test(id)))
+  )
+
+  if (sanitizedIds.length === 0) return null
+  return sanitizedIds.map((id) => `"${id}"`).join(',')
 }
 
 export function useRequest(requestId?: string) {
@@ -347,6 +357,11 @@ export function useRequestsInbox(filters?: {
 
       const delegatorIds = delegations?.map(d => d.delegator_id) || []
       const idList = [user.id, ...delegatorIds]
+      const formattedIdList = formatSafeIdList(idList)
+
+      if (!isRegionalAccess && !formattedIdList) {
+        return []
+      }
 
       // 2. Build the main query
       let query = supabase
@@ -368,11 +383,9 @@ export function useRequestsInbox(filters?: {
       } else if (isPropertyLevel || isDepartmentHead) {
         // Property/Department level sees requests assigned to them OR where they are supervisor
         // Include delegators in the ID search
-        const formattedIdList = idList.join(',')
         query = query.or(`requester_id.in.(${formattedIdList}),current_assignee_id.in.(${formattedIdList}),supervisor_id.in.(${formattedIdList})`)
       } else {
         // Regular staff: only see requests where they (or their delegators) are requester or assignee
-        const formattedIdList = idList.join(',')
         query = query.or(`requester_id.in.(${formattedIdList}),current_assignee_id.in.(${formattedIdList})`)
       }
 
