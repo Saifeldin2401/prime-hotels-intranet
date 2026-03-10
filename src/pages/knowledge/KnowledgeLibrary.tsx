@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useTranslation } from 'react-i18next'
 import {
     Search,
@@ -88,6 +89,13 @@ export default function KnowledgeLibrary() {
     const activeRequired = searchParams.get('f') === 'required'
     const searchQuery = searchParams.get('q') || ''
 
+    const [localSearch, setLocalSearch] = useState(searchQuery)
+    const debouncedSearch = useDebounce(localSearch, 300)
+
+    useEffect(() => {
+        setLocalSearch(searchQuery)
+    }, [searchQuery])
+
     const [sortBy, setSortBy] = useState('updated')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
@@ -100,7 +108,7 @@ export default function KnowledgeLibrary() {
     ]
 
     const { data: articles, isLoading: articlesLoading } = useArticles({
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         type: activeType || undefined,
         departmentId: activeDept || undefined,
         required: activeRequired || undefined,
@@ -146,6 +154,7 @@ export default function KnowledgeLibrary() {
     }, [articles, activeFeatured, activeBookmarks, bookmarks, sortBy])
 
     const handleSearch = (val: string) => {
+        setLocalSearch(val)
         const newParams = new URLSearchParams(searchParams)
         if (val) newParams.set('q', val)
         else newParams.delete('q')
@@ -236,7 +245,7 @@ export default function KnowledgeLibrary() {
                                 <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 font-bold", isRTL ? "right-3" : "left-3")} />
                                 <Input
                                     placeholder={t('library.filter_within', 'Filter within these results...')}
-                                    value={searchQuery}
+                                    value={localSearch}
                                     onChange={(e) => handleSearch(e.target.value)}
                                     className={cn("h-10 border-none bg-white shadow-sm ring-1 ring-gray-100 focus-visible:ring-hotel-gold/50", isRTL ? "pr-10" : "pl-10")}
                                 />

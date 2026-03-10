@@ -29,7 +29,6 @@ import { ROLES, ROLE_HIERARCHY, type AppRole } from '@/lib/constants'
 import type { Permission } from '@/hooks/usePermissions'
 import { ALL_PERMISSIONS, PERMISSION_CATEGORIES, formatPermissionLabel } from '@/lib/permissionCatalog'
 import { useTranslation } from 'react-i18next'
-import { useDebounce } from '@/hooks/useDebounce'
 
 // Fallback hardcoded permissions for role assignment dialog
 const ROLE_PERMISSIONS_FALLBACK: Record<AppRole, Permission[]> = {
@@ -73,7 +72,6 @@ export default function RoleManagement() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState<AppRole>('staff')
   const [viewMode, setViewMode] = useState<'list' | 'comparison'>('list')
-  const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
   // Fetch role permissions from DB
   const { data: dbPermissions = [], isLoading: permissionsLoading } = useQuery({
@@ -133,7 +131,7 @@ export default function RoleManagement() {
 
   // User queries
   const { data: users = [] } = useQuery({
-    queryKey: ['users', debouncedSearchQuery],
+    queryKey: ['users', searchQuery],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
@@ -143,7 +141,7 @@ export default function RoleManagement() {
           user_properties(*),
           user_departments(*)
         `)
-        .ilike('full_name', `%${debouncedSearchQuery}%`)
+        .ilike('full_name', `%${searchQuery}%`)
         .limit(50)
 
       if (error) throw error

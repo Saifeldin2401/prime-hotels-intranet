@@ -4,6 +4,12 @@ import { useUserBulkOperations } from '@/hooks/useUserBulkOperations'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -30,7 +36,7 @@ interface UserBulkActionsBarProps {
 }
 
 export function UserBulkActionsBar({ selectedIds, onClearSelection, userNames }: UserBulkActionsBarProps) {
-    const { t } = useTranslation('users')
+    const { t } = useTranslation(['users', 'common'])
     const { bulkAssignRole, bulkDeactivate, bulkActivate, bulkForcePasswordReset, isLoading } = useUserBulkOperations()
 
     const [dialogOpen, setDialogOpen] = useState(false)
@@ -84,20 +90,28 @@ export function UserBulkActionsBar({ selectedIds, onClearSelection, userNames }:
     }
 
     return (
-        <>
+        <TooltipProvider>
             <div className="bg-hotel-navy text-white rounded-lg p-3 flex flex-wrap items-center gap-3 shadow-lg animate-in slide-in-from-bottom-2">
                 <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="bg-white/20 text-white border-0">
                         {t('bulk.selected', { count })}
                     </Badge>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-white/60 hover:text-white hover:bg-white/10"
-                        onClick={onClearSelection}
-                    >
-                        <X className="w-4 h-4" />
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-white/60 hover:text-white hover:bg-white/10"
+                                onClick={onClearSelection}
+                                aria-label={t('common:clearselection')}
+                            >
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                            {t('common:clearselection')}
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
 
                 <div className="flex items-center gap-2 ms-auto flex-wrap">
@@ -259,6 +273,6 @@ export function UserBulkActionsBar({ selectedIds, onClearSelection, userNames }:
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </>
+        </TooltipProvider>
     )
 }

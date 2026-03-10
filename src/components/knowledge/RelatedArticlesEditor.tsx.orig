@@ -1,6 +1,6 @@
 /**
  * Related Articles Editor
- * 
+ *
  * Component for managing article-to-article relationships.
  * Updated to use 'documents' table.
  */
@@ -41,7 +41,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { RelatedArticle } from '@/types/knowledge'
 import { useTranslation } from "react-i18next";
-import { useDebounce } from '@/hooks/useDebounce'
 
 const RELATION_TYPES = [
     { value: 'see_also', label: 'Related / See Also', color: 'blue' },
@@ -65,24 +64,23 @@ export function RelatedArticlesEditor({
     const [searchOpen, setSearchOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRelationType, setSelectedRelationType] = useState<string>('see_also')
-    const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
     // Search for articles to link
     const { data: searchResults, isLoading: searchLoading } = useQuery({
-        queryKey: ['knowledge-articles-search', debouncedSearchQuery],
+        queryKey: ['knowledge-articles-search', searchQuery],
         queryFn: async () => {
-            if (!debouncedSearchQuery.trim()) return []
+            if (!searchQuery.trim()) return []
             const { data, error } = await supabase
                 .from('documents') // Updated table
                 .select('id, title')
                 .neq('id', documentId)
-                .ilike('title', `%${debouncedSearchQuery}%`)
+                .ilike('title', `%${searchQuery}%`)
                 .eq('status', 'PUBLISHED') // Only link published docs
                 .limit(10)
             if (error) throw error
             return data
         },
-        enabled: debouncedSearchQuery.length > 2
+        enabled: searchQuery.length > 2
     })
 
     // Add related article

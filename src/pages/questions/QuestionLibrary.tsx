@@ -4,7 +4,7 @@
  * Admin page for browsing, managing, and reviewing questions.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,6 +43,12 @@ export function QuestionLibrary() {
     const { t } = useTranslation(['knowledge', 'common'])
     const [searchParams, setSearchParams] = useSearchParams()
     const [search, setSearch] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(search), 300)
+        return () => clearTimeout(timer)
+    }, [search])
 
     const tab = searchParams.get('tab') || 'all'
     const typeFilter = searchParams.get('type') as QuestionType | null
@@ -51,7 +57,7 @@ export function QuestionLibrary() {
     const { data, isLoading } = useQuestions({
         status: statusFilter,
         type: typeFilter || undefined,
-        search: search || undefined
+        search: debouncedSearch || undefined
     })
 
     const { data: pendingData } = usePendingReviewQuestions()
