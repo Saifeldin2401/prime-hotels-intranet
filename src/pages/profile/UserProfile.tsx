@@ -75,6 +75,11 @@ interface PrivateProfileData {
   emergency_contact_phone: string | null
   national_id: string | null
   salary_grade: string | null
+  phone: string | null
+  nationality: string | null
+  blood_group: string | null
+  iqama_number: string | null
+  iqama_expiry: string | null
 }
 
 const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']
@@ -408,6 +413,28 @@ export default function UserProfile() {
                           <div className="rounded-md border p-3">
                             <div className="text-xs text-gray-500 mb-1">{t('profile:salary_grade', 'Salary Grade')}</div>
                             <div className="font-medium">{privateProfile.salary_grade || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:phone_number', 'Phone Number')}</div>
+                            <div className="font-medium">{privateProfile.phone || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:nationality', 'Nationality')}</div>
+                            <div className="font-medium">{privateProfile.nationality || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:blood_group', 'Blood Group')}</div>
+                            <div className="font-medium">{privateProfile.blood_group || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:iqama_number', 'Iqama Number')}</div>
+                            <div className="font-medium">{privateProfile.iqama_number || '-'}</div>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="text-xs text-gray-500 mb-1">{t('profile:iqama_expiry', 'Iqama Expiry')}</div>
+                            <div className="font-medium">
+                              {privateProfile.iqama_expiry ? format(new Date(privateProfile.iqama_expiry), 'MMMM d, yyyy') : '-'}
+                            </div>
                           </div>
                         </div>
                       </div>

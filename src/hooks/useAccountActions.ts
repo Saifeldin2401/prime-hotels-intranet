@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 
-type AccountAction = 'suspend' | 'reactivate' | 'force_password_reset' | 'unlock'
+type AccountAction = 'suspend' | 'reactivate' | 'force_password_reset' | 'cancel_password_reset' | 'unlock' | 'resend_credentials'
 
 interface AccountActionParams {
     action: AccountAction
@@ -67,7 +67,9 @@ export function useAccountActions() {
                     suspend: 'Account Suspended',
                     reactivate: 'Account Reactivated',
                     force_password_reset: 'Password Reset Required',
+                    cancel_password_reset: 'Password Reset Cancelled',
                     unlock: 'Account Unlocked',
+                    resend_credentials: 'Credentials Resent',
                 }
 
                 const messageMap: Record<AccountAction, string> = {
@@ -76,7 +78,9 @@ export function useAccountActions() {
                         : 'Your account has been suspended by an administrator.',
                     reactivate: 'Your account has been reactivated.',
                     force_password_reset: 'Your account requires a password reset. Please update your password to continue.',
+                    cancel_password_reset: 'Your account no longer requires a password reset.',
                     unlock: 'Your account has been unlocked.',
+                    resend_credentials: 'Your access details have been resent. Check your email for the latest login instructions.',
                 }
 
                 await supabase
@@ -103,7 +107,9 @@ export function useAccountActions() {
                 suspend: 'Account has been suspended',
                 reactivate: 'Account has been reactivated',
                 force_password_reset: 'Password reset initiated',
+                cancel_password_reset: 'Password reset requirement removed',
                 unlock: 'Account has been unlocked',
+                resend_credentials: 'Credentials resent',
             }
 
             toast({
@@ -156,6 +162,17 @@ export function useAccountActions() {
             note: options?.note
         })
 
+    const cancelPasswordReset = (
+        userId: string,
+        options?: { notifyUser?: boolean; note?: string }
+    ) =>
+        accountActionMutation.mutateAsync({
+            action: 'cancel_password_reset',
+            user_id: userId,
+            notify_user: options?.notifyUser,
+            note: options?.note
+        })
+
     const unlockAccount = (
         userId: string,
         options?: { notifyUser?: boolean; note?: string }
@@ -167,11 +184,24 @@ export function useAccountActions() {
             note: options?.note
         })
 
+    const resendCredentials = (
+        userId: string,
+        options?: { notifyUser?: boolean; note?: string }
+    ) =>
+        accountActionMutation.mutateAsync({
+            action: 'resend_credentials',
+            user_id: userId,
+            notify_user: options?.notifyUser,
+            note: options?.note
+        })
+
     return {
         suspendAccount,
         reactivateAccount,
         forcePasswordReset,
+        cancelPasswordReset,
         unlockAccount,
+        resendCredentials,
         isLoading: accountActionMutation.isPending,
     }
 }

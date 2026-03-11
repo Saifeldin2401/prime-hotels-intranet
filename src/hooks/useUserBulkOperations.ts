@@ -315,15 +315,90 @@ export function useUserBulkOperations() {
         onSuccess: (result) => showResult('Password Reset', result),
     })
 
+    // Bulk cancel password reset
+    const bulkCancelPasswordReset = useMutation({
+        mutationFn: async ({
+            userIds,
+            notifyUser,
+            note
+        }: {
+            userIds: string[]
+            notifyUser?: boolean
+            note?: string
+        }) => {
+            const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
+            const { data: authData } = await supabase.auth.getUser()
+            const actorId = authData.user?.id ?? null
+
+            for (const userId of userIds) {
+                try {
+                    const response = await supabase.functions.invoke('admin-account-actions', {
+                        body: {
+                            action: 'cancel_password_reset',
+                            user_id: userId,
+                            reason: note || 'Bulk cancel password reset',
+                        },
+                    })
+
+                    if (response.error) {
+                        throw new Error(response.error.message || 'Edge function failed')
+                    }
+
+                    if (note && note.trim()) {
+                        const { error: noteError } = await supabase
+                            .from('account_action_notes')
+                            .insert({
+                                user_id: userId,
+                                action: 'bulk_cancel_password_reset',
+                                note: note.trim(),
+                                created_by: actorId,
+                                metadata: { notify_user: !!notifyUser }
+                            })
+                        if (noteError) throw noteError
+                    }
+
+                    if (notifyUser) {
+                        const { error: notifyError } = await supabase.from('notifications').insert({
+                            user_id: userId,
+                            type: 'system',
+                            title: 'Password Reset Cancelled',
+                            message: 'Your account no longer requires a password reset.',
+                            metadata: { action: 'bulk_cancel_password_reset' }
+                        })
+                        if (notifyError) throw notifyError
+                    }
+
+                    const { error: auditError } = await supabase.from('audit_logs').insert({
+                        entity_type: 'user',
+                        entity_id: userId,
+                        action: 'bulk_cancel_password_reset',
+                        user_id: actorId,
+                        details: { bulk_operation: true },
+                    })
+                    if (auditError) throw auditError
+
+                    result.success++
+                } catch (err) {
+                    result.failed++
+                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                }
+            }
+            return result
+        },
+        onSuccess: (result) => showResult('Cancel Reset', result),
+    })
+
     return {
         bulkAssignRole,
         bulkDeactivate,
         bulkActivate,
         bulkForcePasswordReset,
+        bulkCancelPasswordReset,
         isLoading:
             bulkAssignRole.isPending ||
             bulkDeactivate.isPending ||
             bulkActivate.isPending ||
-            bulkForcePasswordReset.isPending,
+            bulkForcePasswordReset.isPending ||
+            bulkCancelPasswordReset.isPending,
     }
 }

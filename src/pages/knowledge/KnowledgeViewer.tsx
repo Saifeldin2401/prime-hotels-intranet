@@ -573,7 +573,7 @@ export default function KnowledgeViewer() {
                     }
                 ],
                 notes: [
-                    `Department: ${article.department?.name || 'General'}`,
+                    `Department: ${article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || 'General')}`,
                     `Category: ${article.category?.name || 'Uncategorized'}`,
                     `Status: ${article.status}`,
                     `Version: v${article.current_version || article.version || 1}`
@@ -1021,7 +1021,7 @@ export default function KnowledgeViewer() {
                             <Separator orientation="vertical" className="h-6 mx-1" />
                             <Breadcrumbs items={[
                                 { label: t('viewer.library', 'Library'), href: '/knowledge/search' },
-                                { label: article.department?.name || t('viewer.no_dept', 'General'), href: `/knowledge/search?department=${article.department_id}` },
+                                { label: article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || t('viewer.no_dept', 'General')), href: `/knowledge/search?department=${article.department_id}` },
                                 { label: article.title }
                             ]} className="hidden md:flex" />
                             <div className="md:hidden text-xs font-semibold text-slate-500 truncate max-w-[150px]">
@@ -1296,7 +1296,7 @@ export default function KnowledgeViewer() {
                     <div className="text-center">
                         <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
                         <p className="text-sm text-gray-600">
-                            PHG Connect - Knowledge Base | {article.department?.name || 'General'} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
+                            PHG Connect - Knowledge Base | {article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || 'General')} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
                         </p>
                     </div>
                 </div>

@@ -178,7 +178,7 @@ export async function getArticleById(id: string, userId?: string): Promise<Knowl
                 author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
                 last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
                 sop:sop_documents(linked_training_id, linked_quiz_id),
-                document_department_access(department_id)
+                department:departments(id, name),\n                category:categories(id, name),\n                document_department_access(department_id, department:departments(id, name))
             `)
             .eq('id', id)
             .eq('is_deleted', false)
@@ -881,7 +881,7 @@ type RawKnowledgeArticle = {
     category?: RawKnowledgeJoin | RawKnowledgeJoin[] | null
     author?: RawKnowledgeJoin | RawKnowledgeJoin[] | null
     last_editor?: RawKnowledgeJoin | RawKnowledgeJoin[] | null
-    document_department_access?: Array<{ department_id?: string | null }> | null
+    document_department_access?: Array<{ department_id?: string | null, department?: RawKnowledgeJoin | null }> | null
 }
 
 function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
@@ -892,13 +892,24 @@ function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
     const author = Array.isArray(data.author) ? data.author[0] : data.author
     const lastEditor = Array.isArray(data.last_editor) ? data.last_editor[0] : data.last_editor
 
+    let finalDepartment = department
+    if (!finalDepartment && Array.isArray(data.document_department_access) && data.document_department_access.length > 0) {
+        if (data.document_department_access.length === 1 && data.document_department_access[0].department) {
+            finalDepartment = Array.isArray(data.document_department_access[0].department) 
+                ? data.document_department_access[0].department[0]
+                : data.document_department_access[0].department
+        } else if (data.document_department_access.length > 1) {
+            finalDepartment = { id: 'multiple', name: 'Multiple Departments' }
+        }
+    }
+
     return {
         ...data,
         content_type: (typeof data.content_type === 'string' ? data.content_type.toLowerCase() : 'document') as KnowledgeArticle['content_type'],
         visibility_scope: (data.visibility_scope || data.visibility || 'all_properties') as KnowledgeArticle['visibility_scope'],
         linked_training_id: data.linked_training_id || sopData?.linked_training_id,
         linked_quiz_id: data.linked_quiz_id || sopData?.linked_quiz_id,
-        department: department || (data.department_id ? { id: data.department_id, name: 'Department' } : undefined),
+        department: finalDepartment || (data.department_id ? { id: data.department_id, name: 'Department' } : undefined),
         category: category || (data.category_id ? { id: data.category_id, name: 'Category' } : undefined),
         version: data.current_version || data.version || 1,
         current_version: data.current_version || data.version || 1,

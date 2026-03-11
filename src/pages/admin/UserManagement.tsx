@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { UserForm } from '@/components/admin/UserForm'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { Plus, Users, Loader2, Trash2, Edit, MoreVertical, ShieldOff, ShieldCheck, KeyRound, Unlock, AlertTriangle, Clock, CheckSquare, Square, MailPlus, UserX, Upload } from 'lucide-react'
+import { Plus, Users, Loader2, Trash2, Edit, MoreVertical, ShieldOff, ShieldCheck, KeyRound, Unlock, AlertTriangle, Clock, CheckSquare, Square, MailPlus, UserX, Upload, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
@@ -54,6 +54,7 @@ export default function UserManagement() {
   const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation('users')
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -66,7 +67,7 @@ export default function UserManagement() {
 
   // Account action dialog state
   const [actionDialogOpen, setActionDialogOpen] = useState(false)
-  const [actionType, setActionType] = useState<'suspend' | 'reactivate' | 'force_password_reset' | 'unlock' | null>(null)
+  const [actionType, setActionType] = useState<'suspend' | 'reactivate' | 'force_password_reset' | 'cancel_password_reset' | 'unlock' | 'resend_credentials' | null>(null)
   const [actionTargetUser, setActionTargetUser] = useState<Profile | null>(null)
   const [suspendReason, setSuspendReason] = useState('')
   const [suspendUntil, setSuspendUntil] = useState('')
@@ -76,7 +77,7 @@ export default function UserManagement() {
   // Bulk selection state
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
 
-  const { suspendAccount, reactivateAccount, forcePasswordReset, unlockAccount, isLoading: isActionLoading } = useAccountActions()
+  const { suspendAccount, reactivateAccount, forcePasswordReset, cancelPasswordReset, unlockAccount, resendCredentials, isLoading: isActionLoading } = useAccountActions()
 
   const { data: users, isLoading, refetch } = useQuery({
     queryKey: ['users'],
@@ -123,6 +124,30 @@ export default function UserManagement() {
       return (data || []) as Array<{ id: string; name: string; property_id: string }>
     },
   })
+
+  useEffect(() => {
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null
+
+    const scheduleInvalidate = () => {
+      if (invalidateTimer) return
+      invalidateTimer = setTimeout(() => {
+        invalidateTimer = null
+        queryClient.invalidateQueries({ queryKey: ['users'] })
+      }, 400)
+    }
+
+    const channel = supabase
+      .channel('admin-users-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, scheduleInvalidate)
+      .subscribe()
+
+    return () => {
+      if (invalidateTimer) {
+        clearTimeout(invalidateTimer)
+      }
+      void supabase.removeChannel(channel)
+    }
+  }, [queryClient])
 
   const actionNotesQuery = useQuery({
     queryKey: ['account-action-notes', actionTargetUser?.id],
@@ -381,8 +406,20 @@ export default function UserManagement() {
             note: actionNote || undefined
           })
           break
+        case 'cancel_password_reset':
+          await cancelPasswordReset(actionTargetUser.id, {
+            notifyUser,
+            note: actionNote || undefined
+          })
+          break
         case 'unlock':
           await unlockAccount(actionTargetUser.id, {
+            notifyUser,
+            note: actionNote || undefined
+          })
+          break
+        case 'resend_credentials':
+          await resendCredentials(actionTargetUser.id, {
             notifyUser,
             note: actionNote || undefined
           })
@@ -456,6 +493,10 @@ export default function UserManagement() {
     inactive: users?.filter(u => !u.is_active).length || 0,
   }
 
+  const selectedResetCount = filteredUsers
+    ? filteredUsers.filter((u) => selectedUserIds.has(u.id) && u.force_password_reset).length
+    : 0
+
   if (showForm) {
     return (
       <UserForm user={selectedUser || undefined} onClose={handleCloseForm} />
@@ -519,6 +560,7 @@ export default function UserManagement() {
           selectedIds={selectedUserIds}
           onClearSelection={deselectAll}
           userNames={new Map(filteredUsers?.map(u => [u.id, u.full_name || u.email]) || [])}
+          resetRequiredCount={selectedResetCount}
         />
       )}
 
@@ -680,6 +722,18 @@ export default function UserManagement() {
                           <DropdownMenuItem onClick={() => openActionDialog(user, 'force_password_reset')} className="gap-2">
                             <KeyRound className="w-4 h-4 text-amber-600" />
                             {t('account_actions.force_password_reset')}
+                          </DropdownMenuItem>
+
+                          {user.force_password_reset && (
+                            <DropdownMenuItem onClick={() => openActionDialog(user, 'cancel_password_reset')} className="gap-2">
+                              <XCircle className="w-4 h-4 text-gray-500" />
+                              {t('account_actions.cancel_password_reset')}
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuItem onClick={() => openActionDialog(user, 'resend_credentials')} className="gap-2">
+                            <MailPlus className="w-4 h-4 text-sky-600" />
+                            {t('account_actions.resend_credentials', 'Resend Credentials')}
                           </DropdownMenuItem>
 
                           <DropdownMenuSeparator />
@@ -898,7 +952,9 @@ export default function UserManagement() {
               {actionType === 'suspend' && <ShieldOff className="w-5 h-5 text-red-600" />}
               {actionType === 'reactivate' && <ShieldCheck className="w-5 h-5 text-green-600" />}
               {actionType === 'force_password_reset' && <KeyRound className="w-5 h-5 text-amber-600" />}
+              {actionType === 'cancel_password_reset' && <XCircle className="w-5 h-5 text-gray-500" />}
               {actionType === 'unlock' && <Unlock className="w-5 h-5 text-blue-600" />}
+              {actionType === 'resend_credentials' && <MailPlus className="w-5 h-5 text-sky-600" />}
               {actionType && t(`account_actions.${actionType}`)}
             </DialogTitle>
             <DialogDescription>
@@ -910,7 +966,11 @@ export default function UserManagement() {
 
           <div className="space-y-4 py-2">
             <p className="text-sm text-gray-600">
-              {actionType && t(`account_actions.confirm_${actionType === 'force_password_reset' ? 'force_reset' : actionType}`)}
+              {actionType && t(`account_actions.confirm_${actionType === 'force_password_reset'
+                ? 'force_reset'
+                : actionType === 'cancel_password_reset'
+                  ? 'cancel_reset'
+                  : actionType}`)}
             </p>
 
             {actionType === 'suspend' && (

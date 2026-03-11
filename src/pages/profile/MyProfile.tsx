@@ -194,7 +194,7 @@ export default function MyProfile() {
                         {/* Avatar */}
                         <div className="relative group">
                             <Avatar className="w-28 h-28 text-4xl ring-4 ring-white/20 shadow-2xl">
-                                <AvatarImage src={avatarUrl || undefined} />
+                                <AvatarImage src={avatarUrl || undefined} className="object-cover object-center" />
                                 <AvatarFallback className="bg-indigo-700 text-white text-3xl">
                                     {fullName ? fullName.charAt(0).toUpperCase() : <UserIcon className="w-12 h-12" />}
                                 </AvatarFallback>

@@ -46,9 +46,74 @@ function buildCorsHeaders(req: Request): Record<string, string> {
     };
 }
 
-type AccountAction = "suspend" | "reactivate" | "force_password_reset" | "unlock";
+const TEMP_PASSWORD_LENGTH = 20;
+const TEMP_PASSWORD_SETS = {
+    lower: "abcdefghijklmnopqrstuvwxyz",
+    upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    digits: "0123456789",
+    symbols: "!@#$%^&*()-_=+[]{}<>?",
+} as const;
 
-const VALID_ACTIONS: Set<string> = new Set(["suspend", "reactivate", "force_password_reset", "unlock"]);
+function randomInt(maxExclusive: number): number {
+    if (maxExclusive <= 0) throw new Error("randomInt maxExclusive must be positive");
+    const upper = 0xffffffff;
+    const limit = Math.floor(upper / maxExclusive) * maxExclusive;
+    const buffer = new Uint32Array(1);
+
+    let value = upper;
+    while (value >= limit) {
+        crypto.getRandomValues(buffer);
+        value = buffer[0];
+    }
+
+    return value % maxExclusive;
+}
+
+function pickRandomChar(charset: string): string {
+    return charset[randomInt(charset.length)];
+}
+
+function generateSecureTemporaryPassword(length = TEMP_PASSWORD_LENGTH): string {
+    const minLength = 12;
+    const targetLength = Math.max(length, minLength);
+    const requiredChars = [
+        pickRandomChar(TEMP_PASSWORD_SETS.lower),
+        pickRandomChar(TEMP_PASSWORD_SETS.upper),
+        pickRandomChar(TEMP_PASSWORD_SETS.digits),
+        pickRandomChar(TEMP_PASSWORD_SETS.symbols),
+    ];
+
+    const allChars = `${TEMP_PASSWORD_SETS.lower}${TEMP_PASSWORD_SETS.upper}${TEMP_PASSWORD_SETS.digits}${TEMP_PASSWORD_SETS.symbols}`;
+    const passwordChars = [...requiredChars];
+
+    while (passwordChars.length < targetLength) {
+        passwordChars.push(pickRandomChar(allChars));
+    }
+
+    for (let i = passwordChars.length - 1; i > 0; i -= 1) {
+        const j = randomInt(i + 1);
+        [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
+    }
+
+    return passwordChars.join("");
+}
+
+type AccountAction =
+    | "suspend"
+    | "reactivate"
+    | "force_password_reset"
+    | "cancel_password_reset"
+    | "unlock"
+    | "resend_credentials";
+
+const VALID_ACTIONS: Set<string> = new Set([
+    "suspend",
+    "reactivate",
+    "force_password_reset",
+    "cancel_password_reset",
+    "unlock",
+    "resend_credentials",
+]);
 
 type AppRole =
     | "corporate_admin"
@@ -196,7 +261,7 @@ Deno.serve(async (req: Request) => {
         // 5. Get the target user's profile and email
         const { data: targetProfile, error: targetProfileError } = await adminClient
             .from("profiles")
-            .select("id, email, full_name, account_status, is_active")
+            .select("id, email, full_name, account_status, is_active, is_temp_password, password_initialized, force_password_reset")
             .eq("id", user_id)
             .maybeSingle();
 
@@ -335,6 +400,160 @@ Deno.serve(async (req: Request) => {
                 }
 
                 console.log(`Password reset forced for ${user_id} by ${caller.email}`);
+                break;
+            }
+
+            case "cancel_password_reset": {
+                const { error: updateError } = await adminClient
+                    .from("profiles")
+                    .update({
+                        force_password_reset: false,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", user_id);
+
+                if (updateError) {
+                    return jsonResponse({ error: "Failed to cancel password reset: " + updateError.message }, 500, corsHeaders);
+                }
+
+                console.log(`Password reset cancelled for ${user_id} by ${caller.email}`);
+                break;
+            }
+
+            case "resend_credentials": {
+                const targetEmail = targetProfile.email;
+                if (!targetEmail) {
+                    return jsonResponse({ error: "Target user has no email on file" }, 400, corsHeaders);
+                }
+
+                const isTempPassword = targetProfile.is_temp_password === true;
+                const passwordInitialized = targetProfile.password_initialized === true;
+                const recoveryRedirectPath = passwordInitialized ? "/reset-password" : "/complete-invite";
+                const recoveryRedirectTo = `${appUrl}${recoveryRedirectPath}`;
+
+                if (isTempPassword) {
+                    const tempPassword = generateSecureTemporaryPassword();
+                    const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(user_id, {
+                        password: tempPassword,
+                    });
+
+                    if (updateAuthError) {
+                        return jsonResponse({ error: "Failed to reset temporary password: " + updateAuthError.message }, 500, corsHeaders);
+                    }
+
+                    const { error: profileUpdateError } = await adminClient
+                        .from("profiles")
+                        .update({
+                            is_temp_password: true,
+                            password_initialized: false,
+                            force_password_reset: true,
+                            updated_at: new Date().toISOString(),
+                        })
+                        .eq("id", user_id);
+
+                    if (profileUpdateError) {
+                        return jsonResponse({ error: "Failed to update password flags: " + profileUpdateError.message }, 500, corsHeaders);
+                    }
+
+                    try {
+                        const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${serviceRoleKey}`,
+                                "apikey": serviceRoleKey,
+                            },
+                            body: JSON.stringify({
+                                to: targetEmail,
+                                templateKey: "user_management_welcome",
+                                title: "Portal Access Credentials",
+                                message: "Your access credentials have been reissued. Use the temporary password below to sign in and you will be prompted to change it.",
+                                actionLabel: "Sign In to PHG Connect",
+                                actionUrl: "/",
+                                businessDomain: "user_management",
+                                notificationType: "system",
+                                userId: user_id,
+                                variables: {
+                                    recipient_name: targetProfile.full_name || targetEmail,
+                                    credential_email: targetEmail,
+                                    credential_password: tempPassword,
+                                    security_note: "For your security, you must change this temporary password after your first successful sign in.",
+                                },
+                            }),
+                        });
+
+                        if (!emailResponse.ok) {
+                            const errorData = await emailResponse.json().catch(() => ({}));
+                            console.error("Resend credentials email failed:", errorData);
+                            return jsonResponse({ error: "Failed to send credential email" }, 500, corsHeaders);
+                        }
+                    } catch (emailErr) {
+                        console.error("Error sending credential email:", emailErr);
+                        return jsonResponse({ error: "Failed to send credential email" }, 500, corsHeaders);
+                    }
+                } else {
+                    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+                        type: "recovery",
+                        email: targetEmail,
+                    });
+
+                    if (linkError) {
+                        console.error("Failed to generate recovery link:", linkError);
+                        return jsonResponse({ error: "Failed to generate reset link" }, 500, corsHeaders);
+                    }
+
+                    const hashedToken = linkData?.properties?.hashed_token || null;
+                    const actionLink = linkData?.properties?.action_link || null;
+                    const recoveryLink = hashedToken
+                        ? `${recoveryRedirectTo}?token_hash=${hashedToken}&type=recovery`
+                        : actionLink || recoveryRedirectTo;
+
+                    const subject = passwordInitialized
+                        ? "Reset your PHG Connect password"
+                        : "Complete your PHG Connect account setup";
+                    const title = passwordInitialized ? "Password reset" : "Complete your account setup";
+                    const message = passwordInitialized
+                        ? "Use the link below to reset your PHG Connect password."
+                        : "Use the link below to finish your account setup and set your password.";
+                    const actionLabel = passwordInitialized ? "Reset Password" : "Complete Account Setup";
+
+                    try {
+                        const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${serviceRoleKey}`,
+                                "apikey": serviceRoleKey,
+                            },
+                            body: JSON.stringify({
+                                to: targetEmail,
+                                subject,
+                                title,
+                                message,
+                                actionUrl: recoveryLink,
+                                actionLabel,
+                                businessDomain: "user_management",
+                                notificationType: "system",
+                                userId: user_id,
+                                variables: {
+                                    recipient_name: targetProfile.full_name || targetEmail,
+                                    reset_url: recoveryLink,
+                                },
+                            }),
+                        });
+
+                        if (!emailResponse.ok) {
+                            const errorData = await emailResponse.json().catch(() => ({}));
+                            console.error("Resend reset email failed:", errorData);
+                            return jsonResponse({ error: "Failed to send reset email" }, 500, corsHeaders);
+                        }
+                    } catch (emailErr) {
+                        console.error("Error sending reset email:", emailErr);
+                        return jsonResponse({ error: "Failed to send reset email" }, 500, corsHeaders);
+                    }
+                }
+
+                console.log(`Credentials resent to ${targetEmail} by ${caller.email}`);
                 break;
             }
 

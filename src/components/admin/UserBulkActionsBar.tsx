@@ -32,15 +32,16 @@ import { ROLES, type AppRole } from '@/lib/constants'
 interface UserBulkActionsBarProps {
     selectedIds: Set<string>
     onClearSelection: () => void
-    userNames?: Map<string, string> // userId → displayName for confirmation
+    userNames?: Map<string, string> // userId ? displayName for confirmation
+    resetRequiredCount?: number
 }
 
-export function UserBulkActionsBar({ selectedIds, onClearSelection, userNames }: UserBulkActionsBarProps) {
+export function UserBulkActionsBar({ selectedIds, onClearSelection, userNames, resetRequiredCount = 0 }: UserBulkActionsBarProps) {
     const { t } = useTranslation(['users', 'common'])
-    const { bulkAssignRole, bulkDeactivate, bulkActivate, bulkForcePasswordReset, isLoading } = useUserBulkOperations()
+    const { bulkAssignRole, bulkDeactivate, bulkActivate, bulkForcePasswordReset, bulkCancelPasswordReset, isLoading } = useUserBulkOperations()
 
     const [dialogOpen, setDialogOpen] = useState(false)
-    const [dialogAction, setDialogAction] = useState<'assign_role' | 'deactivate' | 'activate' | 'reset_password' | null>(null)
+    const [dialogAction, setDialogAction] = useState<'assign_role' | 'deactivate' | 'activate' | 'reset_password' | 'cancel_reset' | null>(null)
     const [selectedRole, setSelectedRole] = useState<AppRole | ''>('')
     const [bulkReason, setBulkReason] = useState('')
     const [suspendUntil, setSuspendUntil] = useState('')
@@ -82,6 +83,9 @@ export function UserBulkActionsBar({ selectedIds, onClearSelection, userNames }:
                 break
             case 'reset_password':
                 await bulkForcePasswordReset.mutateAsync({ userIds: ids, notifyUser, note: actionNote || undefined })
+                break
+            case 'cancel_reset':
+                await bulkCancelPasswordReset.mutateAsync({ userIds: ids, notifyUser, note: actionNote || undefined })
                 break
         }
 
@@ -146,6 +150,17 @@ export function UserBulkActionsBar({ selectedIds, onClearSelection, userNames }:
                     >
                         <KeyRound className="w-3.5 h-3.5" />
                         {t('bulk.reset_password')}
+                    </Button>
+
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs gap-1.5 bg-white/10 hover:bg-white/20 text-white border-0"
+                        onClick={() => openDialog('cancel_reset')}
+                        disabled={isLoading || resetRequiredCount === 0}
+                    >
+                        <X className="w-3.5 h-3.5" />
+                        {t('bulk.cancel_reset')}
                     </Button>
 
                     <Button
