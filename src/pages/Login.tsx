@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { Sparkles, Shield, Clock, Users, Fingerprint, ChevronRight } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 // Animated background particles
 function Particle({ delay, x, y, size }: { delay: number; x: string; y: string; size: number }) {
@@ -113,13 +113,17 @@ export default function Login() {
   }, [])
 
   // Generate particles
-  const particles = Array.from({ length: 15 }, (_, i) => ({
-    id: i,
-    delay: i * 0.8,
-    x: `${Math.random() * 100}%`,
-    y: `${Math.random() * 100}%`,
-    size: Math.random() * 4 + 2,
-  }))
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 15 }, (_, i) => ({
+        id: i,
+        delay: i * 0.8,
+        x: `${Math.random() * 100}%`,
+        y: `${Math.random() * 100}%`,
+        size: Math.random() * 4 + 2,
+      })),
+    []
+  )
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 overflow-hidden bg-gray-50 dark:bg-gray-950">
