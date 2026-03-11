@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,6 @@ import { securityConfig } from '@/lib/security-config'
 export default function ResetPassword() {
     const { t } = useTranslation('auth')
     const navigate = useNavigate()
-    const [searchParams] = useSearchParams()
 
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
@@ -23,27 +22,59 @@ export default function ResetPassword() {
     const [validatingToken, setValidatingToken] = useState(true)
     const [tokenValid, setTokenValid] = useState(false)
 
+    type SupportedOtpType = 'recovery'
+
+    const isSupportedOtpType = (value: string | null): value is SupportedOtpType => value === 'recovery'
+
     // Check if we have a valid session from the reset link
     useEffect(() => {
         const checkSession = async () => {
             let isTokenValid = false
             try {
-                const { data: { session }, error } = await supabase.auth.getSession()
+                const queryParams = new URLSearchParams(window.location.search)
+                const tokenHash = queryParams.get('token_hash')
+                const otpType = queryParams.get('type')
 
-                if (error) {
-                    console.error('Session error:', error)
-                } else if (session) {
-                    isTokenValid = true
-                } else {
+                if (tokenHash && isSupportedOtpType(otpType)) {
+                    // Explicit recovery tokens must override any existing browser session.
+                    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
+                    const { data: verifiedData, error: verifyError } = await supabase.auth.verifyOtp({
+                        token_hash: tokenHash,
+                        type: otpType,
+                    })
+
+                    if (!verifyError && verifiedData.session) {
+                        isTokenValid = true
+                        window.history.replaceState({}, document.title, window.location.pathname)
+                    }
+                }
+
+                if (!isTokenValid) {
                     // Check if there's a hash fragment (Supabase auth redirect)
                     const hashParams = new URLSearchParams(window.location.hash.substring(1))
                     const accessToken = hashParams.get('access_token')
+                    const refreshToken = hashParams.get('refresh_token')
 
-                    if (accessToken) {
-                        const { error: refreshError } = await supabase.auth.refreshSession()
-                        if (!refreshError) {
+                    if (accessToken && refreshToken) {
+                        const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken,
+                        })
+
+                        if (!setSessionError && setSessionData.session) {
                             isTokenValid = true
+                            window.history.replaceState({}, document.title, window.location.pathname)
                         }
+                    }
+                }
+
+                if (!isTokenValid) {
+                    const { data: { session }, error } = await supabase.auth.getSession()
+
+                    if (error) {
+                        console.error('Session error:', error)
+                    } else if (session) {
+                        isTokenValid = true
                     }
                 }
             } catch (err) {
@@ -55,7 +86,7 @@ export default function ResetPassword() {
         }
 
         checkSession()
-    }, [searchParams])
+    }, [])
 
     // Password validation
     const validatePassword = (pwd: string): string[] => {

@@ -175,16 +175,6 @@ function resolveAppUrl(req: Request, appUrlFromBody: unknown): string | null {
     return null;
 }
 
-function isLocalhostAppUrl(url: string | null): boolean {
-    if (!url) return false;
-    try {
-        const hostname = new URL(url).hostname.toLowerCase();
-        return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-    } catch {
-        return false;
-    }
-}
-
 function buildInviteCompletionUrl(baseUrl: string, tokenHash: string): string {
     const inviteUrl = new URL(baseUrl);
     inviteUrl.searchParams.set("token_hash", tokenHash);
@@ -196,24 +186,24 @@ type GenerateInviteResult = {
     userId: string | null;
     error: unknown;
     tokenHash: string | null;
+    actionLink: string | null;
 };
 
 async function generateInviteLink(
     email: string,
     authMetadata: Record<string, string>,
-    redirectTo?: string,
 ): Promise<GenerateInviteResult> {
     const { data, error } = await adminClient.auth.admin.generateLink({
         type: "invite",
         email,
         data: authMetadata,
-        ...(redirectTo ? { options: { redirectTo } } : {}),
     });
 
     return {
         userId: data?.user?.id ?? null,
         error,
         tokenHash: data?.properties?.hashed_token ?? null,
+        actionLink: data?.properties?.action_link ?? null,
     };
 }
 
@@ -390,31 +380,27 @@ Deno.serve(async (req: Request) => {
         // 1. Create Auth User
         let authData: { user?: { id?: string } } | null = null;
         let authError: any = null;
-        let customInviteTokenHash: string | null = null;
-        const resolvedAppUrl = resolveAppUrl(req, appUrl);
-        const inviteRedirectTo = resolvedAppUrl ? `${resolvedAppUrl}/complete-invite` : undefined;
-        const shouldUseCustomLocalInvite = provisioningMethod === "invite" && isLocalhostAppUrl(resolvedAppUrl);
+        let inviteTokenHash: string | null = null;
+        let inviteActionLink: string | null = null;
+        const resolvedAppUrl = resolveAppUrl(req, appUrl) || "https://phg-connect.com";
+        const inviteRedirectTo = `${resolvedAppUrl}/complete-invite`;
         const authMetadata: Record<string, string> = {};
         if (normalizedFullName) authMetadata.full_name = normalizedFullName;
         if (normalizedDob) authMetadata.date_of_birth = normalizedDob;
         try {
-            if (provisioningMethod === "invite" && shouldUseCustomLocalInvite) {
-                const generatedInvite = await generateInviteLink(normalizedEmail, authMetadata, inviteRedirectTo);
+            if (provisioningMethod === "invite") {
+                const generatedInvite = await generateInviteLink(normalizedEmail, authMetadata);
                 authData = generatedInvite.userId ? { user: { id: generatedInvite.userId } } : null;
                 authError = generatedInvite.error;
-                customInviteTokenHash = generatedInvite.tokenHash;
+                inviteTokenHash = generatedInvite.tokenHash;
+                inviteActionLink = generatedInvite.actionLink;
             } else {
-                const result = provisioningMethod === "invite"
-                    ? await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, {
-                        data: authMetadata,
-                        ...(inviteRedirectTo ? { redirectTo: inviteRedirectTo } : {}),
-                    })
-                    : await adminClient.auth.admin.createUser({
-                        email: normalizedEmail,
-                        password: temporaryPassword!,
-                        email_confirm: true,
-                        user_metadata: authMetadata,
-                    });
+                const result = await adminClient.auth.admin.createUser({
+                    email: normalizedEmail,
+                    password: temporaryPassword!,
+                    email_confirm: true,
+                    user_metadata: authMetadata,
+                });
                 authData = result.data;
                 authError = result.error;
             }
@@ -558,10 +544,21 @@ Deno.serve(async (req: Request) => {
             }
         }
 
-        // 7. Send localhost invite email when Supabase redirect allowlist would otherwise force production URL.
-        if (provisioningMethod === "invite" && shouldUseCustomLocalInvite && customInviteTokenHash && inviteRedirectTo) {
+        // 7. Send invite email via Resend (all environments).
+        if (provisioningMethod === "invite") {
+            const inviteUrl = inviteTokenHash
+                ? buildInviteCompletionUrl(inviteRedirectTo, inviteTokenHash)
+                : inviteActionLink || inviteRedirectTo;
+
+            if (!inviteTokenHash && !inviteActionLink) {
+                await adminClient.auth.admin.deleteUser(userId);
+                return new Response(JSON.stringify({ error: "Failed to generate invitation link." }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
             try {
-                const localInviteUrl = buildInviteCompletionUrl(inviteRedirectTo, customInviteTokenHash);
                 const inviteMessage = "You have been invited to PHG Connect. Open the link below to set your password and complete your profile.";
                 const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
                     method: "POST",
@@ -574,20 +571,20 @@ Deno.serve(async (req: Request) => {
                         subject: "You are invited to PHG Connect",
                         title: "Complete your account setup",
                         message: inviteMessage,
-                        actionUrl: localInviteUrl,
+                        actionUrl: inviteUrl,
                         actionLabel: "Complete Account Setup",
                         businessDomain: "user_management",
                         notificationType: "system",
                         variables: {
                             recipient_name: normalizedFullName || normalizedEmail,
-                            invite_url: localInviteUrl,
+                            invite_url: inviteUrl,
                         },
                     }),
                 });
 
                 if (!emailResponse.ok) {
                     const errorData = await emailResponse.json().catch(() => ({}));
-                    console.error("Failed to send localhost invite email:", errorData);
+                    console.error("Failed to send invite email:", errorData);
                     await adminClient.auth.admin.deleteUser(userId);
                     return new Response(JSON.stringify({ error: "Failed to send invitation email." }), {
                         status: 500,
@@ -595,7 +592,7 @@ Deno.serve(async (req: Request) => {
                     });
                 }
             } catch (inviteEmailErr) {
-                console.error("Error sending localhost invite email:", inviteEmailErr);
+                console.error("Error sending invite email:", inviteEmailErr);
                 await adminClient.auth.admin.deleteUser(userId);
                 return new Response(JSON.stringify({ error: "Failed to send invitation email." }), {
                     status: 500,

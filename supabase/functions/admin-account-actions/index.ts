@@ -273,7 +273,6 @@ Deno.serve(async (req: Request) => {
                 }
 
                 // b) Generate a password recovery link via Supabase Auth Admin API
-                //    This sends the actual password reset email through Supabase's built-in email system
                 const targetEmail = targetProfile.email;
                 if (!targetEmail) {
                     return jsonResponse({ error: "Target user has no email on file" }, 400, corsHeaders);
@@ -284,88 +283,55 @@ Deno.serve(async (req: Request) => {
                 const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
                     type: "recovery",
                     email: targetEmail,
-                    options: {
-                        redirectTo: resetRedirectTo,
-                    },
                 });
 
                 if (linkError) {
                     console.error("Failed to generate recovery link:", linkError);
-                    // The flag is set but email failed — try sending via our send-email function as fallback
-                    try {
-                        const recoveryUrl = `${appUrl}/forgot-password`;
-                        const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${serviceRoleKey}`,
-                                "apikey": serviceRoleKey,
+                    return jsonResponse({ error: "Failed to generate password reset link" }, 500, corsHeaders);
+                }
+
+                const hashedToken = linkData?.properties?.hashed_token || null;
+                const actionLink = linkData?.properties?.action_link || null;
+                const resetLink = hashedToken
+                    ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery`
+                    : actionLink || resetRedirectTo;
+
+                console.log(`Recovery link generated for ${targetEmail}`);
+
+                // Send via branded email system (Resend) for a consistent experience
+                try {
+                    const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${serviceRoleKey}`,
+                            "apikey": serviceRoleKey,
+                        },
+                        body: JSON.stringify({
+                            to: targetEmail,
+                            subject: "Password Reset Required - PHG Connect",
+                            title: "Password Reset Required",
+                            message: "An administrator has requested that you reset your password. Please use the link below to set a new password for your PHG Connect account.",
+                            actionUrl: resetLink,
+                            actionLabel: "Reset Password",
+                            businessDomain: "user_management",
+                            notificationType: "system",
+                            userId: user_id,
+                            variables: {
+                                recipient_name: targetProfile.full_name || targetEmail,
+                                reset_url: resetLink,
                             },
-                            body: JSON.stringify({
-                                to: targetEmail,
-                                subject: "Password Reset Required - PHG Connect",
-                                title: "Password Reset Required",
-                                message: "An administrator has requested that you reset your password. Please use the link below to set a new password for your PHG Connect account.",
-                                actionUrl: recoveryUrl,
-                                actionLabel: "Reset Password",
-                                businessDomain: "user_management",
-                                notificationType: "system",
-                                userId: user_id,
-                                variables: {
-                                    recipient_name: targetProfile.full_name || targetEmail,
-                                },
-                            }),
-                        });
+                        }),
+                    });
 
-                        if (!emailResponse.ok) {
-                            const errorData = await emailResponse.json().catch(() => ({}));
-                            console.error("Fallback email also failed:", errorData);
-                        } else {
-                            console.log(`Fallback password reset email sent to ${targetEmail}`);
-                        }
-                    } catch (fallbackErr) {
-                        console.error("Fallback email error:", fallbackErr);
+                    if (!emailResponse.ok) {
+                        const errorData = await emailResponse.json().catch(() => ({}));
+                        console.error("Password reset email send failed:", errorData);
+                    } else {
+                        console.log(`Password reset email sent to ${targetEmail}`);
                     }
-                } else {
-                    // The generateLink succeeded - Supabase sends the email automatically if SMTP is configured.
-                    // If SMTP is not configured (e.g. local dev), we need to send the email ourselves.
-                    const actionUrl = linkData?.properties?.action_link || `${appUrl}/reset-password`;
-                    console.log(`Recovery link generated for ${targetEmail}`);
-
-                    // Also send via our branded email system for a better user experience
-                    try {
-                        const emailResponse = await fetch(supabaseUrl + "/functions/v1/send-email", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${serviceRoleKey}`,
-                                "apikey": serviceRoleKey,
-                            },
-                            body: JSON.stringify({
-                                to: targetEmail,
-                                subject: "Password Reset Required - PHG Connect",
-                                title: "Password Reset Required",
-                                message: "An administrator has requested that you reset your password. Please use the link below to set a new password for your PHG Connect account.",
-                                actionUrl: actionUrl,
-                                actionLabel: "Reset Password",
-                                businessDomain: "user_management",
-                                notificationType: "system",
-                                userId: user_id,
-                                variables: {
-                                    recipient_name: targetProfile.full_name || targetEmail,
-                                },
-                            }),
-                        });
-
-                        if (!emailResponse.ok) {
-                            const errorData = await emailResponse.json().catch(() => ({}));
-                            console.error("Branded email send failed:", errorData);
-                        } else {
-                            console.log(`Password reset email sent to ${targetEmail}`);
-                        }
-                    } catch (emailErr) {
-                        console.error("Error sending password reset email:", emailErr);
-                    }
+                } catch (emailErr) {
+                    console.error("Error sending password reset email:", emailErr);
                 }
 
                 console.log(`Password reset forced for ${user_id} by ${caller.email}`);
@@ -421,3 +387,4 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ error: message }, 500, corsHeaders);
     }
 });
+
