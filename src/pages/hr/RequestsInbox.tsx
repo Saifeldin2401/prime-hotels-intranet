@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Loader2, Search, Filter, CalendarIcon, User, FileText, Clock, CheckCircle, XCircle, AlertCircle, ArrowDown, ArrowUp, Flame } from 'lucide-react'
 import { format } from 'date-fns'
 import { useRequestsInbox, type RequestStatus, type RequestRow } from '@/hooks/useRequests'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { ar, enUS } from 'date-fns/locale'
@@ -53,11 +54,15 @@ export default function RequestsInbox() {
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+
+  // ⚡ Bolt: Debounce the search term to prevent excessive API calls
+  // Reduces network requests by waiting for the user to stop typing
+  const debouncedSearch = useDebounce(searchTerm, 300)
   const isNumericSearch = /^\d+$/.test(searchTerm.trim())
 
   // Build filters object
   const filters = {
-    search: searchTerm || undefined,
+    search: debouncedSearch || undefined,
     status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
     priority: selectedPriorities.length > 0 ? selectedPriorities : undefined,
     employee: selectedEmployee || undefined,
