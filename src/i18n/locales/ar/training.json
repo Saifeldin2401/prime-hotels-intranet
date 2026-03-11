@@ -407,6 +407,7 @@
         "failedLoad": "فشل تحميل بيانات المهارات",
         "failedLink": "فشل ربط المهارة",
         "failedUnlink": "فشل إلغاء ربط المهارة",
+        "removeSkill": "إزالة المهارة",
         "pts": "Pts"
     },
     "wizard": {

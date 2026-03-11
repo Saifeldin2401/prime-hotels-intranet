@@ -407,6 +407,7 @@
         "failedLoad": "Failed to load skills data",
         "failedLink": "Failed to link skill",
         "failedUnlink": "Failed to unlink skill",
+        "removeSkill": "Remove Skill",
         "pts": "Pts"
     },
     "wizard": {
