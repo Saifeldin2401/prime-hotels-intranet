@@ -164,7 +164,7 @@ async function run() {
     return
   }
 
-  console.log(\`Found \${modules.length} active modules to process.\`)
+  console.log(`Found ${modules.length} active modules to process.`)
 
   for (const mod of modules) {
     // 1. Delete existing blocks for this module to start fresh
@@ -174,12 +174,12 @@ async function run() {
       .eq('training_module_id', mod.id)
 
     if (deleteError) {
-      console.error(\`Failed to delete existing blocks for module \${mod.title}:\`, deleteError)
+      console.error(`Failed to delete existing blocks for module ${mod.title}:`, deleteError)
       continue
     }
 
     // 2. Generate new blocks
-    console.log(\`Generating blocks for -> \${mod.title}\`)
+    console.log(`Generating blocks for -> ${mod.title}`)
     const newBlocks = generateContentForModule(mod.title, mod.category).map(b => ({
       ...b,
       training_module_id: mod.id,
@@ -191,9 +191,9 @@ async function run() {
       .insert(newBlocks)
 
     if (insertError) {
-      console.error(\`Failed to insert blocks for module \${mod.title}:\`, insertError)
+      console.error(`Failed to insert blocks for module ${mod.title}:`, insertError)
     } else {
-      console.log(\`Successfully updated \${mod.title}\`)
+      console.log(`Successfully updated ${mod.title}`)
     }
   }
 
