@@ -487,16 +487,16 @@ export default function EmailWriter() {
       })
       : buildBeautifulEmailHtml({
         lang: language,
-        subject: preset.subject,
-        shortMessage: preset.shortMessage,
-        body: preset.body,
+        subject: language === 'ar' ? (subjectAr || preset.subject) : preset.subject,
+        shortMessage: language === 'ar' ? (shortMessageAr || preset.shortMessage) : preset.shortMessage,
+        body: language === 'ar' ? (bodyAr || preset.body) : preset.body,
         actionUrl: absoluteActionUrl,
-        actionLabel: preset.actionLabel,
+        actionLabel: language === 'ar' ? (actionLabelAr || preset.actionLabel) : preset.actionLabel,
         logoUrl: defaultLogoUrl,
       })
     setHtmlBody(html)
     setTextBody(`${preset.subject}\n\n${preset.shortMessage}\n\n${preset.body}\n\n${preset.actionUrl}`)
-  }, [appBaseUrl, bilingualEnabled, defaultLogoUrl, language])
+  }, [actionLabelAr, appBaseUrl, bilingualEnabled, bodyAr, defaultLogoUrl, language, shortMessageAr, subjectAr])
 
   const rebuildHtmlFromFields = useCallback(() => {
     const absoluteActionUrl = toAbsoluteUrl(appBaseUrl, actionUrl)
@@ -516,18 +516,18 @@ export default function EmailWriter() {
       })
       : buildBeautifulEmailHtml({
         lang: language,
-        subject,
-        shortMessage,
-        body,
+        subject: language === 'ar' ? (subjectAr || subject) : subject,
+        shortMessage: language === 'ar' ? (shortMessageAr || shortMessage) : shortMessage,
+        body: language === 'ar' ? (bodyAr || body) : body,
         actionUrl: absoluteActionUrl,
-        actionLabel,
+        actionLabel: language === 'ar' ? (actionLabelAr || actionLabel) : actionLabel,
         logoUrl: defaultLogoUrl,
       })
     setHtmlBody(html)
     if (!textBody.trim()) {
       setTextBody(`${subject}\n\n${shortMessage}\n\n${body}\n\n${actionUrl}`)
     }
-  }, [actionLabel, actionUrl, appBaseUrl, bilingualEnabled, body, defaultLogoUrl, language, shortMessage, subject, textBody])
+  }, [actionLabel, actionLabelAr, actionUrl, appBaseUrl, bilingualEnabled, body, bodyAr, defaultLogoUrl, language, shortMessage, shortMessageAr, subject, subjectAr, textBody])
 
   const filteredUsers = useMemo(() => {
     const rows = (users || []) as ProfileRow[]
@@ -933,6 +933,47 @@ Return ONLY valid JSON:
       const isCustomHtml = contentMode === 'custom_html';
       const absoluteActionUrl = toAbsoluteUrl(appBaseUrl, actionUrl)
 
+      const resolvedSubject = bilingualEnabled
+        ? subject.trim()
+        : (language === 'ar' ? (subjectAr.trim() || subject.trim()) : subject.trim())
+      const resolvedShortMessage = bilingualEnabled
+        ? shortMessage.trim()
+        : (language === 'ar' ? (shortMessageAr.trim() || shortMessage.trim()) : shortMessage.trim())
+      const resolvedActionLabel = bilingualEnabled
+        ? (actionLabel?.trim() ? actionLabel.trim() : undefined)
+        : (language === 'ar'
+          ? (actionLabelAr?.trim() ? actionLabelAr.trim() : (actionLabel?.trim() ? actionLabel.trim() : undefined))
+          : (actionLabel?.trim() ? actionLabel.trim() : undefined))
+
+      const shouldOverrideEmailHtml = isCustomHtml || bilingualEnabled || language === 'ar'
+
+      const resolvedEmailHtml = shouldOverrideEmailHtml
+        ? (isCustomHtml
+          ? htmlBody.trim()
+          : (bilingualEnabled
+            ? buildBilingualEmailHtml({
+              subject_en: subject,
+              shortMessage_en: shortMessage,
+              body_en: body,
+              subject_ar: subjectAr || subject,
+              shortMessage_ar: shortMessageAr || shortMessage,
+              body_ar: bodyAr || body,
+              actionUrl: absoluteActionUrl,
+              actionLabel_en: actionLabel,
+              actionLabel_ar: actionLabelAr || actionLabel,
+              logoUrl: defaultLogoUrl,
+            })
+            : buildBeautifulEmailHtml({
+              lang: language,
+              subject: language === 'ar' ? (subjectAr.trim() || subject.trim()) : subject.trim(),
+              shortMessage: language === 'ar' ? (shortMessageAr.trim() || shortMessage.trim()) : shortMessage.trim(),
+              body: language === 'ar' ? (bodyAr.trim() || body.trim()) : body.trim(),
+              actionUrl: absoluteActionUrl,
+              actionLabel: resolvedActionLabel || '',
+              logoUrl: defaultLogoUrl,
+            })))
+        : undefined
+
       const payload = {
         userIds: targetMode === 'users' ? recipientUserIds : undefined,
         all: targetMode === 'all',
@@ -943,15 +984,15 @@ Return ONLY valid JSON:
         templateKey: templateMeta.key,
         channels: ['in_app', 'email'] as const,
         priority,
-        emailSubject: subject.trim(),
-        emailHtml: isCustomHtml ? htmlBody.trim() : undefined,
+        emailSubject: resolvedSubject,
+        emailHtml: resolvedEmailHtml,
         notificationData: {
-          title: subject.trim(),
+          title: resolvedSubject,
           title_ar: subjectAr.trim() || subject.trim(),
-          message: shortMessage.trim(),
+          message: resolvedShortMessage,
           message_ar: shortMessageAr.trim() || shortMessage.trim(),
           link: actionUrl?.trim() ? actionUrl.trim() : '/notifications',
-          actionLabel: actionLabel?.trim() ? actionLabel.trim() : undefined,
+          actionLabel: resolvedActionLabel,
           actionLabel_ar: actionLabelAr?.trim() ? actionLabelAr.trim() : undefined,
           variables: {
             data_box: body?.trim() ? body.trim() : undefined,

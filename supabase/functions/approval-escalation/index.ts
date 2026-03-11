@@ -135,29 +135,40 @@ serve(async (req) => {
                 for (const profile of profiles) {
                     if (!profile.email) continue
 
-                    fetch(`${supabaseUrl}/functions/v1/send-email`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${serviceRoleKey}`
-                        },
-                        body: JSON.stringify({
-                            to: profile.email,
-                            templateKey: 'approval_escalated',
-                            title: `Escalation Required: ${title}`,
-                            variables: {
-                                recipient_name: profile.full_name || 'Executive',
-                                title: title,
-                                message: message,
-                                original_approver_name: meta.original_approver_name || 'Assigned Approver',
-                                time_overdue: meta.days_overdue ? `${meta.days_overdue} days` : 'Exceeded SLA',
-                                action_url: meta.link || '/approvals'
+                    try {
+                        const res = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${serviceRoleKey}`
                             },
-                            businessDomain: 'management',
-                            notificationType: 'escalation'
+                            body: JSON.stringify({
+                                to: profile.email,
+                                templateKey: 'approval_escalated',
+                                title: `Escalation Required: ${title}`,
+                                variables: {
+                                    recipient_name: profile.full_name || 'Executive',
+                                    title: title,
+                                    message: message,
+                                    original_approver_name: meta.original_approver_name || 'Assigned Approver',
+                                    time_overdue: meta.days_overdue ? `${meta.days_overdue} days` : 'Exceeded SLA',
+                                    action_url: meta.link || '/approvals'
+                                },
+                                businessDomain: 'management',
+                                notificationType: 'escalation'
+                            })
                         })
-                    }).catch(e => console.error(`Failed to send escalation email to ${profile.email}:`, e))
-                    emailsSent++
+
+                        if (!res.ok) {
+                            const body = await res.text().catch(() => '')
+                            console.error(`Failed to send escalation email to ${profile.email}:`, res.status, body)
+                            continue
+                        }
+
+                        emailsSent++
+                    } catch (e) {
+                        console.error(`Failed to send escalation email to ${profile.email}:`, e)
+                    }
                 }
             }
         }

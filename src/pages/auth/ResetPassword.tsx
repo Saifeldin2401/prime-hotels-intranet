@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { securityConfig } from '@/lib/security-config'
+import { auditLog } from '@/lib/auditLog'
 
 export default function ResetPassword() {
     const { t } = useTranslation('auth')
@@ -21,6 +22,9 @@ export default function ResetPassword() {
     const [success, setSuccess] = useState(false)
     const [validatingToken, setValidatingToken] = useState(true)
     const [tokenValid, setTokenValid] = useState(false)
+    const [validationNonce, setValidationNonce] = useState(0)
+    const validationInFlightRef = useRef(false)
+    const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null)
 
     type SupportedOtpType = 'recovery'
 
@@ -29,14 +33,31 @@ export default function ResetPassword() {
     // Check if we have a valid session from the reset link
     useEffect(() => {
         const checkSession = async () => {
+            if (validationInFlightRef.current) return
+            validationInFlightRef.current = true
             let isTokenValid = false
             try {
-                const queryParams = new URLSearchParams(window.location.search)
+                const url = new URL(window.location.href)
+                const queryParams = url.searchParams
+                const code = queryParams.get('code')
                 const tokenHash = queryParams.get('token_hash')
                 const otpType = queryParams.get('type')
 
-                if (tokenHash && isSupportedOtpType(otpType)) {
-                    // Explicit recovery tokens must override any existing browser session.
+                const tryExchangeCode = async () => {
+                    if (!code) return false
+                    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
+                    const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+
+                    if (!exchangeError && exchangeData.session) {
+                        url.searchParams.delete('code')
+                        window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''))
+                        return true
+                    }
+                    return false
+                }
+
+                const tryVerifyOtp = async () => {
+                    if (!tokenHash || !isSupportedOtpType(otpType)) return false
                     await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
                     const { data: verifiedData, error: verifyError } = await supabase.auth.verifyOtp({
                         token_hash: tokenHash,
@@ -44,16 +65,60 @@ export default function ResetPassword() {
                     })
 
                     if (!verifyError && verifiedData.session) {
-                        isTokenValid = true
                         window.history.replaceState({}, document.title, window.location.pathname)
+                        return true
                     }
+
+                    return false
+                }
+
+                const trySetSessionFromTokens = async () => {
+                    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+                    const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
+                    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
+
+                    if (!accessToken || !refreshToken) return false
+
+                    const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken,
+                    })
+
+                    if (!setSessionError && setSessionData.session) {
+                        window.history.replaceState({}, document.title, window.location.pathname)
+                        return true
+                    }
+
+                    return false
+                }
+
+                const attemptWithRetry = async (fn: () => Promise<boolean>) => {
+                    const delays = [0, 250, 750]
+                    for (const delayMs of delays) {
+                        if (delayMs > 0) {
+                            await new Promise((resolve) => setTimeout(resolve, delayMs))
+                        }
+                        const ok = await fn()
+                        if (ok) return true
+                    }
+                    return false
+                }
+
+                isTokenValid = await attemptWithRetry(tryExchangeCode)
+
+                if (!isTokenValid) {
+                    isTokenValid = await attemptWithRetry(tryVerifyOtp)
                 }
 
                 if (!isTokenValid) {
-                    // Check if there's a hash fragment (Supabase auth redirect)
+                    isTokenValid = await attemptWithRetry(trySetSessionFromTokens)
+                }
+
+                if (!isTokenValid) {
+                    const { data: { session }, error } = await supabase.auth.getSession()
                     const hashParams = new URLSearchParams(window.location.hash.substring(1))
-                    const accessToken = hashParams.get('access_token')
-                    const refreshToken = hashParams.get('refresh_token')
+                    const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
+                    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
 
                     if (accessToken && refreshToken) {
                         const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
@@ -67,26 +132,57 @@ export default function ResetPassword() {
                         }
                     }
                 }
-
-                if (!isTokenValid) {
-                    const { data: { session }, error } = await supabase.auth.getSession()
-
-                    if (error) {
-                        console.error('Session error:', error)
-                    } else if (session) {
-                        isTokenValid = true
-                    }
-                }
             } catch (err) {
                 console.error('Token validation error:', err)
             } finally {
                 setTokenValid(isTokenValid)
                 setValidatingToken(false)
+                validationInFlightRef.current = false
             }
         }
 
-        checkSession()
-    }, [])
+        const runValidation = () => {
+            setValidatingToken(true)
+            void checkSession()
+        }
+
+        runValidation()
+
+        window.addEventListener('hashchange', runValidation)
+        window.addEventListener('focus', runValidation)
+
+        const onVisibilityChange = () => {
+            if (!document.hidden) {
+                runValidation()
+            }
+        }
+        document.addEventListener('visibilitychange', onVisibilityChange)
+
+        return () => {
+            window.removeEventListener('hashchange', runValidation)
+            window.removeEventListener('focus', runValidation)
+            document.removeEventListener('visibilitychange', onVisibilityChange)
+        }
+    }, [validationNonce])
+
+    useEffect(() => {
+        if (!success) {
+            setRedirectCountdown(null)
+            return
+        }
+
+        setRedirectCountdown(3)
+        const interval = window.setInterval(() => {
+            setRedirectCountdown((value) => {
+                if (value === null) return value
+                return Math.max(0, value - 1)
+            })
+        }, 1000)
+
+        return () => {
+            window.clearInterval(interval)
+        }
+    }, [success])
 
     // Password validation
     const validatePassword = (pwd: string): string[] => {
@@ -149,6 +245,8 @@ export default function ResetPassword() {
 
             setSuccess(true)
 
+            await auditLog.passwordChange().catch(() => undefined)
+
             // Redirect to login after 3 seconds
             setTimeout(() => {
                 supabase.auth.signOut()
@@ -193,9 +291,14 @@ export default function ResetPassword() {
                         </CardDescription>
                     </CardHeader>
                     <CardFooter>
-                        <Button className="w-full" onClick={() => navigate('/forgot-password')}>
-                            {t('reset_password.request_new')}
-                        </Button>
+                        <div className="w-full space-y-3">
+                            <Button className="w-full" onClick={() => setValidationNonce((v) => v + 1)}>
+                                Re-validate Link
+                            </Button>
+                            <Button className="w-full" variant="outline" onClick={() => navigate('/forgot-password')}>
+                                {t('reset_password.request_new')}
+                            </Button>
+                        </div>
                     </CardFooter>
                 </Card>
             </div>
@@ -218,7 +321,9 @@ export default function ResetPassword() {
                     </CardHeader>
                     <CardContent className="text-center">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400" />
-                        <p className="text-sm text-gray-500 mt-2">Redirecting to login...</p>
+                        {redirectCountdown !== null && (
+                            <p className="mt-4 text-sm text-gray-500">Redirecting to login in {redirectCountdown}...</p>
+                        )}
                     </CardContent>
                 </Card>
             </div>

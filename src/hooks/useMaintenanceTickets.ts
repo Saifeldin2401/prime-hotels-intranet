@@ -113,7 +113,6 @@ export function useAssignedMaintenanceTickets() {
 
 export function useMaintenanceTicket(ticketId: string) {
   const { user } = useAuth()
-  const { currentProperty } = useProperty()
 
   return useQuery({
     queryKey: ['maintenance-tickets', 'single', ticketId],
@@ -140,9 +139,6 @@ export function useMaintenanceTicket(ticketId: string) {
         `)
 
       query = query.eq('id', ticketId)
-      if (isRealPropertyId(currentProperty?.id)) {
-        query = query.eq('property_id', currentProperty.id)
-      }
 
       const { data, error } = await query.single()
 

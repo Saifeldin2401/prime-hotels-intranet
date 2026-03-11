@@ -24,6 +24,8 @@ interface CreateBatchParams {
     templateKey?: string
     channels?: Array<'in_app' | 'email'>
     priority?: 'low' | 'normal' | 'high' | 'critical'
+    emailSubject?: string
+    emailHtml?: string
     notificationData: {
         title: string
         message: string
@@ -89,6 +91,8 @@ export function useBulkNotifications() {
                 templateKey: params.templateKey,
                 channels: params.channels,
                 priority: params.priority,
+                emailSubject: params.emailSubject,
+                emailHtml: params.emailHtml,
             })
             return data as unknown as BatchResult
         },

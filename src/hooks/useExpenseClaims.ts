@@ -53,6 +53,7 @@ export function useExpenseClaimsInbox() {
         .from('requests')
         .select('id, request_no, status, current_assignee_id, entity_id, created_at')
         .eq('entity_type', 'expense_claim')
+        .eq('current_assignee_id', user.id)
         .in('status', ['pending_supervisor_approval', 'pending_hr_review'])
         .order('created_at', { ascending: false })
 

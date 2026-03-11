@@ -836,6 +836,15 @@ export const ROUTES: RouteConfig[] = [
         order: 3.85
     },
     {
+        path: '/admin/inbound-emails',
+        title: 'inbound_emails',
+        icon: Mail,
+        description: 'View inbound emails received via Resend',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'administration',
+        order: 3.86
+    },
+    {
         path: '/admin/audit',
         title: 'audit_logs',
         icon: ClipboardList,

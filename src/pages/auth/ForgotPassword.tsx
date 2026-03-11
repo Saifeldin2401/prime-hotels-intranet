@@ -26,14 +26,18 @@ export default function ForgotPassword() {
                 throw new Error('Please enter a valid email address')
             }
 
-            // Send password reset email via Supabase
-            const appUrl = import.meta.env.VITE_APP_URL || window.location.origin
-            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-                redirectTo: `${appUrl.replace(/\/$/, '')}/reset-password`
+            const normalizedEmail = email.trim().toLowerCase()
+
+            const { error: invokeError } = await supabase.functions.invoke('public-forgot-password', {
+                body: { email: normalizedEmail },
             })
 
-            if (resetError) {
-                throw resetError
+            if (invokeError) {
+                console.error('Password reset invoke error:', invokeError)
+                if (invokeError.message?.toLowerCase().includes('too many')) {
+                    setError('Too many requests. Please try again later.')
+                    return
+                }
             }
 
             setSuccess(true)

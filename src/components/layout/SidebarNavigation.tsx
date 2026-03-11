@@ -309,7 +309,7 @@ export function SidebarNavigation({
             isMobile && "h-14 border-none bg-transparent"
           )}>
             {!isMobile && (
-              <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute start-1/2 transform -translate-x-1/2")}>
+              <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute left-1/2 transform -translate-x-1/2")}>
                 <img
                   src="/prime-logo-light.png"
                   alt="Prime Hotels"

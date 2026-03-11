@@ -1,11 +1,14 @@
-import { createContext, useCallback, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { analytics } from '@/services/analyticsService'
 import type { Profile, UserRole, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
+import { useAuthSession } from './auth/useAuthSession'
+import { useUserDataLoader } from './auth/useUserDataLoader'
 
+// ─── Context type ──────────────────────────────────────────────────────────
 interface AuthContextType {
   user: User | null
   profile: Profile | null
@@ -22,6 +25,19 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// ─── Role priority order (lower = higher privilege) ────────────────────────
+const ROLE_ORDER: Record<AppRole, number> = {
+  corporate_admin: 1,
+  regional_admin: 2,
+  regional_hr: 3,
+  property_manager: 4,
+  property_hr: 5,
+  department_head: 6,
+  manager: 7,
+  staff: 8,
+}
+
+// ─── Provider ──────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -30,36 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [rolesLoading, setRolesLoading] = useState(true)
-  const loadSeqRef = useRef(0)
-  const activeUserIdRef = useRef<string | null>(null)
-  const lastUserDataRefreshRef = useRef<number>(0)
-  const profileRef = useRef<Profile | null>(null)
-  const rolesRef = useRef<UserRole[]>([])
-  const authRecoveryInProgressRef = useRef(false)
-  const resumeValidationInFlightRef = useRef(false)
-  const lastResumeValidationAtRef = useRef(0)
 
-  useEffect(() => {
-    profileRef.current = profile
-  }, [profile])
-
-  useEffect(() => {
-    rolesRef.current = roles
-  }, [roles])
-
-  const isAuthError = useCallback((error: unknown) => {
-    if (!error || typeof error !== 'object') return false
-    const candidate = error as { code?: string | number; status?: number }
-    const code = String(candidate.code ?? '')
-    const status = Number(candidate.status ?? 0)
-    return (
-      status === 401 ||
-      code === '401' ||
-      code === 'PGRST301' ||
-      code === 'PGRST302' ||
-      code.toUpperCase().includes('JWT')
-    )
-  }, [])
+  // ── Session helpers (error detection, timeout, clear) ──────────────────
+  const { isAuthError, withTimeout, clearLocalSession, authRecoveryInProgressRef, resumeValidationInFlightRef, lastResumeValidationAtRef } =
+    useAuthSession()
 
   const resetLocalAuthState = useCallback(() => {
     setUser(null)
@@ -68,351 +58,116 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProperties([])
     setDepartments([])
     setRolesLoading(false)
-    activeUserIdRef.current = null
-    lastUserDataRefreshRef.current = 0
-    loadSeqRef.current += 1
   }, [])
 
-  const clearLocalSession = useCallback(async (reason: string) => {
-    if (authRecoveryInProgressRef.current) return
-    authRecoveryInProgressRef.current = true
-    try {
-      console.warn(`[Auth] ${reason}. Clearing local session.`)
-      const maxAttempts = 3
-      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        try {
-          await supabase.auth.signOut({ scope: 'local' })
-          break
-        } catch (error) {
-          if (attempt === maxAttempts - 1) {
-            throw error
-          }
-          const delayMs = 250 * (2 ** attempt)
-          await new Promise((resolve) => setTimeout(resolve, delayMs))
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to clear local auth session:', error)
-    } finally {
-      resetLocalAuthState()
-      authRecoveryInProgressRef.current = false
-    }
-  }, [resetLocalAuthState])
+  // ── User data loader (profile, roles, properties, departments) ─────────
+  const stateSetters = useMemo(
+    () => ({ setProfile, setRoles, setProperties, setDepartments, setRolesLoading }),
+    []
+  )
+  const sessionHelpers = useMemo(
+    () => ({ isAuthError, withTimeout, clearLocalSession }),
+    [isAuthError, withTimeout, clearLocalSession]
+  )
 
-  const shouldRefreshUserData = useCallback((userId: string) => {
-    if (activeUserIdRef.current !== userId) return true
-    if (!profileRef.current || rolesRef.current.length === 0) return true
-    if (!lastUserDataRefreshRef.current) return true
-    return Date.now() - lastUserDataRefreshRef.current > 5 * 60 * 1000
-  }, [])
+  const { loadUserData, shouldRefreshUserData, syncProfileRef, syncRolesRef } =
+    useUserDataLoader(stateSetters, sessionHelpers, resetLocalAuthState)
 
-  const withTimeout = useCallback(<T,>(promise: Promise<T>, ms: number, label: string) => {
-    return new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`${label} timeout`)), ms)
-      promise
-        .then((value) => {
-          clearTimeout(timer)
-          resolve(value)
-        })
-        .catch((err) => {
-          clearTimeout(timer)
-          reject(err)
-        })
-    })
-  }, [])
+  // Keep refs in sync
+  useEffect(() => { syncProfileRef(profile) }, [profile, syncProfileRef])
+  useEffect(() => { syncRolesRef(roles) }, [roles, syncRolesRef])
 
-  const loadUserData = useCallback(async (userId: string) => {
-    try {
-      const loadId = ++loadSeqRef.current
-      activeUserIdRef.current = userId
-      setRolesLoading(true)
-      const isStale = () => activeUserIdRef.current !== userId || loadId !== loadSeqRef.current
-
-      // Load profile with timeout
-      const profilePromise = supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .limit(1)
-
-      const { data: profileRows, error: profileError } = await withTimeout(
-        profilePromise as any,
-        10000,
-        'Profile load'
-      ) as any
-      if (isStale()) return
-      const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
-
-      if (profileError) {
-        if (isAuthError(profileError)) {
-          await clearLocalSession('Profile request returned auth/session error')
-          return
-        }
-        console.warn('Error loading profile.')
-
-        // Try alternative: use auth.users metadata
-        const { data: { user } } = await supabase.auth.getUser()
-        if (isStale()) return
-        if (user) {
-          // Set basic profile from auth user
-          const fullProfile: Profile = {
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || null,
-            phone: user.user_metadata?.phone || null,
-            avatar_url: user.user_metadata?.avatar_url || null,
-            hire_date: null,
-            date_of_birth: null,
-            job_title: null,
-            staff_id: null,
-            reporting_to: null,
-            is_active: true,
-            emergency_contact_name: null,
-            emergency_contact_phone: null,
-            nationality: null,
-            blood_group: null,
-            created_at: user.created_at,
-            updated_at: new Date().toISOString()
-          }
-          setProfile(fullProfile)
-        }
-      } else if (profileData) {
-        if (isStale()) return
-        setProfile(profileData)
-      } else {
-        // No profile row yet (e.g. during first-time auth propagation).
-        // Fall back to auth user metadata without logging as an error.
-        const { data: { user } } = await supabase.auth.getUser()
-        if (isStale()) return
-        if (user) {
-          const fullProfile: Profile = {
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || null,
-            phone: user.user_metadata?.phone || null,
-            avatar_url: user.user_metadata?.avatar_url || null,
-            hire_date: null,
-            date_of_birth: null,
-            job_title: null,
-            staff_id: null,
-            reporting_to: null,
-            is_active: true,
-            emergency_contact_name: null,
-            emergency_contact_phone: null,
-            nationality: null,
-            blood_group: null,
-            created_at: user.created_at,
-            updated_at: new Date().toISOString()
-          }
-          setProfile(fullProfile)
-        }
-      }
-
-      // Load all other data in parallel with individual timeouts
-      const rolesPromise = supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-
-      const propertiesPromise = supabase
-        .from('user_properties')
-        .select('property_id, properties(*)')
-        .eq('user_id', userId)
-
-      const departmentsPromise = supabase
-        .from('user_departments')
-        .select('department_id, departments(*)')
-        .eq('user_id', userId)
-
-      // Load all data with individual timeouts
-      const [rolesResult, propertiesResult, departmentsResult] = await Promise.allSettled([
-        withTimeout(rolesPromise as any, 10000, 'Roles load'),
-        withTimeout(propertiesPromise as any, 10000, 'Properties load'),
-        withTimeout(departmentsPromise as any, 10000, 'Departments load')
-      ]) as [PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>, PromiseSettledResult<{ data?: any; error?: any }>]
-
-      if (isStale()) return
-
-      // Handle roles
-      if (rolesResult.status === 'fulfilled') {
-        const { data: directRoles, error: rolesError } = rolesResult.value
-        if (rolesError) {
-          if (isAuthError(rolesError)) {
-            await clearLocalSession('Roles request returned auth/session error')
-            return
-          }
-          console.warn('Error loading roles.')
-          setRolesLoading(false) // Mark as done even on error
-        } else {
-          const rolesData = directRoles || []
-          setRoles(rolesData) // Set even if empty - means user has no roles
-          setRolesLoading(false)
-        }
-      } else {
-        console.warn('Roles loading failed or timed out.')
-        setRolesLoading(false) // Mark as done even on timeout
-      }
-
-      // Handle properties
-      if (propertiesResult.status === 'fulfilled') {
-        const { data: directProps, error: propertiesError } = propertiesResult.value
-        if (propertiesError) {
-          if (isAuthError(propertiesError)) {
-            await clearLocalSession('Properties request returned auth/session error')
-            return
-          }
-          console.warn('Error loading properties.')
-        } else {
-          const props = directProps?.map((up: any) => up.properties).filter(Boolean) || []
-          setProperties(props)
-
-        }
-      } else {
-        console.warn('Properties loading failed or timed out.')
-      }
-
-      // Handle departments
-      if (departmentsResult.status === 'fulfilled') {
-        const { data: directDepts, error: departmentsError } = departmentsResult.value
-        if (departmentsError) {
-          if (isAuthError(departmentsError)) {
-            await clearLocalSession('Departments request returned auth/session error')
-            return
-          }
-          console.warn('Error loading departments.')
-        } else {
-          const depts = directDepts?.map((ud: any) => ud.departments).filter(Boolean) || []
-          setDepartments(depts)
-
-        }
-      } else {
-        console.warn('Departments loading failed or timed out.')
-      }
-
-      lastUserDataRefreshRef.current = Date.now()
-    } catch (error) {
-      if (isAuthError(error)) {
-        await clearLocalSession('User data load failed due to auth/session error')
-        return
-      }
-      console.warn('Unexpected error loading user data.')
-    }
-  }, [clearLocalSession, isAuthError, withTimeout])
-
+  // ── Initial session + auth state listener ──────────────────────────────
   useEffect(() => {
     let mounted = true
     let loadingState = true
 
-
-
-    // Safety timeout - ensure loading never stays true forever
     const timeoutId = setTimeout(() => {
       if (mounted && loadingState) {
         console.warn('Loading timeout - forcing loading to false after 5 seconds')
         setLoading(false)
         loadingState = false
       }
-    }, 5000) // 5 second timeout for slow networks
+    }, 5000)
+
+    const finishLoading = () => {
+      loadingState = false
+      setLoading(false)
+      clearTimeout(timeoutId)
+    }
 
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (!mounted) return
-
       if (error) {
         console.warn('Error getting session.')
-        loadingState = false
-        setLoading(false)
-        clearTimeout(timeoutId)
+        finishLoading()
         return
       }
-
       if (session?.user) {
         authRecoveryInProgressRef.current = false
         setUser(session.user)
         setRolesLoading(true)
-        // Set loading to false immediately, load data in background
-        loadingState = false
-        setLoading(false)
-
-        clearTimeout(timeoutId)
-        // Load user data asynchronously without blocking
-        loadUserData(session.user.id).catch((err) => {
+        finishLoading()
+        loadUserData(session.user.id).catch(() => {
           console.warn('Error in loadUserData.')
         })
       } else {
-        loadingState = false
-        setLoading(false)
-        clearTimeout(timeoutId)
+        finishLoading()
       }
-    }).catch((error) => {
+    }).catch(() => {
       console.warn('Unexpected error in getSession.')
-      if (mounted) {
-        loadingState = false
-        setLoading(false)
-        clearTimeout(timeoutId)
-      }
+      if (mounted) finishLoading()
     })
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return
-
       if (session?.user) {
         authRecoveryInProgressRef.current = false
         setUser(session.user)
         void analytics.identify(session.user.id).catch((error) => {
           console.warn('Failed to initialize analytics identity:', error)
         })
-        // Only refresh user data when user changes or cache is stale
         if (_event !== 'TOKEN_REFRESHED' || shouldRefreshUserData(session.user.id)) {
-          // Set loading to false immediately, load data in background
-          loadingState = false
-          setLoading(false)
-          clearTimeout(timeoutId)
-          loadUserData(session.user.id).catch((err) => {
+          finishLoading()
+          loadUserData(session.user.id).catch(() => {
             console.warn('Error in loadUserData (auth change).')
           })
         } else {
-          loadingState = false
-          setLoading(false)
-          clearTimeout(timeoutId)
+          finishLoading()
         }
       } else {
         resetLocalAuthState()
-        loadingState = false
-        setLoading(false)
-        clearTimeout(timeoutId)
+        finishLoading()
       }
     })
 
+    // ── Session verification on tab resume ──────────────────────────────
     const verifySessionOnResume = async () => {
       if (!mounted || document.visibilityState === 'hidden') return
       if (resumeValidationInFlightRef.current) return
-
       const now = Date.now()
       if (now - lastResumeValidationAtRef.current < 2000) return
 
       resumeValidationInFlightRef.current = true
       lastResumeValidationAtRef.current = now
-
       try {
         const { data: { user: verifiedUser }, error } = await supabase.auth.getUser()
         if (!mounted) return
-
         if (error || !verifiedUser) {
-          await clearLocalSession('Session is no longer valid after tab resume')
-          loadingState = false
-          setLoading(false)
-          clearTimeout(timeoutId)
+          if (isAuthError(error) || !verifiedUser) {
+            await clearLocalSession('Session is no longer valid after tab resume', resetLocalAuthState)
+            finishLoading()
+            return
+          }
+          finishLoading()
           return
         }
-
         authRecoveryInProgressRef.current = false
         setUser((current) => (current?.id === verifiedUser.id ? current : verifiedUser))
         if (shouldRefreshUserData(verifiedUser.id)) {
-          loadUserData(verifiedUser.id).catch((err) => {
+          loadUserData(verifiedUser.id).catch(() => {
             console.warn('Error in loadUserData (resume validation).')
           })
         }
@@ -421,100 +176,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const handleWindowFocus = () => {
-      void verifySessionOnResume()
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void verifySessionOnResume()
-      }
-    }
-
-    window.addEventListener('focus', handleWindowFocus)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', () => void verifySessionOnResume())
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void verifySessionOnResume()
+    })
 
     return () => {
       mounted = false
       clearTimeout(timeoutId)
       subscription.unsubscribe()
-      window.removeEventListener('focus', handleWindowFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', () => void verifySessionOnResume())
+      document.removeEventListener('visibilitychange', () => void verifySessionOnResume())
     }
-  }, [clearLocalSession, loadUserData, resetLocalAuthState, shouldRefreshUserData])
+  }, [
+    clearLocalSession, loadUserData, resetLocalAuthState, shouldRefreshUserData,
+    isAuthError, authRecoveryInProgressRef, resumeValidationInFlightRef, lastResumeValidationAtRef,
+  ])
 
+  // ── Sign in / sign out / refresh ───────────────────────────────────────
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
       setRolesLoading(true)
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setLoading(false)
-        setRolesLoading(false) // FIX: Reset roles loading on error to prevent infinite loop
+        setRolesLoading(false)
         return { error }
       }
-
       if (data.user) {
         setUser(data.user)
-        // Set loading to false immediately after auth succeeds
-        // Load user data in background (non-blocking)
         setLoading(false)
-        // Load user data asynchronously without blocking
-        loadUserData(data.user.id).catch((err) => {
+        loadUserData(data.user.id).catch(() => {
           console.warn('Error loading user data after sign in.')
-          // Don't set loading to true again - app should continue
         })
       } else {
         setLoading(false)
       }
-
       return { error: null }
     } catch (error) {
       setLoading(false)
-      setRolesLoading(false) // FIX: Reset roles loading on unexpected error
+      setRolesLoading(false)
       return { error: error as Error }
     }
   }
 
   const signOut = async () => {
-    // Clear local property context to prevent confusion for next user
     localStorage.removeItem('prime_current_property_id')
-    await clearLocalSession('User signed out')
+    await clearLocalSession('User signed out', resetLocalAuthState)
   }
 
   const refreshSession = async () => {
     const { data: { session }, error } = await supabase.auth.refreshSession()
     if (error || !session?.user) {
-      await clearLocalSession('Session refresh failed')
+      await clearLocalSession('Session refresh failed', resetLocalAuthState)
       return
     }
-    if (session?.user) {
-      authRecoveryInProgressRef.current = false
-      setUser(session.user)
-      setRolesLoading(true)
-      await loadUserData(session.user.id)
-    }
+    authRecoveryInProgressRef.current = false
+    setUser(session.user)
+    setRolesLoading(true)
+    await loadUserData(session.user.id)
   }
 
+  // ── Derived: primary role ──────────────────────────────────────────────
   const primaryRole = roles.length > 0
-    ? [...roles].sort((a, b) => {
-      const order: Record<AppRole, number> = {
-        corporate_admin: 1,
-        regional_admin: 2,
-        regional_hr: 3,
-        property_manager: 4,
-        property_hr: 5,
-        department_head: 6,
-        manager: 7,
-        staff: 8,
-      }
-      return order[a.role] - order[b.role]
-    })[0]?.role || null
+    ? [...roles].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])[0]?.role || null
     : null
 
   return (
@@ -538,4 +264,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
-// useAuth hook moved to @/hooks/useAuth to resolve circular dependencies
+// useAuth hook is in @/hooks/useAuth to resolve circular dependencies

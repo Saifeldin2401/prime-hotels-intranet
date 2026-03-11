@@ -29,6 +29,7 @@ const SystemSettings = lazy(() => import('@/pages/admin/SystemSettings'))
 const SLASettings = lazy(() => import('@/pages/admin/SLASettings'))
 const ManualCertificateGenerator = lazy(() => import('@/pages/admin/ManualCertificateGenerator'))
 const EmailWriter = lazy(() => import('@/pages/admin/EmailWriter'))
+const InboundEmails = lazy(() => import('@/pages/admin/InboundEmails'))
 
 export const AdminRoutes = () => (
     <>
@@ -148,6 +149,16 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
                     <AppLayout>
                         <EmailWriter />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/inbound-emails"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+                    <AppLayout>
+                        <InboundEmails />
                     </AppLayout>
                 </ProtectedRoute>
             }

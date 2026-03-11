@@ -12,8 +12,17 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Play, Loader2, Settings2, Plus } from 'lucide-react'
 import { useWorkflows, useToggleWorkflow, useExecuteWorkflow, useDeleteWorkflow } from '@/hooks/useWorkflows'
+import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { useToast } from '@/components/ui/use-toast'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import {
     Dialog,
     DialogContent,
@@ -28,6 +37,7 @@ import { useTranslation } from "react-i18next";
 export function WorkflowList() {
     const { t: t_ext } = useTranslation('extracted');
     const { data: workflows, isLoading, error } = useWorkflows()
+    const { user } = useAuth()
     const toggleMutation = useToggleWorkflow()
     const executeMutation = useExecuteWorkflow()
     const deleteMutation = useDeleteWorkflow()
@@ -36,6 +46,8 @@ export function WorkflowList() {
     const [editingWorkflow, setEditingWorkflow] = useState<WorkflowDefinition | null>(null)
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [deleteId, setDeleteId] = useState<string | null>(null)
+    const [searchText, setSearchText] = useState('')
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
     const handleToggle = (id: string, currentStatus: boolean) => {
         toggleMutation.mutate(
@@ -59,9 +71,17 @@ export function WorkflowList() {
     }
 
     const handleExecute = (id: string, name: string) => {
+        if (!user?.id) {
+            toast({
+                title: 'Execution Failed',
+                description: 'No authenticated user found. Please sign in again.',
+                variant: 'destructive',
+            })
+            return
+        }
         setExecutingId(id)
         executeMutation.mutate(
-            { workflowId: id },
+            { workflowId: id, metadata: { triggered_by: user.id } },
             {
                 onSuccess: () => {
                     toast({
@@ -122,13 +142,50 @@ export function WorkflowList() {
         )
     }
 
+    const filteredWorkflows = (workflows || []).filter((workflow) => {
+        const matchesStatus = statusFilter === 'all'
+            || (statusFilter === 'active' && workflow.is_active)
+            || (statusFilter === 'inactive' && !workflow.is_active)
+        const matchesSearch = !searchText
+            || workflow.name?.toLowerCase().includes(searchText.toLowerCase())
+            || workflow.description?.toLowerCase().includes(searchText.toLowerCase())
+        return matchesStatus && matchesSearch
+    })
+
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">{t_ext('workflow_definitions', 'Workflow Definitions')}</h3>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h3 className="text-lg font-medium">{t_ext('workflow_definitions', 'Workflow Definitions')}</h3>
+                    <p className="text-xs text-muted-foreground">Create, activate, and run automated workflows.</p>
+                </div>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     {t_ext('new_workflow', 'New Workflow')}</Button>
+            </div>
+
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2">
+                    <Select value={statusFilter} onValueChange={(val: 'all' | 'active' | 'inactive') => setStatusFilter(val)}>
+                        <SelectTrigger className="w-[160px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Input
+                        placeholder="Search workflows..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="w-[260px]"
+                    />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                    Showing {filteredWorkflows.length} of {workflows?.length || 0} workflows
+                </div>
             </div>
 
             <div className="rounded-md border">
@@ -144,7 +201,7 @@ export function WorkflowList() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {workflows?.map((workflow) => (
+                        {filteredWorkflows.map((workflow) => (
                             <TableRow key={workflow.id}>
                                 <TableCell className="font-medium">
                                     <div>{workflow.name}</div>
@@ -203,7 +260,7 @@ export function WorkflowList() {
                                 </TableCell>
                             </TableRow>
                         ))}
-                        {!workflows?.length && (
+                        {filteredWorkflows.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                     {t_ext('no_workflows_found', 'No workflows found.')}</TableCell>

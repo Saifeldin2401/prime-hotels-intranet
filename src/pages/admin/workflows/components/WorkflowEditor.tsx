@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -7,6 +7,7 @@ import { Plus, Trash2, GripVertical, Loader2, Save } from 'lucide-react'
 import { useWorkflowSteps, useUpdateWorkflow, useUpdateWorkflowSteps, useCreateWorkflow } from '@/hooks/useWorkflows'
 import { useToast } from '@/components/ui/use-toast'
 import type { WorkflowDefinition, WorkflowStep } from '@/hooks/useWorkflows'
+import { useTrainingModulesList } from '@/hooks/useTrainingRules'
 import {
     Select,
     SelectContent,
@@ -28,6 +29,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
     const updateWorkflowMutation = useUpdateWorkflow()
     const createWorkflowMutation = useCreateWorkflow()
     const updateStepsMutation = useUpdateWorkflowSteps(workflow.id)
+    const { data: modules } = useTrainingModulesList()
     const { toast } = useToast()
 
     const [name, setName] = useState(workflow.name)
@@ -40,12 +42,143 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         JSON.stringify(workflow.action_config || {}, null, 2)
     )
     const [localSteps, setLocalSteps] = useState<Partial<WorkflowStep>[]>([])
+    const [advancedMode, setAdvancedMode] = useState(false)
+    const [eventType, setEventType] = useState('NEW_HIRE')
+    const [customEventType, setCustomEventType] = useState('')
+    const [scheduleCron, setScheduleCron] = useState('0 9 * * *')
+    const [simpleAction, setSimpleAction] = useState<'none' | 'send_training_reminders' | 'custom'>('none')
+    const isNewWorkflow = !workflow.id
+
+    const eventOptions = useMemo(() => ([
+        { value: 'NEW_HIRE', label: 'New Hire' },
+        { value: 'ROLE_CHANGE', label: 'Role Change' },
+        { value: 'SOP_PUBLISHED', label: 'SOP Published' },
+        { value: 'SOP_UPDATED', label: 'SOP Updated' },
+        { value: 'INCIDENT_REPORTED', label: 'Incident Reported' },
+        { value: 'AUDIT_FINDING', label: 'Audit Finding' },
+        { value: 'CERTIFICATION_EXPIRED', label: 'Certification Expired' },
+        { value: 'DOCUMENT_EXPIRING', label: 'Document Expiring' },
+        { value: 'LEAVE_REQUESTED', label: 'Leave Requested' }
+    ]), [])
+
+    const templates = [
+        {
+            id: 'training_reminders',
+            title: 'Training Deadline Reminders',
+            description: 'Send overdue training reminders every morning.',
+            apply: () => {
+                setName('training_deadline_reminders')
+                setDescription('Send reminders for overdue training assignments.')
+                setType('scheduled')
+                setScheduleCron('0 9 * * *')
+                setSimpleAction('send_training_reminders')
+                setActionConfig(JSON.stringify({ action: 'send_training_reminders' }, null, 2))
+                setTriggerConfig(JSON.stringify({ cron: '0 9 * * *' }, null, 2))
+                setLocalSteps([])
+            }
+        },
+        {
+            id: 'new_hire_welcome',
+            title: 'New Hire Welcome (Notify + Task)',
+            description: 'Welcome new hires and create an onboarding task.',
+            apply: () => {
+                setName('New Hire Welcome Pack')
+                setDescription('Welcome workflow for new staff: notify and create onboarding task.')
+                setType('event-based')
+                setEventType('NEW_HIRE')
+                setTriggerConfig(JSON.stringify({ event_type: 'NEW_HIRE' }, null, 2))
+                setSimpleAction('none')
+                setActionConfig(JSON.stringify({}, null, 2))
+                setLocalSteps([
+                    {
+                        name: 'Send Welcome Notification',
+                        action: 'send_notification',
+                        config: {
+                            title: 'Welcome to Prime Hotels',
+                            message: 'Welcome aboard! Please complete your onboarding checklist.'
+                        }
+                    },
+                    {
+                        name: 'Create Onboarding Task',
+                        action: 'create_task',
+                        config: {
+                            title: 'Complete onboarding checklist',
+                            description: 'Finish your onboarding tasks for the first week.',
+                            priority: 'medium'
+                        }
+                    }
+                ])
+            }
+        }
+    ]
 
     useEffect(() => {
         if (steps) {
             setLocalSteps(steps)
         }
     }, [steps])
+
+    useEffect(() => {
+        try {
+            const parsedTrigger = triggerConfig ? JSON.parse(triggerConfig) : {}
+            const parsedAction = actionConfig ? JSON.parse(actionConfig) : {}
+
+            if (type === 'scheduled') {
+                setScheduleCron(parsedTrigger?.cron || '0 9 * * *')
+                const triggerKeys = Object.keys(parsedTrigger || {})
+                if (triggerKeys.some((key) => key !== 'cron')) {
+                    setAdvancedMode(true)
+                }
+            }
+            if (type === 'event-based') {
+                const evt = parsedTrigger?.event_type || parsedTrigger?.event
+                if (evt && eventOptions.some((opt) => opt.value === evt)) {
+                    setEventType(evt)
+                } else if (evt) {
+                    setEventType('CUSTOM')
+                    setCustomEventType(evt)
+                }
+                const triggerKeys = Object.keys(parsedTrigger || {})
+                if (triggerKeys.some((key) => !['event', 'event_type'].includes(key))) {
+                    setAdvancedMode(true)
+                }
+            }
+
+            if (!parsedAction || Object.keys(parsedAction).length === 0) {
+                setSimpleAction('none')
+            } else if (parsedAction?.action === 'send_training_reminders') {
+                setSimpleAction('send_training_reminders')
+            } else {
+                setSimpleAction('custom')
+                setAdvancedMode(true)
+            }
+        } catch {
+            setAdvancedMode(true)
+        }
+    }, [])
+
+    useEffect(() => {
+        if (advancedMode) return
+
+        if (type === 'scheduled') {
+            setTriggerConfig(JSON.stringify({ cron: scheduleCron || '0 9 * * *' }, null, 2))
+        } else if (type === 'event-based') {
+            const evt = eventType === 'CUSTOM' ? customEventType : eventType
+            setTriggerConfig(JSON.stringify(evt ? { event_type: evt } : {}, null, 2))
+        } else {
+            setTriggerConfig(JSON.stringify({}, null, 2))
+        }
+    }, [advancedMode, type, scheduleCron, eventType, customEventType])
+
+    useEffect(() => {
+        if (advancedMode) return
+
+        if (simpleAction === 'send_training_reminders') {
+            setActionConfig(JSON.stringify({ action: 'send_training_reminders' }, null, 2))
+        } else if (simpleAction === 'none') {
+            setActionConfig(JSON.stringify({}, null, 2))
+        }
+    }, [advancedMode, simpleAction])
 
     const handleAddStep = () => {
         setLocalSteps([...localSteps, {
@@ -62,6 +195,18 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
     const handleStepChange = (index: number, field: keyof WorkflowStep, value: any) => {
         const updatedSteps = [...localSteps]
         updatedSteps[index] = { ...updatedSteps[index], [field]: value }
+        setLocalSteps(updatedSteps)
+    }
+
+    const updateStepConfig = (index: number, updates: Record<string, any>) => {
+        const updatedSteps = [...localSteps]
+        const currentConfig = typeof updatedSteps[index]?.config === 'object' && updatedSteps[index]?.config !== null
+            ? updatedSteps[index]?.config
+            : {}
+        updatedSteps[index] = {
+            ...updatedSteps[index],
+            config: { ...currentConfig, ...updates }
+        }
         setLocalSteps(updatedSteps)
     }
 
@@ -139,6 +284,28 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
 
     return (
         <div className="space-y-6">
+            {isNewWorkflow && (
+                <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                    <div>
+                        <h3 className="text-base font-semibold">Templates</h3>
+                        <p className="text-xs text-muted-foreground">Start with a ready-made workflow and edit the details.</p>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {templates.map((template) => (
+                            <button
+                                key={template.id}
+                                type="button"
+                                className="rounded-lg border bg-card px-4 py-3 text-left transition hover:border-primary/50"
+                                onClick={template.apply}
+                            >
+                                <div className="text-sm font-semibold">{template.title}</div>
+                                <div className="text-xs text-muted-foreground">{template.description}</div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="space-y-4 border-b pb-6">
                 <div className="grid gap-2">
                     <Label htmlFor="name">{t_ext('workflow_name', 'Workflow Name')}</Label>
@@ -166,26 +333,113 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="trigger_config">{t_ext('trigger_config_json', 'Trigger Config (JSON)')}</Label>
-                    <Textarea
-                        id="trigger_config"
-                        value={triggerConfig}
-                        onChange={(e) => setTriggerConfig(e.target.value)}
-                        className="font-mono text-xs h-28"
-                    />
+                <div className="grid gap-3 rounded-lg border bg-muted/30 p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h4 className="text-sm font-semibold">Trigger</h4>
+                            <p className="text-xs text-muted-foreground">Decide when this workflow should run.</p>
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setAdvancedMode(!advancedMode)}>
+                            {advancedMode ? 'Simple Mode' : 'Advanced JSON'}
+                        </Button>
+                    </div>
+                    {!advancedMode && (
+                        <>
+                            {type === 'scheduled' && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="schedule_cron">Run Schedule (Cron)</Label>
+                                    <Input
+                                        id="schedule_cron"
+                                        value={scheduleCron}
+                                        onChange={(e) => setScheduleCron(e.target.value)}
+                                        placeholder="0 9 * * *"
+                                    />
+                                    <p className="text-xs text-muted-foreground">Example: 0 9 * * * = every day at 9 AM.</p>
+                                </div>
+                            )}
+                            {type === 'event-based' && (
+                                <>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="event_type">Event Type</Label>
+                                        <Select value={eventType} onValueChange={setEventType}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {eventOptions.map((evt) => (
+                                                    <SelectItem key={evt.value} value={evt.value}>{evt.label}</SelectItem>
+                                                ))}
+                                                <SelectItem value="CUSTOM">Custom</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    {eventType === 'CUSTOM' && (
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="custom_event_type">Custom Event Type</Label>
+                                            <Input
+                                                id="custom_event_type"
+                                                value={customEventType}
+                                                onChange={(e) => setCustomEventType(e.target.value.toUpperCase())}
+                                                placeholder="e.g., MAINTENANCE_TICKET_CREATED"
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                            {type === 'manual' && (
+                                <p className="text-xs text-muted-foreground">Manual workflows run only when you click “Run”.</p>
+                            )}
+                        </>
+                    )}
+                    {advancedMode && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="trigger_config">{t_ext('trigger_config_json', 'Trigger Config (JSON)')}</Label>
+                            <Textarea
+                                id="trigger_config"
+                                value={triggerConfig}
+                                onChange={(e) => setTriggerConfig(e.target.value)}
+                                className="font-mono text-xs h-28"
+                            />
+                        </div>
+                    )}
                 </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="action_config">{t_ext('workflow_action_config_json', 'Workflow Action Config (JSON)')}</Label>
-                    <Textarea
-                        id="action_config"
-                        value={actionConfig}
-                        onChange={(e) => setActionConfig(e.target.value)}
-                        className="font-mono text-xs h-28"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                        {t_ext('used_when_no_steps_are_defined_example', 'Used when no steps are defined. Example:')}{"{\"action\":\"send_training_reminders\"}"}
-                    </p>
+
+                <div className="grid gap-3 rounded-lg border bg-muted/30 p-4">
+                    <div>
+                        <h4 className="text-sm font-semibold">Default Action (optional)</h4>
+                        <p className="text-xs text-muted-foreground">Used when no steps are defined.</p>
+                    </div>
+                    {!advancedMode && (
+                        <Select
+                            value={simpleAction}
+                            onValueChange={(val: 'none' | 'send_training_reminders' | 'custom') => {
+                                setSimpleAction(val)
+                                if (val === 'custom') {
+                                    setAdvancedMode(true)
+                                }
+                            }}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose a default action" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">No default action</SelectItem>
+                                <SelectItem value="send_training_reminders">Send overdue training reminders</SelectItem>
+                                <SelectItem value="custom">Custom (advanced)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+                    {advancedMode && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="action_config">{t_ext('workflow_action_config_json', 'Workflow Action Config (JSON)')}</Label>
+                            <Textarea
+                                id="action_config"
+                                value={actionConfig}
+                                onChange={(e) => setActionConfig(e.target.value)}
+                                className="font-mono text-xs h-28"
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -196,6 +450,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                         <Plus className="h-4 w-4 mr-2" />
                         {t_ext('add_step', 'Add Step')}</Button>
                 </div>
+                <p className="text-xs text-muted-foreground">Steps are actions performed in order when the workflow runs.</p>
 
                 <div className="space-y-3">
                     {localSteps.map((step, index) => (
@@ -232,20 +487,85 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                     </div>
                                 </div>
                                 <div className="grid gap-1.5">
-                                    <Label className="text-xs">{t_ext('config_json', 'Config (JSON)')}</Label>
-                                    <Textarea
-                                        className="font-mono text-xs min-h-[60px]"
-                                        value={JSON.stringify(step.config)}
-                                        onChange={(e) => {
-                                            try {
-                                                handleStepChange(index, 'config', JSON.parse(e.target.value))
-                                            } catch (err) {
-                                                // Keep raw text so user can see and correct invalid JSON
-                                                // The config will be validated again on save via handleSave
-                                                handleStepChange(index, 'config', e.target.value)
-                                            }
-                                        }}
-                                    />
+                                    <Label className="text-xs">{advancedMode ? t_ext('config_json', 'Config (JSON)') : 'Step Details'}</Label>
+                                    {!advancedMode && (
+                                        <div className="space-y-2">
+                                            {step.action === 'send_notification' && (
+                                                <>
+                                                    <Input
+                                                        placeholder="Notification title"
+                                                        value={(step.config as any)?.title || ''}
+                                                        onChange={(e) => updateStepConfig(index, { title: e.target.value })}
+                                                    />
+                                                    <Textarea
+                                                        placeholder="Notification message"
+                                                        value={(step.config as any)?.message || ''}
+                                                        onChange={(e) => updateStepConfig(index, { message: e.target.value })}
+                                                    />
+                                                </>
+                                            )}
+                                            {step.action === 'create_task' && (
+                                                <>
+                                                    <Input
+                                                        placeholder="Task title"
+                                                        value={(step.config as any)?.title || ''}
+                                                        onChange={(e) => updateStepConfig(index, { title: e.target.value })}
+                                                    />
+                                                    <Textarea
+                                                        placeholder="Task description"
+                                                        value={(step.config as any)?.description || ''}
+                                                        onChange={(e) => updateStepConfig(index, { description: e.target.value })}
+                                                    />
+                                                    <Select
+                                                        value={(step.config as any)?.priority || 'medium'}
+                                                        onValueChange={(val) => updateStepConfig(index, { priority: val })}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Priority" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="low">Low</SelectItem>
+                                                            <SelectItem value="medium">Medium</SelectItem>
+                                                            <SelectItem value="high">High</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </>
+                                            )}
+                                            {step.action === 'assign_training' && (
+                                                <Select
+                                                    value={(step.config as any)?.module_id || (step.config as any)?.content_id || ''}
+                                                    onValueChange={(val) => updateStepConfig(index, { module_id: val })}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select training module" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {modules?.map((module) => (
+                                                            <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                            {step.action !== 'send_notification' && step.action !== 'create_task' && step.action !== 'assign_training' && (
+                                                <p className="text-xs text-muted-foreground">Use Advanced JSON for this step.</p>
+                                            )}
+                                        </div>
+                                    )}
+                                    {advancedMode && (
+                                        <Textarea
+                                            className="font-mono text-xs min-h-[60px]"
+                                            value={JSON.stringify(step.config)}
+                                            onChange={(e) => {
+                                                try {
+                                                    handleStepChange(index, 'config', JSON.parse(e.target.value))
+                                                } catch (err) {
+                                                    // Keep raw text so user can see and correct invalid JSON
+                                                    // The config will be validated again on save via handleSave
+                                                    handleStepChange(index, 'config', e.target.value)
+                                                }
+                                            }}
+                                        />
+                                    )}
                                 </div>
                             </div>
                             <Button

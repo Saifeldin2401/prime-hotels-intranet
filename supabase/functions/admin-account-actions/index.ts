@@ -348,6 +348,9 @@ Deno.serve(async (req: Request) => {
                 const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
                     type: "recovery",
                     email: targetEmail,
+                    options: {
+                        redirectTo: resetRedirectTo,
+                    },
                 });
 
                 if (linkError) {
@@ -374,9 +377,9 @@ Deno.serve(async (req: Request) => {
                         },
                         body: JSON.stringify({
                             to: targetEmail,
-                            subject: "Password Reset Required - PHG Connect",
-                            title: "Password Reset Required",
-                            message: "An administrator has requested that you reset your password. Please use the link below to set a new password for your PHG Connect account.",
+                            templateKey: "system_generic_alert",
+                            title: "Password reset",
+                            message: "Use the link below to reset your PHG Connect password.",
                             actionUrl: resetLink,
                             actionLabel: "Reset Password",
                             businessDomain: "user_management",

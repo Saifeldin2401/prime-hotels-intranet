@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
               .replace(/{{dir}}/g, "ltr")
               .replace(/{{lang}}/g, "en");
 
-          let text = template.text_template
+          let text = (template.text_template || "")
               .replace(/{{recipient_name}}/g, recipientName)
               .replace(/{{action_url}}/g, "https://phg-connect.com/login");
 

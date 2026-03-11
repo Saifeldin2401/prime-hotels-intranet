@@ -250,6 +250,7 @@ export function useDeleteWorkflow() {
  * Hook to get workflow statistics
  */
 export function useWorkflowStats() {
+    const { user } = useAuth()
     return useQuery({
         queryKey: ['workflow-stats'],
         queryFn: async () => {
@@ -261,18 +262,21 @@ export function useWorkflowStats() {
 
             if (error) throw error
 
+            const timed = executions.filter(e => e.execution_time_ms)
+
             const stats = {
                 total: executions.length,
                 completed: executions.filter(e => e.status === 'completed').length,
                 failed: executions.filter(e => e.status === 'failed').length,
                 running: executions.filter(e => e.status === 'running').length,
-                avgExecutionTime: executions
-                    .filter(e => e.execution_time_ms)
-                    .reduce((sum, e) => sum + (e.execution_time_ms || 0), 0) / executions.length || 0
+                avgExecutionTime: timed.length > 0
+                    ? timed.reduce((sum, e) => sum + (e.execution_time_ms || 0), 0) / timed.length
+                    : 0
             }
 
             return stats
-        }
+        },
+        enabled: !!user
     })
 }
 

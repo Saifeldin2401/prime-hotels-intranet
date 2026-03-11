@@ -594,35 +594,6 @@ export function useChannelMessages(params: {
   })
 }
 
-// Notification Hooks
-export function useNotifications() {
-  const { user } = useAuth()
-
-  return useQuery({
-    queryKey: ['notifications', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return []
-
-      const { data, error } = await supabase
-        .from('notifications')
-        .select(`
-          *,
-          user:profiles!user_id(id, full_name, email)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50)
-
-      if (error) throw error
-      return (data || []).map((n: any) => ({
-        ...n,
-        is_read: !!n.read_at,
-      })) as Notification[]
-    },
-    enabled: !!user?.id
-  })
-}
-
 export function useMarkNotificationAsRead() {
   const queryClient = useQueryClient()
 

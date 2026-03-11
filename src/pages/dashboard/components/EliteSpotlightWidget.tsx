@@ -1,7 +1,7 @@
-﻿import { m, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Star, Gift, User, ChevronLeft, ChevronRight, Award, Trophy } from 'lucide-react'
+import { Star, Gift, User, ChevronLeft, ChevronRight, Award, Trophy, Cake, CalendarDays } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,7 +13,7 @@ import { isRealPropertyId } from '@/lib/propertyScope'
 
 interface SpotlightItem {
   id: string
-  type: 'eom' | 'anniversary' | 'achievement'
+  type: 'eom' | 'anniversary' | 'achievement' | 'birthday' | 'event'
   name: string
   property: string
   title: string
@@ -46,6 +46,22 @@ interface AchievementRow {
   title: string | null
   description: string | null
   earned_at: string
+}
+
+interface BirthdayRow {
+  id: string
+  full_name: string | null
+  avatar_url: string | null
+  job_title: string | null
+  date_of_birth: string | null
+}
+
+interface EventRow {
+  id: string
+  title: string
+  type: string
+  start_date: string
+  property_id: string | null
 }
 
 interface ProfileLite {
@@ -166,10 +182,54 @@ export function EliteSpotlightWidget() {
         return (data || []) as AchievementRow[]
       }
 
-      const [eomRows, anniversaryRows, achievementRows] = await Promise.all([
+      const getBirthdayRows = async (): Promise<BirthdayRow[]> => {
+        let q = supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, job_title, date_of_birth')
+          .eq('is_active', true)
+          .not('date_of_birth', 'is', null)
+          .limit(100)
+
+        if (isScoped) {
+          if (scopedUserIds.length === 0) return []
+          q = q.in('id', scopedUserIds)
+        }
+
+        const { data, error } = await q
+        if (error) {
+          console.warn('Elite spotlight: failed to load birthdays', error)
+          return []
+        }
+        return (data || []) as BirthdayRow[]
+      }
+
+      const getEventRows = async (): Promise<EventRow[]> => {
+        let q = supabase
+          .from('events')
+          .select('id, title, type, start_date, property_id')
+          .eq('is_public', true)
+          .gte('start_date', now.toISOString())
+          .order('start_date', { ascending: true })
+          .limit(5)
+
+        if (isScoped && propertyId) {
+          q = q.or(`property_id.is.null,property_id.eq.${propertyId}`)
+        }
+
+        const { data, error } = await q
+        if (error) {
+          console.warn('Elite spotlight: failed to load events', error)
+          return []
+        }
+        return (data || []) as EventRow[]
+      }
+
+      const [eomRows, anniversaryRows, achievementRows, birthdayRows, eventRows] = await Promise.all([
         getEomRows(),
         getAnniversaryRows(),
-        getAchievementRows()
+        getAchievementRows(),
+        getBirthdayRows(),
+        getEventRows()
       ])
 
       const profileIds = Array.from(
@@ -296,6 +356,74 @@ export function EliteSpotlightWidget() {
         }
       }
 
+      const birthdayCandidate = birthdayRows
+        .map((row) => {
+          if (!row.date_of_birth || !row.full_name) return null
+          const dobParts = row.date_of_birth.split('-')
+          if (dobParts.length < 3) return null
+          const month = parseInt(dobParts[1], 10) - 1
+          const day = parseInt(dobParts[2], 10)
+          
+          let upcomingBirthday = new Date(now.getFullYear(), month, day)
+          
+          if (startOfToday(upcomingBirthday).getTime() < today.getTime()) {
+            upcomingBirthday = new Date(now.getFullYear() + 1, month, day)
+          }
+
+          const diffDays = Math.round((startOfToday(upcomingBirthday).getTime() - today.getTime()) / 86400000)
+          
+          if (diffDays > 30) return null 
+          return { row, upcomingBirthday, diffDays }
+        })
+        .filter((entry): entry is { row: BirthdayRow; upcomingBirthday: Date; diffDays: number } => entry !== null)
+        .sort((a, b) => a.diffDays - b.diffDays)[0]
+
+      if (birthdayCandidate) {
+        const dateLabel = formatDate(birthdayCandidate.upcomingBirthday.toISOString(), i18n.language)
+        const daysUntil = birthdayCandidate.diffDays === 0 
+          ? t('spotlight.birthday.today', 'Today!')
+          : t('spotlight.birthday.upcoming', { date: dateLabel, defaultValue: `Coming up on ${dateLabel}` })
+
+        items.push({
+          id: `birthday-${birthdayCandidate.row.id}`,
+          type: 'birthday',
+          name: birthdayCandidate.row.full_name || t('spotlight.member', 'Team Member'),
+          property: defaultPropertyName,
+          title: birthdayCandidate.row.job_title || t('spotlight.member', 'Team Member'),
+          image: birthdayCandidate.row.avatar_url,
+          date: daysUntil,
+          description: t(
+            'spotlight.birthday.description',
+            'Wishing you a fantastic birthday and a wonderful year ahead from the Prime Hotels team!'
+          )
+        })
+      }
+
+      const upcomingEvent = eventRows[0]
+      if (upcomingEvent) {
+        const eventDate = new Date(upcomingEvent.start_date)
+        const diffDays = Math.round((startOfToday(eventDate).getTime() - today.getTime()) / 86400000)
+        
+        const dateLabel = formatDate(upcomingEvent.start_date, i18n.language)
+        const daysUntil = diffDays === 0 
+          ? t('spotlight.event.today', 'Today!')
+          : t('spotlight.event.upcoming', { date: dateLabel, defaultValue: dateLabel })
+
+        items.push({
+          id: `event-${upcomingEvent.id}`,
+          type: 'event',
+          name: upcomingEvent.title,
+          property: upcomingEvent.property_id ? propertyMap.get(upcomingEvent.property_id)?.name || defaultPropertyName : t('spotlight.event.company_wide', 'Company Wide'),
+          title: upcomingEvent.type.charAt(0).toUpperCase() + upcomingEvent.type.slice(1),
+          image: null, 
+          date: daysUntil,
+          description: t(
+            'spotlight.event.description',
+            'Important upcoming event in your calendar. Save the date!'
+          )
+        })
+      }
+
       return items
     },
     staleTime: 1000 * 60 * 5,
@@ -325,7 +453,9 @@ export function EliteSpotlightWidget() {
   const typeConfig = {
     eom: { icon: Trophy, color: 'text-amber-500', bg: 'bg-amber-500/10', label: 'Employee of the Month' },
     anniversary: { icon: Gift, color: 'text-rose-500', bg: 'bg-rose-500/10', label: 'Work Anniversary' },
-    achievement: { icon: Award, color: 'text-emerald-500', bg: 'bg-emerald-500/10', label: 'Pride Achievement' }
+    achievement: { icon: Award, color: 'text-emerald-500', bg: 'bg-emerald-500/10', label: 'Pride Achievement' },
+    birthday: { icon: Cake, color: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10', label: 'Birthday Celebration' },
+    event: { icon: CalendarDays, color: 'text-cyan-500', bg: 'bg-cyan-500/10', label: 'Upcoming Event' }
   }
 
   const { icon: Icon, color, bg, label } = current ? typeConfig[current.type] : typeConfig.achievement

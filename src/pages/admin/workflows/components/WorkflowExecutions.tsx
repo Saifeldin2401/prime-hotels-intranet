@@ -29,11 +29,13 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { useExecuteWorkflow } from '@/hooks/useWorkflows'
+import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from "react-i18next";
 
 export function WorkflowExecutions() {
     const { t: t_ext } = useTranslation('extracted');
     const { data: executions, isLoading, error } = useWorkflowExecutions(undefined, 50)
+    const { user } = useAuth()
     const [selectedExecution, setSelectedExecution] = useState<any>(null)
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [searchText, setSearchText] = useState('')
@@ -187,8 +189,11 @@ export function WorkflowExecutions() {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => executeMutation.mutate({ workflowId: selectedExecution.workflow_id, metadata: { retry_of: selectedExecution.id } })}
-                                    disabled={executeMutation.isPending}
+                                    onClick={() => executeMutation.mutate({
+                                        workflowId: selectedExecution.workflow_id,
+                                        metadata: { retry_of: selectedExecution.id, triggered_by: user?.id }
+                                    })}
+                                    disabled={executeMutation.isPending || !user?.id}
                                 >
                                     {t_ext('retry_run', 'Retry Run')}</Button>
                             </div>

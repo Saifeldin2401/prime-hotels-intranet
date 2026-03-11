@@ -14,6 +14,14 @@ import { Settings2, Trash2, Plus, Loader2 } from 'lucide-react'
 import { useTriggers, useUpdateTrigger, useDeleteTrigger } from '@/hooks/useTriggers'
 import { format } from 'date-fns'
 import { useToast } from '@/components/ui/use-toast'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -43,6 +51,8 @@ export function TriggerList() {
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [editingTrigger, setEditingTrigger] = useState<TriggerRule | null>(null)
     const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const [searchText, setSearchText] = useState('')
+    const [eventFilter, setEventFilter] = useState<string>('all')
 
     const handleToggle = (id: string, currentStatus: boolean) => {
         updateMutation.mutate(
@@ -97,13 +107,51 @@ export function TriggerList() {
         )
     }
 
+    const eventOptions = Array.from(new Set((triggers || []).map((trigger) => trigger.event_type))).sort()
+    const filteredTriggers = (triggers || []).filter((trigger) => {
+        const matchesEvent = eventFilter === 'all' || trigger.event_type === eventFilter
+        const matchesSearch = !searchText
+            || trigger.name?.toLowerCase().includes(searchText.toLowerCase())
+            || trigger.description?.toLowerCase().includes(searchText.toLowerCase())
+            || trigger.action_type?.toLowerCase().includes(searchText.toLowerCase())
+        return matchesEvent && matchesSearch
+    })
+
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">{t_ext('active_trigger_rules', 'Active Trigger Rules')}</h3>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h3 className="text-lg font-medium">{t_ext('active_trigger_rules', 'Active Trigger Rules')}</h3>
+                    <p className="text-xs text-muted-foreground">Connect events to workflows, training, and notifications.</p>
+                </div>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     {t_ext('new_trigger', 'New Trigger')}</Button>
+            </div>
+
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2">
+                    <Select value={eventFilter} onValueChange={setEventFilter}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Event Types</SelectItem>
+                            {eventOptions.map((evt) => (
+                                <SelectItem key={evt} value={evt}>{evt}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Input
+                        placeholder="Search triggers..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="w-[260px]"
+                    />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                    Showing {filteredTriggers.length} of {triggers?.length || 0} rules
+                </div>
             </div>
 
             <div className="rounded-md border">
@@ -119,7 +167,7 @@ export function TriggerList() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {triggers?.map((trigger) => (
+                        {filteredTriggers.map((trigger) => (
                             <TableRow key={trigger.id}>
                                 <TableCell className="font-medium">
                                     <div>{trigger.name}</div>
@@ -165,7 +213,7 @@ export function TriggerList() {
                                 </TableCell>
                             </TableRow>
                         ))}
-                        {!triggers?.length && (
+                        {filteredTriggers.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                     {t_ext('no_trigger_rules_found', 'No trigger rules found.')}</TableCell>

@@ -502,7 +502,7 @@ export function useCompleteTraining() {
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          quiz_score: quizScore || null,
+          quiz_score: quizScore ?? null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', progressId)

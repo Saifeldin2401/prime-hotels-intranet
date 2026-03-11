@@ -70,6 +70,7 @@ interface QuizComponentEnhancedProps {
     showBilingual?: boolean
     enableImmediateFeedback?: boolean
     enablePowerUps?: boolean
+    initialQuiz?: LearningQuiz | null
 }
 
 interface QuizResult {
@@ -263,7 +264,8 @@ export function QuizComponentEnhanced({
     translationTarget: propTranslationTarget,
     showBilingual: propShowBilingual,
     enableImmediateFeedback = true,
-    enablePowerUps = true
+    enablePowerUps = true,
+    initialQuiz = null
 }: QuizComponentEnhancedProps) {
     const { toast } = useToast()
     const { user, profile, properties, departments } = useAuth()
@@ -321,10 +323,26 @@ export function QuizComponentEnhanced({
 
     // Load quiz
     useEffect(() => {
-        if (quizId) {
+        if (initialQuiz) {
+            setQuiz(initialQuiz)
+            setLoading(false)
+            if (initialQuiz.time_limit_minutes) {
+                setTimeLeft(initialQuiz.time_limit_minutes * 60)
+            }
+            // Initialize states
+            const initialStates: Record<string, QuestionState> = {}
+            initialQuiz.questions?.forEach(q => {
+                initialStates[q.question_id] = {
+                    status: 'unanswered',
+                    timeSpentSeconds: 0,
+                    powerUpsUsed: []
+                }
+            })
+            setQuestionStates(initialStates)
+        } else if (quizId) {
             loadQuiz(quizId)
         }
-    }, [quizId, user?.id, assignmentId])
+    }, [quizId, user?.id, assignmentId, initialQuiz])
 
     useEffect(() => {
         if (propTranslationTarget !== undefined) {

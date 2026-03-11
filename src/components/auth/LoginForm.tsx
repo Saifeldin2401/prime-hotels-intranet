@@ -305,12 +305,22 @@ export function LoginForm() {
         throw new Error(t('forgot_password.invalid_email'))
       }
 
-      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: `${appUrl.replace(/\/$/, '')}/reset-password`,
+      const { error: invokeError } = await supabase.functions.invoke('public-forgot-password', {
+        body: { email: trimmed.toLowerCase() },
       })
 
-      if (resetError) throw resetError
+      if (invokeError) {
+        console.error('Reset password error:', invokeError)
+
+        if (invokeError.message?.toLowerCase().includes('too many') || invokeError.status === 429) {
+          setErrorType('rate')
+          setResetError(t('errors.too_many_requests'))
+        } else {
+          setResetError(t('errors.reset_password_failed'))
+        }
+        setResetLoading(false)
+        return
+      }
 
       setAuthView('forgot_success')
       showSuccessToast(t('forgot_password.success_title'), t('forgot_password.success_message'))

@@ -45,6 +45,17 @@ export interface AuditLogEntry {
     user_agent?: string
 }
 
+function isUuid(value: unknown): value is string {
+    if (typeof value !== 'string') return false
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function resolveEntityId(entry: AuditLogEntry, userId?: string) {
+    if (isUuid(entry.entity_id)) return entry.entity_id
+    if ((entry.entity_type === 'user' || entry.event_type.startsWith('user.')) && isUuid(userId)) return userId
+    return crypto.randomUUID()
+}
+
 /**
  * Record an audit log entry
  */
@@ -53,15 +64,19 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<{ success: bo
         const { data: userData } = await supabase.auth.getUser()
         const userId = userData?.user?.id
 
+        const entityId = resolveEntityId(entry, userId)
+
         const { error } = await supabase
             .from('audit_logs')
             .insert({
                 user_id: userId,
-                event_type: entry.event_type,
-                entity_type: entry.entity_type,
-                entity_id: entry.entity_id,
-                description: entry.description,
-                metadata: entry.metadata || {},
+                action: entry.event_type,
+                entity_type: entry.entity_type || 'system',
+                entity_id: entityId,
+                details: {
+                    description: entry.description,
+                    metadata: entry.metadata || {},
+                },
                 ip_address: entry.ip_address,
                 user_agent: entry.user_agent || navigator.userAgent
             })

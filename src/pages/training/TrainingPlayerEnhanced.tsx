@@ -886,10 +886,21 @@ export default function TrainingPlayerEnhanced() {
                                     )}
 
                                     {/* Quiz Block */}
-                                    {activeBlock.type === 'quiz' && ((activeBlock.content_data as Record<string, unknown> | null)?.quiz_id as string | undefined) && (
+                                    {activeBlock.type === 'quiz' && (
                                         <div className={focusMode ? "bg-slate-900 rounded-2xl p-6" : ""}>
                                             <QuizComponentEnhanced
-                                                quizId={(activeBlock.content_data as Record<string, unknown>).quiz_id as string}
+                                                quizId={((activeBlock.content_data as any)?.quiz_id as string) || ''}
+                                                initialQuiz={!(activeBlock.content_data as any)?.quiz_id && (activeBlock.content_data as any)?.questions ? ({
+                                                    id: activeBlock.id,
+                                                    title: activeBlock.title || 'Knowledge Check',
+                                                    passing_score_percentage: 80,
+                                                    randomize_questions: false,
+                                                    show_feedback_during: true,
+                                                    status: 'published',
+                                                    created_at: new Date().toISOString(),
+                                                    updated_at: new Date().toISOString(),
+                                                    questions: (activeBlock.content_data as any).questions
+                                                } as any) : null}
                                                 assignmentId={assignmentId}
                                                 enableImmediateFeedback={true}
                                                 enablePowerUps={true}

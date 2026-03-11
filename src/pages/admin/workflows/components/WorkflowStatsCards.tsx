@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from "react-i18next";
 
 export function WorkflowStatsCards() {
-    const { data: stats, isLoading } = useWorkflowStats()
+    const { data: stats, isLoading, error } = useWorkflowStats()
 
     if (isLoading) {
         return (
@@ -18,8 +18,14 @@ export function WorkflowStatsCards() {
     }
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+        <div className="space-y-3">
+            {error && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                    Failed to load workflow stats: {error instanceof Error ? error.message : 'Unknown error'}
+                </div>
+            )}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Runs (7d)</CardTitle>
                     <Activity className="h-4 w-4 text-muted-foreground" />
@@ -32,7 +38,7 @@ export function WorkflowStatsCards() {
                 </CardContent>
             </Card>
 
-            <Card>
+                <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
                     <CheckCircle className="h-4 w-4 text-green-500" />
@@ -47,7 +53,7 @@ export function WorkflowStatsCards() {
                 </CardContent>
             </Card>
 
-            <Card>
+                <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Failures</CardTitle>
                     <XCircle className="h-4 w-4 text-red-500" />
@@ -60,7 +66,7 @@ export function WorkflowStatsCards() {
                 </CardContent>
             </Card>
 
-            <Card>
+                <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -74,6 +80,7 @@ export function WorkflowStatsCards() {
                     </p>
                 </CardContent>
             </Card>
+            </div>
         </div>
     )
 }

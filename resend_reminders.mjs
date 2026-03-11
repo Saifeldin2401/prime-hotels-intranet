@@ -84,14 +84,14 @@ async function main() {
     try {
         const res = await fetch("https://api.resend.com/emails", {
             headers: {
-                Authorization: \`Bearer \${RESEND_API_KEY}\`
+                Authorization: `Bearer ${RESEND_API_KEY}`
             }
         });
         const data = await res.json();
         if (data && data.data) {
             sentEmails = data.data.map(e => e.to).flat().map(e => String(e).toLowerCase());
         }
-        console.log(\`Found \${sentEmails.length} recent emails.\`);
+        console.log(`Found ${sentEmails.length} recent emails.`);
     } catch (e) {
         console.error("Failed to fetch sent emails from resend. Will send to all.", e);
     }
@@ -100,7 +100,7 @@ async function main() {
 
     for (const usr of users) {
         if (sentEmails.includes(usr.email.toLowerCase())) {
-            console.log(\`Skipping \${usr.email} (already sent)\`);
+            console.log(`Skipping ${usr.email} (already sent)`);
             continue;
         }
 
@@ -122,7 +122,7 @@ async function main() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": \`Bearer \${RESEND_API_KEY}\`
+                    "Authorization": `Bearer ${RESEND_API_KEY}`
                 },
                 body: JSON.stringify({
                     from: "PRIME Connect Security <notifications@phg-connect.com>",
@@ -135,20 +135,20 @@ async function main() {
             const sendData = await sendRes.json();
             
             if (sendRes.ok) {
-                console.log(\`✅ Sent to \${usr.email}\`);
+                console.log(`✅ Sent to ${usr.email}`);
                 count++;
             } else {
-                console.error(\`❌ Failed to send to \${usr.email}: \`, sendData);
+                console.error(`❌ Failed to send to ${usr.email}: `, sendData);
             }
         } catch (err) {
-            console.error(\`❌ Error sending to \${usr.email}:\`, err.message);
+            console.error(`❌ Error sending to ${usr.email}:`, err.message);
         }
 
         // Resend rate limit: 2 requests per second. Let's delay 600ms between requests.
         await delay(600);
     }
 
-    console.log(\`\nFinished. Successfully sent \${count} new emails.\`);
+    console.log(`\nFinished. Successfully sent ${count} new emails.`);
 }
 
 main();
