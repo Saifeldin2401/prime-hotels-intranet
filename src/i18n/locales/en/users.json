@@ -102,6 +102,8 @@
             "validation_failed": "Validation failed"
         },
         "staff_id_auto": "Staff ID Auto",
-        "staff_id": "Staff ID"
+        "staff_id": "Staff ID",
+        "manager_auto_selected": "Manager Auto-Selected",
+        "manager_auto_selected_desc": "{{name}} ({{jobTitle}}) has been automatically selected as the reporting manager based on department."
     }
 }

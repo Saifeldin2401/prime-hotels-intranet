@@ -173,7 +173,6 @@ export function TrainingAssignmentsPanel({
       const { data, error } = await supabase
         .from('training_modules')
         .select('id, title, description')
-        .eq('is_active', true)
         .order('title')
       if (error) throw error
       return data as TrainingModule[]
@@ -563,12 +562,9 @@ export function TrainingAssignmentsPanel({
       // 2. Status Filter
       if (overviewFilterStatus !== 'all' && item.status !== overviewFilterStatus) return false
 
-      // Resolve User Context
-      const userDeptData = userDepartments?.find(ud => ud.user_id === item.user_id)?.department
-      const userPropData = userProperties?.find(up => up.user_id === item.user_id)?.property
-
-      const userDeptId = Array.isArray(userDeptData) ? userDeptData[0]?.id : (userDeptData as any)?.id
-      const userPropId = Array.isArray(userPropData) ? userPropData[0]?.id : (userPropData as any)?.id
+      // Resolve user dept/prop for filtering - use userDepartments query for IDs (for filter dropdowns)
+      const userDeptId = (userDepartments?.find(ud => ud.user_id === item.user_id)?.department as any)?.id
+      const userPropId = (userProperties?.find(up => up.user_id === item.user_id)?.property as any)?.id
 
       // 3. Department Filter
       if (overviewFilterDept !== 'all' && userDeptId !== overviewFilterDept) return false
@@ -909,11 +905,15 @@ export function TrainingAssignmentsPanel({
                           </TableRow>
                         ) : (
                           filteredProgress.map((item) => {
-                            const deptData = userDepartments?.find(d => d.user_id === item.user_id)?.department
-                            const propData = userProperties?.find(p => p.user_id === item.user_id)?.property
-
-                            const deptName = Array.isArray(deptData) ? deptData[0]?.name : (deptData as any)?.name
-                            const propName = Array.isArray(propData) ? propData[0]?.name : (propData as any)?.name
+                            // Prefer dept/prop data joined directly in the hook (avoids RLS issues on user_departments)
+                            const joinedDepts = item.profiles?.user_departments
+                            const joinedProps = item.profiles?.user_properties
+                            const deptName = (joinedDepts && joinedDepts.length > 0)
+                              ? joinedDepts[0]?.departments?.name
+                              : userDepartments?.find((d: any) => d.user_id === item.user_id)?.department?.name
+                            const propName = (joinedProps && joinedProps.length > 0)
+                              ? joinedProps[0]?.properties?.name
+                              : userProperties?.find((p: any) => p.user_id === item.user_id)?.property?.name
 
                             const user = users?.find(u => u.id === item.user_id)
                             const userName = item.profiles?.full_name || user?.full_name || t('unknownUser')
@@ -938,7 +938,7 @@ export function TrainingAssignmentsPanel({
                                   </div>
                                 </TableCell>
                                 <TableCell className="font-medium text-slate-700 py-4">
-                                  {modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')}
+                                  {item.training_modules?.title || modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')}
                                 </TableCell>
                                 <TableCell className="py-4">
                                   <Badge variant="outline" className={cn(
@@ -995,12 +995,17 @@ export function TrainingAssignmentsPanel({
                       </div>
                     ) : (
                       filteredProgress.map((item) => {
-                        const deptData = userDepartments?.find(d => d.user_id === item.user_id)?.department
-                        const propData = userProperties?.find(p => p.user_id === item.user_id)?.property
-                        const deptName = Array.isArray(deptData) ? deptData[0]?.name : (deptData as any)?.name
-                        const propName = Array.isArray(propData) ? propData[0]?.name : (propData as any)?.name
+                        // Prefer joined data from hook
+                        const joinedDepts2 = item.profiles?.user_departments
+                        const joinedProps2 = item.profiles?.user_properties
+                        const deptName = (joinedDepts2 && joinedDepts2.length > 0)
+                          ? joinedDepts2[0]?.departments?.name
+                          : userDepartments?.find((d: any) => d.user_id === item.user_id)?.department?.name
+                        const propName = (joinedProps2 && joinedProps2.length > 0)
+                          ? joinedProps2[0]?.properties?.name
+                          : userProperties?.find((p: any) => p.user_id === item.user_id)?.property?.name
                         const user = users?.find(u => u.id === item.user_id)
-                        const module = modules?.find(m => m.id === item.content_id)
+                        const module = item.training_modules || modules?.find(m => m.id === item.content_id)
 
                         return (
                           <div key={item.id} className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
