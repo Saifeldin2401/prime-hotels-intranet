@@ -172,6 +172,10 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
           }
         }
 
+        // Force an update check immediately on load so users pick up new SW versions
+        // without needing to manually unregister.
+        registration.update().catch(() => {})
+
         // If an update is already waiting when the page loads, activate it now.
         activateWaitingWorker()
 

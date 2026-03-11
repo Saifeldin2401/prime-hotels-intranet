@@ -5,7 +5,7 @@
  * Implements a "Clean Shell" strategy to resolve navigation redirect errors.
  */
 
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE_NAME = `prime-hotels-${VERSION}`;
 const STATIC_CACHE = `prime-hotels-static-${VERSION}`;
 const DYNAMIC_CACHE = `prime-hotels-dynamic-${VERSION}`;
@@ -77,6 +77,8 @@ self.addEventListener('fetch', (event) => {
 
     // Skip Chrome extensions and non-http(s)
     if (!url.protocol.startsWith('http')) return;
+
+    if (url.origin !== self.location.origin) return;
 
     // 1. Navigation Redirect Fix (App Shell Pattern)
     // Navigation requests (mode: navigate) can fail if the SW returns redirected/opaqueredirect responses.
