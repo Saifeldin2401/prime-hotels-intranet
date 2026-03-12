@@ -156,15 +156,15 @@ Deno.serve(async (req: Request) => {
 
     if (!linkError) {
       const hashedToken = linkData?.properties?.hashed_token || null;
-      const actionLink = linkData?.properties?.action_link || null;
 
-      // Prefer action_link which routes through Supabase's server-side
-      // /auth/v1/verify endpoint. This verifies the token server-side and
-      // redirects the browser to the app with access_token & refresh_token.
-      // The PASSWORD_RECOVERY event handler in AuthContext will then redirect
-      // the user to the /reset-password page to set their new password.
-      const resetLink = actionLink
-        || (hashedToken ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery` : resetRedirectTo);
+      // ALWAYS use direct token_hash link. Do NOT use action_link because
+      // it routes through Supabase's /auth/v1/verify which does a 303 redirect,
+      // and that redirect fails with "access_denied" if the redirect URL is not
+      // perfectly whitelisted in the Supabase dashboard. Direct links go straight
+      // to our app where ResetPassword.tsx verifies the token client-side.
+      const resetLink = hashedToken
+        ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery`
+        : resetRedirectTo;
 
       await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: "POST",
