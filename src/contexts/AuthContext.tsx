@@ -123,6 +123,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return
+
+      // ── PASSWORD_RECOVERY: redirect to /reset-password ────────────────
+      // When a user clicks the recovery action_link, Supabase verifies the token
+      // server-side and redirects to the app with access/refresh tokens in the hash.
+      // The JS client fires PASSWORD_RECOVERY. We must redirect to /reset-password
+      // instead of loading the dashboard, so the user can set their new password.
+      if (_event === 'PASSWORD_RECOVERY' && session?.user) {
+        setUser(session.user)
+        finishLoading()
+        // Navigate to the reset-password page. Using window.location ensures
+        // it works even without React Router context at this level.
+        if (!window.location.pathname.includes('/reset-password')) {
+          window.location.replace('/reset-password')
+        }
+        return
+      }
+
       if (session?.user) {
         authRecoveryInProgressRef.current = false
         setUser(session.user)

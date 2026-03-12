@@ -27,8 +27,10 @@ export default function ResetPassword() {
     const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null)
 
     // Confirmation gate: protect against email security scanners that pre-fetch links.
-    // We show a "Confirm" button first; only after the user clicks do we verify the token.
-    const [awaitingConfirmation, setAwaitingConfirmation] = useState(true)
+    // Disabled by default when using action_link (server-side token verification).
+    // The gate is only shown when the URL has a token_hash param (direct link flow).
+    const hasTokenHashInUrl = new URLSearchParams(window.location.search).has('token_hash')
+    const [awaitingConfirmation, setAwaitingConfirmation] = useState(hasTokenHashInUrl)
 
     // Inline resend: allow users to request a new link directly from the error page.
     const [resendEmail, setResendEmail] = useState('')
@@ -75,7 +77,6 @@ export default function ResetPassword() {
 
                 // Strategy 1: PKCE code exchange (from action_link redirect)
                 if (!isTokenValid && code) {
-                    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
                     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
                     if (!exchangeError && data.session) {
                         isTokenValid = true
@@ -84,9 +85,8 @@ export default function ResetPassword() {
                     }
                 }
 
-                // Strategy 2: OTP token_hash verification (legacy fallback, single attempt only)
+                // Strategy 2: OTP token_hash verification (direct link fallback, single attempt only)
                 if (!isTokenValid && tokenHash && isSupportedOtpType(otpType)) {
-                    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
                     const { data, error: verifyError } = await supabase.auth.verifyOtp({
                         token_hash: tokenHash,
                         type: otpType,
