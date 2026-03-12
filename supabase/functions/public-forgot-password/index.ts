@@ -157,9 +157,13 @@ Deno.serve(async (req: Request) => {
     if (!linkError) {
       const hashedToken = linkData?.properties?.hashed_token || null;
       const actionLink = linkData?.properties?.action_link || null;
-      const resetLink = hashedToken
-        ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery`
-        : actionLink || resetRedirectTo;
+      // Prefer the action_link which routes through Supabase's server-side
+      // /auth/v1/verify endpoint — it handles token verification server-side
+      // and redirects to the app with a PKCE code. This is far more reliable
+      // than sending hashed_token directly to the client for client-side verifyOtp,
+      // which is a one-time-use token that gets consumed by retry logic / focus events.
+      const resetLink = actionLink
+        || (hashedToken ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery` : resetRedirectTo);
 
       await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: "POST",

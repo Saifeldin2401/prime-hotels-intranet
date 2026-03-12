@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, ShieldCheck } from 'lucide-react'
+import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, Mail, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { securityConfig } from '@/lib/security-config'
 import { auditLog } from '@/lib/auditLog'
@@ -20,18 +20,48 @@ export default function ResetPassword() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
-    const [validatingToken, setValidatingToken] = useState(true)
+    const [validatingToken, setValidatingToken] = useState(false)
     const [tokenValid, setTokenValid] = useState(false)
     const [validationNonce, setValidationNonce] = useState(0)
     const validationInFlightRef = useRef(false)
     const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null)
 
+    // Confirmation gate: protect against email security scanners that pre-fetch links.
+    // We show a "Confirm" button first; only after the user clicks do we verify the token.
+    const [awaitingConfirmation, setAwaitingConfirmation] = useState(true)
+
+    // Inline resend: allow users to request a new link directly from the error page.
+    const [resendEmail, setResendEmail] = useState('')
+    const [resendLoading, setResendLoading] = useState(false)
+    const [resendSuccess, setResendSuccess] = useState(false)
+    const [resendError, setResendError] = useState<string | null>(null)
+
     type SupportedOtpType = 'recovery'
 
     const isSupportedOtpType = (value: string | null): value is SupportedOtpType => value === 'recovery'
 
-    // Check if we have a valid session from the reset link
+    // Detect if URL has any reset tokens (for the confirmation gate UI)
+    const hasResetParams = useCallback(() => {
+        const url = new URL(window.location.href)
+        const queryParams = url.searchParams
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        return !!(
+            queryParams.get('code') ||
+            queryParams.get('token_hash') ||
+            queryParams.get('access_token') ||
+            hashParams.get('access_token')
+        )
+    }, [])
+
+    // Check if we have a valid session from the reset link.
+    // IMPORTANT: Run validation ONCE per nonce. Do NOT re-run on focus/visibility
+    // events because one-time tokens (OTP, code) are consumed on first attempt, and
+    // re-validation on mobile focus events causes a flood of "One-time token not found"
+    // errors that permanently break the reset flow.
     useEffect(() => {
+        // Don't run verification until user clicks "Confirm" (scanner protection)
+        if (awaitingConfirmation) return
+
         const checkSession = async () => {
             if (validationInFlightRef.current) return
             validationInFlightRef.current = true
@@ -43,90 +73,42 @@ export default function ResetPassword() {
                 const tokenHash = queryParams.get('token_hash')
                 const otpType = queryParams.get('type')
 
-                const tryExchangeCode = async () => {
-                    if (!code) return false
+                // Strategy 1: PKCE code exchange (from action_link redirect)
+                if (!isTokenValid && code) {
                     await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
-                    const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-
-                    if (!exchangeError && exchangeData.session) {
+                    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+                    if (!exchangeError && data.session) {
+                        isTokenValid = true
                         url.searchParams.delete('code')
                         window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''))
-                        return true
                     }
-                    return false
                 }
 
-                const tryVerifyOtp = async () => {
-                    if (!tokenHash || !isSupportedOtpType(otpType)) return false
+                // Strategy 2: OTP token_hash verification (legacy fallback, single attempt only)
+                if (!isTokenValid && tokenHash && isSupportedOtpType(otpType)) {
                     await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
-                    const { data: verifiedData, error: verifyError } = await supabase.auth.verifyOtp({
+                    const { data, error: verifyError } = await supabase.auth.verifyOtp({
                         token_hash: tokenHash,
                         type: otpType,
                     })
-
-                    if (!verifyError && verifiedData.session) {
+                    if (!verifyError && data.session) {
+                        isTokenValid = true
                         window.history.replaceState({}, document.title, window.location.pathname)
-                        return true
                     }
-
-                    return false
                 }
 
-                const trySetSessionFromTokens = async () => {
-                    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-                    const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
-                    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
-
-                    if (!accessToken || !refreshToken) return false
-
-                    const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
-                        access_token: accessToken,
-                        refresh_token: refreshToken,
-                    })
-
-                    if (!setSessionError && setSessionData.session) {
-                        window.history.replaceState({}, document.title, window.location.pathname)
-                        return true
-                    }
-
-                    return false
-                }
-
-                const attemptWithRetry = async (fn: () => Promise<boolean>) => {
-                    const delays = [0, 250, 750]
-                    for (const delayMs of delays) {
-                        if (delayMs > 0) {
-                            await new Promise((resolve) => setTimeout(resolve, delayMs))
-                        }
-                        const ok = await fn()
-                        if (ok) return true
-                    }
-                    return false
-                }
-
-                isTokenValid = await attemptWithRetry(tryExchangeCode)
-
+                // Strategy 3: Direct session tokens from hash/query
                 if (!isTokenValid) {
-                    isTokenValid = await attemptWithRetry(tryVerifyOtp)
-                }
-
-                if (!isTokenValid) {
-                    isTokenValid = await attemptWithRetry(trySetSessionFromTokens)
-                }
-
-                if (!isTokenValid) {
-                    const { data: { session }, error } = await supabase.auth.getSession()
                     const hashParams = new URLSearchParams(window.location.hash.substring(1))
                     const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
                     const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
 
                     if (accessToken && refreshToken) {
-                        const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+                        const { data, error: setSessionError } = await supabase.auth.setSession({
                             access_token: accessToken,
                             refresh_token: refreshToken,
                         })
-
-                        if (!setSessionError && setSessionData.session) {
+                        if (!setSessionError && data.session) {
                             isTokenValid = true
                             window.history.replaceState({}, document.title, window.location.pathname)
                         }
@@ -141,29 +123,9 @@ export default function ResetPassword() {
             }
         }
 
-        const runValidation = () => {
-            setValidatingToken(true)
-            void checkSession()
-        }
-
-        runValidation()
-
-        window.addEventListener('hashchange', runValidation)
-        window.addEventListener('focus', runValidation)
-
-        const onVisibilityChange = () => {
-            if (!document.hidden) {
-                runValidation()
-            }
-        }
-        document.addEventListener('visibilitychange', onVisibilityChange)
-
-        return () => {
-            window.removeEventListener('hashchange', runValidation)
-            window.removeEventListener('focus', runValidation)
-            document.removeEventListener('visibilitychange', onVisibilityChange)
-        }
-    }, [validationNonce])
+        setValidatingToken(true)
+        void checkSession()
+    }, [validationNonce, awaitingConfirmation])
 
     useEffect(() => {
         if (!success) {
@@ -183,6 +145,41 @@ export default function ResetPassword() {
             window.clearInterval(interval)
         }
     }, [success])
+
+    // Handle confirmation gate click — user confirms they want to proceed
+    const handleConfirmClick = () => {
+        setAwaitingConfirmation(false)
+    }
+
+    // Handle inline resend
+    const handleResend = async () => {
+        setResendError(null)
+        setResendSuccess(false)
+
+        const email = resendEmail.trim().toLowerCase()
+        if (!email || !email.includes('@')) {
+            setResendError(t('forgot_password.invalid_email'))
+            return
+        }
+
+        setResendLoading(true)
+        try {
+            const { error: invokeError } = await supabase.functions.invoke('public-forgot-password', {
+                body: { email },
+            })
+
+            if (invokeError?.message?.toLowerCase().includes('too many')) {
+                setResendError(t('reset_password.resend_rate_limited'))
+                return
+            }
+
+            setResendSuccess(true)
+        } catch {
+            setResendError(t('forgot_password.error'))
+        } finally {
+            setResendLoading(false)
+        }
+    }
 
     // Password validation
     const validatePassword = (pwd: string): string[] => {
@@ -262,6 +259,58 @@ export default function ResetPassword() {
         }
     }
 
+    // Confirmation gate: show "Confirm" button before verifying token.
+    // This prevents email security scanners (Outlook Safe Links, Google, Barracuda)
+    // from consuming the one-time token when they pre-fetch the link.
+    if (awaitingConfirmation) {
+        // If there are no reset params in the URL, skip the gate and show the error page
+        if (!hasResetParams()) {
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+                    <Card className="w-full max-w-md">
+                        <CardHeader className="text-center">
+                            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                <AlertCircle className="h-6 w-6 text-red-600" />
+                            </div>
+                            <CardTitle>{t('reset_password.invalid_title')}</CardTitle>
+                            <CardDescription>
+                                {t('reset_password.invalid_message')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardFooter>
+                            <div className="w-full">
+                                <Button className="w-full" variant="outline" onClick={() => navigate('/forgot-password')}>
+                                    {t('reset_password.request_new')}
+                                </Button>
+                            </div>
+                        </CardFooter>
+                    </Card>
+                </div>
+            )
+        }
+
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                            <Lock className="h-6 w-6 text-primary" />
+                        </div>
+                        <CardTitle>{t('reset_password.confirm_title')}</CardTitle>
+                        <CardDescription>
+                            {t('reset_password.confirm_message')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                        <Button className="w-full" size="lg" onClick={handleConfirmClick}>
+                            {t('reset_password.confirm_button')}
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+        )
+    }
+
     // Loading state while validating token
     if (validatingToken) {
         return (
@@ -269,14 +318,14 @@ export default function ResetPassword() {
                 <Card className="w-full max-w-md">
                     <CardContent className="flex flex-col items-center justify-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                        <p className="text-gray-600">Validating reset link...</p>
+                        <p className="text-gray-600">{t('reset_password.validating')}</p>
                     </CardContent>
                 </Card>
             </div>
         )
     }
 
-    // Invalid or expired token
+    // Invalid or expired token — with inline resend
     if (!tokenValid) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -290,10 +339,58 @@ export default function ResetPassword() {
                             {t('reset_password.invalid_message')}
                         </CardDescription>
                     </CardHeader>
+                    <CardContent className="space-y-4">
+                        {/* Inline resend: request a new link without navigating away */}
+                        <div className="border rounded-lg p-4 space-y-3">
+                            <p className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                <Mail className="h-4 w-4" />
+                                {t('reset_password.resend_title')}
+                            </p>
+
+                            {resendSuccess ? (
+                                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md text-green-700">
+                                    <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                                    <span className="text-sm">{t('reset_password.resend_success')}</span>
+                                </div>
+                            ) : (
+                                <>
+                                    {resendError && (
+                                        <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-md text-red-700">
+                                            <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                            <span className="text-xs">{resendError}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <Input
+                                            type="email"
+                                            value={resendEmail}
+                                            onChange={(e) => setResendEmail(e.target.value)}
+                                            placeholder={t('email_placeholder')}
+                                            disabled={resendLoading}
+                                            className="flex-1"
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleResend() } }}
+                                        />
+                                        <Button
+                                            onClick={() => void handleResend()}
+                                            disabled={resendLoading || !resendEmail.trim()}
+                                            size="sm"
+                                            className="shrink-0"
+                                        >
+                                            {resendLoading ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <RefreshCw className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </CardContent>
                     <CardFooter>
                         <div className="w-full space-y-3">
                             <Button className="w-full" onClick={() => setValidationNonce((v) => v + 1)}>
-                                Re-validate Link
+                                {t('reset_password.revalidate_link')}
                             </Button>
                             <Button className="w-full" variant="outline" onClick={() => navigate('/forgot-password')}>
                                 {t('reset_password.request_new')}
@@ -322,7 +419,7 @@ export default function ResetPassword() {
                     <CardContent className="text-center">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400" />
                         {redirectCountdown !== null && (
-                            <p className="mt-4 text-sm text-gray-500">Redirecting to login in {redirectCountdown}...</p>
+                            <p className="mt-4 text-sm text-gray-500">{t('reset_password.redirecting', { count: redirectCountdown })}</p>
                         )}
                     </CardContent>
                 </Card>
