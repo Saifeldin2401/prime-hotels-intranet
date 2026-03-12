@@ -157,13 +157,16 @@ Deno.serve(async (req: Request) => {
     if (!linkError) {
       const hashedToken = linkData?.properties?.hashed_token || null;
       const actionLink = linkData?.properties?.action_link || null;
-      // Prefer the action_link which routes through Supabase's server-side
-      // /auth/v1/verify endpoint — it handles token verification server-side
-      // and redirects to the app with a PKCE code. This is far more reliable
-      // than sending hashed_token directly to the client for client-side verifyOtp,
-      // which is a one-time-use token that gets consumed by retry logic / focus events.
-      const resetLink = actionLink
-        || (hashedToken ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery` : resetRedirectTo);
+
+      // Use direct link to the app with token_hash. This is more reliable than
+      // Supabase's action_link because it avoids intermediate server-side redirects
+      // that often accidentally fall back to the Site URL (root /) if the 
+      // redirectTo path isn't strictly whitelisted in the dashboard.
+      // Our frontend ResetPassword.tsx handles the token verification and 
+      // scanner protection (confirmation gate) anyway.
+      const resetLink = hashedToken
+        ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery`
+        : actionLink || resetRedirectTo;
 
       await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: "POST",

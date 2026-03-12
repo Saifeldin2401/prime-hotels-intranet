@@ -114,6 +114,16 @@ export default function ResetPassword() {
                         }
                     }
                 }
+
+                // Final fallback: if no tokens in URL but user already has a session
+                // (e.g. Supabase already verified the token and established a session
+                // before landing on this component), allow them to stay on the page.
+                if (!isTokenValid) {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    if (session?.user) {
+                        isTokenValid = true
+                    }
+                }
             } catch (err) {
                 console.error('Token validation error:', err)
             } finally {
