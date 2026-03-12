@@ -9,11 +9,8 @@ import {
     CheckCircle,
     XCircle,
     Wrench,
-    User,
-    Building,
     Eye,
     Inbox,
-    MessageSquare,
     Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -50,7 +47,6 @@ export function ApprovalCard({
     requester,
     requesterAvatar,
     createdAt,
-    status,
     entityMatches,
     priority,
     onApprove,
@@ -58,8 +54,7 @@ export function ApprovalCard({
     onView,
     isActionPending
 }: ApprovalCardProps) {
-    const { t, i18n } = useTranslation('approvals')
-    const isRTL = i18n.dir() === 'rtl'
+    const { t } = useTranslation('approvals')
 
     const getTypeConfig = (type: ApprovalType) => {
         switch (type) {

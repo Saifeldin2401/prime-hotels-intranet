@@ -18,7 +18,6 @@ import { differenceInMinutes } from 'date-fns'
 import { formatRelativeTime } from '@/lib/utils'
 import { getApproverForRequest } from '@/lib/approvalService'
 import { toast } from 'sonner'
-import { useTranslation } from "react-i18next";
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',
@@ -45,7 +44,7 @@ export function ApprovalWorkflow({
   propertyId,
   onApprovalComplete
 }: ApprovalWorkflowProps) {
-  const { profile, primaryRole } = useAuth()
+  const { profile } = useAuth()
   const queryClient = useQueryClient()
   const [comment, setComment] = useState('')
 
@@ -311,7 +310,7 @@ export function ApprovalWorkflow({
           {request.request_comments && request.request_comments.length > 0 && (
             <div className="space-y-2">
               <h4 className="font-medium">Comments</h4>
-              {request.request_comments.map((c: any) => (
+              {request.request_comments.map((c: { id: string, comment: string, created_at: string, author?: { full_name?: string | null } | null }) => (
                 <div key={c.id} className="p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="font-medium">{c.author?.full_name}</span>
