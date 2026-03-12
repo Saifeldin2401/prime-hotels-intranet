@@ -18,6 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { useDebounce } from '@/hooks/useDebounce'
 
 interface Profile {
     id: string
@@ -52,6 +53,7 @@ export default function EmployeeOfMonthManagement() {
     const [winners, setWinners] = useState<EOMWinner[]>([])
     const [editingWinnerId, setEditingWinnerId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
+    const debouncedSearchQuery = useDebounce(searchQuery, 300)
     const searchListId = useId()
 
     const [form, setForm] = useState({
@@ -61,42 +63,43 @@ export default function EmployeeOfMonthManagement() {
         reason_ar: ''
     })
 
-    const fetchProfiles = async (query: string) => {
-        setSearchQuery(query)
-        if (query.length < 2) {
-            setProfiles([])
-            return
-        }
-
-        const propertyId = currentProperty?.id
-        const isAll = !isRealPropertyId(propertyId)
-
-        try {
-
-            let queryBuilder = supabase
-                .from('profiles')
-                .select(`
-                    id, 
-                    full_name, 
-                    avatar_url, 
-                    job_title,
-                    user_properties${isAll ? '' : '!inner'}(property_id)
-                `)
-                .ilike('full_name', `%${query}%`)
-                .eq('is_active', true)
-
-            if (!isAll && propertyId) {
-                queryBuilder = queryBuilder.eq('user_properties.property_id', propertyId)
+    useEffect(() => {
+        const fetchProfiles = async () => {
+            if (debouncedSearchQuery.length < 2) {
+                setProfiles([])
+                return
             }
 
-            const { data, error } = await queryBuilder.limit(5)
+            const propertyId = currentProperty?.id
+            const isAll = !isRealPropertyId(propertyId)
 
-            if (error) throw error
-            setProfiles(data || [])
-        } catch (err) {
-            console.error('Error fetching profiles:', err)
+            try {
+                let queryBuilder = supabase
+                    .from('profiles')
+                    .select(`
+                        id,
+                        full_name,
+                        avatar_url,
+                        job_title,
+                        user_properties${isAll ? '' : '!inner'}(property_id)
+                    `)
+                    .ilike('full_name', `%${debouncedSearchQuery}%`)
+                    .eq('is_active', true)
+
+                if (!isAll && propertyId) {
+                    queryBuilder = queryBuilder.eq('user_properties.property_id', propertyId)
+                }
+
+                const { data, error } = await queryBuilder.limit(5)
+
+                if (error) throw error
+                setProfiles(data || [])
+            } catch (err) {
+                console.error('Error fetching profiles:', err)
+            }
         }
-    }
+        fetchProfiles()
+    }, [debouncedSearchQuery, currentProperty?.id])
 
     const fetchWinners = useCallback(async () => {
         setLoading(true)
@@ -376,7 +379,7 @@ export default function EmployeeOfMonthManagement() {
                                         <Command shouldFilter={false}>
                                             <CommandInput
                                                 placeholder="Type name..."
-                                                onValueChange={(v) => fetchProfiles(v)}
+                                                onValueChange={(v) => setSearchQuery(v)}
                                             />
                                             <CommandList id={searchListId}>
                                                 {searchQuery.length > 0 && searchQuery.length < 2 && (
