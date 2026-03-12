@@ -4,6 +4,12 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Search, X, Building2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
@@ -14,7 +20,7 @@ interface TaskFiltersProps {
 }
 
 export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
-    const { t } = useTranslation('tasks')
+    const { t } = useTranslation(['tasks', 'common'])
     const { currentProperty } = useProperty()
 
     // Fetch departments for current property (or all in consolidated scope).
@@ -58,14 +64,16 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
     const hasFilters = filters.status || filters.priority || filters.departmentId
 
     return (
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder={t('search_placeholder')}
-                    className="pl-8"
-                />
-            </div>
+        <TooltipProvider>
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1 relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder={t('search_placeholder')}
+                        aria-label={t('search_placeholder')}
+                        className="pl-8"
+                    />
+                </div>
 
             {/* Department Filter */}
             <Select
@@ -120,11 +128,24 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
                 </SelectContent>
             </Select>
 
-            {hasFilters && (
-                <Button variant="ghost" onClick={() => onChange({})} size="icon">
-                    <X className="h-4 w-4" />
-                </Button>
-            )}
-        </div>
+                {hasFilters && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                onClick={() => onChange({})}
+                                size="icon"
+                                aria-label={t('common:clear_filters')}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                            {t('common:clear_filters')}
+                        </TooltipContent>
+                    </Tooltip>
+                )}
+            </div>
+        </TooltipProvider>
     )
 }
