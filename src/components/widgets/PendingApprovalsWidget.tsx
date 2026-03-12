@@ -4,6 +4,12 @@ import { formatDistanceToNow } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useApprovalStats, usePendingApprovals } from '@/hooks/useApprovalStats'
@@ -78,6 +84,7 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
     }
 
     return (
+        <TooltipProvider>
         <Card className={cn('', className)}>
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -128,24 +135,40 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                         </div>
 
                         <div className="flex gap-1 shrink-0">
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                onClick={() => approveMutation.mutate({ requestId: item.id })}
-                                disabled={approveMutation.isPending}
-                            >
-                                <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => setRejectionId(item.id)}
-                                disabled={rejectMutation.isPending}
-                            >
-                                <XCircle className="h-4 w-4" />
-                            </Button>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        onClick={() => approveMutation.mutate({ requestId: item.id })}
+                                        disabled={approveMutation.isPending}
+                                        aria-label={t('approve')}
+                                    >
+                                        <CheckCircle className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                    {t('approve')}
+                                </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        onClick={() => setRejectionId(item.id)}
+                                        disabled={rejectMutation.isPending}
+                                        aria-label={t('reject')}
+                                    >
+                                        <XCircle className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                    {t('reject')}
+                                </TooltipContent>
+                            </Tooltip>
                         </div>
                     </div>
                 ))}
@@ -175,6 +198,7 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                 description={t('reject_dialog_desc_leave', 'Please provide a reason for rejecting this request.')}
             />
         </Card>
+        </TooltipProvider>
     )
 }
 
