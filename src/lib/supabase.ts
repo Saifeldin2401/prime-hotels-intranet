@@ -5,6 +5,53 @@ import { validateEnvironment } from './env-validation'
 const env = validateEnvironment()
 const isDevMode = import.meta.env.DEV || env.VITE_DEV_MODE === 'true'
 
+type StorageLike = {
+  getItem: (key: string) => string | null
+  setItem: (key: string, value: string) => void
+  removeItem: (key: string) => void
+}
+
+const createSafeStorage = (preferred: 'local' | 'session'): StorageLike => {
+  const memoryStore = new Map<string, string>()
+
+  const getNativeStorage = (): Storage | null => {
+    if (typeof window === 'undefined') return null
+    try {
+      const storage = preferred === 'local' ? window.localStorage : window.sessionStorage
+      const testKey = '__storage_test__'
+      storage.setItem(testKey, '1')
+      storage.removeItem(testKey)
+      return storage
+    } catch {
+      return null
+    }
+  }
+
+  return {
+    getItem: (key) => {
+      const nativeStorage = getNativeStorage()
+      if (nativeStorage) return nativeStorage.getItem(key)
+      return memoryStore.get(key) ?? null
+    },
+    setItem: (key, value) => {
+      const nativeStorage = getNativeStorage()
+      if (nativeStorage) {
+        nativeStorage.setItem(key, value)
+        return
+      }
+      memoryStore.set(key, value)
+    },
+    removeItem: (key) => {
+      const nativeStorage = getNativeStorage()
+      if (nativeStorage) {
+        nativeStorage.removeItem(key)
+        return
+      }
+      memoryStore.delete(key)
+    },
+  }
+}
+
 // Security: No fallback to demo project in any environment
 const supabaseUrl = env.VITE_SUPABASE_URL
 const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY
@@ -22,7 +69,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     // Security: Use sessionStorage in production for better security
-    storage: isDevMode ? localStorage : sessionStorage,
+    storage: isDevMode ? createSafeStorage('local') : createSafeStorage('session'),
   },
   // Security: Add global request headers
   global: {
