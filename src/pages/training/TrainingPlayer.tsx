@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -818,24 +818,51 @@ export default function TrainingPlayer() {
 
         if (moduleData.module.title && !moduleTitleTranslations[targetLang]) {
             tasks.push(
-                translateAI.mutateAsync({ text: moduleData.module.title, target_lang: targetLang, source_lang: 'auto' })
+                translateAI.mutateAsync({ 
+                    text: moduleData.module.title, 
+                    target_lang: targetLang, 
+                    source_lang: 'auto',
+                    preserve_format: false 
+                })
                     .then(res => {
-                        setModuleTitleTranslations(prev => ({ ...prev, [targetLang]: res.translated_text }))
+                        if (res.translated_text) {
+                            setModuleTitleTranslations(prev => ({
+                                ...prev,
+                                [targetLang]: res.translated_text
+                            }))
+                        }
                     })
             )
         }
 
-        if (activeBlock && canTranslateBlock(activeBlock) && !blockTranslations[activeBlock.id]?.[targetLang]) {
+        const untranslatedBlocks = moduleData.blocks.filter(b => 
+            canTranslateBlock(b) && !blockTranslations[b.id]?.[targetLang]
+        )
+
+        if (untranslatedBlocks.length > 0) {
             tasks.push(
-                translateAI.mutateAsync({ text: activeBlock.content, target_lang: targetLang, source_lang: 'auto' })
+                translateAI.mutateAsync({
+                    texts: untranslatedBlocks.map(b => b.content || ''),
+                    target_lang: targetLang,
+                    source_lang: 'auto',
+                    preserve_format: true
+                })
                     .then(res => {
-                        setBlockTranslations(prev => ({
-                            ...prev,
-                            [activeBlock.id]: {
-                                ...prev[activeBlock.id],
-                                [targetLang]: res.translated_text
-                            }
-                        }))
+                        if (res.translated_texts) {
+                            setBlockTranslations(prev => {
+                                const next = { ...prev }
+                                untranslatedBlocks.forEach((block, idx) => {
+                                    const translated = res.translated_texts?.[idx]
+                                    if (translated) {
+                                        next[block.id] = {
+                                            ...next[block.id],
+                                            [targetLang]: translated
+                                        }
+                                    }
+                                })
+                                return next
+                            })
+                        }
                     })
             )
         }
@@ -862,7 +889,7 @@ export default function TrainingPlayer() {
         } finally {
             setIsTranslating(false)
         }
-    }, [activeBlock, blockTranslations, moduleData, moduleTitleTranslations, t, toast, translateAI])
+    }, [blockTranslations, moduleData, moduleTitleTranslations, t, toast, translateAI])
 
     const handleTranslate = async (targetLang: TranslationTargetLanguage) => {
         setTranslationTarget(targetLang)
@@ -1520,7 +1547,7 @@ export default function TrainingPlayer() {
                                                             || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
                                                           ] : '') ||
                                                     (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : ''))
-                                                    ? `${t('blockTitle', { number: idx + 1 })} â€¢ ${block.type.replace('_', ' ')}`
+                                                    ? `${t('blockTitle', { number: idx + 1 })} • ${block.type.replace('_', ' ')}`
                                                     : block.type.replace('_', ' ')
                                                 }
                                             </p>
@@ -1683,7 +1710,7 @@ export default function TrainingPlayer() {
                                                     ? `${moduleData.module.estimated_duration_minutes} ${t('min', 'min')}`
                                                     : t('unknown', 'Unknown')}
                                             </span>
-                                            <span className="text-slate-300">â€¢</span>
+                                            <span className="text-slate-300">•</span>
                                             <span>{t('timeSpent', 'Time spent')}</span>
                                             <span className="font-semibold text-slate-700">{formatDuration(timeSpentSeconds)}</span>
                                         </div>

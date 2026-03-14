@@ -90,7 +90,40 @@ const detectLanguage = (value: string) => {
     return arabicPattern.test(value) ? 'ar' : 'en'
 }
 
-const chunkText = (value: string, size: number) => value.match(new RegExp(`[\\s\\S]{1,${size}}`, 'g')) || [value]
+const hasTranslatableText = (value: string) => /[A-Za-z\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\u0900-\u097F]/.test(value)
+
+const looksLikeHtml = (value: string) => /<\/?[a-z][\s\S]*>/i.test(value)
+
+const chunkText = (value: string, size: number) => {
+    const safeSize = Math.max(400, Math.floor(size || 3200))
+    const chunks: string[] = []
+    let remaining = value
+
+    while (remaining.length > safeSize) {
+        const slice = remaining.slice(0, safeSize)
+        const candidates = [
+            slice.lastIndexOf('\n\n'),
+            slice.lastIndexOf('\n'),
+            slice.lastIndexOf('. '),
+            slice.lastIndexOf('! '),
+            slice.lastIndexOf('? '),
+            slice.lastIndexOf('؟ '),
+            slice.lastIndexOf(' '),
+        ].filter((index) => index >= Math.floor(safeSize * 0.5))
+
+        const breakIndex = candidates.length > 0 ? Math.max(...candidates) : -1
+        const cutIndex = breakIndex >= 0 ? breakIndex + 1 : safeSize
+
+        chunks.push(remaining.slice(0, cutIndex))
+        remaining = remaining.slice(cutIndex)
+    }
+
+    if (remaining) {
+        chunks.push(remaining)
+    }
+
+    return chunks.length > 0 ? chunks : [value]
+}
 
 const toHex = (buffer: ArrayBuffer) => Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, '0')).join('')
 
@@ -101,6 +134,26 @@ const sha256Hex = async (value: string) => {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const isQuotaOrCreditsError = (status: number, message: string) => {
+    const msg = (message || '').toLowerCase()
+    return (
+        status === 401 ||
+        status === 402 ||
+        status === 403 ||
+        status === 429 ||
+        msg.includes('quota') ||
+        msg.includes('credit') ||
+        msg.includes('credits') ||
+        msg.includes('rate limit') ||
+        msg.includes('too many requests') ||
+        msg.includes('payment required') ||
+        msg.includes('depleted') ||
+        msg.includes('exhausted') ||
+        msg.includes('limit reached')
+    )
+}
+
 
 const withConcurrency = async <T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>) => {
     const results = new Array<R>(items.length)
@@ -115,7 +168,8 @@ const withConcurrency = async <T, R>(items: T[], limit: number, fn: (item: T) =>
         }
     }
 
-    const effectiveLimit = Math.max(1, Math.min(limit, items.length || 1))
+    const safeLimit = Number.isFinite(limit) && !Number.isNaN(limit) ? limit : 1;
+    const effectiveLimit = Math.max(1, Math.floor(Math.min(safeLimit, items.length || 1)))
     await Promise.all(new Array(effectiveLimit).fill(0).map(() => worker()))
     return results
 }
@@ -126,6 +180,90 @@ const sanitizeTranslation = (value: string, targetLang: string) => {
         sanitized = sanitized.replace(/[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3040-\u30FF\u31F0-\u31FF]/g, '')
     }
     return sanitized.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+const preserveEdgeWhitespace = (original: string, translated: string) => {
+    const leading = original.match(/^\s+/)?.[0] || ''
+    const trailing = original.match(/\s+$/)?.[0] || ''
+    const core = translated.trim()
+    return `${leading}${core}${trailing}`
+}
+
+type PreparedPlainInput = {
+    kind: 'plain'
+    original: string
+}
+
+type PreparedHtmlPart = {
+    kind: 'markup' | 'text'
+    value: string
+    slot?: number
+}
+
+type PreparedHtmlInput = {
+    kind: 'html'
+    original: string
+    parts: PreparedHtmlPart[]
+    segments: string[]
+}
+
+type PreparedInput = PreparedPlainInput | PreparedHtmlInput
+
+const prepareInput = (value: string, preserveFormat: boolean): PreparedInput => {
+    if (!preserveFormat || !looksLikeHtml(value)) {
+        return { kind: 'plain', original: value }
+    }
+
+    const tokens = value.split(/(<[^>]+>)/g).filter((token) => token.length > 0)
+    const parts: PreparedHtmlPart[] = []
+    const segments: string[] = []
+
+    for (const token of tokens) {
+        if (token.startsWith('<') && token.endsWith('>')) {
+            parts.push({ kind: 'markup', value: token })
+            continue
+        }
+
+        if (!hasTranslatableText(token)) {
+            parts.push({ kind: 'text', value: token })
+            continue
+        }
+
+        const slot = segments.length
+        segments.push(token)
+        parts.push({ kind: 'text', value: token, slot })
+    }
+
+    if (segments.length === 0) {
+        return { kind: 'plain', original: value }
+    }
+
+    return {
+        kind: 'html',
+        original: value,
+        parts,
+        segments,
+    }
+}
+
+const rebuildPreparedInput = (prepared: PreparedInput, translatedSegments?: string[]) => {
+    if (prepared.kind === 'plain') {
+        return translatedSegments?.[0] ?? prepared.original
+    }
+
+    return prepared.parts.map((part) => {
+        if (part.kind === 'markup') {
+            return part.value
+        }
+
+        if (part.slot === undefined) {
+            return part.value
+        }
+
+        const original = prepared.segments[part.slot] || ''
+        const translated = translatedSegments?.[part.slot] || original
+        return preserveEdgeWhitespace(original, translated)
+    }).join('')
 }
 
 serve(async (req: Request) => {
@@ -140,9 +278,36 @@ serve(async (req: Request) => {
 
         const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
         const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-        const hfToken = Deno.env.get('HUGGINGFACE_TOKEN') ?? ''
         const hfRouterUrl = 'https://router.huggingface.co/v1/chat/completions'
-        const hfModel = Deno.env.get('HF_TRANSLATION_MODEL') || 'Qwen/Qwen2.5-7B-Instruct'
+        
+        let hfToken = Deno.env.get('HUGGINGFACE_TOKEN') ?? ''
+        let hfModel = Deno.env.get('HF_TRANSLATION_MODEL') || 'Qwen/Qwen2.5-7B-Instruct'
+        
+        const minimaxToken = Deno.env.get('HUGGINGFACE_MINIMAX_TOKEN') ?? ''
+        const minimaxModelId = Deno.env.get('HF_MINIMAX_MODEL_ID') || 'MiniMaxAI/MiniMax-M2.5'
+        const forceMinimax = (Deno.env.get('FORCE_MINIMAX') || '').toLowerCase() === 'true'
+        
+        let usedFallback = false
+
+        if (forceMinimax && minimaxToken) {
+            console.warn('FORCE_MINIMAX enabled. Routing request using MiniMax token and model.')
+            hfToken = minimaxToken
+            hfModel = minimaxModelId
+            usedFallback = true
+        } else if (!hfToken && minimaxToken) {
+            console.warn('Primary HUGGINGFACE_TOKEN missing. Falling back to MiniMax token and model.')
+            hfToken = minimaxToken
+            hfModel = minimaxModelId
+            usedFallback = true
+        }
+
+        console.log('API Strategy Configured:', {
+            usingFallback: usedFallback,
+            model: hfModel,
+            hasPrimary: !!Deno.env.get('HUGGINGFACE_TOKEN'),
+            hasMinimax: !!minimaxToken
+        })
+
 
         const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
             global: { headers: { Authorization: authHeader } }
@@ -156,6 +321,7 @@ serve(async (req: Request) => {
         const rawSourceLang = body?.source_lang ?? body?.sourceLanguage
         const target_lang = normalizeLangInput(rawTargetLang)
         const providedSourceLang = normalizeLangInput(rawSourceLang)
+        const preserve_format = Boolean(body?.preserve_format ?? body?.preserveFormat)
         const file_url = body?.file_url ?? body?.fileUrl
         const file_type = body?.file_type ?? body?.fileType
         let text = typeof body.text === 'string' ? body.text : undefined
@@ -224,43 +390,74 @@ serve(async (req: Request) => {
             })
         }
 
+        const preparedInputs = texts.map((value) => prepareInput(value || '', preserve_format))
+        const htmlSegmentResults = preparedInputs.map((prepared) => prepared.kind === 'html'
+            ? new Array<string>(prepared.segments.length).fill('')
+            : null)
         const results = new Array<string>(texts.length).fill('')
         const toTranslate: Array<{
             index: number
+            segmentIndex?: number
             text: string
             sourceLang: string
             textHash: string
         }> = []
         let resolvedSourceLang = providedSourceLang || 'auto'
 
-        const chunkSize = Number(Deno.env.get('TRANSLATION_CHUNK_CHARS') || 3200)
-        const translationConcurrency = Number(Deno.env.get('TRANSLATION_CONCURRENCY') || 3)
-        const chunkConcurrency = Number(Deno.env.get('TRANSLATION_CHUNK_CONCURRENCY') || 2)
-        const batchChunksPerRequest = Number(Deno.env.get('TRANSLATION_BATCH_CHUNKS') || 4)
+        const getIntEnv = (key, def) => { const str = Deno.env.get(key) || ''; if (!str.trim()) return def; const n = Number(str); return Number.isFinite(n) && !Number.isNaN(n) ? Math.floor(n) : def; };
 
-        for (let i = 0; i < texts.length; i++) {
-            const value = texts[i] || ''
+        const chunkSize = getIntEnv('TRANSLATION_CHUNK_CHARS', 3200)
+        const translationConcurrency = getIntEnv('TRANSLATION_CONCURRENCY', 3)
+        const chunkConcurrency = getIntEnv('TRANSLATION_CHUNK_CONCURRENCY', 2)
+        const batchChunksPerRequest = getIntEnv('TRANSLATION_BATCH_CHUNKS', 4)
 
-            if (!value.trim()) {
+        for (let i = 0; i < preparedInputs.length; i++) {
+            const prepared = preparedInputs[i]
+            const segments = prepared.kind === 'html' ? prepared.segments : [prepared.original]
+
+            if (segments.length === 0) {
                 results[i] = ''
                 continue
             }
 
-            const sourceLang = providedSourceLang && providedSourceLang !== 'auto'
-                ? providedSourceLang
-                : (detectLanguage(value) === 'ar' ? 'ar' : 'auto')
+            for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
+                const value = segments[segmentIndex] || ''
 
-            if (resolvedSourceLang === 'auto') {
-                resolvedSourceLang = sourceLang
+                if (!value.trim() || !hasTranslatableText(value)) {
+                    if (prepared.kind === 'html') {
+                        htmlSegmentResults[i]![segmentIndex] = value
+                    } else {
+                        results[i] = value
+                    }
+                    continue
+                }
+
+                const sourceLang = providedSourceLang && providedSourceLang !== 'auto'
+                    ? providedSourceLang
+                    : (detectLanguage(value) === 'ar' ? 'ar' : 'auto')
+
+                if (resolvedSourceLang === 'auto') {
+                    resolvedSourceLang = sourceLang
+                }
+
+                if (sourceLang === target_lang) {
+                    if (prepared.kind === 'html') {
+                        htmlSegmentResults[i]![segmentIndex] = value
+                    } else {
+                        results[i] = value
+                    }
+                    continue
+                }
+
+                const textHash = await sha256Hex(value)
+                toTranslate.push({
+                    index: i,
+                    segmentIndex: prepared.kind === 'html' ? segmentIndex : undefined,
+                    text: value,
+                    sourceLang,
+                    textHash,
+                })
             }
-
-            if (sourceLang === target_lang) {
-                results[i] = value
-                continue
-            }
-
-            const textHash = await sha256Hex(value)
-            toTranslate.push({ index: i, text: value, sourceLang, textHash })
         }
 
         if (toTranslate.length > 0) {
@@ -272,7 +469,7 @@ serve(async (req: Request) => {
                 .eq('target_lang', target_lang)
 
             if (cacheError) {
-                throw new Error(`Cache lookup failed: ${cacheError.message}`)
+                console.warn('Translation cache lookup failed:', cacheError.message)
             }
 
             const cachedMap = new Map<string, string>()
@@ -286,7 +483,11 @@ serve(async (req: Request) => {
             for (const item of toTranslate) {
                 const cached = cachedMap.get(item.textHash)
                 if (cached) {
-                    results[item.index] = cached
+                    if (item.segmentIndex === undefined) {
+                        results[item.index] = cached
+                    } else {
+                        htmlSegmentResults[item.index]![item.segmentIndex] = cached
+                    }
                 } else {
                     remaining.push(item)
                 }
@@ -304,21 +505,21 @@ serve(async (req: Request) => {
             const targetName = LANGUAGE_NAMES[target_lang] || target_lang
 
             const callHf = async (chunk: string, translationInstruction: string) => {
-                const payload = {
-                    model: hfModel,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only the translated text. Do not include any extra commentary or any language other than ${targetName}.`
-                        },
-                        { role: 'user', content: chunk }
-                    ],
-                    temperature: 0.2,
-                    stream: false
-                }
-
                 const maxAttempts = 3
                 for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    const payload = {
+                        model: hfModel,
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only the translated text. Do not include any extra commentary or any language other than ${targetName}.`
+                            },
+                            { role: 'user', content: chunk }
+                        ],
+                        temperature: 0.2,
+                        stream: false
+                    }
+
                     let hfResponse: Response
                     try {
                         hfResponse = await fetch(hfRouterUrl, {
@@ -345,6 +546,22 @@ serve(async (req: Request) => {
 
                     if (!hfResponse.ok) {
                         const message = (hfResult && typeof hfResult === 'object' && (hfResult.error?.message || hfResult.error || hfResult.message)) || rawText || hfResponse.statusText
+                        
+                        if (isQuotaOrCreditsError(hfResponse.status, message)) {
+                            console.warn(`Quota/Credit error detected (attempt ${attempt}): status=${hfResponse.status}, message="${message}"`)
+                            if (!usedFallback && minimaxToken && minimaxToken !== hfToken) {
+                                console.warn('Falling back to MiniMax token and retrying.')
+                                hfToken = minimaxToken
+                                hfModel = minimaxModelId
+                                usedFallback = true
+                                attempt = 0 // Reset attempt to retry immediately with new token
+                                await sleep(200)
+                                continue
+                            } else {
+                                console.error('Fallback not possible or already used:', { usedFallback, hasMinimax: !!minimaxToken })
+                            }
+                        }
+
                         const retryable = hfResponse.status >= 500 || hfResponse.status === 429 || hfResponse.status === 408
                         if (retryable && attempt < maxAttempts) {
                             await sleep(400 * attempt)
@@ -379,24 +596,24 @@ serve(async (req: Request) => {
             }
 
             const callHfBatch = async (chunks: string[], translationInstruction: string) => {
-                const payload = {
-                    model: hfModel,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only valid JSON. You must output a JSON array of strings. Each string is the translation of the corresponding input chunk. Do not add any extra keys or commentary.`
-                        },
-                        {
-                            role: 'user',
-                            content: JSON.stringify({ chunks, target_language: targetName })
-                        }
-                    ],
-                    temperature: 0.2,
-                    stream: false
-                }
-
                 const maxAttempts = 3
                 for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    const payload = {
+                        model: hfModel,
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only valid JSON. You must output a JSON array of strings. Each string is the translation of the corresponding input chunk. Do not add any extra keys or commentary.`
+                            },
+                            {
+                                role: 'user',
+                                content: JSON.stringify({ chunks, target_language: targetName })
+                            }
+                        ],
+                        temperature: 0.2,
+                        stream: false
+                    }
+
                     let hfResponse: Response
                     try {
                         hfResponse = await fetch(hfRouterUrl, {
@@ -423,6 +640,20 @@ serve(async (req: Request) => {
 
                     if (!hfResponse.ok) {
                         const message = (hfResult && typeof hfResult === 'object' && (hfResult.error?.message || hfResult.error || hfResult.message)) || rawText || hfResponse.statusText
+                        
+                        if (isQuotaOrCreditsError(hfResponse.status, message)) {
+                            console.warn(`Quota/Credit error detected in batch (attempt ${attempt}): status=${hfResponse.status}, message="${message}"`)
+                            if (!usedFallback && minimaxToken && minimaxToken !== hfToken) {
+                                console.warn('Primary token quota/credits issue in batch. Falling back to MiniMax.')
+                                hfToken = minimaxToken
+                                hfModel = minimaxModelId
+                                usedFallback = true
+                                attempt = 0 // Reset attempt
+                                await sleep(200)
+                                continue
+                            }
+                        }
+
                         const retryable = hfResponse.status >= 500 || hfResponse.status === 429 || hfResponse.status === 408
                         if (retryable && attempt < maxAttempts) {
                             await sleep(400 * attempt)
@@ -468,7 +699,7 @@ serve(async (req: Request) => {
                 throw new Error('Batch translation failed after retries.')
             }
 
-            const translateItem = async (item: { index: number; text: string; sourceLang: string; textHash: string }) => {
+            const translateItem = async (item: { index: number; segmentIndex?: number; text: string; sourceLang: string; textHash: string }) => {
                 const sourceName = item.sourceLang === 'auto'
                     ? 'the detected source language'
                     : (LANGUAGE_NAMES[item.sourceLang] || item.sourceLang)
@@ -504,7 +735,11 @@ serve(async (req: Request) => {
 
                 const translatedText = translatedChunks.join('')
 
-                results[item.index] = translatedText
+                if (item.segmentIndex === undefined) {
+                    results[item.index] = translatedText
+                } else {
+                    htmlSegmentResults[item.index]![item.segmentIndex] = translatedText
+                }
 
                 const { error: cacheInsertError } = await supabaseClient
                     .from('translation_cache')
@@ -524,12 +759,25 @@ serve(async (req: Request) => {
             await withConcurrency(toTranslate, translationConcurrency, translateItem)
         }
 
+        for (let i = 0; i < preparedInputs.length; i++) {
+            const prepared = preparedInputs[i]
+            if (prepared.kind === 'html') {
+                results[i] = rebuildPreparedInput(prepared, htmlSegmentResults[i] || prepared.segments)
+            } else if (!results[i]) {
+                results[i] = prepared.original
+            }
+        }
+
         return new Response(JSON.stringify({
             translated_text: results[0] || '',
             translated_texts: results,
             success: true,
             source_lang: resolvedSourceLang,
-            target_lang
+            target_lang,
+            meta: {
+                model_used: hfModel,
+                used_fallback: usedFallback
+            }
         }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
@@ -548,6 +796,3 @@ serve(async (req: Request) => {
         })
     }
 })
-
-
-

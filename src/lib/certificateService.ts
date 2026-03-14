@@ -531,6 +531,34 @@ export async function createCertificate(data: CertificateData): Promise<Certific
     // Automated email dispatch for attained certificates
     try {
         if (data.recipientEmail) {
+            const resultCertificate = mapCertificateFromDb(cert)
+            let attachments: Array<{ filename: string; content: string }> | undefined
+            
+            try {
+                const logoDataUrl = await loadLogoAsDataUrl()
+                const pdfBlob = await generateCertificatePDF(resultCertificate, logoDataUrl || undefined)
+                const fileReader = new FileReader()
+                const base64Promise = new Promise<string>((resolve, reject) => {
+                    fileReader.onloadend = () => {
+                        const result = fileReader.result as string
+                        const base64Content = result.split(',')[1]
+                        resolve(base64Content)
+                    }
+                    fileReader.onerror = reject
+                    fileReader.readAsDataURL(pdfBlob)
+                })
+                const base64Content = await base64Promise
+                
+                attachments = [
+                    {
+                        filename: `${data.title.replace(/[^a-zA-Z0-9 -]/g, '')} - Certificate.pdf`,
+                        content: base64Content
+                    }
+                ]
+            } catch (pdfError) {
+                console.warn('Failed to generate PDF for email attachment:', pdfError)
+            }
+
             await supabase.functions.invoke('send-email', {
                 body: {
                     to: data.recipientEmail,
@@ -542,6 +570,7 @@ export async function createCertificate(data: CertificateData): Promise<Certific
                     actionUrl: '/training/certificates',
                     businessDomain: 'operations',
                     notificationType: 'training_completed',
+                    attachments,
                     variables: {
                         recipient_name: data.recipientName,
                         module_title: data.title,

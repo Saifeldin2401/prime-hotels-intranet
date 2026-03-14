@@ -159,25 +159,35 @@ const EmbeddedArticleViewerInner = ({
 
     // Translation state
     const translateAI = useTranslationAI()
-    const [translatedContent, setTranslatedContent] = useState<string | null>(null)
-    const [translatedTitle, setTranslatedTitle] = useState<string | null>(null)
+    const [translatedContentByLanguage, setTranslatedContentByLanguage] = useState<Partial<Record<TranslationTargetLanguage, string>>>({})
+    const [translatedTitleByLanguage, setTranslatedTitleByLanguage] = useState<Partial<Record<TranslationTargetLanguage, string>>>({})
     const [isTranslating, setIsTranslating] = useState(false)
     const [translationError, setTranslationError] = useState<string | null>(null)
     const translationAttemptRef = useRef<{ key: string; status: 'pending' | 'success' | 'error' } | null>(null)
+    const translatedContent = translationTarget ? translatedContentByLanguage[translationTarget] ?? null : null
+    const translatedTitle = translationTarget ? translatedTitleByLanguage[translationTarget] ?? null : null
 
     useEffect(() => {
-        setTranslatedContent(null)
-        setTranslatedTitle(null)
+        setTranslatedContentByLanguage({})
+        setTranslatedTitleByLanguage({})
         setTranslationError(null)
         translationAttemptRef.current = null
-    }, [document?.id, translationTarget])
+    }, [document?.id])
+
+    useEffect(() => {
+        setTranslationError(null)
+        translationAttemptRef.current = null
+    }, [translationTarget])
 
     // Effect to trigger translation
     useEffect(() => {
         const translateContent = async () => {
-            if (!document || !translationTarget || !document.content) return
+            if (!document || !translationTarget) return
 
-            if (translatedContent || isTranslating) return
+            const needsContentTranslation = Boolean(document.content && !translatedContentByLanguage[translationTarget])
+            const needsTitleTranslation = Boolean(document.title && !translatedTitleByLanguage[translationTarget])
+
+            if ((!needsContentTranslation && !needsTitleTranslation) || isTranslating) return
 
             const attemptKey = `${document.id}-${translationTarget}`
             if (translationAttemptRef.current?.key === attemptKey) {
@@ -189,24 +199,40 @@ const EmbeddedArticleViewerInner = ({
             setIsTranslating(true)
             setTranslationError(null)
             try {
-                // Translate content
-                const contentRes = await translateAI.mutateAsync({
-                    text: document.content,
-                    target_lang: translationTarget,
-                    source_lang: 'auto',
-                    preserve_format: true // Important for HTML
-                })
-                setTranslatedContent(contentRes.translated_text)
+                const tasks: Promise<void>[] = []
 
-                // Translate title
-                if (document.title) {
-                    const titleRes = await translateAI.mutateAsync({
-                        text: document.title,
-                        target_lang: translationTarget,
-                        source_lang: 'auto'
-                    })
-                    setTranslatedTitle(titleRes.translated_text)
+                if (needsContentTranslation && document.content) {
+                    tasks.push(
+                        translateAI.mutateAsync({
+                            text: document.content,
+                            target_lang: translationTarget,
+                            source_lang: 'auto',
+                            preserve_format: true
+                        }).then((contentRes) => {
+                            setTranslatedContentByLanguage(prev => ({
+                                ...prev,
+                                [translationTarget]: contentRes.translated_text
+                            }))
+                        })
+                    )
                 }
+
+                if (needsTitleTranslation && document.title) {
+                    tasks.push(
+                        translateAI.mutateAsync({
+                            text: document.title,
+                            target_lang: translationTarget,
+                            source_lang: 'auto'
+                        }).then((titleRes) => {
+                            setTranslatedTitleByLanguage(prev => ({
+                                ...prev,
+                                [translationTarget]: titleRes.translated_text
+                            }))
+                        })
+                    )
+                }
+
+                await Promise.all(tasks)
 
                 if (translationAttemptRef.current?.key === attemptKey) {
                     translationAttemptRef.current.status = 'success'
@@ -223,10 +249,10 @@ const EmbeddedArticleViewerInner = ({
             }
         }
 
-        if (translationTarget && document && document.content) {
+        if (translationTarget && document && (document.content || document.title)) {
             translateContent()
         }
-    }, [document, document?.id, document?.content, document?.title, translationTarget, translateAI, translatedContent, isTranslating])
+    }, [document, document?.id, document?.content, document?.title, translationTarget, translateAI, translatedContentByLanguage, translatedTitleByLanguage, isTranslating])
 
     if (isLoading) {
         return (

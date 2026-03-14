@@ -262,46 +262,45 @@ export default function KnowledgeReview() {
         try {
             toast.loading(t('translation.processing', 'Generating AI translation...'), { id: 'ai-translate' })
 
-            // Prepare parallel translation tasks
-            const translationTasks = []
+            // Title and Description can be translated together in a single request
+            const metaTexts = [
+                selectedArticle.title || '',
+                selectedArticle.description || ''
+            ]
+            let title_ar = ''
+            let description_ar = ''
 
-            // Title is required
-            translationTasks.push(
-                selectedArticle.title
-                    ? translateAI.mutateAsync({ text: selectedArticle.title, target_lang: 'ar' })
-                    : Promise.resolve({ translated_text: '', success: true })
-            )
-
-            // Description is optional
-            translationTasks.push(
-                selectedArticle.description
-                    ? translateAI.mutateAsync({ text: selectedArticle.description, target_lang: 'ar' })
-                    : Promise.resolve({ translated_text: '', success: true })
-            )
-
-            // Content (handle PDF/DOCX or text)
-            if (selectedArticle.file_url && (selectedArticle.file_url.endsWith('.pdf') || selectedArticle.file_url.endsWith('.docx'))) {
-                translationTasks.push(
-                    translateAI.mutateAsync({
-                        file_url: selectedArticle.file_url,
-                        target_lang: 'ar'
-                    })
-                )
-            } else {
-                translationTasks.push(
-                    selectedArticle.content
-                        ? translateAI.mutateAsync({ text: selectedArticle.content, target_lang: 'ar' })
-                        : Promise.resolve({ translated_text: '', success: true })
-                )
+            if (selectedArticle.title || selectedArticle.description) {
+                const metaRes = await translateAI.mutateAsync({
+                    texts: metaTexts,
+                    target_lang: 'ar',
+                    source_lang: 'auto'
+                })
+                const arr = metaRes.translated_texts || []
+                title_ar = arr[0] || metaRes.translated_text || ''
+                description_ar = arr[1] || ''
             }
 
-            // Run all in parallel
-            const [titleRes, descRes, contentRes] = await Promise.all(translationTasks)
+            // Content or File needs to be translated separately to avoid overlapping `texts` and `file_url` inputs
+            let content_ar = ''
+            if (selectedArticle.file_url && (selectedArticle.file_url.endsWith('.pdf') || selectedArticle.file_url.endsWith('.docx'))) {
+                const fileRes = await translateAI.mutateAsync({
+                    file_url: selectedArticle.file_url,
+                    target_lang: 'ar'
+                })
+                content_ar = fileRes.translated_text || ''
+            } else if (selectedArticle.content) {
+                const contentRes = await translateAI.mutateAsync({
+                    text: selectedArticle.content,
+                    target_lang: 'ar'
+                })
+                content_ar = contentRes.translated_text || ''
+            }
 
             setTranslationData({
-                title_ar: titleRes.translated_text,
-                description_ar: descRes.translated_text,
-                content_ar: contentRes.translated_text
+                title_ar,
+                description_ar,
+                content_ar
             })
 
             toast.success(t('translation.success', 'AI translation generated successfully'), { id: 'ai-translate' })

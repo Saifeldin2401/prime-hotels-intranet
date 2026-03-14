@@ -5,7 +5,7 @@
  * Supports Title, Description, Content (HTML), and File Attachments.
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { marked } from 'marked'
@@ -135,14 +135,17 @@ export default function KnowledgeViewer() {
 
     // Translation States
     const [isTranslating, setIsTranslating] = useState(false)
-    const [translatedData, setTranslatedData] = useState<{
+    type TranslatedArticleData = {
         title: string
         description: string
         content: string
         summary?: string
-    } | null>(null)
+    }
+
+    const [translatedDataByLanguage, setTranslatedDataByLanguage] = useState<Partial<Record<TranslationTargetLanguage, TranslatedArticleData>>>({})
     const [showBilingual, setShowBilingual] = useState(false)
     const [translationTarget, setTranslationTarget] = useState<TranslationTargetLanguage | null>(null)
+    const translatedData = translationTarget ? translatedDataByLanguage[translationTarget] ?? null : null
 
     const translateAI = useTranslationAI()
 
@@ -200,25 +203,25 @@ export default function KnowledgeViewer() {
         }
     }, [id, refetchArticle])
 
+    const renderKnowledgeContent = useCallback((content?: string | null) => {
+        if (!content) return ''
+        const trimmed = content.trim()
+        const isHtml = trimmed.startsWith('<')
+        const baseHtml = isHtml
+            ? content
+            : (marked.parse(content, { async: false }) as string)
+        return transformMermaidCodeBlocks(baseHtml)
+    }, [])
+
     // Convert markdown content to HTML
     const htmlContent = useMemo(() => {
-        if (!article?.content) return ''
-        const isHtml = article.content.trim().startsWith('<')
-        const baseHtml = isHtml
-            ? article.content
-            : (marked.parse(article.content, { async: false }) as string)
-        return transformMermaidCodeBlocks(baseHtml)
-    }, [article?.content])
+        return renderKnowledgeContent(article?.content)
+    }, [article?.content, renderKnowledgeContent])
 
     // Memoize Arabic content HTML if it exists in DB
     const htmlContentAr = useMemo(() => {
-        if (!article?.content_ar) return ''
-        const isHtml = article.content_ar.trim().startsWith('<')
-        const baseHtml = isHtml
-            ? article.content_ar
-            : (marked.parse(article.content_ar, { async: false }) as string)
-        return transformMermaidCodeBlocks(baseHtml)
-    }, [article?.content_ar])
+        return renderKnowledgeContent(article?.content_ar)
+    }, [article?.content_ar, renderKnowledgeContent])
 
     const htmlContentSanitized = useMemo(() => {
         return { __html: sanitizeHtml(htmlContent) }
@@ -230,10 +233,15 @@ export default function KnowledgeViewer() {
 
     const translatedHtmlSanitized = useMemo(() => {
         const translatedHtml = translatedData?.content
-            ? transformMermaidCodeBlocks(marked.parse(translatedData.content, { async: false }) as string)
+            ? renderKnowledgeContent(translatedData.content)
             : htmlContentAr
         return { __html: sanitizeHtml(translatedHtml) }
-    }, [translatedData?.content, htmlContentAr])
+    }, [translatedData?.content, htmlContentAr, renderKnowledgeContent])
+
+    useEffect(() => {
+        setTranslatedDataByLanguage({})
+        setTranslationTarget(null)
+    }, [article?.id])
 
     useEffect(() => {
         if (!article?.id) return
@@ -653,51 +661,57 @@ export default function KnowledgeViewer() {
         const currentLang = article.title_ar && article.content?.includes('\u0600') ? 'ar' : 'en'
         const targetLang = targetOverride || (currentLang === 'en' ? 'ar' : 'en')
 
+        if (translatedDataByLanguage[targetLang]) {
+            setTranslationTarget(targetLang)
+            return
+        }
+
         setIsTranslating(true)
         setTranslationTarget(targetLang)
 
         try {
-            // Prepare translations in parallel
-            const translationTasks = []
+            // Collect parts to translate
+            const textsToTranslate = [
+                article.title || '',
+                article.description || '',
+                article.content || '',
+                (article as any).summary || ''
+            ]
 
-            // Title is required
-            translationTasks.push(
-                article.title
-                    ? translateAI.mutateAsync({ text: article.title, target_lang: targetLang, source_lang: 'auto' })
-                    : Promise.resolve({ translated_text: '', success: true })
-            )
+            // If everything is empty, don't ping the AI
+            if (textsToTranslate.every(text => !text)) {
+                setTranslatedDataByLanguage(prev => ({
+                    ...prev,
+                    [targetLang]: {
+                        title: '',
+                        description: '',
+                        content: '',
+                        summary: ''
+                    }
+                }))
+                setIsTranslating(false)
+                return
+            }
 
-            // Description is optional
-            translationTasks.push(
-                article.description
-                    ? translateAI.mutateAsync({ text: article.description, target_lang: targetLang, source_lang: 'auto' })
-                    : Promise.resolve({ translated_text: '', success: true })
-            )
-
-            // Content - use provided or empty
-            translationTasks.push(
-                article.content
-                    ? translateAI.mutateAsync({ text: article.content, target_lang: targetLang, source_lang: 'auto' })
-                    : Promise.resolve({ translated_text: '', success: true })
-            )
-
-            // Summary is optional
-            const summary = (article as any).summary
-            translationTasks.push(
-                summary
-                    ? translateAI.mutateAsync({ text: summary, target_lang: targetLang, source_lang: 'auto' })
-                    : Promise.resolve({ translated_text: '', success: true })
-            )
-
-            // Run all translations in parallel
-            const [titleRes, descRes, contentRes, summaryRes] = await Promise.all(translationTasks)
-
-            setTranslatedData({
-                title: titleRes.translated_text,
-                description: descRes.translated_text,
-                content: contentRes.translated_text,
-                summary: summaryRes.translated_text
+            // Translate all parts in a single request to avoid rate limits (429 -> 400)
+            const result = await translateAI.mutateAsync({
+                texts: textsToTranslate,
+                target_lang: targetLang,
+                source_lang: 'auto',
+                preserve_format: true
             })
+
+            const arr = result.translated_texts || []
+
+            setTranslatedDataByLanguage(prev => ({
+                ...prev,
+                [targetLang]: {
+                    title: arr[0] || result.translated_text || '',
+                    description: arr[1] || '',
+                    content: arr[2] || '',
+                    summary: arr[3] || ''
+                }
+            }))
 
             toast.success(t('viewer.translation_complete', 'Translation complete!'))
         } catch (error) {

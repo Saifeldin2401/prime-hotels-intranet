@@ -32,6 +32,7 @@ interface SendEmailBody {
   userId?: string;
   batchId?: string;
   queueId?: string;
+  attachments?: Array<{ filename: string; content: string }>;
 }
 
 interface TemplateRow {
@@ -168,6 +169,7 @@ serve(async (req) => {
       subject,
       html,
       text,
+      attachments: body.attachments,
       tags: [
         { name: "domain", value: normalizeDomain(body.businessDomain) },
         { name: "type", value: (body.notificationType || "system").toLowerCase() },
@@ -617,6 +619,7 @@ async function sendWithResendWithRetry(params: {
   subject: string;
   html: string;
   text: string;
+  attachments?: Array<{ filename: string; content: string }>;
   tags: Array<{ name: string; value: string }>;
 }): Promise<{ ok: boolean; payload: Record<string, unknown> }> {
   let lastPayload: Record<string, unknown> = {};
@@ -639,6 +642,7 @@ async function sendWithResendWithRetry(params: {
           subject: params.subject,
           html: params.html,
           text: params.text,
+          attachments: params.attachments,
           tags: params.tags,
         }),
       });
