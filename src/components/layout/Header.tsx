@@ -20,12 +20,19 @@ import {
   ChevronDown,
   LogOut,
   Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
   Sparkles,
   Building,
   Globe,
   ChevronsUpDown,
   Bell
 } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   Avatar,
   AvatarFallback,
@@ -86,15 +93,22 @@ export function Header({
       <div className="bg-hotel-navy text-white shadow-md border-b-4 border-hotel-gold">
         <div className="flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex text-gray-200 hover:bg-hotel-navy-light hover:text-white"
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="hidden lg:flex text-gray-200 hover:bg-hotel-navy-light hover:text-white"
+                  aria-label={sidebarCollapsed ? t('nav:expand_sidebar', 'Expand sidebar') : t('nav:collapse_sidebar', 'Collapse sidebar')}
+                >
+                  {sidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {sidebarCollapsed ? t('nav:expand_sidebar', 'Expand sidebar') : t('nav:collapse_sidebar', 'Collapse sidebar')}
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Center Search - Premium Style */}

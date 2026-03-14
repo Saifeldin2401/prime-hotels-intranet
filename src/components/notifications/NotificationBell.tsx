@@ -9,6 +9,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from 'date-fns'
@@ -18,6 +23,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from "react-i18next";
 
 export function NotificationBell() {
+  const { t } = useTranslation(['nav', 'common'])
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingRead } = useNotifications()
   const { roles } = useAuth()
   const { hasPermission } = usePermissions()
@@ -89,16 +95,28 @@ export function NotificationBell() {
           whileTap={{ scale: 0.95 }}
           className="inline-block"
         >
-          <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-700 hover:bg-gray-100/50" aria-label="Notifications">
-            <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <Badge
-                className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 bg-red-500 text-white rounded-full text-[10px] border-2 border-white"
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative text-gray-500 hover:text-gray-700 hover:bg-gray-100/50"
+                aria-label={t('notifications', 'Notifications')}
               >
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Badge>
-            )}
-          </Button>
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge
+                    className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 bg-red-500 text-white rounded-full text-[10px] border-2 border-white"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {t('notifications', 'Notifications')}
+            </TooltipContent>
+          </Tooltip>
         </motion.div>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">

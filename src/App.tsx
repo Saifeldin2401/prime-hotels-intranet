@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { router } from '@/routes/router'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const QUERY_CACHE_KEY = 'prime_query_cache_v1'
 const QUERY_CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutes
@@ -163,16 +164,18 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <AuthProvider>
-            <PropertyProvider>
-              <UserSettingsProvider>
-                <PresenceProvider>
-                  <RouterProvider router={router} />
-                </PresenceProvider>
-              </UserSettingsProvider>
-            </PropertyProvider>
-          </AuthProvider>
-          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+          <TooltipProvider>
+            <AuthProvider>
+              <PropertyProvider>
+                <UserSettingsProvider>
+                  <PresenceProvider>
+                    <RouterProvider router={router} />
+                  </PresenceProvider>
+                </UserSettingsProvider>
+              </PropertyProvider>
+            </AuthProvider>
+            {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+          </TooltipProvider>
         </ThemeProvider>
         <Toaster />
         {VercelAnalytics && <VercelAnalytics />}

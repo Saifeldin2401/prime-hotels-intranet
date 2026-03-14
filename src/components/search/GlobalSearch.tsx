@@ -5,6 +5,11 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useSearch, useSearchSuggestions, useRecentSearches } from '@/hooks/useSearch'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 
 interface GlobalSearchProps {
@@ -169,18 +174,26 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                     </div>
                 )}
                 {query && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setQuery('')
-                            queryRef.current = ''
-                            setSelectedIndex(0)
-                            setIsOpen(false)
-                        }}
-                        className="absolute inset-y-0 end-0 pe-3 flex items-center text-gray-400 hover:text-white"
-                    >
-                        <X className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setQuery('')
+                                    queryRef.current = ''
+                                    setSelectedIndex(0)
+                                    setIsOpen(false)
+                                }}
+                                className="absolute inset-y-0 end-0 pe-3 flex items-center text-gray-400 hover:text-white"
+                                aria-label={t('common:button.clear', 'Clear')}
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                            {t('common:button.clear', 'Clear')}
+                        </TooltipContent>
+                    </Tooltip>
                 )}
             </div>
 
