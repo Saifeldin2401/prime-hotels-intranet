@@ -1,9 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import { QueryClient, QueryClientProvider, dehydrate, hydrate, focusManager, onlineManager } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { RouterProvider } from 'react-router-dom'
-import { Analytics } from '@vercel/analytics/react'
-import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
@@ -79,7 +77,43 @@ const persistQueryCache = () => {
 
 restoreQueryCache()
 
+const shouldEnableVercelInsights = () => {
+  if (!import.meta.env.PROD) return false
+  if (typeof window === 'undefined') return false
+
+  const host = window.location.hostname
+  return (
+    host.endsWith('vercel.app') ||
+    host === 'phg-connect.com' ||
+    host === 'www.phg-connect.com' ||
+    host === 'connect.primehotels.com'
+  )
+}
+
 function App() {
+  const [VercelAnalytics, setVercelAnalytics] = useState<ComponentType | null>(null)
+  const [VercelSpeedInsights, setVercelSpeedInsights] = useState<ComponentType | null>(null)
+
+  useEffect(() => {
+    if (!shouldEnableVercelInsights()) return
+
+    let cancelled = false
+    ;(async () => {
+      const [{ Analytics }, { SpeedInsights }] = await Promise.all([
+        import('@vercel/analytics/react'),
+        import('@vercel/speed-insights/react'),
+      ])
+
+      if (cancelled) return
+      setVercelAnalytics(() => Analytics)
+      setVercelSpeedInsights(() => SpeedInsights)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useEffect(() => {
     const handlePageHide = () => {
       persistQueryCache()
@@ -141,8 +175,8 @@ function App() {
           {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         </ThemeProvider>
         <Toaster />
-        <Analytics />
-        <SpeedInsights />
+        {VercelAnalytics && <VercelAnalytics />}
+        {VercelSpeedInsights && <VercelSpeedInsights />}
       </QueryClientProvider>
     </ErrorBoundary>
   )

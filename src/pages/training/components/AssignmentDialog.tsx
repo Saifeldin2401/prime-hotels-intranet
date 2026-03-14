@@ -10,12 +10,16 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useTranslation } from 'react-i18next'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Input } from '@/components/ui/input'
 import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from '@/components/ui/accordion'
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Search } from 'lucide-react'
 
 interface AssignableEntity {
     id: string
@@ -52,57 +56,86 @@ export function AssignmentDialog({
     const [targetType, setTargetType] = useState<'all' | 'users' | 'departments' | 'properties'>('all')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [deadline, setDeadline] = useState('')
-    const [propertyFilter, setPropertyFilter] = useState<string>('all')
+    const [propertyFilters, setPropertyFilters] = useState<string[]>([])
+    const [targetSearch, setTargetSearch] = useState('')
 
-    // Get unique properties from departments
+    const normalizedTargetSearch = targetSearch.trim().toLowerCase()
+    const matchesTargetSearch = useCallback((value: string, secondary?: string) => {
+        if (!normalizedTargetSearch) return true
+        const primary = value?.toLowerCase() ?? ''
+        const secondaryValue = secondary?.toLowerCase() ?? ''
+        return primary.includes(normalizedTargetSearch) || secondaryValue.includes(normalizedTargetSearch)
+    }, [normalizedTargetSearch])
+
+    const isPriorityProperty = (name: string) => /head office|prime group/i.test(name)
+    const sortPropertyNames = (a: string, b: string) => {
+        if (isPriorityProperty(a) && !isPriorityProperty(b)) return -1
+        if (!isPriorityProperty(a) && isPriorityProperty(b)) return 1
+        return a.localeCompare(b)
+    }
+
     const departmentProperties = useMemo(() => {
         const props = new Set<string>()
         if (departments && Array.isArray(departments)) {
             departments.forEach(d => {
-                if (d.propertyName) props.add(d.propertyName)
+                if (d.propertyName) {
+                    props.add(d.propertyName)
+                } else {
+                    props.add(t('other', 'Other'))
+                }
             })
         }
-        return Array.from(props).sort()
-    }, [departments])
+        return Array.from(props).sort(sortPropertyNames)
+    }, [departments, t])
 
-    // Memoize list items to prevent render loops
-    const listItems = useMemo((): AssignableEntity[] => {
+    const departmentGroups = useMemo(() => {
+        if (!departments || !Array.isArray(departments)) return []
+        const filters = new Set(propertyFilters)
+        const groups = new Map<string, { name: string; items: AssignableEntity[] }>()
+
+        departments.forEach((dept) => {
+            const propertyName = dept.propertyName || t('other', 'Other')
+            if (propertyFilters.length > 0 && !filters.has(propertyName)) return
+            const displayName = dept.rawName || dept.name.replace(/\s*\(.+\)$/, '')
+            if (!matchesTargetSearch(displayName, propertyName)) return
+
+            if (!groups.has(propertyName)) {
+                groups.set(propertyName, { name: propertyName, items: [] })
+            }
+            groups.get(propertyName)!.items.push({
+                id: dept.id,
+                name: displayName
+            })
+        })
+
+        return Array.from(groups.values())
+            .map(group => ({
+                ...group,
+                items: group.items.sort((a, b) => a.name.localeCompare(b.name))
+            }))
+            .sort((a, b) => sortPropertyNames(a.name, b.name))
+    }, [departments, propertyFilters, matchesTargetSearch, t])
+
+    const currentListItems = useMemo((): AssignableEntity[] => {
         switch (targetType) {
-            case 'users': {
-                return (users && Array.isArray(users)) ? users.map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`, details: u.email })) : []
-            }
-            case 'departments': {
-                if (!departments || !Array.isArray(departments)) return []
-                // Filter by property if one is selected
-                const filteredDepts = propertyFilter === 'all'
-                    ? departments
-                    : departments.filter(d => d.propertyName === propertyFilter)
-                return filteredDepts.map(d => ({
-                    id: d.id,
-                    name: d.rawName || d.name,
-                    group: d.propertyName
-                }))
-            }
-            case 'properties': {
-                return (properties && Array.isArray(properties)) ? properties.map(p => ({ id: p.id, name: p.name })) : []
-            }
-            default: {
+            case 'users':
+                return (users && Array.isArray(users))
+                    ? users
+                        .map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`, details: u.email }))
+                        .filter(u => matchesTargetSearch(u.name, u.details))
+                    : []
+            case 'departments':
+                return departmentGroups.flatMap(group => group.items)
+            case 'properties':
+                return (properties && Array.isArray(properties))
+                    ? properties
+                        .map(p => ({ id: p.id, name: p.name }))
+                        .filter(p => matchesTargetSearch(p.name))
+                    : []
+            default:
                 return []
-            }
         }
-    }, [targetType, users, departments, properties, propertyFilter])
-
-    // Group items if needed
-    const groupedItems = useMemo(() => {
-        if (!listItems.some(i => i.group)) return { 'All': listItems }
-
-        return listItems.reduce((acc, item) => {
-            const group = item.group || 'Other'
-            if (!acc[group]) acc[group] = []
-            acc[group].push(item)
-            return acc
-        }, {} as Record<string, AssignableEntity[]>)
-    }, [listItems])
+    }, [targetType, users, properties, departmentGroups, matchesTargetSearch])
 
     const handleToggle = useCallback((id: string) => {
         setSelectedIds(prev =>
@@ -112,24 +145,33 @@ export function AssignmentDialog({
         )
     }, [])
 
-    // Toggle all in group
-    const handleToggleGroup = useCallback((groupName: string, items: AssignableEntity[]) => {
-        const itemIds = items.map(i => i.id)
-        const allSelected = itemIds.every(id => selectedIds.includes(id))
-
-        setSelectedIds(prev => {
-            if (allSelected) {
-                return prev.filter(id => !itemIds.includes(id))
+    const togglePropertyFilter = useCallback((propertyName: string, enabled: boolean) => {
+        setPropertyFilters(prev => {
+            const next = new Set(prev)
+            if (enabled) {
+                next.add(propertyName)
             } else {
-                return [...new Set([...prev, ...itemIds])]
+                next.delete(propertyName)
             }
+            return Array.from(next)
         })
-    }, [selectedIds])
+    }, [])
+
+    const toggleGroupSelection = useCallback((items: AssignableEntity[], shouldSelect: boolean) => {
+        const itemIds = items.map(item => item.id)
+        setSelectedIds(prev => {
+            if (shouldSelect) {
+                return Array.from(new Set([...prev, ...itemIds]))
+            }
+            return prev.filter(id => !itemIds.includes(id))
+        })
+    }, [])
 
     const handleTargetTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
         setTargetType(e.target.value as 'all' | 'users' | 'departments' | 'properties')
         setSelectedIds([])
-        setPropertyFilter('all')
+        setPropertyFilters([])
+        setTargetSearch('')
     }, [])
 
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -178,37 +220,144 @@ export function AssignmentDialog({
                         </select>
                     </div>
 
-                    {targetType === 'departments' && departmentProperties.length > 0 && (
-                        <div className="space-y-2">
-                            <Label className="text-hotel-navy font-medium">{t('filterByProperty')}</Label>
-                            <select
-                                value={propertyFilter}
-                                onChange={(e) => setPropertyFilter(e.target.value)}
-                                className={`w-full h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold focus:outline-none ${isRTL ? 'text-right' : 'text-left'}`}
-                            >
-                                <option value="all">{t('allProperties')}</option>
-                                {departmentProperties.map(prop => (
-                                    <option key={prop} value={prop}>{prop}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-
                     {targetType !== 'all' && (
-                        <div className="space-y-2">
-                            <Label className="text-hotel-navy font-medium">
-                                {targetType === 'users' ? t('selectUsers', 'Select Users') :
-                                    targetType === 'departments' ? t('selectDepartments', 'Select Departments') :
-                                        t('selectProperties', 'Select Properties')}
-                            </Label>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <Label className="text-hotel-navy font-medium">
+                                    {targetType === 'users' ? t('selectUsers', 'Select Users') :
+                                        targetType === 'departments' ? t('selectDepartments', 'Select Departments') :
+                                            t('selectProperties', 'Select Properties')}
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setSelectedIds(currentListItems.map(item => item.id))}
+                                        disabled={currentListItems.length === 0}
+                                    >
+                                        {t('selectAll', 'Select all')}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setSelectedIds([])}
+                                    >
+                                        {t('clear', 'Clear')}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <div className="relative flex-1">
+                                        <Search className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 ${isRTL ? 'right-3' : 'left-3'}`} />
+                                        <Input
+                                            value={targetSearch}
+                                            onChange={(e) => setTargetSearch(e.target.value)}
+                                            placeholder={
+                                                targetType === 'users'
+                                                    ? t('searchUsers', 'Search users...')
+                                                    : targetType === 'departments'
+                                                        ? t('searchDepartments', 'Search departments or properties...')
+                                                        : t('searchProperties', 'Search properties...')
+                                            }
+                                            className={`${isRTL ? 'pr-9 text-right' : 'pl-9'} bg-white`}
+                                        />
+                                    </div>
+
+                                    {targetType === 'departments' && departmentProperties.length > 0 && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" size="sm" className="h-10">
+                                                    {t('filterByProperty')}
+                                                    {propertyFilters.length > 0 && (
+                                                        <span className="ms-2 text-xs text-muted-foreground">({propertyFilters.length})</span>
+                                                    )}
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-64">
+                                                <DropdownMenuLabel>{t('filterByProperty')}</DropdownMenuLabel>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuCheckboxItem
+                                                    checked={propertyFilters.length === 0}
+                                                    onCheckedChange={() => setPropertyFilters([])}
+                                                >
+                                                    {t('allProperties')}
+                                                </DropdownMenuCheckboxItem>
+                                                <DropdownMenuSeparator />
+                                                {departmentProperties.map(propertyName => (
+                                                    <DropdownMenuCheckboxItem
+                                                        key={propertyName}
+                                                        checked={propertyFilters.includes(propertyName)}
+                                                        onCheckedChange={(checked) => togglePropertyFilter(propertyName, Boolean(checked))}
+                                                    >
+                                                        {propertyName}
+                                                    </DropdownMenuCheckboxItem>
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
+                                </div>
+                            </div>
 
                             <ScrollArea className="h-64 border border-gray-200 rounded-md bg-white">
-                                <div className="p-3 space-y-1">
-                                    {listItems.length > 0 ? (
-                                        listItems.map((item) => (
+                                <div className="p-3 flex flex-col gap-3">
+                                    {targetType === 'departments' ? (
+                                        departmentGroups.length > 0 ? (
+                                            departmentGroups.map((group) => {
+                                                const groupIds = group.items.map(item => item.id)
+                                                const selectedCount = groupIds.filter(id => selectedIds.includes(id)).length
+                                                const allSelected = selectedCount === group.items.length && group.items.length > 0
+
+                                                return (
+                                                    <div key={group.name} className="rounded-md border bg-white">
+                                                        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 px-3 py-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-semibold text-gray-700">{group.name}</span>
+                                                                <span className="text-xs text-gray-500">
+                                                                    {selectedCount}/{group.items.length}
+                                                                </span>
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => toggleGroupSelection(group.items, !allSelected)}
+                                                            >
+                                                                {allSelected ? t('clear', 'Clear') : t('selectAll', 'Select all')}
+                                                            </Button>
+                                                        </div>
+                                                        <div className="flex flex-col gap-1 p-2">
+                                                            {group.items.map((item) => (
+                                                                <label
+                                                                    key={item.id}
+                                                                    className="flex items-center gap-2 rounded-md p-2 hover:bg-gray-50 cursor-pointer"
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedIds.includes(item.id)}
+                                                                        onChange={() => handleToggle(item.id)}
+                                                                        className={`h-4 w-4 rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold ${isRTL ? 'ml-3' : 'mr-3'}`}
+                                                                    />
+                                                                    <span className="text-sm text-gray-700">{item.name}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                                                <p className="text-sm">{t('noDestinationsFound', 'No items found')}</p>
+                                            </div>
+                                        )
+                                    ) : currentListItems.length > 0 ? (
+                                        currentListItems.map((item) => (
                                             <label
                                                 key={item.id}
-                                                className="flex items-center space-x-3 p-2.5 hover:bg-gray-50 rounded-md transition-colors cursor-pointer border border-transparent hover:border-gray-200"
+                                                className="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-md transition-colors cursor-pointer border border-transparent hover:border-gray-200"
                                             >
                                                 <input
                                                     type="checkbox"

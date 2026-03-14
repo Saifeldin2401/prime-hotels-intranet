@@ -26,7 +26,7 @@ type CheckResult = {
 
 const checks: FunctionCheck[] = [
   { name: 'admin-account-actions', payload: { action: 'status' } },
-  { name: 'ai-translation', payload: { text: 'hello', targetLanguage: 'ar' } },
+  { name: 'ai-translation', payload: { text: 'hello', target_lang: 'ar' } },
   { name: 'auto-triage-ticket', payload: { ticketId: '00000000-0000-0000-0000-000000000000' } },
   { name: 'bulk-notification-processor', payload: { action: 'get_status' } },
   { name: 'complete-invite-profile', payload: { token: 'test-token' } },

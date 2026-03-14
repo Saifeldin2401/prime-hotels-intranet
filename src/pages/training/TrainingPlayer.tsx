@@ -32,7 +32,6 @@ import {
     X,
     ArrowLeft,
     Trophy,
-    Clock,
     BookOpen,
     Languages,
     Loader2,
@@ -218,13 +217,9 @@ export default function TrainingPlayer() {
     const [timeSpentSeconds, setTimeSpentSeconds] = useState(0)
     const [resumeNotice, setResumeNotice] = useState<string | null>(null)
 
-    // Anti-Cheat & Engagement State
+    // Engagement State
     const [isFocused, setIsFocused] = useState(true)
     const [isIdle, setIsIdle] = useState(false)
-    const [currentBlockStrictTime, setCurrentBlockStrictTime] = useState(0)
-    const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false)
-    const bottomRef = useRef<HTMLDivElement>(null)
-    const scrollObserver = useRef<IntersectionObserver | null>(null)
 
     const blockStartRef = useRef<number>(Date.now())
     const lastBlockIdRef = useRef<string | null>(null)
@@ -232,28 +227,10 @@ export default function TrainingPlayer() {
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const hasRestoredRef = useRef(false)
     const timeByBlockRef = useRef<Record<string, number>>({})
-    const strictResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const quizScoresByIdRef = useRef<Record<string, number>>({})
     const mediaWatchProgressRef = useRef<Record<string, MediaWatchState>>({})
 
     const translateAI = useTranslationAI()
-
-    const resetStrictBlockState = useCallback((isStrict: boolean) => {
-        setCurrentBlockStrictTime(0)
-        setHasScrolledToBottom(!isStrict)
-
-        if (strictResetTimeoutRef.current) {
-            clearTimeout(strictResetTimeoutRef.current)
-        }
-
-        strictResetTimeoutRef.current = setTimeout(() => {
-            if (!bottomRef.current) return
-            const rect = bottomRef.current.getBoundingClientRect()
-            if (rect.top < window.innerHeight) {
-                setHasScrolledToBottom(true)
-            }
-        }, 500)
-    }, [])
 
     const resetModuleInteractionState = useCallback(() => {
         setTimeSpentSeconds(0)
@@ -424,88 +401,6 @@ export default function TrainingPlayer() {
     })
 
     const activeBlock = moduleData?.blocks[activeBlockIndex]
-
-    const minTimeRequired = useMemo(() => {
-        if (!activeBlock) return 0
-        // Media blocks handled by their own events
-        if (['video', 'audio', 'interactive', 'quiz'].includes(activeBlock.type)) return 0
-
-        // Word count based calculation (approx 250 wpm)
-        const contentText = activeBlock.content || ''
-        const wordCount = contentText.split(/\s+/).length
-        // Formula: words / (250/60) = words * 0.24 seconds
-        const calculatedSeconds = Math.ceil(wordCount * 0.24)
-
-        // Min 5 seconds for very short content, Cap at 5 mins (300s) to prevent frustration
-        return Math.min(300, Math.max(5, calculatedSeconds))
-    }, [activeBlock])
-
-    const contextRules = useMemo(() => {
-        if (!activeBlock) return { isStrict: true, allowBackgroundPlay: false }
-
-        const isAudio = activeBlock.type === 'audio'
-        const contentText = activeBlock.content || ''
-        const wordCount = contentText.split(/\s+/).length
-        // Relaxed mode for short content (< 150 words) or Audio
-        const isShort = wordCount < 150 && !['video', 'audio', 'quiz', 'interactive'].includes(activeBlock.type)
-
-        return {
-            isStrict: !isShort && !isAudio,
-            allowBackgroundPlay: isAudio
-        }
-    }, [activeBlock])
-
-    // Strict Timer (Pauses on blur/idle unless relaxed)
-    useEffect(() => {
-        if (!activeBlock?.id) return
-
-        // Check if we should pause
-        const shouldPause = () => {
-            if (contextRules.allowBackgroundPlay) return false
-            if (!contextRules.isStrict) return false
-            return !isFocused || isIdle
-        }
-
-        if (shouldPause()) return
-
-        const interval = setInterval(() => {
-            setCurrentBlockStrictTime(prev => prev + 1)
-        }, 1000)
-
-        return () => clearInterval(interval)
-    }, [isFocused, isIdle, activeBlock?.id, contextRules])
-
-    // Reset strict state on block change
-    useEffect(() => {
-        resetStrictBlockState(contextRules.isStrict)
-    }, [activeBlock?.id, contextRules.isStrict, resetStrictBlockState])
-
-    useEffect(() => {
-        return () => {
-            if (strictResetTimeoutRef.current) {
-                clearTimeout(strictResetTimeoutRef.current)
-            }
-        }
-    }, [])
-
-    // Scroll Observer
-    useEffect(() => {
-        if (scrollObserver.current) {
-            scrollObserver.current.disconnect()
-        }
-
-        scrollObserver.current = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                setHasScrolledToBottom(true)
-            }
-        }, { threshold: 0.1 })
-
-        if (bottomRef.current) {
-            scrollObserver.current.observe(bottomRef.current)
-        }
-
-        return () => scrollObserver.current?.disconnect()
-    }, [activeBlock?.id])
 
     useEffect(() => {
         hasRestoredRef.current = false
@@ -1085,14 +980,8 @@ export default function TrainingPlayer() {
     const isGateCompletionRequired = !!(activeBlock && activeBlock.is_mandatory && isGateBlock)
     const isGateCompleted = !!(activeBlock && completedMediaBlocks.has(activeBlock.id))
 
-    // Anti-Cheat Gate Logic
-    const isReadingBlock = !!(activeBlock && ['text', 'sop_reference', 'document_link'].includes(activeBlock.type))
-    const isReadingTimeMet = currentBlockStrictTime >= minTimeRequired || completedBlocks.has(activeBlock?.id || '')
-    const isScrollMet = hasScrolledToBottom || completedBlocks.has(activeBlock?.id || '')
-
     // Combined "Can Proceed" Logic
-    const canProceedToNext = (!isGateCompletionRequired || isGateCompleted) &&
-        (!isReadingBlock || (isReadingTimeMet && isScrollMet))
+    const canProceedToNext = (!isGateCompletionRequired || isGateCompleted)
 
     const renderBlockContent = (block: TrainingContentBlock) => {
         const variants = {
@@ -1836,8 +1725,6 @@ export default function TrainingPlayer() {
                             </m.div>
                         </AnimatePresence>
 
-                        {/* Scroll Marker for Anti-Cheat */}
-                        <div ref={bottomRef} className="h-4 w-full mt-4" />
                         <div className="h-12 shrink-0" /> {/* Spacer */}
                     </div>
                 </SmartObserver>
@@ -1899,27 +1786,6 @@ export default function TrainingPlayer() {
                                         <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ml-2 md:ml-3" : "mr-2 md:mr-3")} />
                                         <span className="hidden sm:inline">{t('completeModule')}</span>
                                         <span className="sm:hidden">{t('complete', 'Complete')}</span>
-                                    </>
-                                )
-                            }
-
-                            // Gated States for "Next" Button
-                            if (isReadingBlock && !isScrollMet) {
-                                return (
-                                    <>
-                                        <div className={cn("h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin", isRTL ? "ml-2" : "mr-2")} />
-                                        <span className="hidden sm:inline">{t('scrollToBottom', 'Read to bottom')}</span>
-                                        <span className="sm:hidden">{t('read', 'Read')}</span>
-                                    </>
-                                )
-                            }
-                            if (isReadingBlock && !isReadingTimeMet) {
-                                const remaining = Math.max(0, minTimeRequired - currentBlockStrictTime)
-                                return (
-                                    <>
-                                        <Clock className={cn("h-4 w-4 animate-pulse", isRTL ? "ml-2" : "mr-2")} />
-                                        <span className="hidden sm:inline">{t('readingReq', { seconds: remaining })}</span>
-                                        <span className="sm:hidden">{`${remaining}s`}</span>
                                     </>
                                 )
                             }

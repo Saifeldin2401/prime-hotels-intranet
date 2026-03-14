@@ -4,7 +4,7 @@
  * Specialized components for rendering different knowledge article content types.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -324,18 +324,32 @@ export function RelatedArticles({ articles, sourceId }: RelatedArticlesProps) {
     const { t } = useTranslation('knowledge')
     const { user } = useAuth()
     const trackClick = useTrackRelatedClick()
-    const trackImpressions = useTrackRelatedImpressions()
+    const { mutate: trackImpressionsMutate } = useTrackRelatedImpressions()
     const relatedIds = useMemo(() => articles.map((article) => article.id), [articles])
+    const relatedIdsKey = useMemo(() => relatedIds.join(','), [relatedIds])
+    const impressionKey = useMemo(() => {
+        if (!sourceId) return ''
+        if (!relatedIdsKey) return ''
+        return `${sourceId}::${relatedIdsKey}`
+    }, [sourceId, relatedIdsKey])
+    const sentImpressionKeysRef = useRef<Set<string>>(new Set())
+    const relatedIdsRef = useRef<string[]>([])
+
+    useEffect(() => {
+        relatedIdsRef.current = relatedIds
+    }, [relatedIds])
 
     // Track impressions once when component mounts
     useEffect(() => {
-        if (sourceId && relatedIds.length > 0) {
-            trackImpressions.mutate({
-                sourceId,
-                relatedIds
-            })
-        }
-    }, [sourceId, relatedIds, trackImpressions])
+        if (!impressionKey) return
+        if (sentImpressionKeysRef.current.has(impressionKey)) return
+
+        sentImpressionKeysRef.current.add(impressionKey)
+        trackImpressionsMutate({
+            sourceId: sourceId!,
+            relatedIds: relatedIdsRef.current
+        })
+    }, [impressionKey, sourceId, trackImpressionsMutate])
 
     const handleArticleClick = (relatedId: string, position: number) => {
         if (sourceId) {

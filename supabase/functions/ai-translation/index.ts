@@ -68,12 +68,57 @@ const LANGUAGE_NAMES: Record<string, string> = {
     tl: 'Filipino',
 }
 
+const LANGUAGE_NAME_TO_CODE: Record<string, string> = Object.fromEntries(
+    Object.entries(LANGUAGE_NAMES).map(([code, name]) => [name.toLowerCase(), code])
+)
+
+const normalizeLangInput = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') return undefined
+    const trimmed = value.trim()
+    if (!trimmed) return undefined
+    const lower = trimmed.toLowerCase()
+    if (lower === 'auto') return 'auto'
+    if (SUPPORTED_LANGUAGES.includes(lower as typeof SUPPORTED_LANGUAGES[number])) {
+        return lower
+    }
+    const stripped = lower.replace(/\(.*\)/, '').trim()
+    return LANGUAGE_NAME_TO_CODE[stripped]
+}
+
 const detectLanguage = (value: string) => {
     const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
     return arabicPattern.test(value) ? 'ar' : 'en'
 }
 
 const chunkText = (value: string, size: number) => value.match(new RegExp(`[\\s\\S]{1,${size}}`, 'g')) || [value]
+
+const toHex = (buffer: ArrayBuffer) => Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, '0')).join('')
+
+const sha256Hex = async (value: string) => {
+    const bytes = new TextEncoder().encode(value)
+    const hash = await crypto.subtle.digest('SHA-256', bytes)
+    return toHex(hash)
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const withConcurrency = async <T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>) => {
+    const results = new Array<R>(items.length)
+    let nextIndex = 0
+
+    const worker = async () => {
+        while (true) {
+            const index = nextIndex
+            nextIndex += 1
+            if (index >= items.length) return
+            results[index] = await fn(items[index])
+        }
+    }
+
+    const effectiveLimit = Math.max(1, Math.min(limit, items.length || 1))
+    await Promise.all(new Array(effectiveLimit).fill(0).map(() => worker()))
+    return results
+}
 
 const sanitizeTranslation = (value: string, targetLang: string) => {
     let sanitized = value
@@ -83,7 +128,7 @@ const sanitizeTranslation = (value: string, targetLang: string) => {
     return sanitized.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
@@ -107,19 +152,27 @@ serve(async (req) => {
         if (authError || !user) throw new Error('Unauthorized')
 
         const body = await req.json()
-        const { target_lang, source_lang: providedSourceLang, file_url } = body
-        const file_type = body.file_type
+        const rawTargetLang = body?.target_lang ?? body?.targetLanguage
+        const rawSourceLang = body?.source_lang ?? body?.sourceLanguage
+        const target_lang = normalizeLangInput(rawTargetLang)
+        const providedSourceLang = normalizeLangInput(rawSourceLang)
+        const file_url = body?.file_url ?? body?.fileUrl
+        const file_type = body?.file_type ?? body?.fileType
         let text = typeof body.text === 'string' ? body.text : undefined
         let texts: string[] = Array.isArray(body.texts)
             ? body.texts.map((item: unknown) => typeof item === 'string' ? item : '')
             : []
 
-        if (!SUPPORTED_LANGUAGES.includes(target_lang)) {
-            throw new Error(`Unsupported target language: ${target_lang}`)
+        if (!target_lang || target_lang === 'auto') {
+            throw new Error(`Unsupported target language: ${rawTargetLang ?? ''}`)
         }
 
-        if (providedSourceLang && providedSourceLang !== 'auto' && !SUPPORTED_LANGUAGES.includes(providedSourceLang)) {
-            throw new Error(`Unsupported source language: ${providedSourceLang}`)
+        if (!SUPPORTED_LANGUAGES.includes(target_lang)) {
+            throw new Error(`Unsupported target language: ${rawTargetLang ?? target_lang}`)
+        }
+
+        if (rawSourceLang && (!providedSourceLang || (providedSourceLang !== 'auto' && !SUPPORTED_LANGUAGES.includes(providedSourceLang)))) {
+            throw new Error(`Unsupported source language: ${rawSourceLang}`)
         }
 
         if (file_url) {
@@ -176,8 +229,14 @@ serve(async (req) => {
             index: number
             text: string
             sourceLang: string
+            textHash: string
         }> = []
         let resolvedSourceLang = providedSourceLang || 'auto'
+
+        const chunkSize = Number(Deno.env.get('TRANSLATION_CHUNK_CHARS') || 3200)
+        const translationConcurrency = Number(Deno.env.get('TRANSLATION_CONCURRENCY') || 3)
+        const chunkConcurrency = Number(Deno.env.get('TRANSLATION_CHUNK_CONCURRENCY') || 2)
+        const batchChunksPerRequest = Number(Deno.env.get('TRANSLATION_BATCH_CHUNKS') || 4)
 
         for (let i = 0; i < texts.length; i++) {
             const value = texts[i] || ''
@@ -200,24 +259,41 @@ serve(async (req) => {
                 continue
             }
 
-            const textHash = btoa(unescape(encodeURIComponent(value.substring(0, 1000)))).substring(0, 128)
-            const { data: cached, error: cacheError } = await supabaseClient
+            const textHash = await sha256Hex(value)
+            toTranslate.push({ index: i, text: value, sourceLang, textHash })
+        }
+
+        if (toTranslate.length > 0) {
+            const hashes = Array.from(new Set(toTranslate.map((item) => item.textHash)))
+            const { data: cachedRows, error: cacheError } = await supabaseClient
                 .from('translation_cache')
-                .select('translated_text')
-                .eq('source_text_hash', textHash)
+                .select('source_text_hash,translated_text')
+                .in('source_text_hash', hashes)
                 .eq('target_lang', target_lang)
-                .maybeSingle()
 
             if (cacheError) {
                 throw new Error(`Cache lookup failed: ${cacheError.message}`)
             }
 
-            if (cached?.translated_text) {
-                results[i] = cached.translated_text
-                continue
+            const cachedMap = new Map<string, string>()
+            for (const row of cachedRows || []) {
+                if (row?.source_text_hash && row?.translated_text) {
+                    cachedMap.set(row.source_text_hash, row.translated_text)
+                }
             }
 
-            toTranslate.push({ index: i, text: value, sourceLang })
+            const remaining: typeof toTranslate = []
+            for (const item of toTranslate) {
+                const cached = cachedMap.get(item.textHash)
+                if (cached) {
+                    results[item.index] = cached
+                } else {
+                    remaining.push(item)
+                }
+            }
+
+            toTranslate.length = 0
+            toTranslate.push(...remaining)
         }
 
         if (toTranslate.length > 0) {
@@ -227,39 +303,36 @@ serve(async (req) => {
 
             const targetName = LANGUAGE_NAMES[target_lang] || target_lang
 
-            for (const item of toTranslate) {
-                const sourceName = item.sourceLang === 'auto'
-                    ? 'the detected source language'
-                    : (LANGUAGE_NAMES[item.sourceLang] || item.sourceLang)
-                const translationInstruction = item.sourceLang === 'auto'
-                    ? `Detect the source language and translate to ${targetName}.`
-                    : `Translate from ${sourceName} to ${targetName}.`
+            const callHf = async (chunk: string, translationInstruction: string) => {
+                const payload = {
+                    model: hfModel,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only the translated text. Do not include any extra commentary or any language other than ${targetName}.`
+                        },
+                        { role: 'user', content: chunk }
+                    ],
+                    temperature: 0.2,
+                    stream: false
+                }
 
-                const chunks = chunkText(item.text, 1200)
-                let translatedText = ''
-
-                for (const chunk of chunks) {
+                const maxAttempts = 3
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                     let hfResponse: Response
                     try {
                         hfResponse = await fetch(hfRouterUrl, {
                             headers: { Authorization: `Bearer ${hfToken}`, 'Content-Type': 'application/json' },
                             method: 'POST',
-                            body: JSON.stringify({
-                                model: hfModel,
-                                messages: [
-                                    {
-                                        role: 'system',
-                                        content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only the translated text. Do not include any extra commentary or any language other than ${targetName}.`
-                                    },
-                                    { role: 'user', content: chunk }
-                                ],
-                                temperature: 0.2,
-                                stream: false
-                            }),
+                            body: JSON.stringify(payload),
                         })
                     } catch (fetchError: unknown) {
-                        const message = fetchError instanceof Error ? fetchError.message : String(fetchError)
-                        throw new Error(`Hugging Face request failed: ${message}`)
+                        if (attempt >= maxAttempts) {
+                            const message = fetchError instanceof Error ? fetchError.message : String(fetchError)
+                            throw new Error(`Hugging Face request failed: ${message}`)
+                        }
+                        await sleep(300 * attempt)
+                        continue
                     }
 
                     const rawText = await hfResponse.text()
@@ -272,11 +345,20 @@ serve(async (req) => {
 
                     if (!hfResponse.ok) {
                         const message = (hfResult && typeof hfResult === 'object' && (hfResult.error?.message || hfResult.error || hfResult.message)) || rawText || hfResponse.statusText
+                        const retryable = hfResponse.status >= 500 || hfResponse.status === 429 || hfResponse.status === 408
+                        if (retryable && attempt < maxAttempts) {
+                            await sleep(400 * attempt)
+                            continue
+                        }
                         throw new Error(`Hugging Face HTTP ${hfResponse.status}: ${message}`)
                     }
 
                     if (hfResult?.error) {
                         if (typeof hfResult.error === 'string' && hfResult.error.includes('loading')) {
+                            if (attempt < maxAttempts) {
+                                await sleep(800 * attempt)
+                                continue
+                            }
                             throw new Error('Hugging Face model is loading. Retry in 20-30 seconds.')
                         }
                         if (hfResult.error?.message) {
@@ -290,16 +372,144 @@ serve(async (req) => {
                     if (!translatedChunk) {
                         throw new Error('Hugging Face returned an empty translation.')
                     }
-                    translatedText += translatedChunk
+                    return translatedChunk
                 }
+
+                throw new Error('Translation failed after retries.')
+            }
+
+            const callHfBatch = async (chunks: string[], translationInstruction: string) => {
+                const payload = {
+                    model: hfModel,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only valid JSON. You must output a JSON array of strings. Each string is the translation of the corresponding input chunk. Do not add any extra keys or commentary.`
+                        },
+                        {
+                            role: 'user',
+                            content: JSON.stringify({ chunks, target_language: targetName })
+                        }
+                    ],
+                    temperature: 0.2,
+                    stream: false
+                }
+
+                const maxAttempts = 3
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    let hfResponse: Response
+                    try {
+                        hfResponse = await fetch(hfRouterUrl, {
+                            headers: { Authorization: `Bearer ${hfToken}`, 'Content-Type': 'application/json' },
+                            method: 'POST',
+                            body: JSON.stringify(payload),
+                        })
+                    } catch (fetchError: unknown) {
+                        if (attempt >= maxAttempts) {
+                            const message = fetchError instanceof Error ? fetchError.message : String(fetchError)
+                            throw new Error(`Hugging Face request failed: ${message}`)
+                        }
+                        await sleep(300 * attempt)
+                        continue
+                    }
+
+                    const rawText = await hfResponse.text()
+                    let hfResult: any = null
+                    try {
+                        hfResult = rawText ? JSON.parse(rawText) : null
+                    } catch {
+                        hfResult = rawText
+                    }
+
+                    if (!hfResponse.ok) {
+                        const message = (hfResult && typeof hfResult === 'object' && (hfResult.error?.message || hfResult.error || hfResult.message)) || rawText || hfResponse.statusText
+                        const retryable = hfResponse.status >= 500 || hfResponse.status === 429 || hfResponse.status === 408
+                        if (retryable && attempt < maxAttempts) {
+                            await sleep(400 * attempt)
+                            continue
+                        }
+                        throw new Error(`Hugging Face HTTP ${hfResponse.status}: ${message}`)
+                    }
+
+                    if (hfResult?.error) {
+                        if (typeof hfResult.error === 'string' && hfResult.error.includes('loading')) {
+                            if (attempt < maxAttempts) {
+                                await sleep(800 * attempt)
+                                continue
+                            }
+                            throw new Error('Hugging Face model is loading. Retry in 20-30 seconds.')
+                        }
+                        if (hfResult.error?.message) {
+                            throw new Error(`Hugging Face Error: ${hfResult.error.message}`)
+                        }
+                        throw new Error(`Hugging Face Error: ${hfResult.error}`)
+                    }
+
+                    const content = hfResult?.choices?.[0]?.message?.content?.trim() || ''
+                    try {
+                        const parsed = JSON.parse(content)
+                        if (!Array.isArray(parsed) || parsed.length !== chunks.length) {
+                            throw new Error('Invalid JSON array shape')
+                        }
+                        const out = parsed.map((item: unknown) => sanitizeTranslation(String(item ?? ''), target_lang))
+                        if (out.some((v) => !v)) {
+                            throw new Error('Empty translation in batch')
+                        }
+                        return out
+                    } catch {
+                        if (attempt < maxAttempts) {
+                            await sleep(350 * attempt)
+                            continue
+                        }
+                        throw new Error('Hugging Face returned invalid JSON for batch translation.')
+                    }
+                }
+
+                throw new Error('Batch translation failed after retries.')
+            }
+
+            const translateItem = async (item: { index: number; text: string; sourceLang: string; textHash: string }) => {
+                const sourceName = item.sourceLang === 'auto'
+                    ? 'the detected source language'
+                    : (LANGUAGE_NAMES[item.sourceLang] || item.sourceLang)
+                const translationInstruction = item.sourceLang === 'auto'
+                    ? `Detect the source language and translate to ${targetName}.`
+                    : `Translate from ${sourceName} to ${targetName}.`
+
+                const chunks = chunkText(item.text, chunkSize)
+                const effectiveBatchSize = Number.isFinite(batchChunksPerRequest) && batchChunksPerRequest > 1
+                    ? Math.min(Math.floor(batchChunksPerRequest), 10)
+                    : 1
+
+                const batches: string[][] = []
+                for (let i = 0; i < chunks.length; i += effectiveBatchSize) {
+                    batches.push(chunks.slice(i, i + effectiveBatchSize))
+                }
+
+                let translatedChunks: string[] = []
+                if (effectiveBatchSize > 1 && batches.length > 0) {
+                    try {
+                        const translatedBatches = await withConcurrency(
+                            batches,
+                            chunkConcurrency,
+                            (batch) => callHfBatch(batch, translationInstruction)
+                        )
+                        translatedChunks = translatedBatches.flat()
+                    } catch {
+                        translatedChunks = await withConcurrency(chunks, chunkConcurrency, (chunk) => callHf(chunk, translationInstruction))
+                    }
+                } else {
+                    translatedChunks = await withConcurrency(chunks, chunkConcurrency, (chunk) => callHf(chunk, translationInstruction))
+                }
+
+                const translatedText = translatedChunks.join('')
 
                 results[item.index] = translatedText
 
-                const textHash = btoa(unescape(encodeURIComponent(item.text.substring(0, 1000)))).substring(0, 128)
                 const { error: cacheInsertError } = await supabaseClient
                     .from('translation_cache')
                     .upsert({
-                        source_text_hash: textHash,
+                        source_text_hash: item.textHash,
                         source_lang: item.sourceLang,
                         target_lang,
                         translated_text: translatedText,
@@ -310,6 +520,8 @@ serve(async (req) => {
                     console.warn('Translation cache write failed:', cacheInsertError.message)
                 }
             }
+
+            await withConcurrency(toTranslate, translationConcurrency, translateItem)
         }
 
         return new Response(JSON.stringify({

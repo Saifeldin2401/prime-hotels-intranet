@@ -13,7 +13,7 @@ export function getAllowedOrigins(): string[] {
 
   const parsed = raw
     .split(",")
-    .map((origin) => origin.trim())
+    .map((origin: string) => origin.trim())
     .filter(Boolean);
 
   return parsed.length > 0 ? parsed : [...DEFAULT_ALLOWED_ORIGINS];
@@ -26,6 +26,9 @@ export function resolveCorsOrigin(req: Request): string {
   if (!origin) return allowedOrigins[0] || "https://phg-connect.com";
 
   const cleanOrigin = origin.trim().replace(/\/$/, "");
+
+  const isLocalDevOrigin = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})(:\d{2,5})?$/.test(cleanOrigin);
+  if (isLocalDevOrigin) return origin;
 
   const isAllowed = allowedOrigins.some(ao => {
     const cleanAo = ao.trim().replace(/\/$/, "");

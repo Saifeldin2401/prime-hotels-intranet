@@ -250,12 +250,59 @@ export const learningService = {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Not authenticated')
 
-        // This is complex because of hierarchical targeting
-        // For now, simpler fetch via RLS which filters for us
+        const [rolesResult, departmentsResult, propertiesResult] = await Promise.all([
+            supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', user.id),
+            supabase
+                .from('user_departments')
+                .select('department_id')
+                .eq('user_id', user.id),
+            supabase
+                .from('user_properties')
+                .select('property_id')
+                .eq('user_id', user.id)
+        ])
+
+        if (rolesResult.error) throw rolesResult.error
+        if (departmentsResult.error) throw departmentsResult.error
+        if (propertiesResult.error) throw propertiesResult.error
+
+        const roleIds = (rolesResult.data || [])
+            .map((row: { role?: string | null }) => row.role)
+            .filter((role): role is string => typeof role === 'string' && role.length > 0)
+
+        const departmentIds = (departmentsResult.data || [])
+            .map((row: { department_id?: string | null }) => row.department_id)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+
+        const propertyIds = (propertiesResult.data || [])
+            .map((row: { property_id?: string | null }) => row.property_id)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+
+        const notDeletedFilter = 'or(is_deleted.is.null,is_deleted.eq.false)'
+        const orSegments: string[] = []
+
+        orSegments.push(`and(target_type.eq.everyone,${notDeletedFilter})`)
+        orSegments.push(`and(target_type.eq.user,target_id.eq.${user.id},${notDeletedFilter})`)
+
+        roleIds.forEach((role) => {
+            orSegments.push(`and(target_type.eq.role,target_id.eq.${role},${notDeletedFilter})`)
+        })
+
+        departmentIds.forEach((departmentId) => {
+            orSegments.push(`and(target_type.eq.department,target_id.eq.${departmentId},${notDeletedFilter})`)
+        })
+
+        propertyIds.forEach((propertyId) => {
+            orSegments.push(`and(target_type.eq.property,target_id.eq.${propertyId},${notDeletedFilter})`)
+        })
+
         const { data, error } = await supabase
             .from('learning_assignments')
             .select('*')
-            .or('is_deleted.is.null,is_deleted.eq.false')
+            .or(orSegments.join(','))
             .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -265,22 +312,22 @@ export const learningService = {
         const assignments = (data || []) as LearningAssignment[]
 
         // Fetch only current user's progress (avoid loading all progress rows)
-        const assignmentIds = assignments.map(a => a.id).filter(Boolean)
-        if (assignmentIds.length > 0) {
+        const contentIds = assignments.map(a => a.content_id).filter(Boolean)
+        if (contentIds.length > 0) {
             const { data: progressRows, error: progressError } = await supabase
                 .from('learning_progress')
                 .select('*')
                 .eq('user_id', user.id)
-                .in('assignment_id', assignmentIds)
+                .in('content_id', contentIds)
 
             if (progressError) throw progressError
 
-            const progressByAssignment = new Map(
-                (progressRows || []).map((p: LearningProgress) => [p.assignment_id, p])
+            const progressByContent = new Map(
+                (progressRows || []).map((p: LearningProgress) => [`${p.content_type}:${p.content_id}`, p])
             )
 
             assignments.forEach(a => {
-                a.progress = progressByAssignment.get(a.id) || null
+                a.progress = progressByContent.get(`${a.content_type}:${a.content_id}`) || null
             })
         } else {
             assignments.forEach(a => {
@@ -354,7 +401,48 @@ export const learningService = {
             return true // Keep other types if any
         })
 
-        return validAssignments
+        // De-duplicate assignments per user/content (user completes content once)
+        const priorityScore: Record<string, number> = {
+            compliance: 0,
+            high: 1,
+            normal: 2
+        }
+
+        const deduped = new Map<string, LearningAssignment>()
+        validAssignments.forEach((assignment) => {
+            const key = `${assignment.content_type}:${assignment.content_id}`
+            const existing = deduped.get(key)
+
+            if (!existing) {
+                deduped.set(key, assignment)
+                return
+            }
+
+            const existingPriority = priorityScore[existing.priority] ?? 99
+            const nextPriority = priorityScore[assignment.priority] ?? 99
+
+            if (nextPriority < existingPriority) {
+                deduped.set(key, assignment)
+                return
+            }
+
+            if (nextPriority === existingPriority) {
+                const existingDue = existing.due_date ? new Date(existing.due_date).getTime() : Number.POSITIVE_INFINITY
+                const nextDue = assignment.due_date ? new Date(assignment.due_date).getTime() : Number.POSITIVE_INFINITY
+                if (nextDue < existingDue) {
+                    deduped.set(key, assignment)
+                    return
+                }
+
+                const existingCreated = new Date(existing.created_at).getTime()
+                const nextCreated = new Date(assignment.created_at).getTime()
+                if (nextCreated > existingCreated) {
+                    deduped.set(key, assignment)
+                }
+            }
+        })
+
+        return Array.from(deduped.values())
     },
 
     // ==========================================

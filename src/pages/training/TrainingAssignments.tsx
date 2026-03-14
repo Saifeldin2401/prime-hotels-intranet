@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -148,7 +148,8 @@ export function TrainingAssignmentsPanel({
   const [sendNotifications, setSendNotifications] = useState(true)
   const [notifyOnDue, setNotifyOnDue] = useState(true)
   const [reminderDaysBefore, setReminderDaysBefore] = useState<number[]>([])
-  const [propertyFilter, setPropertyFilter] = useState<string>('all')
+  const [propertyFilters, setPropertyFilters] = useState<string[]>([])
+  const [targetSearch, setTargetSearch] = useState('')
 
 
 
@@ -466,6 +467,8 @@ export function TrainingAssignmentsPanel({
     setSendNotifications(true)
     setNotifyOnDue(true)
     setReminderDaysBefore([])
+    setPropertyFilters([])
+    setTargetSearch('')
   }
   const handleDelete = (id: string) => {
     if (confirm(t('confirmAssignmentDelete'))) {
@@ -516,16 +519,40 @@ export function TrainingAssignmentsPanel({
     }
   }
 
-  const getTargetRawLabel = (type: string) => {
-    switch (type) {
-      case 'all':
-      case 'everyone': return t('everyone')
-      case 'user': return t('specificUser')
-      case 'department': return t('department')
-      case 'property': return t('property')
-      default: return t('everyone')
+  const departmentLookup = useMemo(() => {
+    return new Map((departments || []).map((dept) => [dept.id, dept]))
+  }, [departments])
+
+  const propertyLookup = useMemo(() => {
+    return new Map((properties || []).map((property) => [property.id, property]))
+  }, [properties])
+
+  const userLookup = useMemo(() => {
+    return new Map((users || []).map((user) => [user.id, user]))
+  }, [users])
+
+  const getTargetDetails = useCallback((assignment: LearningAssignment) => {
+    switch (assignment.target_type) {
+      case 'department': {
+        const dept = departmentLookup.get(assignment.target_id ?? '')
+        const name = dept?.rawName || dept?.name || t('department', 'Department')
+        const propertyName = dept?.propertyName || t('unknownProperty', 'Unknown property')
+        return { label: name, meta: propertyName }
+      }
+      case 'property': {
+        const property = propertyLookup.get(assignment.target_id ?? '')
+        const name = property?.name || t('property', 'Property')
+        return { label: name, meta: undefined }
+      }
+      case 'user': {
+        const user = userLookup.get(assignment.target_id ?? '')
+        const name = user?.full_name || user?.email || t('specificUser', 'User')
+        return { label: name, meta: user?.email }
+      }
+      default:
+        return { label: t('allUsers'), meta: undefined }
     }
-  }
+  }, [departmentLookup, propertyLookup, userLookup, t])
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-'
@@ -536,12 +563,55 @@ export function TrainingAssignmentsPanel({
   const filteredAssignments = useMemo(() => {
     return assignments?.filter(assignment => {
       const moduleTitle = assignment.training_modules?.title || ''
-      const matchesSearch = !search || moduleTitle.toLowerCase().includes(search.toLowerCase())
+      const searchValue = search.trim().toLowerCase()
+      const targetDetails = getTargetDetails(assignment)
+      const matchesSearch = !searchValue
+        || moduleTitle.toLowerCase().includes(searchValue)
+        || targetDetails.label.toLowerCase().includes(searchValue)
+        || (targetDetails.meta?.toLowerCase().includes(searchValue) ?? false)
       const status = getAssignmentStatus(assignment)
       const matchesStatus = statusFilter === 'all' || status === statusFilter
       return matchesSearch && matchesStatus
     }) || []
-  }, [assignments, search, statusFilter])
+  }, [assignments, search, statusFilter, getTargetDetails])
+
+  const groupedAssignments = useMemo(() => {
+    const groups = new Map<string, {
+      key: string
+      assignments: LearningAssignment[]
+      latestCreatedAt: string
+    }>()
+
+    filteredAssignments.forEach((assignment) => {
+      const key = [
+        assignment.content_id,
+        assignment.target_type,
+        assignment.priority,
+        assignment.due_date ?? '',
+        assignment.valid_from ?? '',
+        assignment.expires_at ?? '',
+        assignment.requires_acknowledgement ? '1' : '0'
+      ].join('|')
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          assignments: [],
+          latestCreatedAt: assignment.created_at
+        })
+      }
+
+      const group = groups.get(key)!
+      group.assignments.push(assignment)
+      if (new Date(assignment.created_at) > new Date(group.latestCreatedAt)) {
+        group.latestCreatedAt = assignment.created_at
+      }
+    })
+
+    return Array.from(groups.values()).sort((a, b) => {
+      return new Date(b.latestCreatedAt).getTime() - new Date(a.latestCreatedAt).getTime()
+    })
+  }, [filteredAssignments])
 
   // Overview Tab: Filtered Progress Logic with NEW filters
   const filteredProgress = useMemo(() => {
@@ -588,48 +658,103 @@ export function TrainingAssignmentsPanel({
   }, [filteredProgress])
 
   // Get unique properties from departments
-  // Group departments by property for the dropdown
-  const groupedDepartments = useMemo(() => {
-    if (!departments) return {}
+  const normalizedTargetSearch = targetSearch.trim().toLowerCase()
+  const matchesTargetSearch = useCallback((value: string, secondary?: string) => {
+    if (!normalizedTargetSearch) return true
+    const primary = value?.toLowerCase() ?? ''
+    const secondaryValue = secondary?.toLowerCase() ?? ''
+    return primary.includes(normalizedTargetSearch) || secondaryValue.includes(normalizedTargetSearch)
+  }, [normalizedTargetSearch])
 
-    return departments.reduce((acc, dept) => {
-      const propName = dept.propertyName || t('other')
-      if (!acc[propName]) {
-        acc[propName] = []
-      }
-      acc[propName].push(dept)
-      return acc
-    }, {} as Record<string, typeof departments>)
-  }, [departments, t])
+  const isPriorityProperty = (name: string) => /head office|prime group/i.test(name)
+  const sortPropertyNames = (a: string, b: string) => {
+    if (isPriorityProperty(a) && !isPriorityProperty(b)) return -1
+    if (!isPriorityProperty(a) && isPriorityProperty(b)) return 1
+    return a.localeCompare(b)
+  }
 
   const departmentProperties = useMemo(() => {
     if (!departments) return []
     const props = new Set<string>()
     departments.forEach(d => {
-      const match = d.name.match(/\((.+)\)$/)
-      if (match) props.add(match[1])
+      if (d.propertyName) {
+        props.add(d.propertyName)
+      } else {
+        props.add(t('other', 'Other'))
+      }
     })
-    return Array.from(props).sort()
-  }, [departments])
+    return Array.from(props).sort(sortPropertyNames)
+  }, [departments, t])
+
+  const departmentGroups = useMemo(() => {
+    if (!departments) return []
+    const filters = new Set(propertyFilters)
+    const groups = new Map<string, { name: string; items: Array<{ id: string; name: string }> }>()
+
+    departments.forEach((dept) => {
+      const propertyName = dept.propertyName || t('other', 'Other')
+      if (propertyFilters.length > 0 && !filters.has(propertyName)) return
+
+      const displayName = dept.rawName || dept.name.replace(/\s*\(.+\)$/, '')
+      if (!matchesTargetSearch(displayName, propertyName)) return
+
+      if (!groups.has(propertyName)) {
+        groups.set(propertyName, { name: propertyName, items: [] })
+      }
+
+      groups.get(propertyName)!.items.push({
+        id: dept.id,
+        name: displayName
+      })
+    })
+
+    return Array.from(groups.values())
+      .map(group => ({
+        ...group,
+        items: group.items.sort((a, b) => a.name.localeCompare(b.name))
+      }))
+      .sort((a, b) => sortPropertyNames(a.name, b.name))
+  }, [departments, propertyFilters, matchesTargetSearch, t])
 
   // Form List Items
   const currentListItems = useMemo(() => {
     switch (formTargetType) {
-      case 'users': return users?.map(u => ({ id: u.id, name: u.full_name || u.email })) || []
-      case 'departments': {
-        if (!departments) return []
-        const filtered = propertyFilter === 'all'
-          ? departments
-          : departments.filter(d => d.name.includes(`(${propertyFilter})`))
-        return filtered.map(d => ({
-          id: d.id,
-          name: d.name.replace(/\s*\(.+\)$/, '')
-        }))
-      }
-      case 'properties': return properties?.map(p => ({ id: p.id, name: p.name })) || []
-      default: return []
+      case 'users':
+        return (users || [])
+          .map(u => ({ id: u.id, name: u.full_name || u.email || '', details: u.email }))
+          .filter(u => matchesTargetSearch(u.name, u.details))
+      case 'departments':
+        return departmentGroups.flatMap(group => group.items)
+      case 'properties':
+        return (properties || [])
+          .map(p => ({ id: p.id, name: p.name }))
+          .filter(p => matchesTargetSearch(p.name))
+      default:
+        return []
     }
-  }, [formTargetType, users, departments, properties, propertyFilter])
+  }, [formTargetType, users, properties, departmentGroups, matchesTargetSearch])
+
+  const togglePropertyFilter = useCallback((propertyName: string, enabled: boolean) => {
+    setPropertyFilters(prev => {
+      const next = new Set(prev)
+      if (enabled) {
+        next.add(propertyName)
+      } else {
+        next.delete(propertyName)
+      }
+      return Array.from(next)
+    })
+  }, [])
+
+  const toggleGroupSelection = useCallback((items: Array<{ id: string }>, shouldSelect: boolean) => {
+    const itemIds = items.map(item => item.id)
+    setFormTargetIds(prev => {
+      if (shouldSelect) {
+        return Array.from(new Set([...prev, ...itemIds]))
+      }
+      return prev.filter(id => !itemIds.includes(id))
+    })
+  }, [])
 
   const validationErrors = useMemo(() => {
     const errors: string[] = []
@@ -1073,57 +1198,96 @@ export function TrainingAssignmentsPanel({
               <div className="col-span-full flex justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-hotel-gold" />
               </div>
-            ) : filteredAssignments.length > 0 ? (
-              filteredAssignments.map((assignment) => (
-                <Card key={assignment.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
-                          {t('module')}
-                        </Badge>
-                        <Badge variant="outline" className="bg-slate-50 text-slate-700">
-                          {t(assignment.priority || 'normal', assignment.priority || 'normal')}
-                        </Badge>
-                        {assignment.requires_acknowledgement && (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700">
-                            {t('ackRequired', 'Ack required')}
+            ) : groupedAssignments.length > 0 ? (
+              groupedAssignments.map((group) => {
+                const primaryAssignment = group.assignments[0]
+                const targetType = primaryAssignment.target_type
+                const targetTypeLabel = getTargetLabel(targetType)
+                const targets = group.assignments.map((assignment) => ({
+                  assignmentId: assignment.id,
+                  ...getTargetDetails(assignment)
+                }))
+
+                return (
+                  <Card key={group.key} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                            {t('module')}
+                          </Badge>
+                          <Badge variant="outline" className="bg-slate-50 text-slate-700">
+                            {t(primaryAssignment.priority || 'normal', primaryAssignment.priority || 'normal')}
+                          </Badge>
+                          {primaryAssignment.requires_acknowledgement && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700">
+                              {t('ackRequired', 'Ack required')}
+                            </Badge>
+                          )}
+                        </div>
+                        {targets.length > 1 && (
+                          <Badge variant="outline" className="bg-hotel-gold/10 text-hotel-navy">
+                            {targets.length} {t('targets', 'targets')}
                           </Badge>
                         )}
                       </div>
-                      <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-600" onClick={() => handleDelete(assignment.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <CardTitle className="text-lg mt-2 line-clamp-1" title={assignment.training_modules?.title}>
-                      {assignment.training_modules?.title || t('unknownModule')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className={cn("flex items-center text-sm text-gray-600", isRTL ? "flex-row-reverse" : "")}>
-                        {getTargetIcon(assignment.target_type)}
-                        <span className={cn("truncate max-w-[200px]", isRTL ? "mr-2" : "ml-2")} title={getTargetLabel(assignment.target_type)}>
-                          {getTargetLabel(assignment.target_type)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
-                        <span className={cn("flex items-center", isRTL ? "flex-row-reverse" : "")}>
-                          <Clock className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
-                          {formatDate(assignment.created_at)}
-                        </span>
-                        {assignment.due_date && (
-                          <span className={`${new Date(assignment.due_date) < new Date() ? 'text-red-500 font-medium' : ''}`}>
-                            {t('due')}: {formatDate(assignment.due_date)}
+                      <CardTitle className="text-lg mt-2 line-clamp-1" title={primaryAssignment.training_modules?.title}>
+                        {primaryAssignment.training_modules?.title || t('unknownModule')}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-col gap-3">
+                        <div className={cn("flex items-center text-sm text-gray-600", isRTL ? "flex-row-reverse" : "")}>
+                          {getTargetIcon(targetType)}
+                          <span className={cn("truncate max-w-[220px] font-medium", isRTL ? "mr-2" : "ml-2")} title={targetTypeLabel}>
+                            {targetTypeLabel}
                           </span>
-                        )}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          {targets.map((target) => (
+                            <div
+                              key={target.assignmentId}
+                              className="flex items-center justify-between gap-3 rounded-md border bg-slate-50 px-2 py-2"
+                            >
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <span className="text-sm font-semibold text-slate-700 truncate">
+                                  {target.label}
+                                </span>
+                                {target.meta && (
+                                  <span className="text-xs text-muted-foreground truncate">
+                                    {target.meta}
+                                  </span>
+                                )}
+                              </div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-gray-400 hover:text-red-600"
+                                onClick={() => handleDelete(target.assignmentId)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
+                          <span className={cn("flex items-center", isRTL ? "flex-row-reverse" : "")}>
+                            <Clock className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
+                            {formatDate(primaryAssignment.created_at)}
+                          </span>
+                          {primaryAssignment.due_date && (
+                            <span className={`${new Date(primaryAssignment.due_date) < new Date() ? 'text-red-500 font-medium' : ''}`}>
+                              {t('due')}: {formatDate(primaryAssignment.due_date)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                )
+              })
             ) : (
               <div className="col-span-full text-center py-12 bg-white rounded-lg border border-dashed">
                 <div className="mx-auto h-12 w-12 text-gray-300">
@@ -1192,7 +1356,8 @@ export function TrainingAssignmentsPanel({
                     onChange={(e) => {
                       setFormTargetType(e.target.value as any)
                       setFormTargetIds([])
-                      setPropertyFilter('all')
+                      setPropertyFilters([])
+                      setTargetSearch('')
                     }}
                     className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
                   >
@@ -1203,31 +1368,15 @@ export function TrainingAssignmentsPanel({
                   </select>
                 </div>
 
-                {formTargetType === 'departments' && departmentProperties.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>{t('filterByProperty')}</Label>
-                    <select
-                      value={propertyFilter}
-                      onChange={(e) => setPropertyFilter(e.target.value)}
-                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                    >
-                      <option value="all">{t('allProperties')}</option>
-                      {departmentProperties.map(prop => (
-                        <option key={prop} value={prop}>{prop}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
                 {formTargetType !== 'all' && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <Label>
                         {formTargetType === 'users' ? t('selectUsers') :
                           formTargetType === 'departments' ? t('selectDepartments') :
                             t('selectProperties')}
                       </Label>
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <Button
                           type="button"
                           variant="outline"
@@ -1247,8 +1396,118 @@ export function TrainingAssignmentsPanel({
                         </Button>
                       </div>
                     </div>
-                    <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-gray-50">
-                      {currentListItems.length > 0 ? (
+
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="relative flex-1">
+                          <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400", isRTL ? "right-3" : "left-3")} />
+                          <Input
+                            value={targetSearch}
+                            onChange={(e) => setTargetSearch(e.target.value)}
+                            placeholder={
+                              formTargetType === 'users'
+                                ? t('searchUsers', 'Search users...')
+                                : formTargetType === 'departments'
+                                  ? t('searchDepartments', 'Search departments or properties...')
+                                  : t('searchProperties', 'Search properties...')
+                            }
+                            className={cn(isRTL ? "pr-9 text-right" : "pl-9", "bg-white")}
+                          />
+                        </div>
+
+                        {formTargetType === 'departments' && departmentProperties.length > 0 && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-10">
+                                {t('filterByProperty')}
+                                {propertyFilters.length > 0 && (
+                                  <span className="ms-2 text-xs text-muted-foreground">({propertyFilters.length})</span>
+                                )}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-64">
+                              <DropdownMenuLabel>{t('filterByProperty')}</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuCheckboxItem
+                                checked={propertyFilters.length === 0}
+                                onCheckedChange={() => setPropertyFilters([])}
+                              >
+                                {t('allProperties')}
+                              </DropdownMenuCheckboxItem>
+                              <DropdownMenuSeparator />
+                              {departmentProperties.map(propertyName => (
+                                <DropdownMenuCheckboxItem
+                                  key={propertyName}
+                                  checked={propertyFilters.includes(propertyName)}
+                                  onCheckedChange={(checked) => togglePropertyFilter(propertyName, Boolean(checked))}
+                                >
+                                  {propertyName}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto border rounded-md p-2 bg-gray-50">
+                      {formTargetType === 'departments' ? (
+                        departmentGroups.length > 0 ? (
+                          <div className="flex flex-col gap-3">
+                            {departmentGroups.map((group) => {
+                              const groupIds = group.items.map(item => item.id)
+                              const selectedCount = groupIds.filter(id => formTargetIds.includes(id)).length
+                              const allSelected = selectedCount === group.items.length && group.items.length > 0
+
+                              return (
+                                <div key={group.name} className="rounded-md border bg-white">
+                                  <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 px-3 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-semibold text-gray-700">{group.name}</span>
+                                      <span className="text-xs text-gray-500">
+                                        {selectedCount}/{group.items.length}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => toggleGroupSelection(group.items, !allSelected)}
+                                      >
+                                        {allSelected ? t('clear', 'Clear') : t('selectAll', 'Select all')}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1 p-2">
+                                    {group.items.map((item) => (
+                                      <label key={item.id} className="flex items-center gap-2 rounded p-2 hover:bg-gray-50 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={formTargetIds.includes(item.id)}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setFormTargetIds([...formTargetIds, item.id])
+                                            } else {
+                                              setFormTargetIds(formTargetIds.filter(id => id !== item.id))
+                                            }
+                                          }}
+                                          className="h-4 w-4 rounded border-gray-300"
+                                        />
+                                        <span className="text-sm text-gray-700">{item.name}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-center py-6 text-gray-500 text-sm">
+                            {t('noItemsFound')}
+                          </p>
+                        )
+                      ) : currentListItems.length > 0 ? (
                         currentListItems.map((item) => (
                           <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer">
                             <input
