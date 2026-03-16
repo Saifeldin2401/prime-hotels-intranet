@@ -70,4 +70,22 @@ describe('GlobalSearch', () => {
         expect(mockSaveSearch).toHaveBeenCalledWith('policy')
         expect(mockNavigate).toHaveBeenCalledWith('/policies')
     })
+
+    it('shows tooltip on clear button hover', async () => {
+        const { getByPlaceholderText, getByLabelText, getByText } = render(<GlobalSearch />)
+        const input = getByPlaceholderText('nav:search_placeholder') as HTMLInputElement
+
+        await act(async () => {
+            fireEvent.change(input, { target: { value: 'test' } })
+        })
+
+        const clearButton = getByLabelText('Clear search')
+        expect(clearButton).toBeDefined()
+
+        await act(async () => {
+            fireEvent.mouseEnter(clearButton)
+        })
+
+        expect(getByText('Clear search')).toBeDefined()
+    })
 })

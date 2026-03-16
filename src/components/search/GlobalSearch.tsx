@@ -5,6 +5,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useSearch, useSearchSuggestions, useRecentSearches } from '@/hooks/useSearch'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 
 interface GlobalSearchProps {
@@ -138,9 +139,10 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
     }
 
     return (
-        <div ref={wrapperRef} className={cn("relative w-full max-w-2xl mx-6 hidden md:block group", className)}>
-            <div className="relative">
-                <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
+        <TooltipProvider>
+            <div ref={wrapperRef} className={cn("relative w-full max-w-2xl mx-6 hidden md:block group", className)}>
+                <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                     {isLoading ? (
                         <Loader2 className="h-4 w-4 text-hotel-gold animate-spin" />
                     ) : (
@@ -169,18 +171,26 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                     </div>
                 )}
                 {query && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setQuery('')
-                            queryRef.current = ''
-                            setSelectedIndex(0)
-                            setIsOpen(false)
-                        }}
-                        className="absolute inset-y-0 end-0 pe-3 flex items-center text-gray-400 hover:text-white"
-                    >
-                        <X className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                type="button"
+                                aria-label={t('common:button.clear', 'Clear search')}
+                                onClick={() => {
+                                    setQuery('')
+                                    queryRef.current = ''
+                                    setSelectedIndex(0)
+                                    setIsOpen(false)
+                                }}
+                                className="absolute inset-y-0 end-0 pe-3 flex items-center text-gray-400 hover:text-white"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                            {t('common:button.clear', 'Clear search')}
+                        </TooltipContent>
+                    </Tooltip>
                 )}
             </div>
 
@@ -337,6 +347,7 @@ export function GlobalSearch({ className, onClose }: GlobalSearchProps) {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </TooltipProvider>
     )
 }

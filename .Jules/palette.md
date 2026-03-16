@@ -1,0 +1,3 @@
+## 2026-03-16 - [Universal Tooltip Pattern for Icon-Only Elements]
+**Learning:** Icon-only interactive elements in this application (like search clear buttons, notification bells, etc.) often lack both `aria-label` for screen readers and `Tooltip` for visual clarity. Additionally, the custom `Tooltip` implementation requires a local `TooltipProvider` as it is not currently globally provided in the root layout.
+**Action:** Always wrap icon-only buttons with both an `aria-label` and a `Tooltip` (using `TooltipTrigger asChild`), and ensure a `TooltipProvider` is present in the component or parent container.
