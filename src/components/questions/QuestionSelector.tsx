@@ -20,6 +20,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Search, Filter, Loader2 } from 'lucide-react'
 import { useQuestions } from '@/hooks/useQuestions'
+import { useDebounce } from '@/hooks/useDebounce'
 import type { QuestionType, QuestionDifficulty } from '@/types/questions'
 import { Badge } from '@/components/ui/badge'
 import { useTranslation } from "react-i18next";
@@ -38,10 +39,12 @@ export function QuestionSelector({
     excludeIds = []
 }: QuestionSelectorProps) {
     const [search, setSearch] = useState('')
+    // ⚡ Bolt: Debounce search input to prevent unnecessary database queries on every keystroke
+    const debouncedSearch = useDebounce(search, 300)
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
     const { data, isLoading } = useQuestions({
-        search: search || undefined
+        search: debouncedSearch || undefined
         // Removed status: 'published' to allow selecting drafts
     })
 
