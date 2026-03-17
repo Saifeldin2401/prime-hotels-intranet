@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -58,12 +58,12 @@ export default function OrganizationalControlCenter() {
     )
 
     // Build tree structure
-    const treeNodes = hierarchyData ? buildOrgTree(hierarchyData) : []
+    const treeNodes = useMemo(() => hierarchyData ? buildOrgTree(hierarchyData) : [], [hierarchyData])
 
     // Filter nodes by search term
-    const filteredNodes = debouncedSearchTerm
+    const filteredNodes = useMemo(() => debouncedSearchTerm
         ? filterTreeNodes(treeNodes, debouncedSearchTerm)
-        : treeNodes
+        : treeNodes, [treeNodes, debouncedSearchTerm])
 
     const handleNodeClick = (node: OrgTreeNode) => {
         setSelectedEmployee(node)
