@@ -45,11 +45,3 @@ export function RoleBasedRedirect() {
     // Always redirect to unified dashboard
     return <Navigate to="/dashboard" replace />
 }
-
-/**
- * Helper function to get dashboard path for a role
- * Useful for programmatic navigation
- */
-export function getDashboardPathForRole(_role: AppRole | string): string {
-    return '/dashboard'
-}

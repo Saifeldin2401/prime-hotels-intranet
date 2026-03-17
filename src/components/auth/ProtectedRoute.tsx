@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
 import { ROLES, type AppRole } from '@/lib/constants'
 import type { Permission } from '@/hooks/usePermissions'
-import { getDashboardPathForRole } from './RoleBasedRedirect'
+import { getDashboardPathForRole } from '@/lib/auth-utils'
 import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
 
 interface ProtectedRouteProps {
