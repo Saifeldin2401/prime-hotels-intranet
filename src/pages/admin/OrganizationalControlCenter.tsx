@@ -27,6 +27,7 @@ import { supabase } from '@/lib/supabase'
 import { formatDateTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { useDebounce } from '@/hooks/useDebounce'
 import {
     Table,
     TableBody,
@@ -40,6 +41,7 @@ export default function OrganizationalControlCenter() {
     const { t } = useTranslation(['admin', 'common'])
     const [activeTab, setActiveTab] = useState('orgchart')
     const [searchTerm, setSearchTerm] = useState('')
+    const debouncedSearchTerm = useDebounce(searchTerm, 300)
     const [selectedPropertyId, setSelectedPropertyId] = useState<string>('')
     const [selectedEmployee, setSelectedEmployee] = useState<OrgTreeNode | null>(null)
     const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -55,8 +57,8 @@ export default function OrganizationalControlCenter() {
     const treeNodes = hierarchyData ? buildOrgTree(hierarchyData) : []
 
     // Filter nodes by search term
-    const filteredNodes = searchTerm
-        ? filterTreeNodes(treeNodes, searchTerm)
+    const filteredNodes = debouncedSearchTerm
+        ? filterTreeNodes(treeNodes, debouncedSearchTerm)
         : treeNodes
 
     const handleNodeClick = (node: OrgTreeNode) => {
@@ -173,7 +175,7 @@ export default function OrganizationalControlCenter() {
                         /* Department View */
                         <OrgByDepartment
                             selectedPropertyId={selectedPropertyId || undefined}
-                            searchTerm={searchTerm}
+                            searchTerm={debouncedSearchTerm}
                             onEmployeeClick={(emp) => {
                                 // Convert to OrgTreeNode format for editor compatibility
                                 setSelectedEmployee({
@@ -233,7 +235,7 @@ export default function OrganizationalControlCenter() {
                 <TabsContent value="assignments" className="mt-6">
                     <AssignmentsTable
                         propertyId={selectedPropertyId || undefined}
-                        searchTerm={searchTerm}
+                        searchTerm={debouncedSearchTerm}
                         onEditEmployee={handleEditNode}
                     />
                 </TabsContent>

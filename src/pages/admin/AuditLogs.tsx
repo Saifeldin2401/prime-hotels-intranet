@@ -25,6 +25,7 @@ import { Download, Filter, Search, Activity, User, FileText, Shield, Clock, Chev
 import { formatDateTime } from '@/lib/utils'
 import type { AuditLog } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
+import { useDebounce } from '@/hooks/useDebounce'
 
 const actionColors = {
   create: 'bg-green-100 text-green-800',
@@ -42,6 +43,7 @@ type AuditLogWithUser = AuditLog & { user?: AuditUser | AuditUser[] | null }
 export default function AuditLogs() {
   const { t } = useTranslation('admin')
   const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const [actionFilter, setActionFilter] = useState<string>('all')
   const [targetFilter, setTargetFilter] = useState<string>('all')
   const [dateRange, setDateRange] = useState<string>('30days')
@@ -57,7 +59,7 @@ export default function AuditLogs() {
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audit-logs', searchTerm, actionFilter, targetFilter, dateRange, page, pageSize],
+    queryKey: ['audit-logs', debouncedSearchTerm, actionFilter, targetFilter, dateRange, page, pageSize],
     queryFn: async () => {
       let query = supabase
         .from('audit_logs')
@@ -67,8 +69,8 @@ export default function AuditLogs() {
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
 
-      if (searchTerm) {
-        query = query.or(`action.ilike.%${searchTerm}%,entity_type.ilike.%${searchTerm}%`)
+      if (debouncedSearchTerm) {
+        query = query.or(`action.ilike.%${debouncedSearchTerm}%,entity_type.ilike.%${debouncedSearchTerm}%`)
       }
 
       if (actionFilter !== 'all') {
@@ -182,7 +184,7 @@ export default function AuditLogs() {
         .limit(1000) // Safety limit
 
       // Apply same filters...
-      if (searchTerm) query = query.or(`action.ilike.%${searchTerm}%,entity_type.ilike.%${searchTerm}%`)
+      if (debouncedSearchTerm) query = query.or(`action.ilike.%${debouncedSearchTerm}%,entity_type.ilike.%${debouncedSearchTerm}%`)
       if (actionFilter !== 'all') query = query.eq('action', actionFilter)
       if (targetFilter !== 'all') query = query.eq('entity_type', targetFilter)
       // ... date logic ...
