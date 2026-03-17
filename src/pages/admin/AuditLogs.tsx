@@ -43,7 +43,11 @@ type AuditLogWithUser = AuditLog & { user?: AuditUser | AuditUser[] | null }
 export default function AuditLogs() {
   const { t } = useTranslation('admin')
   const [searchTerm, setSearchTerm] = useState('')
+
+  // ⚡ Bolt: Debounce search input to prevent rapid-fire API requests while the user is typing.
+  // Impact: Reduces Supabase requests and re-renders by batching keystrokes.
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
+
   const [actionFilter, setActionFilter] = useState<string>('all')
   const [targetFilter, setTargetFilter] = useState<string>('all')
   const [dateRange, setDateRange] = useState<string>('30days')

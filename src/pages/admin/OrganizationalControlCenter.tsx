@@ -41,7 +41,11 @@ export default function OrganizationalControlCenter() {
     const { t } = useTranslation(['admin', 'common'])
     const [activeTab, setActiveTab] = useState('orgchart')
     const [searchTerm, setSearchTerm] = useState('')
+
+    // ⚡ Bolt: Debounce search input to prevent expensive filterTreeNodes execution on every keystroke.
+    // Impact: Prevents main thread blocking and laggy input behavior during fast typing.
     const debouncedSearchTerm = useDebounce(searchTerm, 300)
+
     const [selectedPropertyId, setSelectedPropertyId] = useState<string>('')
     const [selectedEmployee, setSelectedEmployee] = useState<OrgTreeNode | null>(null)
     const [isEditorOpen, setIsEditorOpen] = useState(false)
