@@ -30,7 +30,7 @@ export function ProtectedRoute({
   fallbackPath = "/unauthorized",
   smartFallback = true // Default to smart fallback for better UX
 }: ProtectedRouteProps) {
-  const { user, primaryRole, roles, rolesLoading, loading } = useAuth()
+  const { user, primaryRole, rolesLoading, loading } = useAuth()
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('common')
 

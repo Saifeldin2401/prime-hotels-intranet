@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label'
 import { Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/ui/use-toast'
-import { useTranslation } from "react-i18next";
 
 interface LoginPanelProps {
     className?: string
@@ -52,7 +51,7 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
                 // RoleBasedRedirect will handle navigation
                 navigate('/', { replace: true })
             }
-        } catch (err) {
+        } catch (_err) {
             toast({
                 title: 'Error',
                 description: 'An unexpected error occurred. Please try again.',
