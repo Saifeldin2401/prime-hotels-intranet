@@ -10,6 +10,7 @@ import { PageTransition } from '@/components/layout/PageTransition'
 import { WizardTrigger } from '@/components/common/WizardTrigger'
 import { CommandPalette } from '@/components/common/CommandPalette'
 import { KeyboardShortcutsModal } from '@/components/common/KeyboardShortcutsModal'
+import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -71,7 +72,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [])
 
   if (isMobileView) {
-    return <MobileLayout>{children}</MobileLayout>
+    return (
+      <>
+        <HolidayCelebration />
+        <MobileLayout>{children}</MobileLayout>
+      </>
+    )
   }
 
   return (
@@ -92,6 +98,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         "flex-1 flex flex-col transition-all duration-300 ease-in-out",
         sidebarCollapsed ? "lg:ms-20" : "lg:ms-[280px]"
       )}>
+        <HolidayCelebration />
         {/* Desktop Header */}
         <div className="hidden lg:block">
           <Header
