@@ -21,6 +21,7 @@ import type { Profile, Property } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
 import { ArrowLeft } from 'lucide-react'
 import { useDepartments } from '@/hooks/useDepartments'
+import { useDebounce } from '@/hooks/useDebounce'
 import {
   Command,
   CommandEmpty,
@@ -90,6 +91,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
   const [openReportingTo, setOpenReportingTo] = useState(false)
   const [managerSearch, setManagerSearch] = useState('')
+  const debouncedManagerSearch = useDebounce(managerSearch, 300)
 
   const triggerKeyboardAction = (event: KeyboardEvent<HTMLDivElement>, action: () => void) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -326,9 +328,9 @@ export function UserForm({ user, onClose }: UserFormProps) {
   })
 
   const { data: searchedManagers } = useQuery({
-    queryKey: ['manager-search', managerSearch],
+    queryKey: ['manager-search', debouncedManagerSearch],
     queryFn: async () => {
-      const trimmed = managerSearch.trim()
+      const trimmed = debouncedManagerSearch.trim()
       if (trimmed.length < 2) return []
 
       const escaped = escapeSearchQuery(trimmed)
@@ -366,7 +368,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
         }))
         .sort((a: PotentialManager, b: PotentialManager) => a.full_name.localeCompare(b.full_name))
     },
-    enabled: managerSearch.trim().length >= 2
+    enabled: debouncedManagerSearch.trim().length >= 2
   })
 
   const combinedManagers = useMemo(() => {

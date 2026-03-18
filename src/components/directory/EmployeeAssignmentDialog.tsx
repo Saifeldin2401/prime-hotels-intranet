@@ -40,6 +40,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import type { OrgEmployee } from '@/hooks/useOrgHierarchy'
 import { cn, escapeSearchQuery } from '@/lib/utils'
+import { useDebounce } from '@/hooks/useDebounce'
 
 interface EmployeeAssignmentDialogProps {
     employee: OrgEmployee | null
@@ -69,6 +70,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
     const [selectedManagerId, setSelectedManagerId] = useState<string | null>(() => employee?.reporting_to || null)
     const [openManagerSelect, setOpenManagerSelect] = useState(false)
     const [managerSearch, setManagerSearch] = useState('')
+    const debouncedManagerSearch = useDebounce(managerSearch, 300)
     const managerListId = useId()
 
     // Check if admin can edit this employee
@@ -176,9 +178,9 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
     })
 
     const { data: managerResults = [] } = useQuery({
-        queryKey: ['org-manager-search', managerSearch, selectedPropertyId, primaryRole, employee?.id],
+        queryKey: ['org-manager-search', debouncedManagerSearch, selectedPropertyId, primaryRole, employee?.id],
         queryFn: async () => {
-            const trimmed = managerSearch.trim()
+            const trimmed = debouncedManagerSearch.trim()
             if (trimmed.length < 2) return []
             if (!employee) return []
 
@@ -221,7 +223,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                 })
                 .sort((a, b) => a.full_name.localeCompare(b.full_name))
         },
-        enabled: managerSearch.trim().length >= 2
+        enabled: debouncedManagerSearch.trim().length >= 2
     })
 
     const initializeForm = (targetEmployee: OrgEmployee) => {
