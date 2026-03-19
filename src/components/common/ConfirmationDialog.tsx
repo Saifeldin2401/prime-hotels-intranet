@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -10,7 +9,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Loader2, AlertTriangle, Trash2, LogOut, Archive } from 'lucide-react'
+import { Loader2, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface ConfirmationDialogProps {

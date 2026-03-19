@@ -94,7 +94,7 @@ export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose
                     timestamp: new Date()
                 }])
             }
-        } catch (error) {
+        } catch (_error) {
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'error',
