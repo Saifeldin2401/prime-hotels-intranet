@@ -122,5 +122,14 @@
     "online": "متصل",
     "good_evening": "مساء الخير",
     "good_morning": "صباح الخير",
-    "good_afternoon": "مساء الخير"
+    "good_afternoon": "مساء الخير",
+    "news_publisher": "ناشر الأخبار",
+    "siem_integrations": "ربط أنظمة SIEM",
+    "retention_policies": "سياسات الاحتفاظ",
+    "report_builder": "منشئ التقارير",
+    "motivational_content": "المحتوى التحفيزي",
+    "compliance_center": "مركز الامتثال",
+    "email_writer": "كاتب البريد الإلكتروني",
+    "inbound_emails": "البريد الوارد",
+    "manual_certificates": "الشهادات اليدوية"
 }

@@ -24,7 +24,8 @@ import {
   Building,
   Globe,
   ChevronsUpDown,
-  Bell
+  Bell,
+  Check
 } from 'lucide-react'
 import {
   Avatar,
@@ -106,36 +107,42 @@ export function Header({
               <div className="hidden md:flex flex-col items-start me-4">
                 <Select value={currentProperty?.id ?? ''} onValueChange={switchProperty}>
                   <SelectTrigger className={cn(
-                    "w-[300px] h-11 bg-hotel-navy-dark/80 border-hotel-gold/30 text-white hover:bg-hotel-navy-light/50 focus:ring-hotel-gold focus:ring-2 transition-all duration-200 rounded-lg shadow-lg",
-                    isConsolidatedContext && "border-hotel-gold bg-hotel-navy-light/30"
+                    "w-[290px] h-14 bg-hotel-navy-dark border border-hotel-gold/30 text-white hover:bg-hotel-navy-light focus:ring-hotel-gold/50 focus:ring-2 transition-all duration-300 rounded-xl shadow-lg relative group overflow-hidden [&>svg]:text-hotel-gold/80 [&>svg]:opacity-100 [&>svg]:w-4 [&>svg]:h-4 [&>svg]:transition-transform [&>svg]:duration-300 ps-3 pe-4",
+                    isConsolidatedContext && "border-hotel-gold/60 bg-gradient-to-r from-hotel-navy-dark to-hotel-navy-light shadow-[0_0_20px_rgba(212,175,55,0.15)]"
                   )}>
-                    <div className="flex items-center gap-3 truncate w-full">
+                    {isConsolidatedContext && (
+                        <div className="absolute inset-0 bg-hotel-gold/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                    )}
+                    <div className="flex items-center gap-3 w-full pr-1">
                       <div className={cn(
-                        "p-2 rounded-md shrink-0",
-                        isConsolidatedContext ? "bg-hotel-gold text-hotel-navy" : "bg-hotel-gold/20 text-hotel-gold"
+                        "flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-all duration-300",
+                        isConsolidatedContext ? "bg-gradient-to-br from-hotel-gold via-yellow-500 to-yellow-600 text-hotel-navy shadow-md" : "bg-hotel-navy/80 text-hotel-gold border border-hotel-gold/20 group-hover:bg-hotel-navy"
                       )}>
                         {isConsolidatedContext ? (
-                          <Globe className="h-4 w-4" />
+                          <Globe className="h-4 w-4 stroke-[2.5]" />
                         ) : (
                           <Building className="h-4 w-4" />
                         )}
                       </div>
-                      <div className="flex flex-col items-start overflow-hidden min-w-0">
-                        <span className="text-[10px] text-hotel-gold/80 uppercase tracking-wider font-semibold leading-none">
+                      <div className="flex flex-col items-start overflow-hidden min-w-0 text-left pt-0.5">
+                        <span className={cn(
+                          "text-[9.5px] uppercase tracking-[0.1em] font-bold leading-tight mb-0.5 transition-colors duration-300",
+                          isConsolidatedContext ? "text-hotel-gold" : "text-hotel-gold/70 group-hover:text-hotel-gold/90"
+                        )}>
                           {isConsolidatedContext ? 'Administrative Context' : 'Active Property'}
                         </span>
-                        <span className="text-sm font-medium truncate">
+                        <span className="text-[13px] font-semibold truncate w-full text-white/95 tracking-wide">
                           {currentProperty?.name || 'Select Property'}
                         </span>
                       </div>
-                      <ChevronDown className="h-4 w-4 text-hotel-gold/60 ms-auto shrink-0" />
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="w-[340px] max-h-[450px] border-hotel-navy/20 bg-white dark:bg-hotel-navy shadow-2xl rounded-xl p-0">
+                  <SelectContent className="w-[340px] max-h-[500px] border border-hotel-gold/20 bg-hotel-navy shadow-2xl shadow-black/40 rounded-xl p-0 overflow-hidden">
                     {/* Header */}
-                    <div className="px-4 py-3 bg-gradient-to-r from-hotel-navy to-hotel-navy-light border-b border-hotel-gold/20">
-                      <p className="text-xs font-bold text-hotel-gold uppercase tracking-wider">Available Properties</p>
-                      <p className="text-[10px] text-white/60 mt-0.5">Select your working context</p>
+                    <div className="px-4 py-4 bg-gradient-to-br from-hotel-navy-dark to-hotel-navy border-b border-hotel-gold/20 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-hotel-gold/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4"></div>
+                      <p className="text-xs font-bold text-hotel-gold uppercase tracking-[0.1em] relative z-10">Available Properties</p>
+                      <p className="text-[11px] text-white/50 mt-1 font-medium relative z-10">Select your working context</p>
                     </div>
                     {/* Property List - Dynamically Grouped by Region */}
                     <div className="py-2">
@@ -145,39 +152,37 @@ export function Header({
                           key={prop.id}
                           value={prop.id}
                           className={cn(
-                            "cursor-pointer mx-2 my-1 rounded-lg border transition-all duration-200",
+                            "cursor-pointer mx-2 my-1.5 rounded-lg border transition-all duration-200 focus:bg-hotel-navy-light/60 focus:text-white ps-3 [&>span.absolute]:hidden",
                             currentProperty?.id === prop.id
-                              ? "bg-hotel-navy text-white border-hotel-gold/50 py-3"
-                              : "hover:bg-hotel-navy/5 border-transparent py-2.5"
+                              ? "bg-hotel-navy-light/80 text-white border-hotel-gold/40 shadow-[0_2px_10px_rgba(212,175,55,0.1)] py-3"
+                              : "hover:bg-hotel-navy-light/40 border-transparent py-2.5 text-white/80"
                           )}
                         >
                           <div className="flex items-center gap-3 w-full">
                             <div className={cn(
-                              "p-2 rounded-md shrink-0",
-                              currentProperty?.id === prop.id ? "bg-hotel-gold text-hotel-navy" : "bg-hotel-navy/10 text-hotel-navy"
+                              "flex items-center justify-center w-8 h-8 rounded-md shrink-0 transition-colors duration-300",
+                              currentProperty?.id === prop.id ? "bg-gradient-to-br from-hotel-gold to-yellow-600 text-hotel-navy" : "bg-white/10 text-hotel-gold/80"
                             )}>
                               <Globe className="h-4 w-4" />
                             </div>
                             <div className="flex flex-col min-w-0">
                               <span className={cn(
-                                "font-semibold text-sm truncate",
-                                currentProperty?.id === prop.id ? "text-white" : "text-foreground"
+                                "font-semibold text-[13px] truncate",
+                                currentProperty?.id === prop.id ? "text-white" : "text-white/90"
                               )}>
                                 {prop.name}
                               </span>
                               <span className={cn(
                                 "text-[10px] truncate",
-                                currentProperty?.id === prop.id ? "text-hotel-gold/80" : "text-muted-foreground"
+                                currentProperty?.id === prop.id ? "text-hotel-gold/90 font-medium" : "text-white/50"
                               )}>
                                 Corporate Headquarters & Global Operations
                               </span>
                             </div>
                             {currentProperty?.id === prop.id && (
-                              <div className="ms-auto shrink-0">
-                                <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center">
-                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                  </svg>
+                              <div className="ms-auto shrink-0 ps-3">
+                                <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center shadow-lg">
+                                  <Check className="w-3 h-3 stroke-[3]" />
                                 </div>
                               </div>
                             )}
@@ -187,7 +192,7 @@ export function Header({
 
                       {/* Divider if both types exist */}
                       {hasConsolidatedOption && scopedProperties.length > 0 && (
-                        <div className="my-3 mx-4 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                        <div className="my-3 mx-4 h-px bg-hotel-gold/20" />
                       )}
 
                       {/* Dynamic Region Grouping */}
@@ -225,9 +230,9 @@ export function Header({
                         })
 
                         return sortedRegions.map(([region, props]) => (
-                          <div key={region} className="mb-2">
-                            <p className="px-3 py-1.5 text-[10px] font-bold text-hotel-navy/60 dark:text-hotel-gold/70 uppercase tracking-wider flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-hotel-gold/60" />
+                          <div key={region} className="mb-3">
+                            <p className="px-4 py-2 mt-2 mb-1 text-[10px] font-bold text-hotel-gold uppercase tracking-[0.15em] flex items-center gap-2 bg-hotel-navy-dark/40 border-y border-hotel-gold/10">
+                              <span className="w-1.5 h-1.5 rounded-full bg-hotel-gold shadow-[0_0_5px_rgba(212,175,55,0.5)]" />
                               {region}
                             </p>
                             {props.map(prop => (
@@ -235,41 +240,39 @@ export function Header({
                                 key={prop.id}
                                 value={prop.id}
                                 className={cn(
-                                  "cursor-pointer mx-2 my-0.5 rounded-lg border transition-all duration-200",
+                                  "cursor-pointer mx-2 my-1 rounded-lg border transition-all duration-200 focus:bg-hotel-navy-light/60 focus:text-white ps-3 [&>span.absolute]:hidden",
                                   currentProperty?.id === prop.id
-                                    ? "bg-hotel-navy-light/90 text-white border-hotel-gold/30 py-3"
-                                    : "hover:bg-slate-50 dark:hover:bg-slate-800/50 border-transparent py-2.5"
+                                    ? "bg-hotel-navy-light/80 text-white border-hotel-gold/40 shadow-[0_2px_10px_rgba(212,175,55,0.1)] py-3"
+                                    : "hover:bg-hotel-navy-light/40 border-transparent py-2.5 text-white/80"
                                 )}
                               >
                                 <div className="flex items-center gap-3 w-full">
                                   <div className={cn(
-                                    "p-1.5 rounded shrink-0",
-                                    currentProperty?.id === prop.id ? "bg-hotel-gold/20 text-hotel-gold" : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                    "flex items-center justify-center w-8 h-8 rounded-md shrink-0 transition-colors duration-300",
+                                    currentProperty?.id === prop.id ? "bg-hotel-gold/20 text-hotel-gold border border-hotel-gold/30" : "bg-white/5 text-white/60"
                                   )}>
                                     <Building className="h-4 w-4" />
                                   </div>
                                   <div className="flex flex-col min-w-0">
                                     <span className={cn(
-                                      "font-medium text-sm truncate",
-                                      currentProperty?.id === prop.id ? "text-white" : "text-foreground"
+                                      "font-medium text-[13px] truncate",
+                                      currentProperty?.id === prop.id ? "text-white" : "text-white/90"
                                     )}>
                                       {prop.name}
                                     </span>
                                     {prop.address && (
                                       <span className={cn(
                                         "text-[10px] truncate",
-                                        currentProperty?.id === prop.id ? "text-white/60" : "text-muted-foreground"
+                                        currentProperty?.id === prop.id ? "text-hotel-gold/80" : "text-white/50"
                                       )}>
                                         {prop.address}
                                       </span>
                                     )}
                                   </div>
                                   {currentProperty?.id === prop.id && (
-                                    <div className="ms-auto shrink-0">
-                                      <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center">
-                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
+                                    <div className="ms-auto shrink-0 ps-3">
+                                      <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center shadow-lg">
+                                        <Check className="w-3 h-3 stroke-[3]" />
                                       </div>
                                     </div>
                                   )}

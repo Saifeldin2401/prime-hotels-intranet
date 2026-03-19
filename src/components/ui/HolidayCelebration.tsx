@@ -23,50 +23,93 @@ export function HolidayCelebration() {
     const d = new Date();
     const gMonth = d.getMonth() + 1; // 1-12
     const gDay = d.getDate();
+    
+    // Cache key for the API hijri date. Only fetch once per day.
+    const dateStr = `${gDay.toString().padStart(2, '0')}-${gMonth.toString().padStart(2, '0')}-${currentYear}`;
+    const cacheKey = `phg_hijri_date_${dateStr}`;
 
-    let event: HolidayEvent = null;
+    const determineEvent = async () => {
+      let event: HolidayEvent = null;
 
-    // Check fixed Gregorian events
-    if (gMonth === 9 && gDay === 23) {
-      event = 'SAUDI_NATIONAL';
-    } else if (gMonth === 2 && gDay === 22) {
-      event = 'SAUDI_FOUNDING';
-    } else {
-      // Predict Hijri events
-      try {
-        const hijriDate = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {
-            day: 'numeric',
-            month: 'numeric',
-        }).format(d);
+      // Check fixed Gregorian events
+      if (gMonth === 9 && gDay === 23) {
+        event = 'SAUDI_NATIONAL';
+      } else if (gMonth === 2 && gDay === 22) {
+        event = 'SAUDI_FOUNDING';
+      } else {
+        let hMonth: number | null = null;
+        let hDay: number | null = null;
+
+        // 1. Check strict cache
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          try {
+             const parsed = JSON.parse(cached);
+             hMonth = parsed.hMonth;
+             hDay = parsed.hDay;
+          } catch(e) {}
+        }
         
-        // hijriDate is typically "M/D" or "M/D/YYYY" handling
-        const parts = hijriDate.split('/');
-        if (parts.length >= 2) {
-          const hMonth = parseInt(parts[0], 10);
-          const hDay = parseInt(parts[1], 10);
+        // 2. Fetch from strict authoritative online API if not cached today
+        if (!hMonth || !hDay) {
+          try {
+            // Using HTTP over HTTPS just in case of strictly mapped API endpoints, but HTTPS preferred.
+            // AlAdhan API properly supports HTTPS.
+            const res = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}&adjustment=0`);
+            const data = await res.json();
+            if (data?.data?.hijri) {
+              hMonth = data.data.hijri.month.number;
+              hDay = parseInt(data.data.hijri.day, 10);
+              
+              localStorage.setItem(cacheKey, JSON.stringify({ hMonth, hDay }));
+            }
+          } catch (err) {
+            console.error("Hijri API fetch failed", err);
+          }
+        }
 
+        // 3. Fallback to offline native local OS calculation if API failed completely
+        if (!hMonth || !hDay) {
+          try {
+            const hijriDate = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {
+                day: 'numeric',
+                month: 'numeric',
+            }).format(d);
+            const parts = hijriDate.split('/');
+            if (parts.length >= 2) {
+              hMonth = parseInt(parts[0], 10);
+              hDay = parseInt(parts[1], 10);
+            }
+          } catch(err) {
+            console.error("Hijri local fallback failed", err);
+          }
+        }
+
+        if (hMonth && hDay) {
           if (hMonth === 9) event = 'RAMADAN';
+          // Eid Al-Fitr spans 3 days typically
           else if (hMonth === 10 && hDay >= 1 && hDay <= 3) event = 'EID_FITR';
+          // Eid Al-Adha spans 3-4 days (10th to 12th/13th of Dhu al-Hijjah)
           else if (hMonth === 12 && hDay >= 10 && hDay <= 12) event = 'EID_ADHA';
         }
-      } catch (err) {
-        console.error("Hijri conversion failed", err);
       }
-    }
 
-    if (event) {
-      setActiveEvent(event);
-      setShowBanner(true);
-      
-      const confettiKey = `${event}_${currentYear}`;
-      if (hasSeenConfettiThisYear !== confettiKey) {
-        setShowConfetti(true);
-        localStorage.setItem('phg_holiday_confetti_year', confettiKey);
+      if (event) {
+        setActiveEvent(event);
+        setShowBanner(true);
         
-        // Turn off confetti after 8 seconds
-        setTimeout(() => setShowConfetti(false), 8000);
+        const confettiKey = `${event}_${currentYear}`;
+        if (hasSeenConfettiThisYear !== confettiKey) {
+          setShowConfetti(true);
+          localStorage.setItem('phg_holiday_confetti_year', confettiKey);
+          
+          // Turn off confetti after 8 seconds
+          setTimeout(() => setShowConfetti(false), 8000);
+        }
       }
-    }
+    };
+
+    determineEvent();
   }, []);
 
   if (!activeEvent || !showBanner) return null;

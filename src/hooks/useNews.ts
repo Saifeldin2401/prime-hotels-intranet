@@ -14,6 +14,8 @@ export interface HospitalityNews {
     published_at: string
     category: string
     original_language: string
+    is_visible: boolean
+    tags: string[] | null
 }
 
 export function useNews() {

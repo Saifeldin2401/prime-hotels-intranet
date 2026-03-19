@@ -30,6 +30,10 @@ const SLASettings = lazy(() => import('@/pages/admin/SLASettings'))
 const ManualCertificateGenerator = lazy(() => import('@/pages/admin/ManualCertificateGenerator'))
 const EmailWriter = lazy(() => import('@/pages/admin/EmailWriter'))
 const InboundEmails = lazy(() => import('@/pages/admin/InboundEmails'))
+const NewsPublisher = lazy(() => import('@/pages/admin/NewsPublisher'))
+const SIEMIntegrations = lazy(() => import('@/pages/admin/SIEMIntegrations'))
+const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
+const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 
 export const AdminRoutes = () => (
     <>
@@ -305,6 +309,54 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
                     <AppLayout>
                         <ManualCertificateGenerator />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/news-publisher"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <NewsPublisher />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/siem-config"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <SIEMIntegrations />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/retention-policies"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <AuditRetentionPolicies />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/report-builder"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <ReportBuilder />
+                        </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>
             }

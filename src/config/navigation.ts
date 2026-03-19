@@ -427,6 +427,15 @@ export const ROUTES: RouteConfig[] = [
         order: 6.9
     },
     {
+        path: '/hr/motivational-content',
+        title: 'motivational_content',
+        icon: Target,
+        description: 'Manage global dashboard motivational quotes',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
+        group: 'hr_management',
+        order: 6.95
+    },
+    {
         path: '/directory',
         title: 'directory',
         icon: Users,
@@ -762,6 +771,42 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager'],
         group: 'administration',
         order: 3.5
+    },
+    {
+        path: '/admin/news-publisher',
+        title: 'news_publisher',
+        icon: Megaphone,
+        description: 'Manage global hospitality news',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 3.51
+    },
+    {
+        path: '/admin/siem-config',
+        title: 'siem_integrations',
+        icon: Shield,
+        description: 'Configure external SIEM webhooks',
+        allowedRoles: ['corporate_admin'],
+        group: 'administration',
+        order: 3.52
+    },
+    {
+        path: '/admin/retention-policies',
+        title: 'retention_policies',
+        icon: Clock,
+        description: 'Manage audit data retention lifecycles',
+        allowedRoles: ['corporate_admin'],
+        group: 'administration',
+        order: 3.53
+    },
+    {
+        path: '/admin/report-builder',
+        title: 'report_builder',
+        icon: FileText,
+        description: 'Build automated reporting queries',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 3.54
     },
     {
         path: '/admin/ai-tools',

@@ -115,5 +115,14 @@
     "newRequest": "New Request",
     "reportIssue": "Report Issue",
     "chat": "Chat",
-    "sla_settings": "SLA Settings"
+    "sla_settings": "SLA Settings",
+    "news_publisher": "News Publisher",
+    "siem_integrations": "SIEM Integrations",
+    "retention_policies": "Retention Policies",
+    "report_builder": "Report Builder",
+    "motivational_content": "Motivational Content",
+    "compliance_center": "Compliance Center",
+    "email_writer": "Email Writer",
+    "inbound_emails": "Inbound Emails",
+    "manual_certificates": "Manual Certificates"
 }

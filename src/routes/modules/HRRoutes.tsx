@@ -28,6 +28,7 @@ const EmployeeOfMonthManagement = lazy(() => import('@/pages/hr/EmployeeOfMonthM
 // New routes
 const MyTeam = lazy(() => import('@/pages/hr/MyTeam'))
 const PropertyDepartments = lazy(() => import('@/pages/hr/PropertyDepartments'))
+const MotivationalContentEditor = lazy(() => import('@/pages/hr/MotivationalContentEditor'))
 
 export const HRRoutes = () => (
     <>
@@ -269,6 +270,18 @@ export const HRRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
                     <AppLayout>
                         <PropertyDepartments />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/hr/motivational-content"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <MotivationalContentEditor />
+                        </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>
             }
