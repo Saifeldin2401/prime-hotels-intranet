@@ -20,11 +20,10 @@ import {
 } from '@/components/ui/tooltip'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next"
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingRead } = useNotifications()
-  const { roles } = useAuth()
   const { hasPermission } = usePermissions()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()

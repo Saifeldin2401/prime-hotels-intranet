@@ -9,7 +9,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -23,7 +22,6 @@ import {
   Sparkles,
   Building,
   Globe,
-  ChevronsUpDown,
   Bell,
   Check
 } from 'lucide-react'
