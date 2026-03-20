@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useOrgHierarchy, buildOrgTree, type OrgTreeNode } from '@/hooks/useOrganization'
 import { OrgChartTree, OrgChartStats } from '@/components/admin/OrgChartTree'
+import { useDebounce } from '@/hooks/useDebounce'
 import { OrgByDepartment } from '@/components/admin/OrgByDepartment'
 import { ReportingLineEditor } from '@/components/admin/ReportingLineEditor'
 import { useProperties } from '@/hooks/useProperties'
@@ -294,8 +295,9 @@ function AssignmentsTable({
     onEditEmployee: (node: OrgTreeNode) => void
 }) {
     const { t } = useTranslation('admin')
+    const debouncedSearchTerm = useDebounce(searchTerm, 300)
     const { data: employees, isLoading } = useQuery({
-        queryKey: ['employees-with-reporting', propertyId, searchTerm],
+        queryKey: ['employees-with-reporting', propertyId, debouncedSearchTerm],
         queryFn: async () => {
             // Fetch profiles without self-join (simpler, avoids FK issues)
             let query = supabase
@@ -304,8 +306,9 @@ function AssignmentsTable({
                 .eq('is_active', true)
                 .order('full_name')
 
-            if (searchTerm) {
-                query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,job_title.ilike.%${searchTerm}%`)
+            // ⚡ Bolt: Use debounced search term to prevent excessive API queries on keystrokes
+            if (debouncedSearchTerm) {
+                query = query.or(`full_name.ilike.%${debouncedSearchTerm}%,email.ilike.%${debouncedSearchTerm}%,job_title.ilike.%${debouncedSearchTerm}%`)
             }
 
             const { data: profiles, error: profilesError } = await query.limit(100)

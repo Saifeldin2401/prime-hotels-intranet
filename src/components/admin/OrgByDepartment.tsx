@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useTranslation } from 'react-i18next'
 import {
     Building2,
@@ -58,10 +59,11 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
     const { t } = useTranslation('admin')
     const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set())
     const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set())
+    const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
     // Fetch all data needed
     const { data: propertyGroups, isLoading } = useQuery({
-        queryKey: ['org-by-department', selectedPropertyId, searchTerm],
+        queryKey: ['org-by-department', selectedPropertyId, debouncedSearchTerm],
         queryFn: async () => {
             // 1. Fetch properties
             let propQuery = supabase.from('properties').select('id, name').eq('is_active', true).order('name')
@@ -95,8 +97,9 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
                 .eq('is_active', true)
                 .order('full_name')
 
-            if (searchTerm) {
-                empQuery = empQuery.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,job_title.ilike.%${searchTerm}%`)
+            // ⚡ Bolt: Use debounced search term to prevent excessive API queries on keystrokes
+            if (debouncedSearchTerm) {
+                empQuery = empQuery.or(`full_name.ilike.%${debouncedSearchTerm}%,email.ilike.%${debouncedSearchTerm}%,job_title.ilike.%${debouncedSearchTerm}%`)
             }
 
             const { data: employees, error: empError } = await empQuery

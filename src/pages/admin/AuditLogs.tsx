@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useDebounce } from '@/hooks/useDebounce'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -46,6 +47,8 @@ export default function AuditLogs() {
   const [targetFilter, setTargetFilter] = useState<string>('all')
   const [dateRange, setDateRange] = useState<string>('30days')
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
+
   // Pagination State
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -57,7 +60,7 @@ export default function AuditLogs() {
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audit-logs', searchTerm, actionFilter, targetFilter, dateRange, page, pageSize],
+    queryKey: ['audit-logs', debouncedSearchTerm, actionFilter, targetFilter, dateRange, page, pageSize],
     queryFn: async () => {
       let query = supabase
         .from('audit_logs')
@@ -67,8 +70,9 @@ export default function AuditLogs() {
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
 
-      if (searchTerm) {
-        query = query.or(`action.ilike.%${searchTerm}%,entity_type.ilike.%${searchTerm}%`)
+      // ⚡ Bolt: Use debounced search term to prevent excessive API queries on keystrokes
+      if (debouncedSearchTerm) {
+        query = query.or(`action.ilike.%${debouncedSearchTerm}%,entity_type.ilike.%${debouncedSearchTerm}%`)
       }
 
       if (actionFilter !== 'all') {
@@ -182,7 +186,7 @@ export default function AuditLogs() {
         .limit(1000) // Safety limit
 
       // Apply same filters...
-      if (searchTerm) query = query.or(`action.ilike.%${searchTerm}%,entity_type.ilike.%${searchTerm}%`)
+      if (debouncedSearchTerm) query = query.or(`action.ilike.%${debouncedSearchTerm}%,entity_type.ilike.%${debouncedSearchTerm}%`)
       if (actionFilter !== 'all') query = query.eq('action', actionFilter)
       if (targetFilter !== 'all') query = query.eq('entity_type', targetFilter)
       // ... date logic ...
