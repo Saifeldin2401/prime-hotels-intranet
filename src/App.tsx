@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, dehydrate, hydrate, focusManager, onl
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { RouterProvider } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
 import { PresenceProvider } from '@/contexts/PresenceContext'
@@ -167,7 +168,9 @@ function App() {
             <PropertyProvider>
               <UserSettingsProvider>
                 <PresenceProvider>
-                  <RouterProvider router={router} />
+                  <TooltipProvider>
+                    <RouterProvider router={router} />
+                  </TooltipProvider>
                 </PresenceProvider>
               </UserSettingsProvider>
             </PropertyProvider>

@@ -4,6 +4,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Search, X, Building2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
@@ -14,7 +15,7 @@ interface TaskFiltersProps {
 }
 
 export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
-    const { t } = useTranslation('tasks')
+    const { t } = useTranslation(['tasks', 'common'])
     const { currentProperty } = useProperty()
 
     // Fetch departments for current property (or all in consolidated scope).
@@ -62,7 +63,8 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
             <div className="flex-1 relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                    placeholder={t('search_placeholder')}
+                    placeholder={t('tasks:search_placeholder')}
+                    aria-label={t('tasks:search_placeholder')}
                     className="pl-8"
                 />
             </div>
@@ -121,9 +123,19 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
             </Select>
 
             {hasFilters && (
-                <Button variant="ghost" onClick={() => onChange({})} size="icon">
-                    <X className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            onClick={() => onChange({})}
+                            size="icon"
+                            aria-label={t('common:clear_filters')}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('common:clear_filters')}</TooltipContent>
+                </Tooltip>
             )}
         </div>
     )
