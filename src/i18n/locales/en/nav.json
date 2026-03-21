@@ -76,6 +76,8 @@
     "profile": "Profile",
     "search": "Search",
     "search_placeholder": "Search documents, staff, tasks...",
+    "collapse_sidebar": "Collapse sidebar",
+    "expand_sidebar": "Expand sidebar",
     "logout": "Logout",
     "attendance": "Attendance",
     "performance": "Performance",
