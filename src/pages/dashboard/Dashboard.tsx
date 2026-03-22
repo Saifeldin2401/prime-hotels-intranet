@@ -317,7 +317,7 @@ export function IntegratedDashboard() {
 
   const showFocusToggle = ['corporate_admin', 'regional_admin', 'property_manager', 'property_hr', 'department_head'].includes(effectiveRole)
 
-  const handleFocusModeChange = useCallback((nextMode: 'my_work' | 'my_team') => {
+  const handleFocusModeChange = (nextMode: 'my_work' | 'my_team') => {
     if (nextMode === 'my_team') {
       setFocusMode('my_work')
       navigate('/hr/team')
@@ -325,7 +325,7 @@ export function IntegratedDashboard() {
     }
 
     setFocusMode(nextMode)
-  }, [navigate, setFocusMode])
+  }
 
   const widgetRendererProps = {
     effectivePermittedWidgets,
