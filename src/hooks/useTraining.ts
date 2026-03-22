@@ -744,21 +744,31 @@ export function useMyAssignments() {
   useEffect(() => {
     if (!user?.id) return
 
+    const invalidateMyAssignments = () => {
+      queryClient.invalidateQueries({ queryKey: ['my-assignments', user.id] })
+    }
+
     const channel = supabase
       .channel(`my-assignments-${user.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'learning_assignments' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['my-assignments', user.id] })
-        }
+        invalidateMyAssignments
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'learning_progress', filter: `user_id=eq.${user.id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['my-assignments', user.id] })
-        }
+        invalidateMyAssignments
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'learning_assignment_exemptions', filter: `user_id=eq.${user.id}` },
+        invalidateMyAssignments
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'learning_assignment_user_overrides', filter: `user_id=eq.${user.id}` },
+        invalidateMyAssignments
       )
       .subscribe()
 
@@ -771,7 +781,9 @@ export function useMyAssignments() {
     queryKey: ['my-assignments', user?.id],
     queryFn: () => learningService.getMyAssignments(),
     enabled: !!user?.id,
+    staleTime: 0,
     refetchInterval: 300000, // 5 min fallback (Realtime handles immediate updates above)
-    refetchOnWindowFocus: false
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true
   })
 }

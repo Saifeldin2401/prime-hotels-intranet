@@ -58,6 +58,7 @@ import {
 } from 'lucide-react'
 import '@/styles/knowledge-ui.css'
 import { cn } from '@/lib/utils'
+import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
 import { useAuth } from '@/hooks/useAuth'
 import {
     useKnowledgeArticle,
@@ -135,6 +136,11 @@ export default function KnowledgeViewer() {
 
     // Translation States
     const [isTranslating, setIsTranslating] = useState(false)
+    type TranslationDiagnostics = {
+        partialFailures: number
+        totalSegments: number
+    }
+
     type TranslatedArticleData = {
         title: string
         description: string
@@ -143,9 +149,11 @@ export default function KnowledgeViewer() {
     }
 
     const [translatedDataByLanguage, setTranslatedDataByLanguage] = useState<Partial<Record<TranslationTargetLanguage, TranslatedArticleData>>>({})
+    const [translationDiagnosticsByLanguage, setTranslationDiagnosticsByLanguage] = useState<Partial<Record<TranslationTargetLanguage, TranslationDiagnostics>>>({})
     const [showBilingual, setShowBilingual] = useState(false)
     const [translationTarget, setTranslationTarget] = useState<TranslationTargetLanguage | null>(null)
     const translatedData = translationTarget ? translatedDataByLanguage[translationTarget] ?? null : null
+    const translationDiagnostics = translationTarget ? translationDiagnosticsByLanguage[translationTarget] ?? null : null
 
     const translateAI = useTranslationAI()
 
@@ -240,6 +248,7 @@ export default function KnowledgeViewer() {
 
     useEffect(() => {
         setTranslatedDataByLanguage({})
+        setTranslationDiagnosticsByLanguage({})
         setTranslationTarget(null)
     }, [article?.id])
 
@@ -655,31 +664,32 @@ export default function KnowledgeViewer() {
         })
     }
 
-    const handleAITranslate = async (targetOverride?: TranslationTargetLanguage) => {
+    const handleAITranslate = async (targetOverride?: TranslationTargetLanguage, options?: { force?: boolean }) => {
         if (!article || !id) return
 
         const currentLang = article.title_ar && article.content?.includes('\u0600') ? 'ar' : 'en'
         const targetLang = targetOverride || (currentLang === 'en' ? 'ar' : 'en')
 
-        if (translatedDataByLanguage[targetLang]) {
+        if (translatedDataByLanguage[targetLang] && !options?.force) {
             setTranslationTarget(targetLang)
             return
         }
 
         setIsTranslating(true)
         setTranslationTarget(targetLang)
+        setTranslationDiagnosticsByLanguage(prev => {
+            const next = { ...prev }
+            delete next[targetLang]
+            return next
+        })
 
         try {
-            // Collect parts to translate
-            const textsToTranslate = [
-                article.title || '',
-                article.description || '',
-                article.content || '',
-                (article as any).summary || ''
-            ]
+            const title = article.title || ''
+            const description = article.description || ''
+            const content = article.content || ''
+            const summary = (article as any).summary || ''
 
-            // If everything is empty, don't ping the AI
-            if (textsToTranslate.every(text => !text)) {
+            if (![title, description, content, summary].some(text => !!text)) {
                 setTranslatedDataByLanguage(prev => ({
                     ...prev,
                     [targetLang]: {
@@ -693,30 +703,74 @@ export default function KnowledgeViewer() {
                 return
             }
 
-            // Translate all parts in a single request to avoid rate limits (429 -> 400)
-            const result = await translateAI.mutateAsync({
-                texts: textsToTranslate,
+            const metaResult = await translateAI.mutateAsync({
+                texts: [title, description, summary],
                 target_lang: targetLang,
                 source_lang: 'auto',
-                preserve_format: true
+                preserve_format: false,
+                strict_target_only: true
             })
 
-            const arr = result.translated_texts || []
+            const metaTranslations = metaResult.translated_texts || []
+            let translatedContent = ''
+            let diagnostics: TranslationDiagnostics = {
+                partialFailures: 0,
+                totalSegments: 0
+            }
+
+            if (content) {
+                let lastContentResult: Awaited<ReturnType<typeof translateAI.mutateAsync>> | null = null
+
+                for (let pass = 1; pass <= 3; pass += 1) {
+                    lastContentResult = await translateAI.mutateAsync({
+                        text: content,
+                        target_lang: targetLang,
+                        source_lang: 'auto',
+                        preserve_format: true,
+                        strict_target_only: true
+                    })
+
+                    if ((lastContentResult.meta?.partial_failures ?? 0) === 0) {
+                        break
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 220 * pass))
+                }
+
+                translatedContent = lastContentResult?.translated_text || content
+                diagnostics = {
+                    partialFailures: lastContentResult?.meta?.partial_failures ?? 0,
+                    totalSegments: lastContentResult?.meta?.total_segments ?? 0
+                }
+            }
 
             setTranslatedDataByLanguage(prev => ({
                 ...prev,
                 [targetLang]: {
-                    title: arr[0] || result.translated_text || '',
-                    description: arr[1] || '',
-                    content: arr[2] || '',
-                    summary: arr[3] || ''
+                    title: metaTranslations[0] || title,
+                    description: metaTranslations[1] || description,
+                    content: translatedContent,
+                    summary: metaTranslations[2] || summary
                 }
             }))
+            setTranslationDiagnosticsByLanguage(prev => ({
+                ...prev,
+                [targetLang]: diagnostics
+            }))
 
-            toast.success(t('viewer.translation_complete', 'Translation complete!'))
+            if (diagnostics.partialFailures > 0) {
+                toast.warning(
+                    t(
+                        'viewer.translation_incomplete',
+                        `Translation is incomplete. ${diagnostics.partialFailures} section${diagnostics.partialFailures === 1 ? '' : 's'} still need retry.`
+                    )
+                )
+            } else {
+                toast.success(t('viewer.translation_complete', 'Translation complete!'))
+            }
         } catch (error) {
             console.error('Translation failed:', error)
-            const errorMessage = error instanceof Error ? error.message : ''
+            const errorMessage = normalizeTranslationErrorMessage(error instanceof Error ? error.message : '')
             const baseMessage = t('viewer.translation_error', 'Failed to translate article')
             toast.error(errorMessage ? `${baseMessage}: ${errorMessage}` : baseMessage)
             // Reset target on failure to avoid showing partial/broken translation
@@ -1133,7 +1187,28 @@ export default function KnowledgeViewer() {
                                                 <Maximize2 className="h-4 w-4 mr-2" />
                                                 {showBilingual ? t('viewer.show_single', 'Show Single') : t('viewer.show_bilingual', 'Show Bilingual')}
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => { setTranslatedData(null); setShowBilingual(false); setTranslationTarget(null); }}>
+                                            {translationTarget && translationDiagnostics?.partialFailures ? (
+                                                <DropdownMenuItem onClick={() => handleAITranslate(translationTarget, { force: true })}>
+                                                    <Sparkles className="h-4 w-4 mr-2 text-amber-600" />
+                                                    {t('viewer.retry_translation', 'Retry Translation')}
+                                                </DropdownMenuItem>
+                                            ) : null}
+                                            <DropdownMenuItem onClick={() => {
+                                                if (translationTarget) {
+                                                    setTranslatedDataByLanguage(prev => {
+                                                        const next = { ...prev }
+                                                        delete next[translationTarget]
+                                                        return next
+                                                    })
+                                                    setTranslationDiagnosticsByLanguage(prev => {
+                                                        const next = { ...prev }
+                                                        delete next[translationTarget]
+                                                        return next
+                                                    })
+                                                }
+                                                setShowBilingual(false)
+                                                setTranslationTarget(null)
+                                            }}>
                                                 <Trash2 className="h-4 w-4 mr-2 text-red-500" />
                                                 {t('viewer.clear_translation', 'Clear')}
                                             </DropdownMenuItem>
@@ -1175,6 +1250,29 @@ export default function KnowledgeViewer() {
                     </div>
                 </div>
             </div>
+
+            {translationTarget && translationDiagnostics?.partialFailures ? (
+                <div className="max-w-[1400px] mx-auto px-3 pt-3 sm:px-4 print:hidden">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-sm text-amber-900">
+                            {t(
+                                'viewer.translation_incomplete_banner',
+                                `Translation is incomplete. ${translationDiagnostics.partialFailures} section${translationDiagnostics.partialFailures === 1 ? '' : 's'} are still using the original language.`
+                            )}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                            onClick={() => handleAITranslate(translationTarget, { force: true })}
+                            disabled={isTranslating}
+                        >
+                            {isTranslating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                            {t('viewer.retry_translation', 'Retry Translation')}
+                        </Button>
+                    </div>
+                </div>
+            ) : null}
 
             {/* Premium Article Hero Section */}
             <header className={cn(

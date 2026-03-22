@@ -1,11 +1,11 @@
 /**
- * Service Worker for Prime Hotels PWA (v6)
+ * Service Worker for Prime Hotels PWA (v8)
  * 
  * Provides offline caching for static assets and API responses.
  * Implements a "Clean Shell" strategy to resolve navigation redirect errors.
  */
 
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE_NAME = `prime-hotels-${VERSION}`;
 const STATIC_CACHE = `prime-hotels-static-${VERSION}`;
 const DYNAMIC_CACHE = `prime-hotels-dynamic-${VERSION}`;
@@ -85,8 +85,42 @@ self.addEventListener('fetch', (event) => {
     if (request.mode === 'navigate') {
         event.respondWith(
             (async () => {
+                const cachedShell = await getCachedAppShell(request);
+
                 try {
-                    // Always fetch the SPA shell directly to avoid path-level redirect edge cases.
+                    const preloadResponse = await event.preloadResponse;
+                    const safePreloadResponse = toSafeResponse(request, preloadResponse);
+                    if (safePreloadResponse?.ok) {
+                        await cacheAppShell(safePreloadResponse.clone());
+                        return safePreloadResponse;
+                    }
+                } catch (error) {
+                    console.warn(`[SW ${VERSION}] Navigation preload failed:`, error);
+                }
+
+                try {
+                    // Prefer the original navigation request so the hosting rewrite layer can
+                    // resolve SPA deep links normally.
+                    const response = await fetch(request, {
+                        redirect: 'follow',
+                        credentials: 'same-origin',
+                        cache: 'no-store',
+                    });
+
+                    const safeNetworkResponse = toSafeResponse(request, response);
+                    if (safeNetworkResponse) {
+                        if (safeNetworkResponse.ok) {
+                            await cacheAppShell(safeNetworkResponse.clone());
+                        }
+                        return safeNetworkResponse;
+                    }
+                } catch (error) {
+                    console.warn(`[SW ${VERSION}] Deep-link navigation fetch failed:`, error);
+                }
+
+                try {
+                    // Fall back to the SPA shell directly if the deep-link request itself
+                    // fails, for example during a transient hosting edge issue.
                     const shellUrl = new URL('/index.html', self.location.origin).toString();
                     const response = await fetch(shellUrl, {
                         redirect: 'follow',
@@ -97,23 +131,19 @@ self.addEventListener('fetch', (event) => {
                     const safeNetworkResponse = toSafeResponse(request, response);
                     if (safeNetworkResponse) {
                         if (safeNetworkResponse.ok) {
-                            const cache = await caches.open(STATIC_CACHE);
-                            cache.put('/index.html', safeNetworkResponse.clone());
+                            await cacheAppShell(safeNetworkResponse.clone());
                         }
                         return safeNetworkResponse;
                     }
                 } catch (error) {
-                    console.error(`[SW ${VERSION}] Navigation fetch failed:`, error);
+                    console.warn(`[SW ${VERSION}] Shell fetch failed:`, error);
                 }
 
-                const cachedShell = await caches.match('/index.html');
-                const safeCachedShell = toSafeResponse(request, cachedShell);
-                if (safeCachedShell) {
-                    return safeCachedShell;
+                if (cachedShell) {
+                    return cachedShell;
                 }
 
-                // Minimal fallback if everything fails
-                return new Response('Offline', { status: 503 });
+                return createOfflineShellResponse();
             })()
         );
         return;
@@ -172,6 +202,81 @@ function toSafeResponse(request, response) {
     } catch {
         return null;
     }
+}
+
+async function cacheAppShell(response) {
+    if (!response || !response.ok) return;
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return;
+
+    const cache = await caches.open(STATIC_CACHE);
+    await Promise.allSettled([
+        cache.put('/index.html', response.clone()),
+        cache.put('/', response.clone()),
+    ]);
+}
+
+async function getCachedAppShell(request) {
+    for (const path of ['/index.html', '/']) {
+        const cached = await caches.match(path);
+        const safeCached = toSafeResponse(request, cached);
+        if (safeCached) {
+            return safeCached;
+        }
+    }
+
+    return null;
+}
+
+function createOfflineShellResponse() {
+    return new Response(
+        `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PHG Connect</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f8f6f1;
+        color: #1f3b5b;
+        font: 16px/1.5 system-ui, sans-serif;
+      }
+      main {
+        max-width: 28rem;
+        padding: 2rem;
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 1.5rem;
+      }
+      p {
+        margin: 0;
+        color: #4f6480;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Connection problem</h1>
+      <p>PHG Connect could not load the app shell. Refresh the page when the network is back.</p>
+    </main>
+  </body>
+</html>`,
+        {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/html; charset=UTF-8',
+                'Cache-Control': 'no-store',
+            },
+        }
+    );
 }
 
 // Cache-first strategy

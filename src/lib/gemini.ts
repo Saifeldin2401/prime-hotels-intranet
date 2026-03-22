@@ -111,6 +111,50 @@ interface QuizQuestion {
 
 }
 
+interface QuizRepairQuestionInput {
+
+  question_id: string
+
+  question_text: string
+
+  question_type: string
+
+  options?: Array<{
+    text: string
+    is_correct: boolean
+  }>
+
+  correct_answer?: string | null
+
+  explanation?: string | null
+
+  hint?: string | null
+
+  issues: string[]
+
+}
+
+interface QuizRepairQuestionOutput {
+
+  question_id: string
+
+  question_text: string
+
+  question_type: string
+
+  options?: Array<{
+    text: string
+    is_correct: boolean
+  }>
+
+  correct_answer?: string
+
+  explanation?: string
+
+  hint?: string
+
+}
+
 
 
 const cleanText = (text: string): string => {
@@ -488,6 +532,90 @@ export const aiService = {
 
 
     return heuristicQuiz()
+
+  },
+
+  async repairQuizQuestions(request: {
+    quizTitle?: string
+    moduleTitle?: string
+    moduleContext?: string
+    questions: QuizRepairQuestionInput[]
+  }): Promise<QuizRepairQuestionOutput[]> {
+
+    const questions = request.questions.filter(question => question.question_id)
+    if (questions.length === 0) {
+      return []
+    }
+
+    const serializedQuestions = JSON.stringify(questions, null, 2)
+    const moduleContext = (request.moduleContext || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 4000)
+
+    const prompt = `You are a Senior Hotel Learning Quality Manager.
+
+Review and repair the quiz questions below so they are clearly written, internally consistent, and ready for hotel staff training.
+
+QUIZ TITLE: ${request.quizTitle || 'Untitled Quiz'}
+MODULE TITLE: ${request.moduleTitle || 'Untitled Module'}
+
+STRICT RULES:
+- Preserve the original learning intent whenever possible.
+- Fix grammar, spelling, ambiguity, and incorrect or weak answer options.
+- Keep every repaired question grounded in the module context when context is provided.
+- Supported question_type values: mcq, mcq_multi, true_false, fill_blank, scenario.
+- For mcq and scenario: return 4 concise options when possible and EXACTLY 1 correct option.
+- For mcq_multi: return at least 3 options and at least 1 correct option.
+- For true_false: return exactly 2 options, "True" and "False", with exactly 1 correct option.
+- For fill_blank: do not return options; return a concise correct_answer.
+- Remove empty or duplicate options.
+- If the existing correct answer is wrong or mismatched, fix it.
+- Return ONLY valid JSON. No markdown, no commentary.
+
+Return a JSON array with this shape:
+[
+  {
+    "question_id": "existing-question-id",
+    "question_text": "Corrected question text",
+    "question_type": "mcq",
+    "options": [
+      { "text": "Option A", "is_correct": false },
+      { "text": "Option B", "is_correct": true }
+    ],
+    "correct_answer": "Option B",
+    "explanation": "Optional explanation",
+    "hint": "Optional hint"
+  }
+]
+
+MODULE CONTEXT:
+${moduleContext || 'No additional module context provided.'}
+
+QUESTIONS TO REPAIR:
+${serializedQuestions}`
+
+    for (const model of FALLBACK_MODELS) {
+
+      try {
+
+        const generatedText = await callHuggingFace(model, prompt)
+
+        const parsed = safeParseJson<QuizRepairQuestionOutput[]>(generatedText, true)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(question => question?.question_id && question?.question_text)
+        }
+
+      } catch (_error) {
+
+        console.warn(`Quiz repair model ${model} failed.`)
+
+      }
+
+    }
+
+    return []
 
   },
 

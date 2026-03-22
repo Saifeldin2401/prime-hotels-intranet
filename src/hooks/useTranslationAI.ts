@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
 
 export type TranslationTargetLanguage =
     | 'en'
@@ -44,6 +45,16 @@ interface TranslationRequest {
     target_lang: TranslationTargetLanguage
     source_lang?: TranslationSourceLanguage
     preserve_format?: boolean
+    strict_target_only?: boolean
+}
+
+interface TranslationMeta {
+    model_used?: string
+    used_fallback?: boolean
+    partial_failures?: number
+    failed_segments?: number
+    total_segments?: number
+    translated_segments?: number
 }
 
 interface TranslationResponse {
@@ -55,6 +66,7 @@ interface TranslationResponse {
     target_lang: string
     cached?: boolean
     error?: string
+    meta?: TranslationMeta
 }
 
 export function useTranslationAI() {
@@ -109,9 +121,9 @@ export function useTranslationAI() {
                     }
                 }
 
-                throw new Error(message)
+                throw new Error(normalizeTranslationErrorMessage(message))
             }
-            if (data?.success === false) throw new Error(data.error || 'Translation failed')
+            if (data?.success === false) throw new Error(normalizeTranslationErrorMessage(data.error || 'Translation failed'))
 
             return data as TranslationResponse
         }

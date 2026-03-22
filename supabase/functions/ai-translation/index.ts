@@ -94,6 +94,134 @@ const hasTranslatableText = (value: string) => /[A-Za-z\u00C0-\u024F\u0400-\u04F
 
 const looksLikeHtml = (value: string) => /<\/?[a-z][\s\S]*>/i.test(value)
 
+type ScriptKey = 'latin' | 'arabic' | 'cyrillic' | 'devanagari' | 'bengali'
+
+const SCRIPT_PATTERNS: Record<ScriptKey, RegExp> = {
+    latin: /[A-Za-z\u00C0-\u024F]/g,
+    arabic: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g,
+    cyrillic: /[\u0400-\u04FF]/g,
+    devanagari: /[\u0900-\u097F]/g,
+    bengali: /[\u0980-\u09FF]/g
+}
+
+const TARGET_PRIMARY_SCRIPT: Record<string, ScriptKey> = {
+    en: 'latin',
+    fr: 'latin',
+    es: 'latin',
+    de: 'latin',
+    tr: 'latin',
+    id: 'latin',
+    tl: 'latin',
+    ar: 'arabic',
+    ur: 'arabic',
+    ru: 'cyrillic',
+    hi: 'devanagari',
+    bn: 'bengali'
+}
+
+const countMatches = (value: string, pattern: RegExp) => {
+    const matcher = new RegExp(pattern.source, pattern.flags)
+    return (value.match(matcher) || []).length
+}
+
+const getScriptCounts = (value: string): Record<ScriptKey, number> => ({
+    latin: countMatches(value, SCRIPT_PATTERNS.latin),
+    arabic: countMatches(value, SCRIPT_PATTERNS.arabic),
+    cyrillic: countMatches(value, SCRIPT_PATTERNS.cyrillic),
+    devanagari: countMatches(value, SCRIPT_PATTERNS.devanagari),
+    bengali: countMatches(value, SCRIPT_PATTERNS.bengali)
+})
+
+const normalizeComparisonText = (value: string) => value
+    .replace(/<[^>]+>/g, ' ')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const tokenizeComparisonText = (value: string) => normalizeComparisonText(value)
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 4)
+
+const calculateTokenOverlapRatio = (source: string, translated: string) => {
+    const sourceTokens = tokenizeComparisonText(source)
+    if (sourceTokens.length === 0) return 0
+
+    const translatedTokenSet = new Set(tokenizeComparisonText(translated))
+    const overlapCount = sourceTokens.filter((token) => translatedTokenSet.has(token)).length
+    return overlapCount / sourceTokens.length
+}
+
+const assessTranslationQuality = (
+    source: string,
+    translated: string,
+    targetLang: string,
+    strictTargetOnly: boolean
+) => {
+    const normalizedSource = normalizeComparisonText(source)
+    const normalizedTranslated = normalizeComparisonText(translated)
+
+    if (!normalizedTranslated) {
+        return 'Translation returned empty text.'
+    }
+
+    const sourceTokens = tokenizeComparisonText(source)
+    if (sourceTokens.length >= 5 && normalizedSource === normalizedTranslated) {
+        return 'Translation matched the source text instead of translating it.'
+    }
+
+    const overlapRatio = calculateTokenOverlapRatio(source, translated)
+    const overlapThreshold = strictTargetOnly ? 0.72 : 0.86
+    if (sourceTokens.length >= 6 && overlapRatio >= overlapThreshold) {
+        return 'Translation still contains too much of the original source text.'
+    }
+
+    if (!strictTargetOnly) {
+        return null
+    }
+
+    const targetScript = TARGET_PRIMARY_SCRIPT[targetLang]
+    if (!targetScript) {
+        return null
+    }
+
+    const translatedScriptCounts = getScriptCounts(translated)
+    const sourceScriptCounts = getScriptCounts(source)
+    const totalTranslatedScriptChars = Object.values(translatedScriptCounts).reduce((sum, count) => sum + count, 0)
+
+    if (totalTranslatedScriptChars < 8) {
+        return null
+    }
+
+    if (targetScript === 'latin') {
+        const nonLatinSourceChars =
+            translatedScriptCounts.arabic +
+            translatedScriptCounts.cyrillic +
+            translatedScriptCounts.devanagari +
+            translatedScriptCounts.bengali
+
+        if (nonLatinSourceChars > Math.floor(totalTranslatedScriptChars * 0.45)) {
+            return 'Translation still contains substantial source-language script.'
+        }
+
+        return null
+    }
+
+    const targetScriptChars = translatedScriptCounts[targetScript]
+    const latinChars = translatedScriptCounts.latin
+
+    if (targetScriptChars < Math.max(3, Math.floor(totalTranslatedScriptChars * 0.25)) && sourceScriptCounts[targetScript] < 2) {
+        return 'Translation did not sufficiently switch into the target language script.'
+    }
+
+    if (latinChars > targetScriptChars && sourceScriptCounts.latin > sourceScriptCounts[targetScript]) {
+        return 'Translation still contains too much source-language text.'
+    }
+
+    return null
+}
+
 const chunkText = (value: string, size: number) => {
     const safeSize = Math.max(400, Math.floor(size || 3200))
     const chunks: string[] = []
@@ -151,6 +279,23 @@ const isQuotaOrCreditsError = (status: number, message: string) => {
         msg.includes('depleted') ||
         msg.includes('exhausted') ||
         msg.includes('limit reached')
+    )
+}
+
+const isRetryableUpstreamError = (status: number, message: string) => {
+    const msg = (message || '').toLowerCase()
+    return (
+        status >= 500 ||
+        status === 429 ||
+        status === 408 ||
+        msg.includes('502 bad gateway') ||
+        msg.includes('503 service unavailable') ||
+        msg.includes('504 gateway timeout') ||
+        msg.includes('timed out') ||
+        msg.includes('timeout') ||
+        msg.includes('upstream') ||
+        msg.includes('connection reset') ||
+        msg.includes('network error')
     )
 }
 
@@ -322,6 +467,7 @@ serve(async (req: Request) => {
         const target_lang = normalizeLangInput(rawTargetLang)
         const providedSourceLang = normalizeLangInput(rawSourceLang)
         const preserve_format = Boolean(body?.preserve_format ?? body?.preserveFormat)
+        const strictTargetOnly = Boolean(body?.strict_target_only ?? body?.strictTargetOnly ?? preserve_format)
         const file_url = body?.file_url ?? body?.fileUrl
         const file_type = body?.file_type ?? body?.fileType
         let text = typeof body.text === 'string' ? body.text : undefined
@@ -402,14 +548,16 @@ serve(async (req: Request) => {
             sourceLang: string
             textHash: string
         }> = []
+        const partialFailures: Array<{ index: number; segmentIndex?: number; reason: string }> = []
+        let totalTranslatableSegments = 0
         let resolvedSourceLang = providedSourceLang || 'auto'
 
         const getIntEnv = (key, def) => { const str = Deno.env.get(key) || ''; if (!str.trim()) return def; const n = Number(str); return Number.isFinite(n) && !Number.isNaN(n) ? Math.floor(n) : def; };
 
-        const chunkSize = getIntEnv('TRANSLATION_CHUNK_CHARS', 3200)
-        const translationConcurrency = getIntEnv('TRANSLATION_CONCURRENCY', 3)
-        const chunkConcurrency = getIntEnv('TRANSLATION_CHUNK_CONCURRENCY', 2)
-        const batchChunksPerRequest = getIntEnv('TRANSLATION_BATCH_CHUNKS', 4)
+        const chunkSize = getIntEnv('TRANSLATION_CHUNK_CHARS', 1200)
+        const translationConcurrency = getIntEnv('TRANSLATION_CONCURRENCY', 2)
+        const chunkConcurrency = getIntEnv('TRANSLATION_CHUNK_CONCURRENCY', 1)
+        const batchChunksPerRequest = getIntEnv('TRANSLATION_BATCH_CHUNKS', 1)
 
         for (let i = 0; i < preparedInputs.length; i++) {
             const prepared = preparedInputs[i]
@@ -450,6 +598,7 @@ serve(async (req: Request) => {
                 }
 
                 const textHash = await sha256Hex(value)
+                totalTranslatableSegments += 1
                 toTranslate.push({
                     index: i,
                     segmentIndex: prepared.kind === 'html' ? segmentIndex : undefined,
@@ -483,14 +632,21 @@ serve(async (req: Request) => {
             for (const item of toTranslate) {
                 const cached = cachedMap.get(item.textHash)
                 if (cached) {
-                    if (item.segmentIndex === undefined) {
-                        results[item.index] = cached
-                    } else {
-                        htmlSegmentResults[item.index]![item.segmentIndex] = cached
+                    const cachedQualityIssue = assessTranslationQuality(item.text, cached, target_lang, strictTargetOnly)
+                    if (!cachedQualityIssue) {
+                        if (item.segmentIndex === undefined) {
+                            results[item.index] = cached
+                        } else {
+                            htmlSegmentResults[item.index]![item.segmentIndex] = cached
+                        }
+                        continue
                     }
                 } else {
                     remaining.push(item)
+                    continue
                 }
+
+                remaining.push(item)
             }
 
             toTranslate.length = 0
@@ -507,12 +663,18 @@ serve(async (req: Request) => {
             const callHf = async (chunk: string, translationInstruction: string) => {
                 const maxAttempts = 3
                 for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    const strictnessInstruction = strictTargetOnly
+                        ? `Translate every translatable phrase fully into ${targetName}. Return a monolingual ${targetName} result only. Do not repeat, quote, or append the source text. Keep only proper nouns, brand names, acronyms, and legal references in their original form when genuinely necessary.`
+                        : `Return only the translation in ${targetName}.`
+                    const retryInstruction = attempt > 1
+                        ? 'Your previous answer contained untranslated or mixed-language text. Fix it and return only the clean final translation.'
+                        : ''
                     const payload = {
                         model: hfModel,
                         messages: [
                             {
                                 role: 'system',
-                                content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only the translated text. Do not include any extra commentary or any language other than ${targetName}.`
+                                content: `You are a professional translator. ${translationInstruction} ${strictnessInstruction} ${retryInstruction} Preserve formatting and return only the translated text. Do not include any extra commentary or any language other than ${targetName}.`
                             },
                             { role: 'user', content: chunk }
                         ],
@@ -562,7 +724,7 @@ serve(async (req: Request) => {
                             }
                         }
 
-                        const retryable = hfResponse.status >= 500 || hfResponse.status === 429 || hfResponse.status === 408
+                        const retryable = isRetryableUpstreamError(hfResponse.status, message)
                         if (retryable && attempt < maxAttempts) {
                             await sleep(400 * attempt)
                             continue
@@ -589,6 +751,16 @@ serve(async (req: Request) => {
                     if (!translatedChunk) {
                         throw new Error('Hugging Face returned an empty translation.')
                     }
+
+                    const qualityIssue = assessTranslationQuality(chunk, translatedChunk, target_lang, strictTargetOnly)
+                    if (qualityIssue) {
+                        if (attempt < maxAttempts) {
+                            await sleep(250 * attempt)
+                            continue
+                        }
+                        throw new Error(qualityIssue)
+                    }
+
                     return translatedChunk
                 }
 
@@ -598,12 +770,15 @@ serve(async (req: Request) => {
             const callHfBatch = async (chunks: string[], translationInstruction: string) => {
                 const maxAttempts = 3
                 for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    const strictnessInstruction = strictTargetOnly
+                        ? `Return only a clean monolingual ${targetName} translation for every chunk. Do not include the source text in the output unless a proper noun or acronym genuinely must stay unchanged.`
+                        : `Return only translated output in ${targetName}.`
                     const payload = {
                         model: hfModel,
                         messages: [
                             {
                                 role: 'system',
-                                content: `You are a professional translator. ${translationInstruction} Preserve formatting and return only valid JSON. You must output a JSON array of strings. Each string is the translation of the corresponding input chunk. Do not add any extra keys or commentary.`
+                                content: `You are a professional translator. ${translationInstruction} ${strictnessInstruction} Preserve formatting and return only valid JSON. You must output a JSON array of strings. Each string is the translation of the corresponding input chunk. Do not add any extra keys or commentary.`
                             },
                             {
                                 role: 'user',
@@ -654,7 +829,7 @@ serve(async (req: Request) => {
                             }
                         }
 
-                        const retryable = hfResponse.status >= 500 || hfResponse.status === 429 || hfResponse.status === 408
+                        const retryable = isRetryableUpstreamError(hfResponse.status, message)
                         if (retryable && attempt < maxAttempts) {
                             await sleep(400 * attempt)
                             continue
@@ -707,38 +882,61 @@ serve(async (req: Request) => {
                     ? `Detect the source language and translate to ${targetName}.`
                     : `Translate from ${sourceName} to ${targetName}.`
 
-                const chunks = chunkText(item.text, chunkSize)
-                const effectiveBatchSize = Number.isFinite(batchChunksPerRequest) && batchChunksPerRequest > 1
-                    ? Math.min(Math.floor(batchChunksPerRequest), 10)
-                    : 1
+                let translatedText = item.text
 
-                const batches: string[][] = []
-                for (let i = 0; i < chunks.length; i += effectiveBatchSize) {
-                    batches.push(chunks.slice(i, i + effectiveBatchSize))
-                }
+                try {
+                    const chunks = chunkText(item.text, chunkSize)
+                    const effectiveBatchSize = Number.isFinite(batchChunksPerRequest) && batchChunksPerRequest > 1
+                        ? Math.min(Math.floor(batchChunksPerRequest), 10)
+                        : 1
 
-                let translatedChunks: string[] = []
-                if (effectiveBatchSize > 1 && batches.length > 0) {
-                    try {
-                        const translatedBatches = await withConcurrency(
-                            batches,
-                            chunkConcurrency,
-                            (batch) => callHfBatch(batch, translationInstruction)
-                        )
-                        translatedChunks = translatedBatches.flat()
-                    } catch {
+                    const batches: string[][] = []
+                    for (let i = 0; i < chunks.length; i += effectiveBatchSize) {
+                        batches.push(chunks.slice(i, i + effectiveBatchSize))
+                    }
+
+                    let translatedChunks: string[] = []
+                    if (effectiveBatchSize > 1 && batches.length > 0) {
+                        try {
+                            const translatedBatches = await withConcurrency(
+                                batches,
+                                chunkConcurrency,
+                                (batch) => callHfBatch(batch, translationInstruction)
+                            )
+                            translatedChunks = translatedBatches.flat()
+                        } catch {
+                            translatedChunks = await withConcurrency(chunks, chunkConcurrency, (chunk) => callHf(chunk, translationInstruction))
+                        }
+                    } else {
                         translatedChunks = await withConcurrency(chunks, chunkConcurrency, (chunk) => callHf(chunk, translationInstruction))
                     }
-                } else {
-                    translatedChunks = await withConcurrency(chunks, chunkConcurrency, (chunk) => callHf(chunk, translationInstruction))
-                }
 
-                const translatedText = translatedChunks.join('')
+                    const candidate = translatedChunks.join('')
+                    if (candidate.trim()) {
+                        translatedText = candidate
+                    }
+                } catch (error) {
+                    const reason = error instanceof Error ? error.message : String(error)
+                    partialFailures.push({
+                        index: item.index,
+                        segmentIndex: item.segmentIndex,
+                        reason
+                    })
+                    console.warn('Translation segment failed; preserving original text for this segment.', {
+                        index: item.index,
+                        segmentIndex: item.segmentIndex,
+                        reason
+                    })
+                }
 
                 if (item.segmentIndex === undefined) {
                     results[item.index] = translatedText
                 } else {
                     htmlSegmentResults[item.index]![item.segmentIndex] = translatedText
+                }
+
+                if (translatedText === item.text) {
+                    return
                 }
 
                 const { error: cacheInsertError } = await supabaseClient
@@ -776,7 +974,11 @@ serve(async (req: Request) => {
             target_lang,
             meta: {
                 model_used: hfModel,
-                used_fallback: usedFallback
+                used_fallback: usedFallback,
+                partial_failures: partialFailures.length,
+                failed_segments: partialFailures.length,
+                total_segments: totalTranslatableSegments,
+                translated_segments: Math.max(0, totalTranslatableSegments - partialFailures.length)
             }
         }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { FileText, Download, ExternalLink, AlertCircle, BookOpen, Loader2 } from 'lucide-react'
@@ -8,9 +8,24 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { useTranslationAI, type TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+
+type TranslationDiagnostics = {
+    partialFailures: number
+    totalSegments: number
+}
+
+type RichTranslationResult = {
+    translatedHtml: string
+    diagnostics: TranslationDiagnostics
+}
+
+const embeddedContentTranslationRequests = new Map<string, Promise<RichTranslationResult>>()
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 interface EmbeddedArticleViewerProps {
     sopId: string
@@ -161,15 +176,107 @@ const EmbeddedArticleViewerInner = ({
     const translateAI = useTranslationAI()
     const [translatedContentByLanguage, setTranslatedContentByLanguage] = useState<Partial<Record<TranslationTargetLanguage, string>>>({})
     const [translatedTitleByLanguage, setTranslatedTitleByLanguage] = useState<Partial<Record<TranslationTargetLanguage, string>>>({})
+    const [translationDiagnosticsByLanguage, setTranslationDiagnosticsByLanguage] = useState<Partial<Record<TranslationTargetLanguage, TranslationDiagnostics>>>({})
     const [isTranslating, setIsTranslating] = useState(false)
     const [translationError, setTranslationError] = useState<string | null>(null)
     const translationAttemptRef = useRef<{ key: string; status: 'pending' | 'success' | 'error' } | null>(null)
     const translatedContent = translationTarget ? translatedContentByLanguage[translationTarget] ?? null : null
     const translatedTitle = translationTarget ? translatedTitleByLanguage[translationTarget] ?? null : null
+    const translationDiagnostics = translationTarget ? translationDiagnosticsByLanguage[translationTarget] ?? null : null
+
+    const invokeTranslationWithRetry = useCallback(async (request: {
+        text: string
+        target_lang: TranslationTargetLanguage
+        source_lang: 'auto'
+        preserve_format: boolean
+        strict_target_only?: boolean
+    }) => {
+        const maxAttempts = 2
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            try {
+                return await translateAI.mutateAsync(request)
+            } catch (error) {
+                if (attempt >= maxAttempts) {
+                    throw error
+                }
+                await delay(350 * attempt)
+            }
+        }
+
+        throw new Error('Translation failed')
+    }, [translateAI])
+
+    const translateRichContent = useCallback(async (content: string, target: TranslationTargetLanguage, requestKey: string) => {
+        const existingRequest = embeddedContentTranslationRequests.get(requestKey)
+        if (existingRequest) {
+            return existingRequest
+        }
+
+        const requestPromise = (async () => {
+            let lastTranslatedHtml = content
+            let partialFailures = 0
+            let totalSegments = 0
+
+            for (let pass = 1; pass <= 3; pass += 1) {
+                const result = await invokeTranslationWithRetry({
+                    text: content,
+                    target_lang: target,
+                    source_lang: 'auto',
+                    preserve_format: true,
+                    strict_target_only: true
+                })
+
+                lastTranslatedHtml = result.translated_text || content
+                partialFailures = result.meta?.partial_failures ?? 0
+                totalSegments = result.meta?.total_segments ?? 0
+
+                if (partialFailures === 0) {
+                    break
+                }
+
+                await delay(220 * pass)
+            }
+
+            return {
+                translatedHtml: lastTranslatedHtml,
+                diagnostics: {
+                    partialFailures,
+                    totalSegments
+                }
+            }
+        })()
+
+        embeddedContentTranslationRequests.set(requestKey, requestPromise)
+
+        try {
+            return await requestPromise
+        } finally {
+            embeddedContentTranslationRequests.delete(requestKey)
+        }
+    }, [invokeTranslationWithRetry])
+
+    const handleRetryTranslation = useCallback(() => {
+        if (!translationTarget) return
+
+        setTranslatedContentByLanguage(prev => {
+            const next = { ...prev }
+            delete next[translationTarget]
+            return next
+        })
+        setTranslationDiagnosticsByLanguage(prev => {
+            const next = { ...prev }
+            delete next[translationTarget]
+            return next
+        })
+        translationAttemptRef.current = null
+        setTranslationError(null)
+    }, [translationTarget])
 
     useEffect(() => {
         setTranslatedContentByLanguage({})
         setTranslatedTitleByLanguage({})
+        setTranslationDiagnosticsByLanguage({})
         setTranslationError(null)
         translationAttemptRef.current = null
     }, [document?.id])
@@ -203,16 +310,18 @@ const EmbeddedArticleViewerInner = ({
 
                 if (needsContentTranslation && document.content) {
                     tasks.push(
-                        translateAI.mutateAsync({
-                            text: document.content,
-                            target_lang: translationTarget,
-                            source_lang: 'auto',
-                            preserve_format: true
-                        }).then((contentRes) => {
+                        translateRichContent(document.content, translationTarget, `${attemptKey}:content`).then(({ translatedHtml, diagnostics }) => {
                             setTranslatedContentByLanguage(prev => ({
                                 ...prev,
-                                [translationTarget]: contentRes.translated_text
+                                [translationTarget]: translatedHtml
                             }))
+                            setTranslationDiagnosticsByLanguage(prev => ({
+                                ...prev,
+                                [translationTarget]: diagnostics
+                            }))
+                            if (diagnostics.partialFailures > 0) {
+                                setTranslationError(`Translation incomplete. ${diagnostics.partialFailures} section${diagnostics.partialFailures === 1 ? '' : 's'} still need retry.`)
+                            }
                         })
                     )
                 }
@@ -222,7 +331,8 @@ const EmbeddedArticleViewerInner = ({
                         translateAI.mutateAsync({
                             text: document.title,
                             target_lang: translationTarget,
-                            source_lang: 'auto'
+                            source_lang: 'auto',
+                            strict_target_only: true
                         }).then((titleRes) => {
                             setTranslatedTitleByLanguage(prev => ({
                                 ...prev,
@@ -239,7 +349,7 @@ const EmbeddedArticleViewerInner = ({
                 }
             } catch (err) {
                 console.error("SOP Translation error:", err)
-                const message = err instanceof Error ? err.message : 'Translation failed'
+                const message = normalizeTranslationErrorMessage(err instanceof Error ? err.message : 'Translation failed')
                 setTranslationError(message)
                 if (translationAttemptRef.current?.key === attemptKey) {
                     translationAttemptRef.current.status = 'error'
@@ -252,7 +362,7 @@ const EmbeddedArticleViewerInner = ({
         if (translationTarget && document && (document.content || document.title)) {
             translateContent()
         }
-    }, [document, document?.id, document?.content, document?.title, translationTarget, translateAI, translatedContentByLanguage, translatedTitleByLanguage, isTranslating])
+    }, [document, document?.id, document?.content, document?.title, translationTarget, translateAI, translatedContentByLanguage, translatedTitleByLanguage, isTranslating, translateRichContent])
 
     if (isLoading) {
         return (
@@ -326,6 +436,18 @@ const EmbeddedArticleViewerInner = ({
                                 {translationError}
                             </span>
                         )}
+                        {translationTarget && translationDiagnostics?.partialFailures ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-9"
+                                onClick={handleRetryTranslation}
+                                disabled={isTranslating}
+                            >
+                                {isTranslating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                {t('retryTranslation', 'Retry Translation')}
+                            </Button>
+                        ) : null}
                         {document.file_url && (
                             <Button variant="outline" size="sm" asChild className="h-9">
                                 <a href={document.file_url} target="_blank" rel="noreferrer">

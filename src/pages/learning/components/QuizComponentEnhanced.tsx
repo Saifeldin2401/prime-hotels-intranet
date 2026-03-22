@@ -13,6 +13,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
     CheckCircle2,
     XCircle,
+    AlertCircle,
     Award,
     Clock,
     ArrowRight,
@@ -50,7 +51,7 @@ import { Badge } from '@/components/ui/badge'
 import { learningService } from '@/services/learningService'
 import { supabase } from '@/lib/supabase'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
-import type { LearningQuiz } from '@/types/learning'
+import type { LearningProgress, LearningQuiz } from '@/types/learning'
 import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
@@ -287,6 +288,7 @@ export function QuizComponentEnhanced({
     // Quiz data
     const [quiz, setQuiz] = useState<LearningQuiz | null>(null)
     const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
 
     // Answers & Progress
     const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
@@ -294,6 +296,7 @@ export function QuizComponentEnhanced({
     const [submitted, setSubmitted] = useState(false)
     const [attemptCount, setAttemptCount] = useState(0)
     const [attemptLimitReached, setAttemptLimitReached] = useState(false)
+    const attemptCountRef = useRef(0)
     const progressMetadataRef = useRef<Record<string, unknown> | null>(null)
     const attemptContextKey = assignmentId ? `assignment:${assignmentId}` : `quiz:${quizId}`
 
@@ -328,11 +331,25 @@ export function QuizComponentEnhanced({
         explanation?: string
         options?: Record<string, string>
     }>>>>({})
+    const onExitRef = useRef(onExit)
+    const toastRef = useRef(toast)
 
     // Final result
     const [result, setResult] = useState<QuizResult | null>(null)
 
     const submitRef = useRef<((isTimeout?: boolean) => Promise<void>) | null>(null)
+
+    useEffect(() => {
+        onExitRef.current = onExit
+    }, [onExit])
+
+    useEffect(() => {
+        attemptCountRef.current = attemptCount
+    }, [attemptCount])
+
+    useEffect(() => {
+        toastRef.current = toast
+    }, [toast])
 
     useEffect(() => {
         if (propTranslationTarget !== undefined) {
@@ -395,9 +412,72 @@ export function QuizComponentEnhanced({
         setEliminatedOptions(new Set())
     }, [currentQuestionIndex])
 
+    const buildInitialQuestionStates = useCallback((quizData: LearningQuiz | null) => {
+        const initialStates: Record<string, QuestionState> = {}
+        quizData?.questions?.forEach(q => {
+            initialStates[q.question_id] = {
+                status: 'unanswered',
+                timeSpentSeconds: 0,
+                powerUpsUsed: []
+            }
+        })
+        return initialStates
+    }, [])
+
+    const resolveAttemptCountFromMetadata = useCallback((metadataValue: unknown) => {
+        const metadata = (
+            metadataValue &&
+            typeof metadataValue === 'object' &&
+            !Array.isArray(metadataValue)
+        ) ? metadataValue as Record<string, unknown> : null
+
+        progressMetadataRef.current = metadata
+
+        const attemptsByContext = (
+            metadata?.quiz_attempts_by_context &&
+            typeof metadata.quiz_attempts_by_context === 'object' &&
+            !Array.isArray(metadata.quiz_attempts_by_context)
+        ) ? metadata.quiz_attempts_by_context as Record<string, unknown> : null
+
+        const contextAttemptsRaw = attemptsByContext?.[attemptContextKey]
+        const fallbackAttemptsRaw = metadata?.quiz_attempt_count
+        const recordedAttempts = Number(
+            typeof contextAttemptsRaw === 'number' ? contextAttemptsRaw : (fallbackAttemptsRaw || 0)
+        )
+
+        return Number.isFinite(recordedAttempts) ? recordedAttempts : 0
+    }, [attemptContextKey])
+
+    const applyAttemptProgress = useCallback((metadataValue: unknown, maxAttempts?: number | null) => {
+        const safeAttempts = resolveAttemptCountFromMetadata(metadataValue)
+        setAttemptCount(safeAttempts)
+        setAttemptLimitReached(Boolean(maxAttempts && safeAttempts >= maxAttempts))
+        return safeAttempts
+    }, [resolveAttemptCountFromMetadata])
+
+    const resetQuizSession = useCallback((quizData: LearningQuiz | null) => {
+        setAnswers({})
+        setCurrentQuestionIndex(0)
+        setSubmitted(false)
+        setResult(null)
+        setQuestionStates(buildInitialQuestionStates(quizData))
+        setStreak(0)
+        setMaxStreak(0)
+        setShowFeedback(false)
+        setCurrentFeedback(null)
+        setEliminatedOptions(new Set())
+        setHintRevealed(new Set())
+        setPowerUpsUsed([])
+        setTimeFrozen(false)
+        setQuestionStartTime(Date.now())
+        feedbackPauseMsRef.current = 0
+        feedbackPauseStartMsRef.current = null
+    }, [buildInitialQuestionStates])
+
     const loadQuiz = useCallback(async (id: string) => {
         try {
             setLoading(true)
+            setLoadError(null)
             const data = await learningService.getQuiz(id)
             setQuiz(data)
 
@@ -414,77 +494,70 @@ export function QuizComponentEnhanced({
                     .eq('content_id', id)
                     .maybeSingle()
 
-                const metadata = (
-                    progressData?.metadata &&
-                    typeof progressData.metadata === 'object' &&
-                    !Array.isArray(progressData.metadata)
-                ) ? progressData.metadata as Record<string, unknown> : null
-
-                progressMetadataRef.current = metadata
-
-                const attemptsByContext = (
-                    metadata?.quiz_attempts_by_context &&
-                    typeof metadata.quiz_attempts_by_context === 'object' &&
-                    !Array.isArray(metadata.quiz_attempts_by_context)
-                ) ? metadata.quiz_attempts_by_context as Record<string, unknown> : null
-
-                const contextAttemptsRaw = attemptsByContext?.[attemptContextKey]
-                const fallbackAttemptsRaw = metadata?.quiz_attempt_count
-                const recordedAttempts = Number(
-                    typeof contextAttemptsRaw === 'number' ? contextAttemptsRaw : (fallbackAttemptsRaw || 0)
-                )
-                const safeAttempts = Number.isFinite(recordedAttempts) ? recordedAttempts : 0
-                setAttemptCount(safeAttempts)
-                setAttemptLimitReached(Boolean(data.max_attempts && safeAttempts >= data.max_attempts))
+                applyAttemptProgress(progressData?.metadata, data.max_attempts)
             } else {
                 progressMetadataRef.current = null
                 setAttemptCount(0)
                 setAttemptLimitReached(false)
             }
 
-            // Initialize question states
-            const initialStates: Record<string, QuestionState> = {}
-            data.questions?.forEach(q => {
-                initialStates[q.question_id] = {
-                    status: 'unanswered',
-                    timeSpentSeconds: 0,
-                    powerUpsUsed: []
-                }
-            })
-            setQuestionStates(initialStates)
+            setQuestionStates(buildInitialQuestionStates(data))
         } catch (error) {
-            toast({
-                title: t('common.error'),
-                description: t('training:quizzes.player.load_error'),
+            setQuiz(null)
+            setLoadError(i18n.t('training:quizzes.player.load_error'))
+            toastRef.current({
+                title: i18n.t('common.error'),
+                description: i18n.t('training:quizzes.player.load_error'),
                 variant: 'destructive',
             })
-            if (onExit) onExit()
+            onExitRef.current?.()
         } finally {
             setLoading(false)
         }
-    }, [attemptContextKey, onExit, t, toast, user?.id])
+    }, [applyAttemptProgress, buildInitialQuestionStates, i18n, user?.id])
 
     // Load quiz
     useEffect(() => {
         if (initialQuiz) {
             setQuiz(initialQuiz)
+            setLoadError(null)
             setLoading(false)
             if (initialQuiz.time_limit_minutes) {
                 setTimeLeft(initialQuiz.time_limit_minutes * 60)
             }
-            const initialStates: Record<string, QuestionState> = {}
-            initialQuiz.questions?.forEach(q => {
-                initialStates[q.question_id] = {
-                    status: 'unanswered',
-                    timeSpentSeconds: 0,
-                    powerUpsUsed: []
-                }
-            })
-            setQuestionStates(initialStates)
+            setQuestionStates(buildInitialQuestionStates(initialQuiz))
         } else if (quizId) {
             void loadQuiz(quizId)
         }
-    }, [initialQuiz, loadQuiz, quizId])
+    }, [buildInitialQuestionStates, initialQuiz, loadQuiz, quizId])
+
+    useEffect(() => {
+        if (!user?.id || !quiz?.id) return
+
+        const channel = supabase
+            .channel(`quiz-progress-${user.id}-${quiz.id}-${attemptContextKey}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'learning_progress', filter: `user_id=eq.${user.id}` },
+                (payload) => {
+                    const row = (payload.new && typeof payload.new === 'object'
+                        ? payload.new
+                        : null) as Partial<LearningProgress> | null
+
+                    if (!row || row.content_type !== 'quiz' || row.content_id !== quiz.id) return
+
+                    const nextAttempts = applyAttemptProgress(row.metadata, quiz.max_attempts)
+                    if (nextAttempts < attemptCountRef.current) {
+                        resetQuizSession(quiz)
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [applyAttemptProgress, attemptContextKey, quiz, resetQuizSession, user?.id])
 
     const getCurrentQuestionTime = () => {
         return Math.floor((Date.now() - questionStartTime) / 1000)
@@ -1009,7 +1082,7 @@ export function QuizComponentEnhanced({
 
     let mainContent: React.ReactNode
 
-    if (loading || !quiz) {
+    if (loading) {
         mainContent = (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <m.div
@@ -1023,6 +1096,52 @@ export function QuizComponentEnhanced({
                     </div>
                     <p className="text-slate-500 font-medium">{t('training:quizzes.player.loading')}</p>
                 </m.div>
+            </div>
+        )
+    } else if (loadError || !quiz) {
+        mainContent = (
+            <div className="min-h-[50vh] flex items-center justify-center">
+                <Card className="max-w-xl border-red-200 bg-red-50 shadow-sm">
+                    <CardContent className="space-y-4 p-6 text-center">
+                        <XCircle className="mx-auto h-10 w-10 text-red-600" />
+                        <div className="space-y-2">
+                            <h2 className="text-lg font-semibold text-red-700">
+                                {t('training:quizzes.player.load_error')}
+                            </h2>
+                            <p className="text-sm text-red-700/80">
+                                {t('quizConfigurationIssue', 'This quiz is not available to learners right now. Please contact an administrator to review the quiz configuration.')}
+                            </p>
+                        </div>
+                        {onExit && (
+                            <Button type="button" variant="outline" onClick={onExit}>
+                                {t('training:quizzes.player.back_to_learning')}
+                            </Button>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    } else if (!quiz.questions || quiz.questions.length === 0 || !currentQuestion || !currentQuestion.question || !displayQuestionText) {
+        mainContent = (
+            <div className="min-h-[50vh] flex items-center justify-center">
+                <Card className="max-w-xl border-amber-200 bg-amber-50 shadow-sm">
+                    <CardContent className="space-y-4 p-6 text-center">
+                        <AlertCircle className="mx-auto h-10 w-10 text-amber-600" />
+                        <div className="space-y-2">
+                            <h2 className="text-lg font-semibold text-amber-700">
+                                {t('quizUnavailableTitle', 'Quiz unavailable')}
+                            </h2>
+                            <p className="text-sm text-amber-700/80">
+                                {t('quizUnavailableDesc', 'This quiz contains unpublished, deleted, or incomplete questions. Ask an administrator to review the quiz before learners continue.')}
+                            </p>
+                        </div>
+                        {onExit && (
+                            <Button type="button" variant="outline" onClick={onExit}>
+                                {t('training:quizzes.player.back_to_learning')}
+                            </Button>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         )
     } else if (result) {

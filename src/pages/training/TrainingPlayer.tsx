@@ -58,7 +58,10 @@ import { getUserFriendlyError } from '@/lib/errorMessages'
 import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
 
 type PersistedModuleProgress = {
+    status?: string
+    progress_percentage?: number
     last_block_index?: number
+    last_block_id?: string | null
     metadata?: {
         completed_blocks?: string[]
         completed_media_blocks?: string[]
@@ -117,6 +120,23 @@ const getModuleQuizIds = (blocks: TrainingContentBlock[] = []) => {
         .map((block) => (block.content_data as Record<string, unknown> | null)?.quiz_id)
         .filter((quizId): quizId is string => typeof quizId === 'string' && quizId.length > 0)
     return Array.from(new Set(ids))
+}
+
+const isResetProgressSnapshot = (progress: PersistedModuleProgress | null | undefined) => {
+    if (!progress) return false
+
+    const completedBlocks = progress.metadata?.completed_blocks
+    const completedMediaBlocks = progress.metadata?.completed_media_blocks
+    const quizScores = progress.metadata?.quiz_scores_by_id
+    const quizResults = progress.metadata?.quiz_results_by_id
+
+    return progress.status === 'assigned'
+        && (progress.progress_percentage ?? 0) === 0
+        && (progress.last_block_index === null || progress.last_block_index === undefined)
+        && (!completedBlocks || completedBlocks.length === 0)
+        && (!completedMediaBlocks || completedMediaBlocks.length === 0)
+        && (!quizScores || Object.keys(quizScores).length === 0)
+        && (!quizResults || Object.keys(quizResults).length === 0)
 }
 
 const getAggregatedQuizScore = (quizIds: string[], quizScoresById: Record<string, number>) => {
@@ -290,6 +310,12 @@ export default function TrainingPlayer() {
     ) => {
         if (!progress) return
 
+        if (isResetProgressSnapshot(progress)) {
+            resetModuleInteractionState()
+            setActiveBlockIndex(0)
+            return
+        }
+
         const maxIndex = Math.max(blocks.length - 1, 0)
         const nextIndex = typeof progress.last_block_index === 'number'
             ? Math.min(Math.max(progress.last_block_index, 0), maxIndex)
@@ -305,15 +331,22 @@ export default function TrainingPlayer() {
         } else if (nextIndex > 0) {
             const completedIds = blocks.slice(0, nextIndex).map(b => b.id)
             setCompletedBlocks(new Set(completedIds))
+        } else {
+            setCompletedBlocks(new Set())
         }
 
         if (progress.metadata?.completed_media_blocks && Array.isArray(progress.metadata.completed_media_blocks)) {
             setCompletedMediaBlocks(new Set(progress.metadata.completed_media_blocks))
+        } else {
+            setCompletedMediaBlocks(new Set())
         }
 
         if (typeof progress.time_spent_seconds === 'number') {
             totalTimeRef.current = progress.time_spent_seconds
             setTimeSpentSeconds(progress.time_spent_seconds)
+        } else {
+            totalTimeRef.current = 0
+            setTimeSpentSeconds(0)
         }
 
         const restoredQuizScores = getValidQuizScoresMap(progress.metadata?.quiz_scores_by_id)
@@ -325,15 +358,24 @@ export default function TrainingPlayer() {
                 setQuizScore(aggregatedScore)
             }
         } else if (typeof progress.score_percentage === 'number') {
+            setQuizScoresById({})
+            quizScoresByIdRef.current = {}
             setQuizScore(progress.score_percentage)
+        } else {
+            setQuizScoresById({})
+            quizScoresByIdRef.current = {}
+            setQuizScore(null)
         }
 
         const restoredQuizResults = progress.metadata?.quiz_results_by_id
         if (restoredQuizResults && typeof restoredQuizResults === 'object' && !Array.isArray(restoredQuizResults)) {
             setQuizResultsById(restoredQuizResults as Record<string, PersistedQuizResult>)
             quizResultsByIdRef.current = restoredQuizResults as Record<string, PersistedQuizResult>
+        } else {
+            setQuizResultsById({})
+            quizResultsByIdRef.current = {}
         }
-    }, [t])
+    }, [resetModuleInteractionState, t])
 
     // Close sidebar on mobile by default and when entering small breakpoints.
     useEffect(() => {
@@ -987,6 +1029,39 @@ export default function TrainingPlayer() {
         }
     }, [user, moduleData, storageKey, applyRestoredProgress])
 
+    useEffect(() => {
+        if (!user || !moduleData) return
+
+        const channel = supabase
+            .channel(`training-player-progress:${user.id}:${moduleData.module.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'learning_progress',
+                filter: `user_id=eq.${user.id}`
+            }, (payload) => {
+                const next = payload.new as PersistedModuleProgress & {
+                    content_type?: string
+                    content_id?: string
+                }
+
+                if (next?.content_type !== 'module' || next?.content_id !== moduleData.module.id) {
+                    return
+                }
+
+                if (isResetProgressSnapshot(next) && storageKey) {
+                    removeEncryptedLocalStorage(storageKey)
+                }
+
+                applyRestoredProgress(next, moduleData.blocks)
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [user, moduleData, storageKey, applyRestoredProgress])
+
     const activeBlockId = activeBlock?.id
 
     useEffect(() => {
@@ -1045,9 +1120,16 @@ export default function TrainingPlayer() {
     const isGateBlock = !!(activeBlock && ['video', 'audio', 'interactive'].includes(activeBlock.type))
     const isGateCompletionRequired = !!(activeBlock && activeBlock.is_mandatory && isGateBlock)
     const isGateCompleted = !!(activeBlock && completedMediaBlocks.has(activeBlock.id))
+    const activeQuizId = activeBlock?.type === 'quiz'
+        ? ((activeBlock.content_data?.quiz_id as string) || '')
+        : ''
+    const activeQuizResult = activeQuizId ? quizResultsById[activeQuizId] : null
+    const activeQuizPassed = activeBlock?.type === 'quiz'
+        ? Boolean(activeQuizResult?.passed)
+        : true
 
     // Combined "Can Proceed" Logic
-    const canProceedToNext = (!isGateCompletionRequired || isGateCompleted)
+    const canProceedToNext = (!isGateCompletionRequired || isGateCompleted) && activeQuizPassed
 
     const renderBlockContent = (block: TrainingContentBlock) => {
         const variants = {
@@ -1365,6 +1447,8 @@ export default function TrainingPlayer() {
                                     setQuizScore(result.score)
                                 }
                                 if (result.passed) {
+                                    setCompletedBlocks((prev) => new Set(prev).add(block.id))
+                                    void recordBlockCompletion(block.id)
                                     toast({
                                         title: t('moduleQuizPassed'),
                                         description: t('quizScoreProceed', { score: result.score })
@@ -1874,15 +1958,27 @@ export default function TrainingPlayer() {
                                 return (
                                     <>
                                         <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ml-2 md:ml-3" : "mr-2 md:mr-3")} />
-                                        <span className="hidden sm:inline">{t('completeModule')}</span>
-                                        <span className="sm:hidden">{t('complete', 'Complete')}</span>
+                                        <span className="hidden sm:inline">
+                                            {activeBlock?.type === 'quiz' && !activeQuizPassed
+                                                ? t('completeQuizBeforeFinish', 'Please complete the quiz before finishing this module.')
+                                                : t('completeModule')}
+                                        </span>
+                                        <span className="sm:hidden">
+                                            {activeBlock?.type === 'quiz' && !activeQuizPassed
+                                                ? t('completeQuiz', 'Complete quiz')
+                                                : t('complete', 'Complete')}
+                                        </span>
                                     </>
                                 )
                             }
 
                             return (
                                 <>
-                                    <span className="hidden md:inline">{t('nextStep')}</span>
+                                    <span className="hidden md:inline">
+                                        {activeBlock?.type === 'quiz' && !activeQuizPassed
+                                            ? t('completeQuiz', 'Complete quiz')
+                                            : t('nextStep')}
+                                    </span>
                                     <ChevronRight className={cn(
                                         "h-4 w-4 md:h-5 md:w-5",
                                         isRTL ? "mr-2 md:mr-3 rotate-180" : "ml-2 md:ml-3"

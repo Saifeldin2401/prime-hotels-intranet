@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { QuizComponentEnhanced } from './components/QuizComponentEnhanced'
@@ -10,6 +11,9 @@ export default function QuizPlayer() {
     const assignmentId = searchParams.get('assignment')
     const navigate = useNavigate()
     const { t } = useTranslation('training')
+    const handleExit = useCallback(() => {
+        navigate('/learning/my')
+    }, [navigate])
 
     if (!id) return <div>{t('quizzes.player.invalid_id')}</div>
 
@@ -17,7 +21,7 @@ export default function QuizPlayer() {
         <div className="container mx-auto py-8">
             <Button
                 variant="ghost"
-                onClick={() => navigate('/learning/my')}
+                onClick={handleExit}
                 className="mb-6"
             >
                 {t_ext('larr', '&larr;')}{t('quizzes.player.back_to_learning')}
@@ -26,7 +30,7 @@ export default function QuizPlayer() {
             <QuizComponentEnhanced
                 quizId={id}
                 assignmentId={assignmentId}
-                onExit={() => navigate('/learning/my')}
+                onExit={handleExit}
             />
         </div>
     )

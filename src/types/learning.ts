@@ -123,6 +123,73 @@ export interface LearningProgress {
     updated_at: string
 }
 
+export interface LearningAssignmentExemption {
+    id: string
+    user_id: string
+    content_type: LearningContentType
+    content_id: string
+    reason?: string | null
+    created_by?: string | null
+    created_at: string
+    updated_at: string
+}
+
+export interface LearningAssignmentUserOverride {
+    id: string
+    user_id: string
+    content_type: LearningContentType
+    content_id: string
+    due_date?: string | null
+    priority?: 'normal' | 'high' | 'compliance' | null
+    instructions?: string | null
+    created_by?: string | null
+    updated_by?: string | null
+    created_at: string
+    updated_at: string
+}
+
+export interface ModuleAssigneeSource {
+    assignment_id: string
+    target_type: LearningTargetType
+    target_id?: string | null
+    label: string
+    meta?: string
+    due_date?: string | null
+    priority?: string | null
+    valid_from?: string | null
+    expires_at?: string | null
+    instructions?: string | null
+    created_at?: string | null
+}
+
+export interface ModuleAssigneeRosterEntry {
+    user_id: string
+    full_name: string
+    email?: string | null
+    avatar_url?: string | null
+    department_name?: string | null
+    property_name?: string | null
+    status: LearningAssignmentStatus | 'not_started'
+    progress_percentage: number
+    score_percentage?: number | null
+    passed?: boolean | null
+    last_accessed_at?: string | null
+    assignment_id?: string | null
+    effective_due_date?: string | null
+    effective_priority?: 'normal' | 'high' | 'compliance' | null
+    effective_instructions?: string | null
+    has_override: boolean
+    override?: LearningAssignmentUserOverride | null
+    sources: ModuleAssigneeSource[]
+    exemption?: LearningAssignmentExemption | null
+}
+
+export interface ModuleAssignmentRoster {
+    module_id: string
+    active: ModuleAssigneeRosterEntry[]
+    exempted: ModuleAssigneeRosterEntry[]
+}
+
 export interface CreateQuizDTO {
     title: string
     description?: string

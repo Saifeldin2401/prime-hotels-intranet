@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -16,18 +16,14 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuCheckboxItem
 } from '@/components/ui/dropdown-menu'
 import { Progress } from '@/components/ui/progress'
@@ -56,6 +52,8 @@ import { useTranslation } from 'react-i18next'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { addDays, format } from 'date-fns'
+import { learningService } from '@/services/learningService'
+import type { ModuleAssigneeRosterEntry } from '@/types/learning'
 
 const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
 
@@ -160,6 +158,28 @@ export function TrainingAssignmentsPanel({
   const [reminderDaysBefore, setReminderDaysBefore] = useState<number[]>([])
   const [propertyFilters, setPropertyFilters] = useState<string[]>([])
   const [targetSearch, setTargetSearch] = useState('')
+  const [manageModuleId, setManageModuleId] = useState<string | null>(null)
+  const [manageModuleTitle, setManageModuleTitle] = useState('')
+  const [reassignEntry, setReassignEntry] = useState<ModuleAssigneeRosterEntry | null>(null)
+  const [reassignUserId, setReassignUserId] = useState('')
+  const [reassignReason, setReassignReason] = useState('')
+  const [overrideEntry, setOverrideEntry] = useState<ModuleAssigneeRosterEntry | null>(null)
+  const [overrideDueDate, setOverrideDueDate] = useState('')
+  const [overridePriority, setOverridePriority] = useState<'inherit' | 'normal' | 'high' | 'compliance'>('inherit')
+  const [overrideInstructions, setOverrideInstructions] = useState('')
+  const [removeReason, setRemoveReason] = useState('')
+
+  const resetReassignDialog = useCallback(() => {
+    setReassignEntry(null)
+    setReassignUserId('')
+    setReassignReason('')
+  }, [])
+
+  const openReassignDialog = useCallback((entry: ModuleAssigneeRosterEntry) => {
+    setReassignEntry(entry)
+    setReassignUserId(entry.user_id)
+    setReassignReason(entry.exemption?.reason || '')
+  }, [])
 
 
 
@@ -171,7 +191,20 @@ export function TrainingAssignmentsPanel({
         .from('learning_assignments')
         .select('*')
         .eq('content_type', 'module')
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    }
+  })
+
+  const { data: moduleExemptions = [] } = useQuery({
+    queryKey: ['learning-assignment-exemptions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('learning_assignment_exemptions')
+        .select('*')
+        .eq('content_type', 'module')
       if (error) throw error
       return data || []
     }
@@ -188,6 +221,12 @@ export function TrainingAssignmentsPanel({
       if (error) throw error
       return data as TrainingModule[]
     }
+  })
+
+  const { data: moduleRoster, isLoading: isLoadingModuleRoster } = useQuery({
+    queryKey: ['module-assignment-roster', manageModuleId],
+    queryFn: () => learningService.getModuleAssignmentRoster(manageModuleId!),
+    enabled: !!manageModuleId
   })
 
   // Combine assignments with modules
@@ -464,6 +503,101 @@ export function TrainingAssignmentsPanel({
     }
   })
 
+  const invalidateAssignmentControlQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
+    queryClient.invalidateQueries({ queryKey: ['learning-progress'] })
+    queryClient.invalidateQueries({ queryKey: ['learning-assignment-exemptions'] })
+    queryClient.invalidateQueries({ queryKey: ['module-assignment-roster'] })
+    queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
+  }, [queryClient])
+
+  const exemptUserMutation = useMutation({
+    mutationFn: async ({ moduleId, userId, reason }: { moduleId: string; userId: string; reason?: string }) => {
+      await learningService.exemptUserFromModule(moduleId, userId, reason)
+    },
+    onSuccess: () => {
+      invalidateAssignmentControlQueries()
+      setRemoveReason('')
+    }
+  })
+
+  const restoreUserMutation = useMutation({
+    mutationFn: async ({ moduleId, userId }: { moduleId: string; userId: string }) => {
+      await learningService.restoreUserModuleAccess(moduleId, userId)
+    },
+    onSuccess: () => {
+      invalidateAssignmentControlQueries()
+      resetReassignDialog()
+    }
+  })
+
+  const resetProgressMutation = useMutation({
+    mutationFn: async ({ moduleId, userId }: { moduleId: string; userId: string }) => {
+      await learningService.resetModuleProgress(moduleId, userId)
+    },
+    onSuccess: () => invalidateAssignmentControlQueries()
+  })
+
+  const saveOverrideMutation = useMutation({
+    mutationFn: async ({
+      moduleId,
+      userId,
+      dueDate,
+      priority,
+      instructions
+    }: {
+      moduleId: string
+      userId: string
+      dueDate?: string | null
+      priority?: 'normal' | 'high' | 'compliance' | null
+      instructions?: string | null
+    }) => {
+      await learningService.setModuleUserOverride({
+        moduleId,
+        userId,
+        dueDate,
+        priority,
+        instructions
+      })
+    },
+    onSuccess: () => {
+      invalidateAssignmentControlQueries()
+      setOverrideEntry(null)
+      setOverrideDueDate('')
+      setOverridePriority('inherit')
+      setOverrideInstructions('')
+    }
+  })
+
+  const clearOverrideMutation = useMutation({
+    mutationFn: async ({ moduleId, userId }: { moduleId: string; userId: string }) => {
+      await learningService.clearModuleUserOverride(moduleId, userId)
+    },
+    onSuccess: () => invalidateAssignmentControlQueries()
+  })
+
+  const reassignUserMutation = useMutation({
+    mutationFn: async ({ moduleId, fromUserId, toUserId, reason }: { moduleId: string; fromUserId: string; toUserId: string; reason?: string }) => {
+      await learningService.reassignModuleUser({ moduleId, fromUserId, toUserId, reason })
+    },
+    onSuccess: () => {
+      invalidateAssignmentControlQueries()
+      resetReassignDialog()
+    }
+  })
+
+  const resendNotificationMutation = useMutation({
+    mutationFn: async ({ userId, moduleId, moduleTitle, deadline }: { userId: string; moduleId: string; moduleTitle: string; deadline?: string | null }) => {
+      await notifyTrainingAssigned(userId, moduleId, moduleTitle, deadline || undefined)
+    },
+    onSuccess: () => {
+      toast({
+        title: t('notificationSent', 'Notification sent'),
+        description: t('notificationSentDesc', 'The learner has been reminded about this module.')
+      })
+    }
+  })
+
   const resetForm = () => {
     setFormModuleId('')
     setFormTargetType('all')
@@ -480,11 +614,53 @@ export function TrainingAssignmentsPanel({
     setPropertyFilters([])
     setTargetSearch('')
   }
+
+  const openManageAssignees = useCallback((moduleId: string, moduleTitle?: string) => {
+    setManageModuleId(moduleId)
+    setManageModuleTitle(moduleTitle || t('unknownModule'))
+  }, [t])
+
+  const closeManageAssignees = useCallback(() => {
+    setManageModuleId(null)
+    setManageModuleTitle('')
+    resetReassignDialog()
+    setOverrideEntry(null)
+    setOverrideDueDate('')
+    setOverridePriority('inherit')
+    setOverrideInstructions('')
+    setRemoveReason('')
+  }, [resetReassignDialog])
+
   const handleDelete = (id: string) => {
     if (confirm(t('confirmAssignmentDelete'))) {
       deleteAssignmentMutation.mutate(id)
     }
   }
+
+  const openOverrideDialog = useCallback((entry: ModuleAssigneeRosterEntry) => {
+    setOverrideEntry(entry)
+    setOverrideDueDate(entry.override?.due_date ? format(new Date(entry.override.due_date), 'yyyy-MM-dd') : '')
+    setOverridePriority(entry.override?.priority || 'inherit')
+    setOverrideInstructions(entry.override?.instructions || '')
+  }, [])
+
+  const submitReassign = useCallback(() => {
+    if (!reassignEntry || !reassignUserId || !manageModuleId) return
+
+    if (reassignUserId === reassignEntry.user_id) {
+      if (reassignEntry.exemption) {
+        restoreUserMutation.mutate({ moduleId: manageModuleId, userId: reassignEntry.user_id })
+      }
+      return
+    }
+
+    reassignUserMutation.mutate({
+      moduleId: manageModuleId,
+      fromUserId: reassignEntry.user_id,
+      toUserId: reassignUserId,
+      reason: reassignReason || undefined
+    })
+  }, [manageModuleId, reassignEntry, reassignReason, reassignUserId, reassignUserMutation, restoreUserMutation])
 
   // Helpers
   const getAssignmentStatus = (assignment: LearningAssignment): AssignmentStatus => {
@@ -541,6 +717,20 @@ export function TrainingAssignmentsPanel({
     return new Map((users || []).map((user) => [user.id, user]))
   }, [users])
 
+  const exemptedModuleUserKeys = useMemo(() => {
+    return new Set(
+      moduleExemptions.map((row: any) => `${row.content_id}:${row.user_id}`)
+    )
+  }, [moduleExemptions])
+
+  const exemptionCountByModule = useMemo(() => {
+    const counts = new Map<string, number>()
+    moduleExemptions.forEach((row: any) => {
+      counts.set(row.content_id, (counts.get(row.content_id) || 0) + 1)
+    })
+    return counts
+  }, [moduleExemptions])
+
   const getTargetDetails = useCallback((assignment: LearningAssignment) => {
     switch (assignment.target_type) {
       case 'department': {
@@ -572,6 +762,14 @@ export function TrainingAssignmentsPanel({
   // Filtered Assignments (For the Assignments Tab)
   const filteredAssignments = useMemo(() => {
     return assignments?.filter(assignment => {
+      if (
+        assignment.target_type === 'user'
+        && assignment.target_id
+        && exemptedModuleUserKeys.has(`${assignment.content_id}:${assignment.target_id}`)
+      ) {
+        return false
+      }
+
       const moduleTitle = assignment.training_modules?.title || ''
       const searchValue = search.trim().toLowerCase()
       const targetDetails = getTargetDetails(assignment)
@@ -583,7 +781,7 @@ export function TrainingAssignmentsPanel({
       const matchesStatus = statusFilter === 'all' || status === statusFilter
       return matchesSearch && matchesStatus
     }) || []
-  }, [assignments, search, statusFilter, getTargetDetails])
+  }, [assignments, exemptedModuleUserKeys, search, statusFilter, getTargetDetails])
 
   const groupedAssignments = useMemo(() => {
     const groups = new Map<string, {
@@ -1461,6 +1659,7 @@ export function TrainingAssignmentsPanel({
                 const primaryAssignment = group.assignments[0]
                 const targetType = primaryAssignment.target_type
                 const targetTypeLabel = getTargetLabel(targetType)
+                const exemptedCount = exemptionCountByModule.get(primaryAssignment.content_id) || 0
                 const targets = group.assignments.map((assignment) => ({
                   assignmentId: assignment.id,
                   ...getTargetDetails(assignment)
@@ -1486,6 +1685,11 @@ export function TrainingAssignmentsPanel({
                         {targets.length > 1 && (
                           <Badge variant="outline" className="bg-hotel-gold/10 text-hotel-navy">
                             {targets.length} {t('targets', 'targets')}
+                          </Badge>
+                        )}
+                        {exemptedCount > 0 && (
+                          <Badge variant="outline" className="bg-rose-50 text-rose-700">
+                            {exemptedCount} {t('exempted', 'exempted')}
                           </Badge>
                         )}
                       </div>
@@ -1541,6 +1745,16 @@ export function TrainingAssignmentsPanel({
                             </span>
                           )}
                         </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => openManageAssignees(primaryAssignment.content_id, primaryAssignment.training_modules?.title)}
+                        >
+                          <Users className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                          {t('manageAssignees', 'Manage assignees')}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1566,6 +1780,385 @@ export function TrainingAssignmentsPanel({
           </div>
         </TabsContent >
       </Tabs >
+
+      <Dialog open={!!manageModuleId} onOpenChange={(open) => !open && closeManageAssignees()}>
+        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('manageAssignees', 'Manage assignees')}</DialogTitle>
+            <DialogDescription>
+              {manageModuleTitle}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingModuleRoster ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('activeAssignees', 'Active assignees')}</p>
+                    <p className="mt-2 text-3xl font-bold">{moduleRoster?.active.length || 0}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('exempted', 'Exempted')}</p>
+                    <p className="mt-2 text-3xl font-bold">{moduleRoster?.exempted.length || 0}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('withOverrides', 'With overrides')}</p>
+                    <p className="mt-2 text-3xl font-bold">{moduleRoster?.active.filter((entry) => entry.has_override).length || 0}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Tabs defaultValue="active" className="space-y-4">
+                <TabsList>
+                  <TabsTrigger value="active">{t('active', 'Active')}</TabsTrigger>
+                  <TabsTrigger value="exempted">{t('exempted', 'Exempted')}</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="active" className="space-y-4">
+                  <div className="rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('employee')}</TableHead>
+                          <TableHead>{t('source', 'Source')}</TableHead>
+                          <TableHead>{t('status')}</TableHead>
+                          <TableHead>{t('due')}</TableHead>
+                          <TableHead>{t('score')}</TableHead>
+                          <TableHead className="text-right">{t('actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(moduleRoster?.active || []).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                              {t('noActiveAssignees', 'No active assignees found for this module.')}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          (moduleRoster?.active || []).map((entry) => (
+                            <TableRow key={entry.user_id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-9 w-9">
+                                    <AvatarImage src={entry.avatar_url || ''} />
+                                    <AvatarFallback>{entry.full_name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium">{entry.full_name}</div>
+                                    <div className="text-xs text-muted-foreground">{entry.email || entry.department_name || t('unknownUser')}</div>
+                                    {(entry.department_name || entry.property_name) && (
+                                      <div className="text-xs text-muted-foreground">
+                                        {[entry.department_name, entry.property_name].filter(Boolean).join(' | ')}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {entry.sources.map((source) => (
+                                    <Badge key={`${entry.user_id}-${source.assignment_id}`} variant="outline">
+                                      {source.label}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-2">
+                                  <Badge variant={entry.status === 'completed' ? 'default' : 'secondary'}>
+                                    {t(entry.status)}
+                                  </Badge>
+                                  {entry.has_override && (
+                                    <Badge variant="outline" className="bg-amber-50 text-amber-700">
+                                      {t('override', 'Override')}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {entry.effective_due_date ? formatDate(entry.effective_due_date) : '-'}
+                              </TableCell>
+                              <TableCell>
+                                {entry.score_percentage !== null && entry.score_percentage !== undefined ? `${entry.score_percentage}%` : '-'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex flex-wrap justify-end gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openReassignDialog(entry)}
+                                  >
+                                    {t('reassign', 'Reassign')}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openOverrideDialog(entry)}
+                                  >
+                                    {t('override', 'Override')}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => resetProgressMutation.mutate({ moduleId: manageModuleId!, userId: entry.user_id })}
+                                    disabled={resetProgressMutation.isPending}
+                                  >
+                                    {t('resetProgress', 'Reset progress & quiz attempts')}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => resendNotificationMutation.mutate({
+                                      userId: entry.user_id,
+                                      moduleId: manageModuleId!,
+                                      moduleTitle: manageModuleTitle,
+                                      deadline: entry.effective_due_date || null
+                                    })}
+                                    disabled={resendNotificationMutation.isPending}
+                                  >
+                                    {t('resend', 'Resend')}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => exemptUserMutation.mutate({
+                                      moduleId: manageModuleId!,
+                                      userId: entry.user_id,
+                                      reason: removeReason || 'Removed from module'
+                                    })}
+                                    disabled={exemptUserMutation.isPending}
+                                  >
+                                    {t('removeFromModule', 'Remove from module')}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="remove-reason">{t('removeReason', 'Removal reason')}</Label>
+                    <Input
+                      id="remove-reason"
+                      value={removeReason}
+                      onChange={(event) => setRemoveReason(event.target.value)}
+                      placeholder={t('removeReasonPlaceholder', 'Optional note for exemption history')}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="exempted" className="space-y-4">
+                  <div className="rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('employee')}</TableHead>
+                          <TableHead>{t('reason', 'Reason')}</TableHead>
+                          <TableHead>{t('source', 'Source')}</TableHead>
+                          <TableHead>{t('updated', 'Updated')}</TableHead>
+                          <TableHead className="text-right">{t('actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(moduleRoster?.exempted || []).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                              {t('noExemptedAssignees', 'No exempted users for this module.')}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          (moduleRoster?.exempted || []).map((entry) => (
+                            <TableRow key={entry.user_id}>
+                              <TableCell>
+                                <div className="font-medium">{entry.full_name}</div>
+                                <div className="text-xs text-muted-foreground">{entry.email || entry.department_name || t('unknownUser')}</div>
+                              </TableCell>
+                              <TableCell>{entry.exemption?.reason || '-'}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {entry.sources.length > 0 ? entry.sources.map((source) => (
+                                    <Badge key={`${entry.user_id}-${source.assignment_id}`} variant="outline">
+                                      {source.label}
+                                    </Badge>
+                                  )) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>{entry.exemption?.updated_at ? formatDate(entry.exemption.updated_at) : '-'}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => restoreUserMutation.mutate({ moduleId: manageModuleId!, userId: entry.user_id })}
+                                    disabled={restoreUserMutation.isPending}
+                                  >
+                                    {t('restore', 'Restore')}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openReassignDialog(entry)}
+                                  >
+                                    {t('reassign', 'Reassign')}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!reassignEntry} onOpenChange={(open) => !open && resetReassignDialog()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('reassign', 'Reassign')}</DialogTitle>
+            <DialogDescription>
+              {reassignEntry?.full_name} {'->'} {manageModuleTitle}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('selectUser', 'Select user')}</Label>
+              <Select value={reassignUserId} onValueChange={setReassignUserId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('selectUser', 'Select user')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(users || [])
+                    .map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {(user.full_name || user.email) + (user.id === reassignEntry?.user_id ? ` ${t('currentAssignee', '(current assignee)')}` : '')}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('reason', 'Reason')}</Label>
+              <Input
+                value={reassignReason}
+                onChange={(event) => setReassignReason(event.target.value)}
+                placeholder={t('reassignReasonPlaceholder', 'Optional reassignment note')}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={resetReassignDialog}>
+                {t('cancel', 'Cancel')}
+              </Button>
+              <Button
+                type="button"
+                onClick={submitReassign}
+                disabled={
+                  !reassignUserId ||
+                  reassignUserMutation.isPending ||
+                  restoreUserMutation.isPending ||
+                  (reassignUserId === reassignEntry?.user_id && !reassignEntry?.exemption)
+                }
+              >
+                {(reassignUserMutation.isPending || restoreUserMutation.isPending)
+                  ? t('saving', 'Saving...')
+                  : reassignUserId === reassignEntry?.user_id && !reassignEntry?.exemption
+                    ? t('alreadyAssigned', 'Already assigned')
+                  : reassignUserId === reassignEntry?.user_id && reassignEntry?.exemption
+                    ? t('restore', 'Restore')
+                    : t('confirmReassign', 'Confirm reassign')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!overrideEntry} onOpenChange={(open) => !open && setOverrideEntry(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('overrideAssignment', 'Override assignment')}</DialogTitle>
+            <DialogDescription>
+              {overrideEntry?.full_name} {'|'} {manageModuleTitle}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('due')}</Label>
+              <Input type="date" value={overrideDueDate} onChange={(event) => setOverrideDueDate(event.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('priority')}</Label>
+              <Select value={overridePriority} onValueChange={(value) => setOverridePriority(value as typeof overridePriority)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">{t('inherit', 'Inherit')}</SelectItem>
+                  <SelectItem value="normal">{t('normal', 'Normal')}</SelectItem>
+                  <SelectItem value="high">{t('high', 'High')}</SelectItem>
+                  <SelectItem value="compliance">{t('compliance', 'Compliance')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('instructions', 'Instructions')}</Label>
+              <Input value={overrideInstructions} onChange={(event) => setOverrideInstructions(event.target.value)} placeholder={t('overrideInstructionsPlaceholder', 'Optional user-specific instructions')} />
+            </div>
+            <div className="flex justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => overrideEntry && clearOverrideMutation.mutate({ moduleId: manageModuleId!, userId: overrideEntry.user_id })}
+                disabled={!overrideEntry?.has_override || clearOverrideMutation.isPending}
+              >
+                {t('clearOverride', 'Clear override')}
+              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setOverrideEntry(null)}>
+                  {t('cancel', 'Cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => overrideEntry && saveOverrideMutation.mutate({
+                    moduleId: manageModuleId!,
+                    userId: overrideEntry.user_id,
+                    dueDate: overrideDueDate ? new Date(`${overrideDueDate}T00:00:00`).toISOString() : null,
+                    priority: overridePriority === 'inherit' ? null : overridePriority,
+                    instructions: overrideInstructions || null
+                  })}
+                  disabled={saveOverrideMutation.isPending}
+                >
+                  {saveOverrideMutation.isPending ? t('saving', 'Saving...') : t('save', 'Save')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* CREATE DIALOG */}
       {

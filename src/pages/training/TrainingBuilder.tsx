@@ -43,6 +43,7 @@ import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
 import { BuilderCanvas } from '@/components/training/builder/BuilderCanvas'
 import { BuilderPreview } from '@/components/training/builder/BuilderPreview'
 import { analytics } from '@/services/analyticsService'
+import { quizIntegrityService } from '@/services/quizIntegrityService'
 import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
 
 type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference'
@@ -559,6 +560,7 @@ export function TrainingBuilder() {
   const [aiTargetSectionId, setAiTargetSectionId] = useState<string | null>(null)
   const [showKBSidebar, _setShowKBSidebar] = useState(false)
   const [showSmartWizard, setShowSmartWizard] = useState(false)
+  const [isValidatingQuizzes, setIsValidatingQuizzes] = useState(false)
 
   // Current form states
   const [currentBlock, setCurrentBlock] = useState<ContentBlockForm>({
@@ -609,6 +611,17 @@ export function TrainingBuilder() {
   const selectedTemplate = templateOptions.find(template => template.id === templatePreset) || null
   const templateStats = getTemplateStats(selectedTemplate)
   const activeSectionName = sections.find(section => section.id === activeSection)?.title
+  const linkedQuizIds = useMemo(
+    () => Array.from(new Set(
+      sections.flatMap(section =>
+        section.items
+          .filter(item => item.type === 'quiz')
+          .map(item => ((item.content_data as { quiz_id?: string }).quiz_id || '').trim())
+          .filter((quizId): quizId is string => quizId.length > 0)
+      )
+    )),
+    [sections]
+  )
 
   const openAIGenerator = (content: string, title: string, targetSectionId: string | null) => {
     setAiPrefillContent(content)
@@ -859,6 +872,69 @@ export function TrainingBuilder() {
     { key: 'content', label: t('builder.validation.content'), ok: totalItems > 0 },
     { key: 'rules', label: t('builder.validation.rules'), ok: rulesComplete }
   ]
+
+  const ensureLinkedQuizzesIntegrity = useCallback(async (mode: 'save' | 'publish') => {
+    if (linkedQuizIds.length === 0) {
+      return true
+    }
+
+    setIsValidatingQuizzes(true)
+
+    try {
+      const moduleContext = buildModuleSourceText(sections)
+      const reports = await Promise.all(
+        linkedQuizIds.map(quizId => quizIntegrityService.ensureQuizIntegrity(quizId, {
+          autoRepair: true,
+          autoPublish: mode === 'publish',
+          moduleTitle: title.trim() || t('builder.untitledModule'),
+          moduleContext
+        }))
+      )
+
+      const repairedCount = reports.reduce((count, report) => count + report.repairedQuestionIds.length, 0)
+      const publishedCount = reports.filter(report => report.autoPublished).length
+      const blockingIssues = reports.flatMap(report =>
+        report.issues
+          .filter(issue => issue.severity === 'error')
+          .map(issue => `${report.quizTitle}: ${issue.message}`)
+      )
+
+      if (repairedCount > 0) {
+        toast({
+          title: 'Quiz issues fixed automatically',
+          description: `${repairedCount} linked question${repairedCount === 1 ? '' : 's'} were repaired with AI before ${mode === 'publish' ? 'publishing' : 'saving'}.`
+        })
+      }
+
+      if (publishedCount > 0) {
+        toast({
+          title: 'Linked quizzes published',
+          description: `${publishedCount} linked quiz${publishedCount === 1 ? '' : 'zes'} moved to published status with the module.`
+        })
+      }
+
+      if (blockingIssues.length > 0) {
+        toast({
+          title: 'Quiz configuration needs review',
+          description: blockingIssues.slice(0, 2).join(' '),
+          variant: 'destructive'
+        })
+        return false
+      }
+
+      return true
+    } catch (error) {
+      const errorDetails = getUserFriendlyError(error)
+      toast({
+        title: 'Quiz validation failed',
+        description: errorDetails.message,
+        variant: 'destructive'
+      })
+      return false
+    } finally {
+      setIsValidatingQuizzes(false)
+    }
+  }, [linkedQuizIds, sections, t, title, toast])
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -1537,6 +1613,9 @@ export function TrainingBuilder() {
     }
 
     try {
+      const quizzesReady = await ensureLinkedQuizzesIntegrity('publish')
+      if (!quizzesReady) return
+
       const savedModuleId = await saveModuleMutation.mutateAsync()
       await Promise.all([
         saveContentBlocksMutation.mutateAsync(savedModuleId),
@@ -1686,6 +1765,9 @@ export function TrainingBuilder() {
 
   const handleSave = async () => {
     try {
+      const quizzesReady = await ensureLinkedQuizzesIntegrity('save')
+      if (!quizzesReady) return
+
       // First save the module
       const savedModuleId = await saveModuleMutation.mutateAsync()
 
@@ -2284,12 +2366,12 @@ export function TrainingBuilder() {
                 </div>
 
                 <div className={cn("flex items-center justify-end gap-3", isRTL ? "flex-row-reverse" : "")}>
-                  <Button variant="outline" onClick={handleSave}>
+                  <Button variant="outline" onClick={handleSave} disabled={builderBusy}>
                     {t('builder.saveDraft')}
                   </Button>
                   <Button
                     onClick={publishTraining}
-                    disabled={!publishReady}
+                    disabled={!publishReady || builderBusy}
                     className="bg-hotel-gold hover:bg-hotel-gold-dark text-white"
                   >
                     {t('builder.publish')}
@@ -2460,14 +2542,15 @@ export function TrainingBuilder() {
 
   const stepContent = renderStepContent()
   const rightPanelContent = renderRightPanel()
+  const builderBusy = isValidatingQuizzes || saveModuleMutation.isPending || saveContentBlocksMutation.isPending || saveQuestionsMutation.isPending
 
   return (
     <div className={`min-h-screen bg-background flex flex-col ${isRTL ? 'text-right' : 'text-left'}`}>
       {/* Header */}
       <BuilderHeader
         title={title}
-        isSaving={saveModuleMutation.isPending || saveContentBlocksMutation.isPending}
-        hasUnsavedChanges={saveModuleMutation.isPending || saveContentBlocksMutation.isPending}
+        isSaving={builderBusy}
+        hasUnsavedChanges={builderBusy}
         onSave={handleSave}
         onPreview={() => handleStepChange('preview')}
         onMagic={() => setShowSmartWizard(true)}
