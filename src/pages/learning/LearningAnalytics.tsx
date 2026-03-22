@@ -235,27 +235,38 @@ export default function LearningAnalytics() {
 
             // Team Training Progress (from TrainingDashboard logic)
             const { data: teamProgressData } = await supabase
-                .from('training_progress')
+                .from('learning_progress')
                 .select(`
                     id,
                     status,
-                    started_at,
+                    content_id,
+                    content_type,
+                    last_accessed_at,
                     completed_at,
-                    quiz_score,
-                    user:profiles!inner(id, first_name, last_name, department:departments(name)),
-                    module:training_modules!inner(id, title)
+                    score_percentage,
+                    user:profiles!inner(id, first_name, last_name, department:departments(name))
                 `)
-                .order('started_at', { ascending: false })
+                .eq('content_type', 'module')
+                .order('last_accessed_at', { ascending: false })
                 .limit(50)
+
+            const teamModuleIds = Array.from(new Set((teamProgressData || []).map(item => item.content_id).filter(Boolean)))
+            const { data: teamModules } = teamModuleIds.length > 0
+                ? await supabase
+                    .from('training_modules')
+                    .select('id, title')
+                    .in('id', teamModuleIds)
+                : { data: [], error: null }
+            const teamModuleMap = new Map((teamModules || []).map((module) => [module.id, module.title]))
 
             const teamProgress = teamProgressData?.map(item => ({
                 id: item.id,
                 user_name: `${(item.user as any)?.first_name || ''} ${(item.user as any)?.last_name || ''}`.trim(),
                 department: (item.user as any)?.department?.name || 'Unassigned',
-                module_title: (item.module as any)?.title || 'Unknown Module',
+                module_title: teamModuleMap.get(item.content_id) || 'Unknown Module',
                 status: item.status,
-                score: item.quiz_score,
-                date: item.completed_at || item.started_at
+                score: item.score_percentage,
+                date: item.completed_at || item.last_accessed_at
             })) || []
 
             // Module insights

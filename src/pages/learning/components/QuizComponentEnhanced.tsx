@@ -79,6 +79,7 @@ interface QuizResult {
     correctCount: number
     totalQuestions: number
     gradedAnswers: GradedAnswer[]
+    reviewItems: QuizReviewItem[]
     streakAchieved: number
     timeSpentSeconds: number
     powerUpsUsed: PowerUpType[]
@@ -88,6 +89,16 @@ interface GradedAnswer {
     question_id: string
     answer: string
     correct: boolean
+    timeSpentSeconds: number
+}
+
+interface QuizReviewItem {
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer: string
+    correct: boolean
+    explanation?: string
     timeSpentSeconds: number
 }
 
@@ -176,7 +187,7 @@ function FeedbackOverlay({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
+            className="absolute inset-0 z-20 flex items-center justify-center rounded-[inherit] bg-slate-950/55 p-4 backdrop-blur-sm"
             onClick={onAdvance}
         >
             <m.div
@@ -184,7 +195,7 @@ function FeedbackOverlay({
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
                 className={cn(
-                    "max-w-lg w-full rounded-3xl p-8 text-center shadow-2xl",
+                    "max-h-[calc(100%-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl p-8 text-center shadow-2xl",
                     isCorrect ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white" : "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
                 )}
                 onClick={e => e.stopPropagation()}
@@ -321,28 +332,7 @@ export function QuizComponentEnhanced({
     // Final result
     const [result, setResult] = useState<QuizResult | null>(null)
 
-    // Load quiz
-    useEffect(() => {
-        if (initialQuiz) {
-            setQuiz(initialQuiz)
-            setLoading(false)
-            if (initialQuiz.time_limit_minutes) {
-                setTimeLeft(initialQuiz.time_limit_minutes * 60)
-            }
-            // Initialize states
-            const initialStates: Record<string, QuestionState> = {}
-            initialQuiz.questions?.forEach(q => {
-                initialStates[q.question_id] = {
-                    status: 'unanswered',
-                    timeSpentSeconds: 0,
-                    powerUpsUsed: []
-                }
-            })
-            setQuestionStates(initialStates)
-        } else if (quizId) {
-            loadQuiz(quizId)
-        }
-    }, [quizId, user?.id, assignmentId, initialQuiz])
+    const submitRef = useRef<((isTimeout?: boolean) => Promise<void>) | null>(null)
 
     useEffect(() => {
         if (propTranslationTarget !== undefined) {
@@ -385,19 +375,6 @@ export function QuizComponentEnhanced({
         localStorage.setItem(powerUpsStorageKey, JSON.stringify(counts))
     }, [powerUps, powerUpsStorageKey])
 
-    // Timer
-    useEffect(() => {
-        let timer: NodeJS.Timeout
-        if (timeLeft !== null && timeLeft > 0 && !submitted && !timeFrozen && !showFeedback) {
-            timer = setInterval(() => {
-                setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
-            }, 1000)
-        } else if (timeLeft === 0 && !submitted) {
-            handleTimeUp()
-        }
-        return () => clearInterval(timer)
-    }, [timeLeft, submitted, timeFrozen, showFeedback])
-
     useEffect(() => {
         if (showFeedback) {
             if (feedbackPauseStartMsRef.current === null) {
@@ -418,7 +395,7 @@ export function QuizComponentEnhanced({
         setEliminatedOptions(new Set())
     }, [currentQuestionIndex])
 
-    const loadQuiz = async (id: string) => {
+    const loadQuiz = useCallback(async (id: string) => {
         try {
             setLoading(true)
             const data = await learningService.getQuiz(id)
@@ -485,16 +462,29 @@ export function QuizComponentEnhanced({
         } finally {
             setLoading(false)
         }
-    }
+    }, [attemptContextKey, onExit, t, toast, user?.id])
 
-    const handleTimeUp = () => {
-        toast({
-            title: t('training:quizzes.player.time_up'),
-            description: t('training:quizzes.player.auto_submitting'),
-            variant: 'destructive'
-        })
-        handleSubmit(true)
-    }
+    // Load quiz
+    useEffect(() => {
+        if (initialQuiz) {
+            setQuiz(initialQuiz)
+            setLoading(false)
+            if (initialQuiz.time_limit_minutes) {
+                setTimeLeft(initialQuiz.time_limit_minutes * 60)
+            }
+            const initialStates: Record<string, QuestionState> = {}
+            initialQuiz.questions?.forEach(q => {
+                initialStates[q.question_id] = {
+                    status: 'unanswered',
+                    timeSpentSeconds: 0,
+                    powerUpsUsed: []
+                }
+            })
+            setQuestionStates(initialStates)
+        } else if (quizId) {
+            void loadQuiz(quizId)
+        }
+    }, [initialQuiz, loadQuiz, quizId])
 
     const getCurrentQuestionTime = () => {
         return Math.floor((Date.now() - questionStartTime) / 1000)
@@ -566,6 +556,53 @@ export function QuizComponentEnhanced({
             ? gradeQuestionAnswer(currentQuestion.question, answers[currentQuestion.question_id])
             : false
     }
+
+    const getAnswerDisplay = useCallback((
+        question: NonNullable<NonNullable<LearningQuiz['questions']>[number]['question']>,
+        userAnswer: string | string[] | undefined
+    ) => {
+        const selectedValues = Array.isArray(userAnswer)
+            ? userAnswer
+            : (typeof userAnswer === 'string' && userAnswer.length > 0
+                ? userAnswer.split(',').map(value => value.trim()).filter(Boolean)
+                : [])
+        const hasOptions =
+            question.question_type === 'mcq' ||
+            question.question_type === 'mcq_multi' ||
+            (question.question_type === 'scenario' && (question.options?.length || 0) > 0)
+
+        if (!hasOptions) {
+            return typeof userAnswer === 'string' && userAnswer.trim().length > 0
+                ? userAnswer
+                : '(No answer)'
+        }
+
+        const labels = selectedValues
+            .map((id) => question.options?.find(option => option.id === id)?.option_text)
+            .filter((value): value is string => typeof value === 'string' && value.length > 0)
+
+        return labels.length > 0 ? labels.join(', ') : '(No answer)'
+    }, [])
+
+    const getCorrectAnswerDisplay = useCallback((
+        question: NonNullable<NonNullable<LearningQuiz['questions']>[number]['question']>
+    ) => {
+        const hasOptions =
+            question.question_type === 'mcq' ||
+            question.question_type === 'mcq_multi' ||
+            (question.question_type === 'scenario' && (question.options?.length || 0) > 0)
+
+        if (!hasOptions) {
+            return question.correct_answer || '(No answer)'
+        }
+
+        const labels = (question.options || [])
+            .filter(option => option.is_correct)
+            .map(option => option.option_text)
+            .filter((value): value is string => typeof value === 'string' && value.length > 0)
+
+        return labels.length > 0 ? labels.join(', ') : '(No answer)'
+    }, [])
 
     const handleAnswerSubmit = () => {
         const currentQuestion = quiz?.questions?.[currentQuestionIndex]
@@ -652,6 +689,20 @@ export function QuizComponentEnhanced({
                     timeSpentSeconds: questionStates[q.question_id]?.timeSpentSeconds || 0
                 }
             }) || []
+            const reviewItems: QuizReviewItem[] = quiz.questions?.map((q) => {
+                const rawAnswer = answers[q.question_id]
+                const question = q.question
+
+                return {
+                    questionId: q.question_id,
+                    questionText: question?.question_text || 'Question',
+                    selectedAnswer: question ? getAnswerDisplay(question, rawAnswer) : '(No answer)',
+                    correctAnswer: question ? getCorrectAnswerDisplay(question) : '(No answer)',
+                    correct: question ? gradeQuestionAnswer(question, rawAnswer) : false,
+                    explanation: question?.explanation || undefined,
+                    timeSpentSeconds: questionStates[q.question_id]?.timeSpentSeconds || 0
+                }
+            }) || []
 
             const totalQuestions = quiz.questions?.length || 0
             const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0
@@ -665,6 +716,7 @@ export function QuizComponentEnhanced({
                 correctCount,
                 totalQuestions,
                 gradedAnswers,
+                reviewItems,
                 streakAchieved: maxStreak,
                 timeSpentSeconds: totalTimeSpent,
                 powerUpsUsed
@@ -686,7 +738,17 @@ export function QuizComponentEnhanced({
                     ...previousContextMap,
                     [attemptContextKey]: nextAttemptCount
                 },
-                max_attempts: quiz.max_attempts ?? null
+                max_attempts: quiz.max_attempts ?? null,
+                latest_quiz_result: {
+                    quiz_id: quiz.id,
+                    quiz_title: quiz.title,
+                    score: finalResult.score,
+                    passed: finalResult.passed,
+                    correct_count: finalResult.correctCount,
+                    total_questions: finalResult.totalQuestions,
+                    completed_at: new Date().toISOString(),
+                    review_items: finalResult.reviewItems
+                }
             }
 
             // Submit to backend
@@ -762,6 +824,28 @@ export function QuizComponentEnhanced({
             setSubmitted(false)
         }
     }
+
+    useEffect(() => {
+        submitRef.current = handleSubmit
+    }, [handleSubmit])
+
+    // Timer
+    useEffect(() => {
+        let timer: NodeJS.Timeout
+        if (timeLeft !== null && timeLeft > 0 && !submitted && !timeFrozen && !showFeedback) {
+            timer = setInterval(() => {
+                setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
+            }, 1000)
+        } else if (timeLeft === 0 && !submitted) {
+            toast({
+                title: t('training:quizzes.player.time_up'),
+                description: t('training:quizzes.player.auto_submitting'),
+                variant: 'destructive'
+            })
+            void submitRef.current?.(true)
+        }
+        return () => clearInterval(timer)
+    }, [showFeedback, submitted, t, timeFrozen, timeLeft, toast])
 
     // Power-up handlers
     const activatePowerUp = (type: PowerUpType) => {
@@ -967,7 +1051,7 @@ export function QuizComponentEnhanced({
         )
     } else {
         mainContent = (
-        <div className="max-w-4xl mx-auto space-y-6 pb-10">
+        <div className="relative isolate mx-auto max-w-4xl space-y-6 pb-10">
             {/* Header with Stats */}
             <m.div
                 initial={{ opacity: 0, y: -10 }}
@@ -1158,72 +1242,75 @@ export function QuizComponentEnhanced({
                                                 })}
                                             </RadioGroup>
                                         ) : (
-                                            <Input
-                                                value={typeof answers[currentQuestion.question_id] === 'string' ? answers[currentQuestion.question_id] as string : ''}
-                                                onChange={(e) => setAnswers({ ...answers, [currentQuestion.question_id]: e.target.value })}
-                                                placeholder="Type your answer..."
-                                                className="text-lg p-6 h-auto rounded-xl border-2"
-                                            />
+                                            <p className="rounded-xl border-2 border-dashed border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                {t('training:quizzes.player.no_options')}
+                                            </p>
                                         )
                                     )}
 
                                     {currentQuestion.question?.question_type === 'mcq_multi' && (
-                                        <div className="grid gap-3">
-                                            {currentQuestion.question.options?.map((opt, idx) => {
-                                                const selectedAnswers = Array.isArray(answers[currentQuestion.question_id]) ? answers[currentQuestion.question_id] as string[] : []
-                                                const isSelected = selectedAnswers.includes(opt.id)
-                                                const translatedOption = displayOptionText(opt.id, opt.option_text)
-                                                return (
-                                                    <m.div
-                                                        key={opt.id || `option-${idx}`}
-                                                        whileHover={{ scale: 1.01 }}
-                                                        whileTap={{ scale: 0.99 }}
-                                                        className={cn(
-                                                            "group flex items-center gap-4 border-2 p-4 rounded-xl transition-all cursor-pointer",
-                                                            isSelected
-                                                                ? 'bg-hotel-navy/5 border-hotel-gold shadow-md'
-                                                                : 'bg-white border-slate-100 hover:border-hotel-gold/50'
-                                                        )}
-                                                        onClick={() => {
-                                                            const next = isSelected
-                                                                ? selectedAnswers.filter(id => id !== opt.id)
-                                                                : [...selectedAnswers, opt.id]
-                                                            setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
-                                                        }}
-                                                        role="checkbox"
-                                                        aria-checked={isSelected}
-                                                        tabIndex={0}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                                e.preventDefault()
+                                        (currentQuestion.question.options?.length || 0) > 0 ? (
+                                            <div className="grid gap-3">
+                                                {currentQuestion.question.options?.map((opt, idx) => {
+                                                    const selectedAnswers = Array.isArray(answers[currentQuestion.question_id]) ? answers[currentQuestion.question_id] as string[] : []
+                                                    const isSelected = selectedAnswers.includes(opt.id)
+                                                    const translatedOption = displayOptionText(opt.id, opt.option_text)
+                                                    return (
+                                                        <m.div
+                                                            key={opt.id || `option-${idx}`}
+                                                            whileHover={{ scale: 1.01 }}
+                                                            whileTap={{ scale: 0.99 }}
+                                                            className={cn(
+                                                                "group flex items-center gap-4 border-2 p-4 rounded-xl transition-all cursor-pointer",
+                                                                isSelected
+                                                                    ? 'bg-hotel-navy/5 border-hotel-gold shadow-md'
+                                                                    : 'bg-white border-slate-100 hover:border-hotel-gold/50'
+                                                            )}
+                                                            onClick={() => {
                                                                 const next = isSelected
                                                                     ? selectedAnswers.filter(id => id !== opt.id)
                                                                     : [...selectedAnswers, opt.id]
                                                                 setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Checkbox
-                                                            checked={isSelected}
-                                                            onCheckedChange={(checked) => {
-                                                                const next = checked
-                                                                    ? [...selectedAnswers, opt.id]
-                                                                    : selectedAnswers.filter(id => id !== opt.id)
-                                                                setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
                                                             }}
-                                                            className="h-5 w-5"
-                                                        />
-                                                        <span className={cn(
-                                                            "flex-1 text-base",
-                                                            isSelected ? "text-hotel-navy font-bold" : "text-slate-600",
-                                                            isRTL && "text-right"
-                                                        )}>
-                                                            {translatedOption}
-                                                        </span>
-                                                    </m.div>
-                                                )
-                                            })}
-                                        </div>
+                                                            role="checkbox"
+                                                            aria-checked={isSelected}
+                                                            tabIndex={0}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                                    e.preventDefault()
+                                                                    const next = isSelected
+                                                                        ? selectedAnswers.filter(id => id !== opt.id)
+                                                                        : [...selectedAnswers, opt.id]
+                                                                    setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Checkbox
+                                                                checked={isSelected}
+                                                                onCheckedChange={(checked) => {
+                                                                    const next = checked
+                                                                        ? [...selectedAnswers, opt.id]
+                                                                        : selectedAnswers.filter(id => id !== opt.id)
+                                                                    setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
+                                                                }}
+                                                                className="h-5 w-5"
+                                                            />
+                                                            <span className={cn(
+                                                                "flex-1 text-base",
+                                                                isSelected ? "text-hotel-navy font-bold" : "text-slate-600",
+                                                                isRTL && "text-right"
+                                                            )}>
+                                                                {translatedOption}
+                                                            </span>
+                                                        </m.div>
+                                                    )
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <p className="rounded-xl border-2 border-dashed border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                {t('training:quizzes.player.no_options')}
+                                            </p>
+                                        )
                                     )}
 
                                     {currentQuestion.question?.question_type === 'true_false' && (

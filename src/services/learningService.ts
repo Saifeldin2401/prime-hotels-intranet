@@ -506,6 +506,9 @@ export const learningService = {
             existingProgress !== null && nextProgress !== null
                 ? Math.max(existingProgress, nextProgress)
                 : (nextProgress ?? existingProgress)
+        const resolvedProgressPercentage = progress.status === 'completed'
+            ? 100
+            : bestProgressPercentage
 
         const bestScorePercentage = keepExistingScore ? existingRow?.score_percentage : progress.score_percentage
         const bestPassed = keepExistingScore ? existingRow?.passed : progress.passed
@@ -513,10 +516,13 @@ export const learningService = {
 
         const progressData = {
             ...progress,
-            progress_percentage: bestProgressPercentage,
+            progress_percentage: resolvedProgressPercentage,
             score_percentage: bestScorePercentage,
             passed: bestPassed,
             completed_at: bestCompletedAt,
+            training_module_id: progress.content_type === 'module'
+                ? progress.content_id
+                : (progress.training_module_id ?? existingRow?.training_module_id ?? null),
             metadata: Object.keys(mergedMetadata).length ? mergedMetadata : progress.metadata,
             updated_at: new Date().toISOString()
         }

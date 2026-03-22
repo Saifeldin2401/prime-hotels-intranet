@@ -57,6 +57,8 @@ import enOperations from './locales/en/operations.json';
 import arOperations from './locales/ar/operations.json';
 import enLearning from './locales/en/learning.json';
 import arLearning from './locales/ar/learning.json';
+import enRequests from './locales/en/requests.json';
+import arRequests from './locales/ar/requests.json';
 import enExtracted from './locales/en/extracted.json';
 import arExtracted from './locales/ar/extracted.json';
 
@@ -89,6 +91,7 @@ const resources = {
     errors: enErrors,
     operations: enOperations,
     learning: enLearning,
+    requests: enRequests,
     extracted: enExtracted,
   },
   ar: {
@@ -118,6 +121,7 @@ const resources = {
     errors: arErrors,
     operations: arOperations,
     learning: arLearning,
+    requests: arRequests,
     extracted: arExtracted,
   },
 };

@@ -26,6 +26,7 @@ import { NotificationsPanel } from './components/NotificationsPanel'
 import { DashboardCustomizeModal } from './components/DashboardCustomizeModal'
 
 import { useTranslation } from "react-i18next";
+import { useNavigate } from 'react-router-dom'
 
 interface RegistryWidgetRendererProps {
   id: WidgetId
@@ -80,6 +81,7 @@ function RegistryWidgetRenderer({
 
 export function IntegratedDashboard() {
   const { t, ready } = useTranslation('dashboard');
+  const navigate = useNavigate()
   const { user, profile, primaryRole, loading, rolesLoading } = useAuth()
   const { data: baseStats, isLoading: baseLoading, refetch: refetchBase } = useDashboardStats()
 
@@ -315,6 +317,16 @@ export function IntegratedDashboard() {
 
   const showFocusToggle = ['corporate_admin', 'regional_admin', 'property_manager', 'property_hr', 'department_head'].includes(effectiveRole)
 
+  const handleFocusModeChange = useCallback((nextMode: 'my_work' | 'my_team') => {
+    if (nextMode === 'my_team') {
+      setFocusMode('my_work')
+      navigate('/hr/team')
+      return
+    }
+
+    setFocusMode(nextMode)
+  }, [navigate, setFocusMode])
+
   const widgetRendererProps = {
     effectivePermittedWidgets,
     visibleWidgets,
@@ -443,7 +455,7 @@ export function IntegratedDashboard() {
 
         {showFocusToggle && (
           <div className="flex justify-center mb-6">
-            <Tabs value={focusMode} onValueChange={(val) => setFocusMode(val as 'my_work' | 'my_team')} className="w-full max-w-md">
+            <Tabs value={focusMode} onValueChange={(val) => handleFocusModeChange(val as 'my_work' | 'my_team')} className="w-full max-w-md">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="my_work">{t('focus.my_work')}</TabsTrigger>
                 <TabsTrigger value="my_team">{t('focus.my_team')}</TabsTrigger>

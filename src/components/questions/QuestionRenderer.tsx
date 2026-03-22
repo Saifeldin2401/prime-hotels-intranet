@@ -61,11 +61,12 @@ export function QuestionRenderer({
     totalQuestions,
     compact = false
 }: QuestionRendererProps) {
+    const { t } = useTranslation(['training', 'common'])
     const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(previousAnswer || null)
     const [hasSubmitted, setHasSubmitted] = useState(false)
     const [showHintPanel, setShowHintPanel] = useState(false)
     const [timeRemaining, setTimeRemaining] = useState(timeLimit || 0)
-    const [startTime] = useState(() => Date.now())
+    const [startTime, setStartTime] = useState(() => Date.now())
 
     const handleSubmit = useCallback(() => {
         if (!selectedAnswer || hasSubmitted) return
@@ -77,12 +78,22 @@ export function QuestionRenderer({
     const [shuffledOptions, setShuffledOptions] = useState<QuestionOption[]>([])
 
     useEffect(() => {
-        if (question.options) {
+        setSelectedAnswer(previousAnswer ?? null)
+        setHasSubmitted(previousAnswer !== undefined && previousAnswer !== null && isCorrect !== undefined)
+        setShowHintPanel(false)
+        setTimeRemaining(timeLimit || 0)
+        setStartTime(Date.now())
+    }, [question.id, previousAnswer, isCorrect, timeLimit])
+
+    useEffect(() => {
+        if (question.options?.length) {
             if (randomizeOptions) {
                 setShuffledOptions([...question.options].sort(() => Math.random() - 0.5))
             } else {
-                setShuffledOptions(question.options.sort((a, b) => a.display_order - b.display_order))
+                setShuffledOptions([...question.options].sort((a, b) => a.display_order - b.display_order))
             }
+        } else {
+            setShuffledOptions([])
         }
     }, [question.id, question.options, randomizeOptions])
 
@@ -101,7 +112,7 @@ export function QuestionRenderer({
         }, 1000)
 
         return () => clearInterval(timer)
-    }, [timeLimit, startTime, hasSubmitted])
+    }, [timeLimit, startTime, hasSubmitted, handleSubmit])
 
     const handleAnswerChange = useCallback((answer: string | string[]) => {
         if (disabled || hasSubmitted) return
@@ -224,24 +235,36 @@ export function QuestionRenderer({
             <CardContent className={cn(compact && 'p-0 pb-3')}>
                 {/* Question Type Renderer */}
                 {question.question_type === 'mcq' && (
-                    <MCQQuestion
-                        options={shuffledOptions}
-                        selectedAnswer={selectedAnswer as string | null}
-                        onSelect={handleAnswerChange}
-                        disabled={disabled || hasSubmitted}
-                        showCorrect={hasSubmitted && showFeedback}
-                    />
+                    shuffledOptions.length > 0 ? (
+                        <MCQQuestion
+                            options={shuffledOptions}
+                            selectedAnswer={selectedAnswer as string | null}
+                            onSelect={handleAnswerChange}
+                            disabled={disabled || hasSubmitted}
+                            showCorrect={hasSubmitted && showFeedback}
+                        />
+                    ) : (
+                        <p className="rounded-xl border-2 border-dashed border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                            {t('training:quizzes.player.no_options', 'This question has no answer options configured.')}
+                        </p>
+                    )
                 )}
 
                 {question.question_type === 'mcq_multi' && (
-                    <MCQQuestion
-                        options={shuffledOptions}
-                        selectedAnswer={selectedAnswer as string[] | null}
-                        onSelect={handleAnswerChange}
-                        disabled={disabled || hasSubmitted}
-                        showCorrect={hasSubmitted && showFeedback}
-                        multiSelect
-                    />
+                    shuffledOptions.length > 0 ? (
+                        <MCQQuestion
+                            options={shuffledOptions}
+                            selectedAnswer={selectedAnswer as string[] | null}
+                            onSelect={handleAnswerChange}
+                            disabled={disabled || hasSubmitted}
+                            showCorrect={hasSubmitted && showFeedback}
+                            multiSelect
+                        />
+                    ) : (
+                        <p className="rounded-xl border-2 border-dashed border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                            {t('training:quizzes.player.no_options', 'This question has no answer options configured.')}
+                        </p>
+                    )
                 )}
 
                 {question.question_type === 'true_false' && (

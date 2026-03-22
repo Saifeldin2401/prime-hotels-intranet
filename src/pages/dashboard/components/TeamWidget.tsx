@@ -12,7 +12,6 @@ import { useDepartmentStaff } from '@/hooks/useDepartmentStaff'
 import { useProfiles } from '@/hooks/useUsers'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
-import { useTranslation } from "react-i18next";
 
 export function TeamWidget() {
   const { profile } = useAuth()
@@ -91,8 +90,8 @@ export function TeamWidget() {
               {currentProperty?.name || 'Your team'} - {teamMembers.length} members
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate('/directory')}>
-            View All
+          <Button variant="outline" size="sm" onClick={() => navigate('/hr/team')}>
+            Open Team Hub
           </Button>
         </div>
       </CardHeader>
@@ -114,7 +113,7 @@ export function TeamWidget() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
                     className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-primary/20 hover:shadow-md transition-all group bg-white cursor-pointer"
-                    onClick={() => navigate(`/directory/${member.id}`)}
+                    onClick={() => navigate(`/profile/${member.id}`)}
                   >
                     <div className="relative">
                       <Avatar className="w-10 h-10 border-2 border-white shadow-sm">

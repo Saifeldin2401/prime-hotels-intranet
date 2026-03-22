@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface QuizComponentProps {
     quizId: string
@@ -72,11 +73,7 @@ export function QuizComponent({
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
 
-    useEffect(() => {
-        if (quizId) {
-            loadQuiz(quizId)
-        }
-    }, [quizId, user?.id])
+    const submitRef = useRef<(() => Promise<void>) | null>(null)
 
     // Sync props to state if they change (controlled by parent)
     useEffect(() => {
@@ -111,19 +108,7 @@ export function QuizComponent({
         void translateQuestion(current)
     }, [translationTarget, currentQuestionIndex, quiz])
 
-    useEffect(() => {
-        let timer: NodeJS.Timeout
-        if (timeLeft !== null && timeLeft > 0 && !submitted) {
-            timer = setInterval(() => {
-                setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
-            }, 1000)
-        } else if (timeLeft === 0 && !submitted) {
-            handleSubmit() // Auto submit
-        }
-        return () => clearInterval(timer)
-    }, [timeLeft, submitted])
-
-    const loadQuiz = async (id: string) => {
+    const loadQuiz = useCallback(async (id: string) => {
         try {
             setLoading(true)
             const data = await learningService.getQuiz(id)
@@ -160,7 +145,13 @@ export function QuizComponent({
         } finally {
             setLoading(false)
         }
-    }
+    }, [onExit, t, toast, user?.id])
+
+    useEffect(() => {
+        if (quizId) {
+            void loadQuiz(quizId)
+        }
+    }, [quizId, loadQuiz])
 
     const hasAnswer = (questionId?: string) => {
         if (!questionId) return false
@@ -338,6 +329,22 @@ export function QuizComponent({
             setSubmitted(false)
         }
     }
+
+    useEffect(() => {
+        submitRef.current = handleSubmit
+    }, [handleSubmit])
+
+    useEffect(() => {
+        let timer: NodeJS.Timeout
+        if (timeLeft !== null && timeLeft > 0 && !submitted) {
+            timer = setInterval(() => {
+                setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
+            }, 1000)
+        } else if (timeLeft === 0 && !submitted) {
+            void submitRef.current?.()
+        }
+        return () => clearInterval(timer)
+    }, [timeLeft, submitted])
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60)

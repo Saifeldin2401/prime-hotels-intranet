@@ -241,6 +241,7 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
             <CardContent className="pt-3">
                 {currentQuestion && (
                     <QuestionRenderer
+                        key={currentQuestion.id}
                         question={currentQuestion}
                         onAnswer={handleAnswer}
                         onNext={handleNext}
@@ -249,6 +250,7 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                         showFeedback
                         showHint
                         compact
+                        disabled={recordAttempt.isPending}
                     />
                 )}
             </CardContent>

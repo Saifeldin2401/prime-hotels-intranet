@@ -24,6 +24,8 @@ import type { QuestionType, QuestionDifficulty } from '@/types/questions'
 import { Badge } from '@/components/ui/badge'
 import { useTranslation } from "react-i18next";
 
+const EMPTY_EXCLUDE_IDS: string[] = []
+
 interface QuestionSelectorProps {
     open: boolean
     onOpenChange: (open: boolean) => void
@@ -35,8 +37,9 @@ export function QuestionSelector({
     open,
     onOpenChange,
     onSelect,
-    excludeIds = []
+    excludeIds = EMPTY_EXCLUDE_IDS
 }: QuestionSelectorProps) {
+    const { t } = useTranslation(['common', 'training'])
     const [search, setSearch] = useState('')
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 

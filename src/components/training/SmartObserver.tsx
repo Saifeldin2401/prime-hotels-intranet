@@ -21,26 +21,26 @@ export const SmartObserver: React.FC<SmartObserverProps> = ({
     className,
     children
 }) => {
-    const [isFocused, setIsFocused] = useState(true)
     const [isIdle, setIsIdle] = useState(false)
     const idleTimerRef = useRef<NodeJS.Timeout | null>(null)
-    const lastActivityRef = useRef<number>(Date.now())
+    const lastActivityRef = useRef<number>(0)
+
+    useEffect(() => {
+        lastActivityRef.current = Date.now()
+    }, [])
 
     // --- Focus Detection ---
     useEffect(() => {
         const handleVisibilityChange = () => {
             const focused = document.visibilityState === 'visible'
-            setIsFocused(focused)
             onFocusChange?.(focused)
         }
 
         const handleWindowFocus = () => {
-            setIsFocused(true)
             onFocusChange?.(true)
         }
 
         const handleWindowBlur = () => {
-            setIsFocused(false)
             onFocusChange?.(false)
         }
 

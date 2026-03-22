@@ -46,6 +46,7 @@ import {
   AlertCircle,
   BarChart3,
   Download,
+  Eye,
   Settings,
   X
 } from 'lucide-react'
@@ -55,6 +56,14 @@ import { useTranslation } from 'react-i18next'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { addDays, format } from 'date-fns'
+
+const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
+
+const sortPropertyNames = (a: string, b: string) => {
+  if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1
+  if (!isPriorityPropertyName(a) && isPriorityPropertyName(b)) return 1
+  return a.localeCompare(b)
+}
 
 // Interface for learning_assignments table
 interface LearningAssignment {
@@ -129,6 +138,7 @@ export function TrainingAssignmentsPanel({
   const [overviewFilterStatus, setOverviewFilterStatus] = useState<string>('all')
   const [overviewFilterDept, setOverviewFilterDept] = useState<string>('all')
   const [overviewFilterProp, setOverviewFilterProp] = useState<string>('all')
+  const [selectedProgressId, setSelectedProgressId] = useState<string | null>(null)
 
   // Form state
   const [formModuleId, setFormModuleId] = useState(defaultModuleId || '')
@@ -617,6 +627,8 @@ export function TrainingAssignmentsPanel({
   const filteredProgress = useMemo(() => {
     if (!progressData) return []
     return progressData.filter(item => {
+      if (item.content_type !== 'module') return false
+
       // 1. Search Filter
       if (overviewSearch) {
         const searchLower = overviewSearch.toLowerCase()
@@ -646,6 +658,30 @@ export function TrainingAssignmentsPanel({
     })
   }, [progressData, overviewSearch, overviewFilterStatus, overviewFilterDept, overviewFilterProp, userDepartments, userProperties, users, modules])
 
+  const selectedProgress = useMemo(() => (
+    filteredProgress.find((item) => item.id === selectedProgressId)
+    || progressData?.find((item) => item.id === selectedProgressId)
+    || null
+  ), [filteredProgress, progressData, selectedProgressId])
+
+  const { data: selectedModuleBlocks } = useQuery({
+    queryKey: ['training-progress-details-blocks', selectedProgress?.content_id],
+    queryFn: async () => {
+      if (!selectedProgress?.content_id) return []
+
+      const { data, error } = await supabase
+        .from('training_content_blocks')
+        .select('id, title, type, "order"')
+        .eq('training_module_id', selectedProgress.content_id)
+        .eq('is_deleted', false)
+        .order('order', { ascending: true })
+
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!selectedProgress?.content_id
+  })
+
   // Overview Tab: Progress Metrics based on Filtered Data
   const progressMetrics = useMemo(() => {
     const sourceData = filteredProgress
@@ -657,6 +693,36 @@ export function TrainingAssignmentsPanel({
     }
   }, [filteredProgress])
 
+  const selectedProgressMetadata = useMemo(() => {
+    const metadata = selectedProgress?.metadata
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return {}
+    return metadata as Record<string, unknown>
+  }, [selectedProgress])
+
+  const selectedBlockId = useMemo(() => {
+    const activeBlockId = selectedProgressMetadata.active_block_id
+    if (typeof activeBlockId === 'string' && activeBlockId.length > 0) return activeBlockId
+    return selectedProgress?.last_block_id || null
+  }, [selectedProgress?.last_block_id, selectedProgressMetadata])
+
+  const selectedBlock = useMemo(() => {
+    if (!selectedBlockId) return null
+    return selectedModuleBlocks?.find((block: any) => block.id === selectedBlockId) || null
+  }, [selectedBlockId, selectedModuleBlocks])
+
+  const selectedQuizResults = useMemo(() => {
+    const rawResults = selectedProgressMetadata.quiz_results_by_id
+    if (!rawResults || typeof rawResults !== 'object' || Array.isArray(rawResults)) return []
+
+    return Object.values(rawResults as Record<string, any>)
+      .filter((item) => item && typeof item === 'object')
+      .sort((a: any, b: any) => {
+        const aTime = new Date(a.completedAt || a.completed_at || 0).getTime()
+        const bTime = new Date(b.completedAt || b.completed_at || 0).getTime()
+        return bTime - aTime
+      })
+  }, [selectedProgressMetadata])
+
   // Get unique properties from departments
   const normalizedTargetSearch = targetSearch.trim().toLowerCase()
   const matchesTargetSearch = useCallback((value: string, secondary?: string) => {
@@ -665,13 +731,6 @@ export function TrainingAssignmentsPanel({
     const secondaryValue = secondary?.toLowerCase() ?? ''
     return primary.includes(normalizedTargetSearch) || secondaryValue.includes(normalizedTargetSearch)
   }, [normalizedTargetSearch])
-
-  const isPriorityProperty = (name: string) => /head office|prime group/i.test(name)
-  const sortPropertyNames = (a: string, b: string) => {
-    if (isPriorityProperty(a) && !isPriorityProperty(b)) return -1
-    if (!isPriorityProperty(a) && isPriorityProperty(b)) return 1
-    return a.localeCompare(b)
-  }
 
   const departmentProperties = useMemo(() => {
     if (!departments) return []
@@ -801,14 +860,15 @@ export function TrainingAssignmentsPanel({
         const propName = Array.isArray(propData) ? propData[0]?.name : (propData as any)?.name
         const user = users?.find(u => u.id === item.user_id)
         const moduleTitle = modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')
+        const displayProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
 
         return [
           `"${item.profiles?.full_name || user?.full_name || t('unknownUser')}"`,
           `"${deptName || propName || '-'}"`,
           `"${moduleTitle}"`,
           t(item.status),
-          `${item.progress_percentage}%`,
-          item.score_percentage ? `${item.score_percentage}%` : '-',
+          `${displayProgress}%`,
+          item.score_percentage !== undefined && item.score_percentage !== null ? `${item.score_percentage}%` : '-',
           formatDate(item.last_accessed_at || item.created_at)
         ].join(',')
       })
@@ -1015,12 +1075,13 @@ export function TrainingAssignmentsPanel({
                           <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('progress')}</TableHead>
                           <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('score')}</TableHead>
                           <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('lastAccess')}</TableHead>
+                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-left" : "text-right")}>{t('actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredProgress.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                               <div className="flex flex-col items-center gap-3">
                                 <Search className="h-10 w-10 text-slate-300" />
                                 <p>{t('noProgressFound')}</p>
@@ -1043,6 +1104,7 @@ export function TrainingAssignmentsPanel({
                             const user = users?.find(u => u.id === item.user_id)
                             const userName = item.profiles?.full_name || user?.full_name || t('unknownUser')
                             const userInitials = userName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                            const displayProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
 
                             return (
                               <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors group">
@@ -1079,10 +1141,10 @@ export function TrainingAssignmentsPanel({
                                 <TableCell className="w-[150px] py-4">
                                   <div className="flex flex-col gap-1.5">
                                     <div className="flex justify-between text-xs mb-1">
-                                      <span className="font-medium text-slate-700">{item.progress_percentage}%</span>
+                                      <span className="font-medium text-slate-700">{displayProgress}%</span>
                                     </div>
-                                    <Progress value={item.progress_percentage} className={cn("h-2",
-                                      item.progress_percentage === 100 ? "[&>div]:bg-green-500" : "[&>div]:bg-hotel-gold"
+                                    <Progress value={displayProgress} className={cn("h-2",
+                                      displayProgress === 100 ? "[&>div]:bg-green-500" : "[&>div]:bg-hotel-gold"
                                     )} />
                                   </div>
                                 </TableCell>
@@ -1103,6 +1165,17 @@ export function TrainingAssignmentsPanel({
                                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                                     {formatDate(item.last_accessed_at || item.created_at)}
                                   </div>
+                                </TableCell>
+                                <TableCell className={cn("py-4", isRTL ? "text-left" : "text-right")}>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSelectedProgressId(item.id)}
+                                  >
+                                    <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                    {t('details', 'Details')}
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             )
@@ -1131,6 +1204,7 @@ export function TrainingAssignmentsPanel({
                           : userProperties?.find((p: any) => p.user_id === item.user_id)?.property?.name
                         const user = users?.find(u => u.id === item.user_id)
                         const module = item.training_modules || modules?.find(m => m.id === item.content_id)
+                        const displayProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
 
                         return (
                           <div key={item.id} className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
@@ -1147,10 +1221,10 @@ export function TrainingAssignmentsPanel({
                             <div>
                               <p className="text-sm font-medium text-slate-700">{module?.title || t('unknownModule')}</p>
                               <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                                <span>{t('progress')}: {item.progress_percentage}%</span>
-                                <span>{item.score_percentage ? `${t('score')}: ${item.score_percentage}%` : ''}</span>
+                                <span>{t('progress')}: {displayProgress}%</span>
+                                <span>{item.score_percentage !== undefined && item.score_percentage !== null ? `${t('score')}: ${item.score_percentage}%` : ''}</span>
                               </div>
-                              <Progress value={item.progress_percentage} className="h-1.5 mt-1" />
+                              <Progress value={displayProgress} className="h-1.5 mt-1" />
                             </div>
 
                             <div className="pt-2 border-t flex justify-between items-center text-xs text-muted-foreground">
@@ -1158,6 +1232,15 @@ export function TrainingAssignmentsPanel({
                                 <Clock className="w-3 h-3" />
                                 {formatDate(item.last_accessed_at || item.created_at)}
                               </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2"
+                                onClick={() => setSelectedProgressId(item.id)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                         )
@@ -1168,6 +1251,181 @@ export function TrainingAssignmentsPanel({
               )}
             </CardContent>
           </Card >
+
+          <Dialog open={!!selectedProgressId} onOpenChange={(open) => !open && setSelectedProgressId(null)}>
+            <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t('details', 'Details')}</DialogTitle>
+                <DialogDescription>
+                  {selectedProgress?.profiles?.full_name || users?.find((user) => user.id === selectedProgress?.user_id)?.full_name || t('unknownUser')}
+                  {' | '}
+                  {selectedProgress?.training_modules?.title || modules?.find((module) => module.id === selectedProgress?.content_id)?.title || t('unknownModule')}
+                </DialogDescription>
+              </DialogHeader>
+
+              {selectedProgress && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('status')}</p>
+                        <p className="mt-2 font-semibold capitalize">{t(selectedProgress.status)}</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('progress')}</p>
+                        <p className="mt-2 font-semibold">
+                          {selectedProgress.status === 'completed'
+                            ? selectedProgress.progress_percentage
+                            : Math.min(selectedProgress.progress_percentage, 99)}%
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('score')}</p>
+                        <p className="mt-2 font-semibold">
+                          {selectedProgress.score_percentage !== undefined && selectedProgress.score_percentage !== null
+                            ? `${Number(selectedProgress.score_percentage).toFixed(0)}%`
+                            : '-'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('lastAccess')}</p>
+                        <p className="mt-2 font-semibold">{formatDate(selectedProgress.last_accessed_at || selectedProgress.created_at)}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">{t('progress', 'Progress')}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('timeSpent', 'Time spent')}</p>
+                          <p className="mt-1 font-medium">
+                            {selectedProgress.time_spent_seconds
+                              ? `${Math.floor(selectedProgress.time_spent_seconds / 60)}m ${selectedProgress.time_spent_seconds % 60}s`
+                              : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('currentStep', 'Current step')}</p>
+                          <p className="mt-1 font-medium">
+                            {selectedBlock?.title || (selectedBlock ? `${t('blockTitle', { number: (selectedBlock.order || 0) + 1 })}` : '-')}
+                          </p>
+                          {selectedBlock && (
+                            <p className="text-xs text-muted-foreground capitalize">{selectedBlock.type.replace('_', ' ')}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('blocksCompleted', 'Blocks completed')}</p>
+                          <p className="mt-1 font-medium">
+                            {Array.isArray(selectedProgressMetadata.completed_blocks) ? selectedProgressMetadata.completed_blocks.length : 0}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('mediaCompleted', 'Media completed')}</p>
+                          <p className="mt-1 font-medium">
+                            {Array.isArray(selectedProgressMetadata.completed_media_blocks) ? selectedProgressMetadata.completed_media_blocks.length : 0}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('quizParts', 'Quiz parts')}</p>
+                          <p className="mt-1 font-medium">{selectedQuizResults.length}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">{t('quizResults', 'Quiz results')}</CardTitle>
+                      <DialogDescription>
+                        {selectedQuizResults.length > 0
+                          ? t('quizResultsDesc', 'Latest question-level review saved from the learner session.')
+                          : t('noQuizResultsSaved', 'No detailed quiz review has been saved for this progress record yet.')}
+                      </DialogDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {selectedQuizResults.length === 0 ? (
+                        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                          {t('noQuizResultsSaved', 'No detailed quiz review has been saved for this progress record yet.')}
+                        </div>
+                      ) : (
+                        selectedQuizResults.map((quizResult: any) => (
+                          <div key={quizResult.quizId || quizResult.quiz_id} className="space-y-4 rounded-xl border p-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <h4 className="font-semibold text-slate-900">{quizResult.quizTitle || quizResult.quiz_title || t('knowledgeCheck')}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatDate(quizResult.completedAt || quizResult.completed_at || selectedProgress.completed_at || selectedProgress.updated_at || selectedProgress.created_at)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={quizResult.passed ? 'default' : 'destructive'}>
+                                  {quizResult.passed ? t('passed', 'Passed') : t('failed', 'Failed')}
+                                </Badge>
+                                <Badge variant="outline">
+                                  {typeof quizResult.score === 'number' ? `${quizResult.score}%` : '-'}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                              <div>
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('correct', 'Correct')}</p>
+                                <p className="mt-1 font-medium">{quizResult.correctCount ?? quizResult.correct_count ?? 0}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('totalQuestions', 'Total questions')}</p>
+                                <p className="mt-1 font-medium">{quizResult.totalQuestions ?? quizResult.total_questions ?? 0}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('score')}</p>
+                                <p className="mt-1 font-medium">{typeof quizResult.score === 'number' ? `${quizResult.score}%` : '-'}</p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              {(quizResult.reviewItems || quizResult.review_items || []).map((reviewItem: any, index: number) => (
+                                <div key={`${quizResult.quizId || quizResult.quiz_id}-${reviewItem.questionId || reviewItem.question_id || index}`} className="rounded-lg border bg-slate-50 p-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="font-medium text-slate-900">{reviewItem.questionText || reviewItem.question_text || t('question', 'Question')}</p>
+                                      <p className="mt-2 text-sm text-slate-600">
+                                        <span className="font-medium text-slate-800">{t('yourAnswer', 'Your answer')}:</span> {reviewItem.selectedAnswer || reviewItem.selected_answer || '-'}
+                                      </p>
+                                      <p className="mt-1 text-sm text-slate-600">
+                                        <span className="font-medium text-slate-800">{t('correctAnswer', 'Correct answer')}:</span> {reviewItem.correctAnswer || reviewItem.correct_answer || '-'}
+                                      </p>
+                                      {(reviewItem.explanation || reviewItem.feedback) && (
+                                        <p className="mt-2 text-sm text-muted-foreground">{reviewItem.explanation || reviewItem.feedback}</p>
+                                      )}
+                                    </div>
+                                    <Badge variant={reviewItem.correct ? 'default' : 'destructive'}>
+                                      {reviewItem.correct ? t('correct', 'Correct') : t('incorrect', 'Incorrect')}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent >
 
         {/* ASSIGNMENTS TAB */}

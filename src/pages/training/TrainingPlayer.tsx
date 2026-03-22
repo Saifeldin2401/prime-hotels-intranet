@@ -63,11 +63,33 @@ type PersistedModuleProgress = {
         completed_blocks?: string[]
         completed_media_blocks?: string[]
         quiz_scores_by_id?: Record<string, number>
+        quiz_results_by_id?: Record<string, PersistedQuizResult>
     }
     score_percentage?: number
     time_spent_seconds?: number
     saved_at?: string
     updated_at?: string
+}
+
+type PersistedQuizReviewItem = {
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer: string
+    correct: boolean
+    explanation?: string
+    timeSpentSeconds: number
+}
+
+type PersistedQuizResult = {
+    quizId: string
+    quizTitle: string
+    score: number
+    passed: boolean
+    correctCount: number
+    totalQuestions: number
+    completedAt: string
+    reviewItems: PersistedQuizReviewItem[]
 }
 
 type RichTextBlockContentProps = {
@@ -205,6 +227,7 @@ export default function TrainingPlayer() {
     const [completedBlocks, setCompletedBlocks] = useState<Set<string>>(new Set())
     const [quizScore, setQuizScore] = useState<number | null>(null)
     const [quizScoresById, setQuizScoresById] = useState<Record<string, number>>({})
+    const [quizResultsById, setQuizResultsById] = useState<Record<string, PersistedQuizResult>>({})
     const [completionScore, setCompletionScore] = useState<number | null>(null)
     const [completionPassed, setCompletionPassed] = useState<boolean | null>(null)
     const [isFinished, setIsFinished] = useState(false)
@@ -228,6 +251,7 @@ export default function TrainingPlayer() {
     const hasRestoredRef = useRef(false)
     const timeByBlockRef = useRef<Record<string, number>>({})
     const quizScoresByIdRef = useRef<Record<string, number>>({})
+    const quizResultsByIdRef = useRef<Record<string, PersistedQuizResult>>({})
     const mediaWatchProgressRef = useRef<Record<string, MediaWatchState>>({})
 
     const translateAI = useTranslationAI()
@@ -238,6 +262,7 @@ export default function TrainingPlayer() {
         setCompletedMediaBlocks(new Set())
         setQuizScore(null)
         setQuizScoresById({})
+        setQuizResultsById({})
         setCompletionScore(null)
         setCompletionPassed(null)
         setIsFinished(false)
@@ -247,12 +272,17 @@ export default function TrainingPlayer() {
         setBlockTranslations({})
         setModuleTitleTranslations({})
         quizScoresByIdRef.current = {}
+        quizResultsByIdRef.current = {}
         mediaWatchProgressRef.current = {}
     }, [])
 
     useEffect(() => {
         quizScoresByIdRef.current = quizScoresById
     }, [quizScoresById])
+
+    useEffect(() => {
+        quizResultsByIdRef.current = quizResultsById
+    }, [quizResultsById])
 
     const applyRestoredProgress = useCallback((
         progress: PersistedModuleProgress | null,
@@ -296,6 +326,12 @@ export default function TrainingPlayer() {
             }
         } else if (typeof progress.score_percentage === 'number') {
             setQuizScore(progress.score_percentage)
+        }
+
+        const restoredQuizResults = progress.metadata?.quiz_results_by_id
+        if (restoredQuizResults && typeof restoredQuizResults === 'object' && !Array.isArray(restoredQuizResults)) {
+            setQuizResultsById(restoredQuizResults as Record<string, PersistedQuizResult>)
+            quizResultsByIdRef.current = restoredQuizResults as Record<string, PersistedQuizResult>
         }
     }, [t])
 
@@ -421,6 +457,7 @@ export default function TrainingPlayer() {
     const completedCount = new Set([...completedBlocks, ...completedMediaBlocks]).size
     const progressSteps = Math.max(completedCount, activeBlockIndex + 1)
     const progressPercentage = Math.min(100, Math.round((progressSteps / totalBlocks) * 100))
+    const persistedProgressPercentage = isFinished ? 100 : Math.min(progressPercentage, 99)
     const translationTargetMeta = translationTarget
         ? SUPPORTED_TRANSLATION_LANGUAGES.find(lang => lang.code === translationTarget)
         : null
@@ -566,6 +603,7 @@ export default function TrainingPlayer() {
                     completed_blocks: Array.from(completedBlocks),
                     completed_media_blocks: Array.from(completedMediaBlocks),
                     quiz_scores_by_id: latestQuizScores,
+                    quiz_results_by_id: quizResultsByIdRef.current,
                     active_block_id: activeBlock?.id || null
                 }
             })
@@ -716,6 +754,7 @@ export default function TrainingPlayer() {
             completed_blocks: Array.from(completedBlocks),
             completed_media_blocks: Array.from(completedMediaBlocks),
             quiz_scores_by_id: latestQuizScores,
+            quiz_results_by_id: quizResultsByIdRef.current,
             active_block_id: activeBlock?.id || null
         }
 
@@ -726,7 +765,7 @@ export default function TrainingPlayer() {
                 content_type: 'module',
                 user_id: user.id,
                 status,
-                progress_percentage: progressPercentage,
+                progress_percentage: status === 'completed' ? 100 : persistedProgressPercentage,
                 last_accessed_at: nowIso,
                 last_activity_at: nowIso,
                 last_block_index: activeBlockIndex,
@@ -748,7 +787,7 @@ export default function TrainingPlayer() {
                     content_type: 'module',
                     user_id: user.id,
                     status,
-                    progress_percentage: progressPercentage,
+                    progress_percentage: status === 'completed' ? 100 : persistedProgressPercentage,
                     last_accessed_at: nowIso,
                     last_activity_at: nowIso,
                     last_block_index: activeBlockIndex,
@@ -768,7 +807,7 @@ export default function TrainingPlayer() {
         completedMediaBlocks,
         activeBlock,
         assignmentId,
-        progressPercentage,
+        persistedProgressPercentage,
         activeBlockIndex,
         storageKey
     ])
@@ -1305,6 +1344,23 @@ export default function TrainingPlayer() {
                                         setQuizScore(nextAggregated ?? result.score)
                                         return next
                                     })
+                                    setQuizResultsById((prev) => {
+                                        const next = {
+                                            ...prev,
+                                            [currentQuizId]: {
+                                                quizId: currentQuizId,
+                                                quizTitle: block.title || t('knowledgeCheck', 'Knowledge Check'),
+                                                score: result.score,
+                                                passed: result.passed,
+                                                correctCount: result.correctCount,
+                                                totalQuestions: result.totalQuestions,
+                                                completedAt: new Date().toISOString(),
+                                                reviewItems: result.reviewItems
+                                            }
+                                        }
+                                        quizResultsByIdRef.current = next
+                                        return next
+                                    })
                                 } else {
                                     setQuizScore(result.score)
                                 }
@@ -1377,6 +1433,8 @@ export default function TrainingPlayer() {
     const passingScore = moduleData.module.passing_score_percentage || 80
     const finalScore = completionScore ?? quizScore
     const finalPassed = completionPassed ?? (!hasQuizBlock || (typeof finalScore === 'number' && finalScore >= passingScore))
+    const canViewCertificate = finalPassed && moduleData.module.certificate_enabled
+    const canRetakeFinalQuiz = !finalPassed && !!moduleData.linkedQuizId
 
     if (isFinished) {
         return (
@@ -1418,9 +1476,14 @@ export default function TrainingPlayer() {
                     </div>
 
                         <div className="space-y-4">
-                            {moduleData.linkedQuizId && (
+                            {canViewCertificate && (
+                                <Button className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12" onClick={() => navigate('/training/certificates')}>
+                                    {t('viewCertificate', 'View Certificate')}
+                                </Button>
+                            )}
+                            {canRetakeFinalQuiz && (
                                 <Button className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12" onClick={() => navigate(`/learning/quizzes/${moduleData.linkedQuizId}/take`)}>
-                                    {t('takeFinalCertification')}
+                                    {t('retryFinalAssessment', { defaultValue: 'Retake Final Assessment' })}
                                 </Button>
                             )}
                             <Button variant="outline" className="w-full h-12" onClick={() => navigate('/learning/my')}>

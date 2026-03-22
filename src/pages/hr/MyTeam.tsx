@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
-import { Search, Loader2, Users, Mail, Phone, Clock, CheckSquare, AlertTriangle, GraduationCap, BarChart3 } from 'lucide-react'
+import { Search, Loader2, Users, Mail, Phone, Clock, CheckSquare, AlertTriangle, GraduationCap, BarChart3, ArrowRight, BookOpenCheck, FolderKanban, UserRoundSearch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { useRequestsInbox } from '@/hooks/useRequests'
@@ -235,6 +235,53 @@ export default function MyTeam() {
                 description={t('team.description', 'Manage and view details of your direct reports')}
             />
 
+            <Card className="border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-sm rounded-2xl overflow-hidden">
+                <CardContent className="p-6 md:p-8">
+                    <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+                        <div className="max-w-3xl space-y-4">
+                            <Badge className="bg-white/10 text-white border-white/15 hover:bg-white/10">
+                                {t('common:my_team', 'My Team')}
+                            </Badge>
+                            <div>
+                                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
+                                    {t('team.workspace_title', 'Team Control Center')}
+                                </h2>
+                                <p className="mt-3 max-w-2xl text-sm md:text-base leading-7 text-slate-200">
+                                    {t('team.workspace_description', 'Review approvals, delegated work, learning follow-up, and employee records from one team workspace.')}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid w-full gap-3 sm:grid-cols-2 2xl:grid-cols-4 xl:max-w-4xl">
+                            <Button asChild variant="secondary" className="h-auto min-h-14 justify-between px-4 py-3 text-left whitespace-normal bg-white text-slate-900 hover:bg-slate-100">
+                                <Link to="/hr/inbox">
+                                    <span>{t('actions.view_inbox', 'Go to Inbox')}</span>
+                                    <ArrowRight className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                            <Button asChild variant="secondary" className="h-auto min-h-14 justify-between px-4 py-3 text-left whitespace-normal bg-white/10 text-white border border-white/10 hover:bg-white/15">
+                                <Link to="/tasks">
+                                    <span>{t('team.open_tasks', 'Open Team Tasks')}</span>
+                                    <FolderKanban className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                            <Button asChild variant="secondary" className="h-auto min-h-14 justify-between px-4 py-3 text-left whitespace-normal bg-white/10 text-white border border-white/10 hover:bg-white/15">
+                                <Link to="/training/assignments">
+                                    <span>{t('team.training_follow_up', 'Training Assignments')}</span>
+                                    <BookOpenCheck className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                            <Button asChild variant="secondary" className="h-auto min-h-14 justify-between px-4 py-3 text-left whitespace-normal bg-white/10 text-white border border-white/10 hover:bg-white/15">
+                                <Link to="/directory">
+                                    <span>{t('team.directory_access', 'Employee Directory')}</span>
+                                    <UserRoundSearch className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Manager Dashboard Widgets */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
                 <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
@@ -442,7 +489,12 @@ export default function MyTeam() {
 
                                     <div className="pt-3 flex gap-2 border-t mt-3">
                                         <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
-                                            <a href={`mailto:${member.email}`}>
+                                            <Link to={`/profile/${member.id}`}>
+                                                {t('common:view', 'View')}
+                                            </Link>
+                                        </Button>
+                                        <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
+                                            <a href={member.email ? `mailto:${member.email}` : '#'} onClick={(e) => !member.email && e.preventDefault()}>
                                                 {t('team.message', 'Message')}
                                             </a>
                                         </Button>

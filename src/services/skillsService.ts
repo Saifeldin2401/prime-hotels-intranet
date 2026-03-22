@@ -61,13 +61,14 @@ export const skillsService = {
     },
 
     async updateUserSkill(userId: string, skillId: string, updates: Partial<UserSkill>) {
-        // Check if exists
-        const { data: existing } = await supabase
+        const { data: existing, error: existingError } = await supabase
             .from('user_skills')
             .select('id')
             .eq('user_id', userId)
             .eq('skill_id', skillId)
-            .single()
+            .maybeSingle()
+
+        if (existingError) throw existingError
 
         if (existing) {
             const { data, error } = await supabase
@@ -78,15 +79,16 @@ export const skillsService = {
                 .single()
             if (error) throw error
             return data
-        } else {
-            const { data, error } = await supabase
-                .from('user_skills')
-                .insert({ ...updates, user_id: userId, skill_id: skillId })
-                .select()
-                .single()
-            if (error) throw error
-            return data
         }
+
+        const { data, error } = await supabase
+            .from('user_skills')
+            .insert({ ...updates, user_id: userId, skill_id: skillId })
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
     },
 
     async getModuleSkills(moduleId: string) {
@@ -120,38 +122,11 @@ export const skillsService = {
     },
 
     async awardModuleSkills(userId: string, moduleId: string) {
-        // 1. Get skills linked to this module
-        const moduleSkills = await this.getModuleSkills(moduleId)
-        if (!moduleSkills || moduleSkills.length === 0) return
+        const { error } = await supabase.rpc('award_module_skills', {
+            p_user_id: userId,
+            p_module_id: moduleId
+        })
 
-        // 2. Award each skill
-        for (const ms of moduleSkills) {
-            // Determine level: For now, use points_awarded as the level (1-5)
-            // Or increment? Let's use simple logic: Set level to points_awarded (clamped 1-5)
-            // If user already has skill, we keep the higher level.
-
-            const levelToAward = Math.min(Math.max(ms.points_awarded || 1, 1), 5)
-
-            // Get existing to compare
-            const { data: existing } = await supabase
-                .from('user_skills')
-                .select('proficiency_level, id')
-                .eq('user_id', userId)
-                .eq('skill_id', ms.skill_id)
-                .single()
-
-            if (existing) {
-                if (existing.proficiency_level < levelToAward) {
-                    await this.updateUserSkill(userId, ms.skill_id, { proficiency_level: levelToAward })
-                }
-            } else {
-                await this.updateUserSkill(userId, ms.skill_id, {
-                    proficiency_level: levelToAward,
-                    verified: false // Auto-awarded skills need verification? Or auto-verify if training passed?
-                    // Let's say unverified by default unless it's an assessment.
-                    // For now, verified = false (self-paced). Manager can verify.
-                })
-            }
-        }
+        if (error) throw error
     }
 }

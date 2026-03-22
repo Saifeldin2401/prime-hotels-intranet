@@ -600,10 +600,10 @@ function OrgChangeHistory() {
             const { data, error } = await supabase
                 .from('audit_logs')
                 .select(`
-          id, table_name, record_id, operation, old_data, new_data, created_at,
-          changed_by_profile:profiles!audit_logs_changed_by_fkey(full_name)
+          id, entity_type, entity_id, action, details, created_at,
+          changed_by_profile:profiles!user_id(full_name)
         `)
-                .in('table_name', ['profiles', 'employee_promotions', 'employee_transfers', 'user_departments', 'user_properties'])
+                .in('entity_type', ['profiles', 'employee_promotions', 'employee_transfers', 'user_departments', 'user_properties'])
                 .order('created_at', { ascending: false })
                 .limit(50)
 
@@ -659,30 +659,38 @@ function OrgChangeHistory() {
                                             <Badge
                                                 variant="outline"
                                                 className={
-                                                    entry.operation === 'INSERT' ? 'bg-green-50 text-green-700' :
-                                                        entry.operation === 'UPDATE' ? 'bg-blue-50 text-blue-700' :
-                                                            entry.operation === 'DELETE' ? 'bg-red-50 text-red-700' :
+                                                    entry.action === 'create' ? 'bg-green-50 text-green-700' :
+                                                        entry.action === 'update' ? 'bg-blue-50 text-blue-700' :
+                                                            entry.action === 'delete' ? 'bg-red-50 text-red-700' :
                                                                 ''
                                                 }
                                             >
-                                                {entry.operation}
+                                                {entry.action}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="font-mono text-xs">
-                                            {entry.table_name}
+                                            {entry.entity_type}
                                         </TableCell>
                                         <TableCell>
                                             {entry.changed_by_profile?.full_name || 'System'}
                                         </TableCell>
                                         <TableCell className="max-w-xs truncate text-xs text-gray-500">
-                                            {entry.operation === 'UPDATE' && entry.old_data?.reporting_to !== entry.new_data?.reporting_to && (
+                                            {entry.action === 'update' && entry.details?.old?.reporting_to !== entry.details?.new?.reporting_to && (
                                                 <span>{t('organization.reporting_changed')}</span>
                                             )}
-                                            {entry.operation === 'INSERT' && entry.table_name === 'employee_promotions' && (
+                                            {entry.action === 'create' && entry.entity_type === 'employee_promotions' && (
                                                 <span>{t('organization.promotion_created')}</span>
                                             )}
-                                            {entry.operation === 'INSERT' && entry.table_name === 'employee_transfers' && (
+                                            {entry.action === 'create' && entry.entity_type === 'employee_transfers' && (
                                                 <span>{t('organization.transfer_created')}</span>
+                                            )}
+                                            {entry.action === 'update' && entry.entity_type === 'profiles' && !(
+                                                entry.details?.old?.reporting_to !== entry.details?.new?.reporting_to
+                                            ) && (
+                                                <span>{t('organization.profile_updated', 'Profile updated')}</span>
+                                            )}
+                                            {entry.action === 'update' && (
+                                                <span className="sr-only">{entry.entity_id}</span>
                                             )}
                                         </TableCell>
                                     </TableRow>

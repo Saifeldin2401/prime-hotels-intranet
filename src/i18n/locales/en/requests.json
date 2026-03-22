@@ -1,7 +1,7 @@
 {
     "title": "Requests Inbox",
     "description": "View and manage all requests across the organization",
-    "search_placeholder": "Search by request number or employee name...",
+    "search_placeholder": "Search by employee, assignee, property, or request number...",
     "filters": "Filters",
     "clear_all": "Clear all",
     "status_label": "Status",
@@ -18,8 +18,30 @@
     "current_assignee": "Current assignee: {{name}}",
     "due_date": "Due",
     "view_details": "View Details",
+    "assigned_to_me": "Assigned to me",
+    "property_label": "Property",
+    "job_title_label": "Job title",
     "error_loading": "Error loading requests",
     "error_loading_desc": "Please try again later",
+    "hero_title": "Use this inbox to process employee requests that need action",
+    "hero_description": "This queue collects leave requests, expense claims, transfers, and other HR approvals. Start with overdue or assigned items, then open details to approve, reject, return, or forward.",
+    "summary": {
+        "actionable": "Actionable now",
+        "mine": "Assigned to me",
+        "overdue": "Overdue",
+        "urgent": "High priority"
+    },
+    "quick_views": {
+        "inbox_label": "Approval Queue",
+        "all": "All actionable",
+        "mine": "Assigned to me",
+        "overdue": "Overdue",
+        "urgent": "Urgent",
+        "pending_hr": "Pending HR",
+        "pending_supervisor": "Pending supervisor"
+    },
+    "search_hint": "Search by employee, assignee, property, request type, or request number.",
+    "search_hint_numeric": "Matching request number and visible request details.",
     "status": {
         "draft": "Draft",
         "pending_supervisor": "Pending Supervisor",
@@ -37,5 +59,6 @@
     },
     "leave_request": "Leave Request",
     "document": "Document",
-    "transfer": "Transfer"
+    "transfer": "Transfer",
+    "expense_claim": "Expense Claim"
 }

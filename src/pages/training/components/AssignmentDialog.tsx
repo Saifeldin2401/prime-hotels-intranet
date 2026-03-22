@@ -21,6 +21,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Search } from 'lucide-react'
 
+const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
+
+const sortPropertyNames = (a: string, b: string) => {
+    if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1
+    if (!isPriorityPropertyName(a) && isPriorityPropertyName(b)) return 1
+    return a.localeCompare(b)
+}
+
 interface AssignableEntity {
     id: string
     name: string
@@ -66,13 +74,6 @@ export function AssignmentDialog({
         const secondaryValue = secondary?.toLowerCase() ?? ''
         return primary.includes(normalizedTargetSearch) || secondaryValue.includes(normalizedTargetSearch)
     }, [normalizedTargetSearch])
-
-    const isPriorityProperty = (name: string) => /head office|prime group/i.test(name)
-    const sortPropertyNames = (a: string, b: string) => {
-        if (isPriorityProperty(a) && !isPriorityProperty(b)) return -1
-        if (!isPriorityProperty(a) && isPriorityProperty(b)) return 1
-        return a.localeCompare(b)
-    }
 
     const departmentProperties = useMemo(() => {
         const props = new Set<string>()

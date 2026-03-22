@@ -37,7 +37,7 @@ const ChartContainer = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("w-full", className)} {...props} />
+  <div ref={ref} className={cn("w-full min-w-0", className)} {...props} />
 ))
 ChartContainer.displayName = "ChartContainer"
 
@@ -65,6 +65,7 @@ const ChartTooltipContent = React.forwardRef<
     nameKey?: string
     labelKey?: string
     sideOffset?: number
+    formatter?: (value: unknown, name: string, item: RechartsTooltipPayload) => React.ReactNode
   }
 >(({ className, sideOffset = 4, hideLabel = false, hideIndicator = false, indicator = "dot", nameKey, labelKey, ...props }, ref) => {
   const {
@@ -105,10 +106,13 @@ const ChartTooltipContent = React.forwardRef<
         </div>
       )}
       <div className="grid gap-1.5">
-        {payload.map((item: any, index: number) => {
-          const key = `${nameKey || item.name || item.dataKey || "value"}`
-          const itemConfig = getPayloadConfigFromPayload(config, item, key)
-          const indicatorColor = item.payload.fill || item.color
+        {payload.map((item: RechartsTooltipPayload, index: number) => {
+          const key = `${nameKey || item.name || item.dataKey || "value"}-${index}`
+          const itemLabel = getPayloadLabel(item, nameKey, labelKey)
+          const indicatorColor = item.payload?.fill || item.color || "currentColor"
+          const formattedValue = typeof item.value === "number"
+            ? item.value.toLocaleString()
+            : String(item.value ?? "-")
 
           return (
             <div
@@ -126,10 +130,10 @@ const ChartTooltipContent = React.forwardRef<
               )}
               <div className="flex flex-1 justify-between leading-none gap-4">
                 <span className="text-muted-foreground capitalize">
-                  {itemConfig?.label || item.name}
+                  {itemLabel}
                 </span>
                 <span className="font-mono font-medium tabular-nums text-foreground">
-                  {item.value.toLocaleString()}
+                  {formattedValue}
                 </span>
               </div>
             </div>
@@ -141,10 +145,35 @@ const ChartTooltipContent = React.forwardRef<
 })
 ChartTooltipContent.displayName = "ChartTooltipContent"
 
-// Helper to safely get config - returns undefined as this is a lightweight implementation
-// Config should be passed via props or context by the consuming component
-function getPayloadConfigFromPayload(config: any, payload: unknown, key: string) {
-  return undefined
+type RechartsTooltipPayload = {
+  color?: string
+  dataKey?: string
+  name?: string
+  value?: number | string | null
+  payload?: Record<string, unknown> & { fill?: string }
+}
+
+function getPayloadLabel(
+  item: RechartsTooltipPayload,
+  nameKey?: string,
+  labelKey?: string
+) {
+  const payloadRecord = item.payload ?? {}
+  const resolvedLabelKey = labelKey ?? nameKey
+
+  if (resolvedLabelKey && typeof payloadRecord[resolvedLabelKey] === "string") {
+    return payloadRecord[resolvedLabelKey] as string
+  }
+
+  if (typeof item.name === "string" && item.name.length > 0) {
+    return item.name
+  }
+
+  if (typeof item.dataKey === "string" && item.dataKey.length > 0) {
+    return item.dataKey
+  }
+
+  return "Value"
 }
 
 export { Chart, ChartContainer, ChartTooltip, ChartTooltipContent }

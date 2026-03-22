@@ -217,6 +217,7 @@ export function InlineQuizWidget({
             <CardContent className="pt-3">
                 {currentQuestion && (
                     <QuestionRenderer
+                        key={currentQuestion.id}
                         question={currentQuestion}
                         onAnswer={handleAnswer}
                         onNext={handleNext}
@@ -226,6 +227,7 @@ export function InlineQuizWidget({
                         showFeedback
                         showHint
                         compact
+                        disabled={recordAttempt.isPending}
                     />
                 )}
             </CardContent>
